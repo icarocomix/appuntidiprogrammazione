@@ -1,0 +1,37 @@
+---
+layout: default
+---
+<article class="article-card">
+  <h1>{{ page.title }}</h1>
+  <p class="date">{{ page.date | date: "%d/%m/%Y" }}</p>
+
+  <div class="tags">
+    {% for tag in page.tags %}
+      <span class="tag-btn">{{ tag }}</span>
+    {% endfor %}
+  </div>
+
+  <section>
+    <span class="section-label">SINTESI DEL PROBLEMA</span>
+    <p>{{ page.sintesi }}</p>
+  </section>
+
+  <section>
+    <span class="section-label">ESIGENZA REALE</span>
+    <p>{{ page.esigenza }}</p>
+  </section>
+
+  <section>
+    <span class="section-label">ANALISI TECNICA</span>
+    {{ content }}
+  </section>
+
+  <section>
+    <span class="section-label">ESEMPIO IMPLEMENTATIVO</span>
+    <div class="code-block">
+      {% highlight {{ page.codice.language }} %}
+      {{ page.codice.code }}
+      {% endhighlight %}
+    </div>
+  </section>
+</article>

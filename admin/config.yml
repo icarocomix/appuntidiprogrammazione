@@ -1,0 +1,25 @@
+local_backend: true
+display_url: http://localhost:8000
+backend:
+  name: github
+  repo: cosimociraci/appuntidiprogrammazione
+  branch: main
+
+media_folder: "assets/img"
+public_folder: "/assets/img"
+
+collections:
+  - name: "articoli"
+    label: "Articoli di Programmazione"
+    folder: "data/articoli"
+    create: true
+    slug: "{{year}}-{{month}}-{{day}}-{{slug}}"
+    fields:
+      - { label: "Titolo", name: "title", widget: "string" }
+      - { label: "Data Pubblicazione", name: "date", widget: "datetime" }
+      - { label: "Sintesi del problema", name: "sintesi", widget: "text" }
+      - { label: "Esigenza reale", name: "esigenza", widget: "text" }
+      - { label: "Analisi tecnica (Markdown)", name: "body", widget: "markdown" }
+      - { label: "Esempio implementativo (Codice)", name: "codice", widget: "code", default_language: "java" }
+      - { label: "Tag", name: "tags", widget: "list", default: ["java", "spring"] }
+      - { label: "Allegati", name: "downloads", widget: "file", multiple: true, required: false }

@@ -1,0 +1,85 @@
+---
+layout: default
+title: DevLog - Appunti di Programmazione
+---
+
+<div class="container">
+    <section class="search-section">
+        <input type="text" id="search-bar" placeholder="CERCA NEGLI APPUNTI (es. SQL, Java, Docker)..." onkeyup="filterArticles()">
+    </section>
+
+    <div id="tag-cloud" class="mb-12">
+        <button class="tag-btn active" onclick="filterByTag('all')">TUTTI</button>
+        {% assign all_tags = site.articoli | map: 'tags' | join: ',' | split: ',' | uniq | sort %}
+        {% for tag in all_tags %}
+            <button class="tag-btn" onclick="filterByTag('{{ tag | slugify }}')">{{ tag | upcase }}</button>
+        {% endfor %}
+    </div>
+
+    <div id="articles-list">
+        {% for post in site.articoli reversed %}
+        <article class="article-card" data-tags="{{ post.tags | join: ',' | slugify }}" data-title="{{ post.title | downcase }}">
+            <div class="card-header">
+                <span class="date">{{ post.date | date: "%d %b %Y" }}</span>
+                <div class="card-tags">
+                    {% for tag in post.tags %}
+                        <span class="tag-label">{{ tag }}</span>
+                    {% endfor %}
+                </div>
+            </div>
+            
+            <h2 class="article-title">
+                <a href="{{ post.url | relative_url }}">{{ post.title }}</a>
+            </h2>
+            
+            <p class="sintesi">{{ post.sintesi }}</p>
+            
+            <div class="card-footer">
+                <a href="{{ post.url | relative_url }}" class="read-more">LEGGI ANALISI TECNICA →</a>
+            </div>
+        </article>
+        {% endfor %}
+    </div>
+</div>
+
+<script>
+    /**
+     * Filtra gli articoli basandosi sul testo inserito nella barra di ricerca
+     */
+    function filterArticles() {
+        const query = document.getElementById('search-bar').value.toLowerCase();
+        const articles = document.querySelectorAll('.article-card');
+
+        articles.forEach(article => {
+            const title = article.getAttribute('data-title');
+            const tags = article.getAttribute('data-tags');
+            
+            if (title.includes(query) || tags.includes(query)) {
+                article.style.display = "block";
+            } else {
+                article.style.display = "none";
+            }
+        });
+    }
+
+    /**
+     * Filtra gli articoli cliccando sui pulsanti dei Tag
+     */
+    function filterByTag(tag) {
+        const articles = document.querySelectorAll('.article-card');
+        const buttons = document.querySelectorAll('.tag-btn');
+
+        // Aggiorna stato attivo dei bottoni
+        buttons.forEach(btn => btn.classList.remove('active'));
+        event.target.classList.add('active');
+
+        articles.forEach(article => {
+            if (tag === 'all') {
+                article.style.display = "block";
+            } else {
+                const articleTags = article.getAttribute('data-tags').split(',');
+                article.style.display = articleTags.includes(tag) ? "block" : "none";
+            }
+        });
+    }
+</script>

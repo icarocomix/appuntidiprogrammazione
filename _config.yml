@@ -1,0 +1,44 @@
+# Informazioni Generali
+title: DevLog
+email: tua_email@esempio.com
+description: >-
+  Hub tecnico per appunti di programmazione, analisi di problemi reali 
+  e soluzioni implementative in ambito Spring Boot, Java e Web Dev.
+
+# Configurazione URL (Fondamentale per GitHub Pages)
+# Se il tuo sito è cosimociraci.github.io/appuntidiprogrammazione, 
+# allora baseurl deve essere "/appuntidiprogrammazione"
+baseurl: "" 
+url: "https://cosimociraci.github.io"
+
+# Gestione dei Contenuti (Collections)
+collections:
+  articoli:
+    output: true
+    permalink: /articoli/:title/
+
+# Impostazioni di Default per i file
+defaults:
+  - scope:
+      path: ""
+      type: "articoli"
+    values:
+      layout: "post"
+
+# Markdown e Syntax Highlighting
+markdown: kramdown
+highlighter: rouge
+kramdown:
+  input: GFM
+  syntax_highlighter: rouge
+
+# Esclusioni (File che Jekyll non deve processare)
+exclude:
+  - Gemfile
+  - Gemfile.lock
+  - node_modules
+  - vendor/bundle/
+  - vendor/cache/
+  - vendor/gems/
+  - vendor/ruby/
+  - admin/    # Escludiamo la cartella admin dalla build di Jekyll per sicurezza
