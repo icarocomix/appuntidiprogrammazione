@@ -82,17 +82,22 @@ title: DevLog - Appunti di Programmazione
      */
     // Nella logica di filtraggio dell'index
     function filterByTag(tag) {
-        // Cerchiamo .post-item (che abbiamo aggiunto sopra)
-        const articles = document.querySelectorAll('.post-item');
-        const cleanTag = tag.toLowerCase().trim();
+    // 1. Usiamo la classe corretta che vediamo nell'HTML generato
+    const articles = document.querySelectorAll('.article-card');
+    const cleanTag = tag.toLowerCase().trim();
 
-        articles.forEach(article => {
-            const articleTags = (article.getAttribute('data-tags') || "").toLowerCase();
-            if (cleanTag === 'tutti' || articleTags.includes(cleanTag)) {
-                article.style.display = 'block';
-            } else {
-                article.style.display = 'none';
-            }
-        });
-    }
+    articles.forEach(article => {
+        // 2. Recuperiamo l'attributo data-tags
+        const articleTags = (article.getAttribute('data-tags') || "").toLowerCase();
+        
+        // 3. Logica di confronto
+        // Se è 'tutti' mostro tutto
+        // Altrimenti controllo se il tag selezionato è presente nella stringa dei tag
+        if (cleanTag === 'tutti' || articleTags.includes(cleanTag)) {
+            article.style.display = 'block';
+        } else {
+            article.style.display = 'none';
+        }
+    });
+}
 </script>
