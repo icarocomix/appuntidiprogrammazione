@@ -1,10 +1,11 @@
 ---
 layout: post
 title: "Multi-Layout ViewResolver Order"
-date: 2026-03-31 17:07:33 
+date: 2026-03-31 17:29:27 
 sintesi: "In progetti grandi convivono spesso diverse tecnologie (Thymeleaf per il frontend, JSP per il legacy, JSON per API). Configurando correttamente la proprietà order del ViewResolver, Spring sa quale motore interpellare per primo. Questo permette una mi"
 tech: thymeleaf
 tags: ['thymeleaf', 'spring integration & flow archi']
+pdf_file: "multi-layout-viewresolver-order.pdf"
 ---
 
 ## Esigenza Reale

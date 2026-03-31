@@ -1,10 +1,11 @@
 ---
 layout: post
 title: "De-ottimizzazione e Type Instability"
-date: 2026-03-31 17:07:16 
+date: 2026-03-31 17:29:27 
 sintesi: "La pipeline JIT (TurboFan) ottimizza il codice basandosi sui tipi visti finora. Passare tipi diversi (es. a volte un int, a volte una string) a una funzione "calda" causa una "Deopt": V8 deve scartare il codice macchina ottimizzato e tornare all'inte"
 tech: js
 tags: ['js', 'v8 engine & runtime performance']
+pdf_file: "de-ottimizzazione-e-type-instability.pdf"
 ---
 
 ## Esigenza Reale
