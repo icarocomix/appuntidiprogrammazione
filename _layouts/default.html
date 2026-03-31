@@ -7,26 +7,20 @@
     <link rel="stylesheet" href="{{ '/assets/css/style.css' | relative_url }}">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700;800&family=Fira+Code&display=swap" rel="stylesheet">
     <script>
-        // Gestione Tema (Eseguito subito per evitare flash bianchi)
+        // Gestione Tema: deve essere globale per funzionare con onclick
         function toggleTheme() {
             const html = document.documentElement;
             const current = html.getAttribute('data-theme');
             const next = current === 'dark' ? 'light' : 'dark';
             html.setAttribute('data-theme', next);
             localStorage.setItem('theme', next);
-            updateThemeIcon(next);
-        }
-
-        function updateThemeIcon(theme) {
             const btn = document.getElementById('theme-btn');
-            if (btn) btn.innerHTML = theme === 'dark' ? '☀️' : '🌙';
+            if (btn) btn.innerHTML = next === 'dark' ? '☀️' : '🌙';
         }
 
-        document.addEventListener('DOMContentLoaded', () => {
-            const savedTheme = localStorage.getItem('theme') || 'dark';
-            document.documentElement.setAttribute('data-theme', savedTheme);
-            updateThemeIcon(savedTheme);
-        });
+        // Applica il tema salvato prima del rendering per evitare flash
+        const savedTheme = localStorage.getItem('theme') || 'dark';
+        document.documentElement.setAttribute('data-theme', savedTheme);
     </script>
 </head>
 <body>
@@ -34,7 +28,11 @@
         <div class="logo" onclick="window.location.href='{{ '/' | relative_url }}'">
             APPUNTI DI <span>PROGRAMMAZIONE.</span>
         </div>
-        <button onclick="toggleTheme()" id="theme-btn" class="theme-toggle">☀️</button>
+        <nav>
+            <button onclick="toggleTheme()" id="theme-btn" class="theme-toggle">
+                {% if savedTheme == 'light' %}🌙{% else %}☀️{% endif %}
+            </button>
+        </nav>
     </header>
 
     {{ content }}

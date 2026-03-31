@@ -1,20 +1,20 @@
 ---
 layout: default
-title: Home - Appunti di Programmazione
+title: Home - DevLog
 ---
 
 <div class="container">
     <nav class="tag-nav">
         <button class="tag-btn active" onclick="filterByTag('tutti', this)">Tutti</button>
         
-        {% comment %} Estrazione dinamica e pulita dei tag {% endcomment %}
+        {% comment %} Metodo infallibile per estrarre tag unici in Jekyll {% endcomment %}
         {% assign raw_tags = "" %}
         {% for post in site.posts %}
             {% for tag in post.tags %}
-                {% assign raw_tags = raw_tags | append: tag | append: "," %}
+                {% assign raw_tags = raw_tags | append: tag | append: "|" %}
             {% endfor %}
         {% endfor %}
-        {% assign unique_tags = raw_tags | split: "," | sort | uniq %}
+        {% assign unique_tags = raw_tags | split: "|" | uniq | sort %}
 
         {% for tag in unique_tags %}
             {% if tag != "" %}
@@ -26,7 +26,7 @@ title: Home - Appunti di Programmazione
     </nav>
 
     <section class="search-container">
-        <input type="text" id="searchInput" placeholder="Cerca tra gli appunti..." onkeyup="applyFilters()">
+        <input type="text" id="searchInput" placeholder="Cerca tra gli articoli..." onkeyup="applyFilters()">
     </section>
     
     <main class="bento-grid">
@@ -38,12 +38,12 @@ title: Home - Appunti di Programmazione
                 <h2 class="article-title">
                     <a href="{{ post.url | relative_url }}">{{ post.title }}</a>
                 </h2>
-                <p class="sintesi">{{ post.sintesi }}</p>
+                <p class="sintesi">{{ post.sintesi | truncate: 150 }}</p>
             </div>
             
             {% if post.codice_mini %}
             <div class="code-mini">
-                <code>{{ post.codice_mini | escape }}</code>
+                <code>{{ post.codice_mini }}</code>
             </div>
             {% endif %}
         </article>
@@ -52,29 +52,31 @@ title: Home - Appunti di Programmazione
 </div>
 
 <script>
-    let activeTag = 'tutti';
+    let currentTag = 'tutti';
 
-    function filterByTag(tag, element) {
-        activeTag = tag.toLowerCase().trim();
-        document.querySelectorAll('.tag-btn').forEach(btn => btn.classList.remove('active'));
-        element.classList.add('active');
+    function filterByTag(tag, btn) {
+        currentTag = tag.toLowerCase().trim();
+        // Aggiorna UI bottoni
+        document.querySelectorAll('.tag-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
         applyFilters();
     }
 
     function applyFilters() {
-        const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+        const search = document.getElementById('searchInput').value.toLowerCase();
         const articles = document.querySelectorAll('.article-card');
 
-        articles.forEach(article => {
-            const title = article.getAttribute('data-title') || "";
-            const tags = (article.getAttribute('data-tags') || "").split(',');
-            const matchesTag = (activeTag === 'tutti' || tags.includes(activeTag));
-            const matchesSearch = title.includes(searchTerm);
+        articles.forEach(card => {
+            const title = card.getAttribute('data-title') || "";
+            const tags = card.getAttribute('data-tags').split(',');
+            
+            const matchTag = (currentTag === 'tutti' || tags.includes(currentTag));
+            const matchSearch = title.includes(search);
 
-            if (matchesTag && matchesSearch) {
-                article.style.display = 'flex';
+            if (matchTag && matchSearch) {
+                card.style.display = "flex";
             } else {
-                article.style.display = 'none';
+                card.style.display = "none";
             }
         });
     }
