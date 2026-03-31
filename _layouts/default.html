@@ -1,60 +1,44 @@
 <!DOCTYPE html>
-<html lang="it" data-theme="light">
+<html lang="it" data-theme="dark">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{{ page.title }}</title>
     <link rel="stylesheet" href="{{ '/assets/css/style.css' | relative_url }}">
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;900&display=swap" rel="stylesheet">
-
-    <style>
-      /* Stile specifico per il bottone tema */
-      .theme-toggle {
-        background: var(--bg);
-        color: var(--text);
-        border: var(--border);
-        padding: 5px 10px;
-        font-size: 1.2rem;
-        cursor: pointer;
-        box-shadow: 4px 4px 0px var(--text);
-      }
-      .theme-toggle:active {
-        box-shadow: 0px 0px 0px var(--text);
-        transform: translate(2px, 2px);
-      }
-    </style>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700;800&family=Fira+Code&display=swap" rel="stylesheet">
 </head>
 <body>
-    <header class="main-header">
-        <div class="logo" onclick="window.location.href='{{ '/' | relative_url }}'" style="cursor: pointer;">
+    <header class="main-header container">
+        <div class="logo" onclick="window.location.href='{{ '/' | relative_url }}'">
             APPUNTI DI <span>PROGRAMMAZIONE.</span>
         </div>
-        <nav>
-            <button onclick="toggleTheme()" id="theme-btn" class="theme-toggle">🌙</button>
-        </nav>
+        <button onclick="toggleTheme()" id="theme-btn" class="theme-toggle">☀️</button>
     </header>
 
     {{ content }}
 
     <script>
-    function toggleTheme() {
-        const html = document.documentElement;
-        const btn = document.getElementById('theme-btn');
-        const isDark = html.getAttribute('data-theme') === 'dark';
-        const next = isDark ? 'light' : 'dark';
-        
-        html.setAttribute('data-theme', next);
-        btn.innerHTML = next === 'dark' ? '☀️' : '🌙';
-        localStorage.setItem('theme', next);
-    }
-    
-    document.addEventListener('DOMContentLoaded', () => {
-        const savedTheme = localStorage.getItem('theme');
-        if (savedTheme) {
-            document.documentElement.setAttribute('data-theme', savedTheme);
+        // Gestione Tema Globale
+        function toggleTheme() {
+            const html = document.documentElement;
             const btn = document.getElementById('theme-btn');
-            if(btn) btn.innerHTML = savedTheme === 'dark' ? '☀️' : '🌙';
+            const current = html.getAttribute('data-theme');
+            const next = current === 'dark' ? 'light' : 'dark';
+            
+            html.setAttribute('data-theme', next);
+            btn.innerHTML = next === 'dark' ? '☀️' : '🌙';
+            localStorage.setItem('theme', next);
         }
-    });
+
+        // Caricamento preferenza tema
+        (function() {
+            const savedTheme = localStorage.getItem('theme') || 'dark';
+            document.documentElement.setAttribute('data-theme', savedTheme);
+            document.addEventListener('DOMContentLoaded', () => {
+                const btn = document.getElementById('theme-btn');
+                if (btn) btn.innerHTML = savedTheme === 'dark' ? '☀️' : '🌙';
+            });
+        })();
     </script>
 </body>
 </html>
