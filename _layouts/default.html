@@ -5,24 +5,57 @@
     <title>{{ page.title }}</title>
     <link rel="stylesheet" href="{{ '/assets/css/style.css' | relative_url }}">
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;900&display=swap" rel="stylesheet">
+
+    <style>
+      /* Stile specifico per il bottone tema */
+      .theme-toggle {
+        background: var(--bg);
+        color: var(--text);
+        border: var(--border);
+        padding: 5px 10px;
+        font-size: 1.2rem;
+        cursor: pointer;
+        box-shadow: 4px 4px 0px var(--text);
+      }
+      .theme-toggle:active {
+        box-shadow: 0px 0px 0px var(--text);
+        transform: translate(2px, 2px);
+      }
+    </style>
 </head>
 <body>
     <header class="main-header">
         <div class="logo">DEVLOG<span>.</span></div>
         <nav>
             <a href="{{ '/' | relative_url }}">HOME</a>
-            <button onclick="toggleTheme()" class="theme-toggle">MODE</button>
+            <button onclick="toggleTheme()" id="theme-btn" class="theme-toggle">
+              🌙
+            </button>
         </nav>
     </header>
 
     {{ content }}
 
     <script>
-        function toggleTheme() {
-            const html = document.documentElement;
-            const current = html.getAttribute('data-theme');
-            html.setAttribute('data-theme', current === 'dark' ? 'light' : 'dark');
-        }
+    function toggleTheme() {
+        const html = document.documentElement;
+        const btn = document.getElementById('theme-btn');
+        const current = html.getAttribute('data-theme');
+        const next = current === 'dark' ? 'light' : 'dark';
+        
+        html.setAttribute('data-theme', next);
+        btn.innerHTML = next === 'dark' ? '☀️' : '🌙';
+        
+        // Salviamo la preferenza nel browser
+        localStorage.setItem('theme', next);
+    }
+
+    // Al caricamento, controlla se c'era una preferenza salvata
+    const savedTheme = localStorage.getItem('theme');
+    if (savedTheme) {
+        document.documentElement.setAttribute('data-theme', savedTheme);
+        document.getElementById('theme-btn').innerHTML = savedTheme === 'dark' ? '☀️' : '🌙';
+    }
     </script>
 </body>
 </html>

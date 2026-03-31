@@ -41,4 +41,3 @@ exclude:
   - vendor/cache/
   - vendor/gems/
   - vendor/ruby/
-  - admin/    # Escludiamo la cartella admin dalla build di Jekyll per sicurezza
