@@ -8,7 +8,7 @@ description: >-
 # Configurazione URL (Fondamentale per GitHub Pages)
 # Se il tuo sito è cosimociraci.github.io/appuntidiprogrammazione, 
 # allora baseurl deve essere "/appuntidiprogrammazione"
-baseurl: "" 
+baseurl: "/appuntidiprogrammazione" 
 url: "https://cosimociraci.github.io"
 
 # Gestione dei Contenuti (Collections)
