@@ -26,6 +26,7 @@ backend:
 
 # Consente di lavorare in locale col comando: npx decap-server
 local_backend: true
+publish_mode: editorial_workflow # Opzionale: permette di salvare bozze
 
 # ==========================================
 # 4. GESTIONE CONTENUTI (Collections)
