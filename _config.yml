@@ -11,7 +11,7 @@ description: >-
 # 2. CONFIGURAZIONE URL (GitHub Pages)
 # ==========================================
 baseurl: "/appuntidiprogrammazione"
-url: "https://cosimociraci.github.io"
+url: "https://icarocomix.github.io"
 future: true
 
 # ==========================================
@@ -19,7 +19,7 @@ future: true
 # ==========================================
 backend:
   name: github
-  repo: cosimociraci/appuntidiprogrammazione
+  repo: icarocomix/appuntidiprogrammazione
   branch: main
   base_url: https://api.staticcms.org
   auth_endpoint: /auth
