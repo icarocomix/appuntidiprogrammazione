@@ -39,8 +39,8 @@
     function toggleTheme() {
         const html = document.documentElement;
         const btn = document.getElementById('theme-btn');
-        const current = html.getAttribute('data-theme');
-        const next = current === 'dark' ? 'light' : 'dark';
+        const isDark = html.getAttribute('data-theme') === 'dark';
+        const next = isDark ? 'light' : 'dark';
         
         html.setAttribute('data-theme', next);
         btn.innerHTML = next === 'dark' ? '☀️' : '🌙';

@@ -4,57 +4,37 @@ title: DevLog - Appunti di Programmazione
 ---
 
 <div class="container">
-    <section class="search-section">
-        <input type="text" id="search-bar" placeholder="CERCA NEGLI APPUNTI (es. SQL, Java, Docker)..." onkeyup="filterArticles()">
-    </section>
+    <header class="main-header">
+        <div class="logo" onclick="window.location.href='{{ '/' | relative_url }}'">
+            APPUNTI DI <span>PROGRAMMAZIONE.</span>
+        </div>
+        <button onclick="toggleTheme()" id="theme-btn" class="theme-toggle">🌙</button>
+    </header>
 
-    <div id="tag-cloud" class="mb-12">
-        <button class="tag-btn active" onclick="filterByTag('all')">TUTTI</button>
-        {% assign all_tags = site.articoli | map: 'tags' | join: ',' | split: ',' | uniq | sort %}
-        {% for tag in all_tags %}
-            <button class="tag-btn" onclick="filterByTag('{{ tag | slugify }}')">{{ tag | upcase }}</button>
-        {% endfor %}
-    </div>
+    <nav class="tag-nav">
+        <button class="tag-btn active" onclick="filterByTag('tutti')">Tutti</button>
+        <button class="tag-btn" onclick="filterByTag('java')">Java</button>
+        <button class="tag-btn" onclick="filterByTag('sql')">SQL</button>
+    </nav>
 
-    <div id="articles-list">
-        {% for post in site.articoli reversed %}
-        <article class="article-card" data-tags="{{ post.tags | join: ',' | slugify }}" data-title="{{ post.title | downcase }}">
-            <div class="card-header">
-                <span class="date">{{ post.date | date: "%d %b %Y" }}</span>
-                <div class="card-tags">
-                    {% for tag in post.tags %}
-                        <span class="tag-label">{{ tag }}</span>
-                    {% endfor %}
-                </div>
+    <main class="bento-grid">
+        {% for post in site.posts %}
+        <article class="article-card" data-tags="{{ post.tags | join: ',' | downcase }}">
+            <div class="card-content">
+                <h2 class="article-title">
+                    <a href="{{ post.url | relative_url }}">{{ post.title }}</a>
+                </h2>
+                <p class="sintesi">{{ post.sintesi | truncate: 120 }}</p>
             </div>
             
-            <h2 class="article-title">
-                <a href="{{ post.url | relative_url }}">{{ post.title }}</a>
-            </h2>
-            
-            <p class="sintesi">{{ post.sintesi }}</p>
-            
-            <div class="card-footer">
-                <a href="{{ post.url | relative_url }}" class="read-more">LEGGI ANALISI TECNICA →</a>
+            {% if post.codice_mini %}
+            <div class="code-mini">
+                <code>{{ post.codice_mini | escape }}</code>
             </div>
+            {% endif %}
         </article>
         {% endfor %}
-    </div>
-
-    <div class="posts-grid">
-      {% for post in site.posts %}
-        <article class="post-item article-card" data-tags="{{ post.tags | join: ',' | downcase }}">
-          <h2>{{ post.title }}</h2>
-          <div class="tags">
-            {% for tag in post.tags %}
-              <span class="tag-label">{{ tag }}</span>
-            {% endfor %}
-          </div>
-          <p>{{ post.sintesi }}</p>
-          <a href="{{ post.url | relative_url }}" class="read-more">Leggi tutto →</a>
-        </article>
-      {% endfor %}
-    </div>
+    </main>
 </div>
 
 <script>
@@ -80,24 +60,25 @@ title: DevLog - Appunti di Programmazione
     /**
      * Filtra gli articoli cliccando sui pulsanti dei Tag
      */
-    // Nella logica di filtraggio dell'index
     function filterByTag(tag) {
-    // 1. Usiamo la classe corretta che vediamo nell'HTML generato
-    const articles = document.querySelectorAll('.article-card');
-    const cleanTag = tag.toLowerCase().trim();
+        const articles = document.querySelectorAll('.article-card');
+        const buttons = document.querySelectorAll('.tag-btn');
+        const cleanTag = tag.toLowerCase().trim();
 
-    articles.forEach(article => {
-        // 2. Recuperiamo l'attributo data-tags
-        const articleTags = (article.getAttribute('data-tags') || "").toLowerCase();
-        
-        // 3. Logica di confronto
-        // Se è 'tutti' mostro tutto
-        // Altrimenti controllo se il tag selezionato è presente nella stringa dei tag
-        if (cleanTag === 'tutti' || articleTags.includes(cleanTag)) {
-            article.style.display = 'block';
-        } else {
-            article.style.display = 'none';
-        }
-    });
-}
+        // Aggiorna stile bottoni
+        buttons.forEach(b => {
+            if(b.textContent.toLowerCase().trim() === cleanTag) b.classList.add('active');
+            else b.classList.remove('active');
+        });
+
+        // Filtra articoli
+        articles.forEach(article => {
+            const articleTags = article.getAttribute('data-tags') || "";
+            if (cleanTag === 'tutti' || articleTags.includes(cleanTag)) {
+                article.style.display = 'flex';
+            } else {
+                article.style.display = 'none';
+            }
+        });
+    }
 </script>
