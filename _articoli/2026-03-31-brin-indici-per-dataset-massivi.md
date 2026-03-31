@@ -1,7 +1,7 @@
 ---
 layout: post
 title: "BRIN: Indici per dataset massivi"
-date: 2026-03-31 17:29:27 
+date: 2026-03-31 17:53:39 
 sintesi: "Quando una tabella raggiunge i terabyte, un indice B-Tree può diventare più grande della RAM disponibile. Gli indici BRIN (Block Range Indexes) nascono per questo scenario: invece di salvare ogni singola riga, memorizzano solo il valore minimo e mass"
 tech: db
 tags: ['db', 'indexing internals']

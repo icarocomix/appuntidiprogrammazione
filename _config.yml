@@ -12,6 +12,7 @@ description: >-
 # ==========================================
 baseurl: "/appuntidiprogrammazione"
 url: "https://cosimociraci.github.io"
+future: true
 
 # ==========================================
 # 3. BACKEND & AUTENTICAZIONE (Decap CMS)

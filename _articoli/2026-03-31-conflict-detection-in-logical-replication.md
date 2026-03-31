@@ -1,7 +1,7 @@
 ---
 layout: post
 title: "Conflict Detection in Logical Replication"
-date: 2026-03-31 17:29:27 
+date: 2026-03-31 17:53:42 
 sintesi: "A differenza della replica fisica, quella logica può incontrare conflitti (es. un inserimento sulla replica di una riga con una chiave primaria già esistente). Quando ciò accade, la replica si blocca e smette di applicare le modifiche, creando un lag"
 tech: db
 tags: ['db', 'advanced replication & ha']
