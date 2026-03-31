@@ -1,0 +1,37 @@
+name: Gemini AI Tagger
+
+on:
+  push:
+    paths:
+      - '_articoli/**'
+
+jobs:
+  auto-tag:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.x'
+
+      - name: Install dependencies
+        run: pip install google-generativeai python-frontmatter
+
+      - name: Run AI Tagger Script
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+        run: |
+          python .github/scripts/tagger.py
+          
+      - name: Commit and Push changes
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          git add _articoli/*.md
+          git commit -m "AI: Updated tags for new articles" || exit 0
+          git push
