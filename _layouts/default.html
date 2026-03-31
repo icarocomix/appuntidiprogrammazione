@@ -2,36 +2,30 @@
 <html lang="it" data-theme="dark">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{{ page.title }}</title>
     <link rel="stylesheet" href="{{ '/assets/css/style.css' | relative_url }}">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700;800&family=Fira+Code&display=swap" rel="stylesheet">
-</head>
-<body>
-    <header class="main-header container">
-        <div class="logo" onclick="window.location.href='{{ '/' | relative_url }}'">
-            APPUNTI DI <span>PROGRAMMAZIONE.</span>
-        </div>
-        <button onclick="toggleTheme()" id="theme-btn" class="theme-toggle">☀️</button>
-    </header>
-
-    {{ content }}
-
     <script>
-        // Gestione Tema
         function toggleTheme() {
             const html = document.documentElement;
             const current = html.getAttribute('data-theme');
             const next = current === 'dark' ? 'light' : 'dark';
             html.setAttribute('data-theme', next);
             localStorage.setItem('theme', next);
-            document.getElementById('theme-btn').innerHTML = next === 'dark' ? '☀️' : '🌙';
         }
-
-        // Inizializzazione
+        
+        // Applica tema salvato
         const savedTheme = localStorage.getItem('theme') || 'dark';
         document.documentElement.setAttribute('data-theme', savedTheme);
-        document.getElementById('theme-btn').innerHTML = savedTheme === 'dark' ? '☀️' : '🌙';
     </script>
+</head>
+<body>
+    <header class="main-header" style="display: flex; justify-content: space-between; align-items: center; padding: 20px;">
+        <div class="logo" onclick="window.location.href='{{ '/' | relative_url }}'">
+            APPUNTI DI <span>PROGRAMMAZIONE.</span>
+        </div>
+        <button onclick="toggleTheme()" class="theme-toggle">🌓</button>
+    </header>
+
+    {{ content }}
 </body>
 </html>
