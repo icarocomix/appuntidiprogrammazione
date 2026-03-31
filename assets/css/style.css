@@ -52,3 +52,31 @@
     color: inherit !important;
     font-family: 'Consolas', 'Monaco', monospace;
 }
+
+/* --- FIX TAG (Sempre visibili) --- */
+.tag-btn, .tag-label {
+    background-color: #ffde03 !important; /* Giallo Brutalista */
+    color: #000000 !important;           /* Testo Nero */
+    border: 2px solid #000 !important;
+    font-weight: 900;
+    text-transform: uppercase;
+    padding: 4px 10px;
+    box-shadow: 2px 2px 0px #000;
+}
+
+/* --- FIX CODICE (Sempre leggibile) --- */
+/* Lo sfondo deve essere scuro anche se il tema è light */
+.code-block, .language-java, .language-sql, pre {
+    background-color: #1e1e1e !important; 
+    color: #f8f8f2 !important;           /* Testo quasi bianco */
+    padding: 15px;
+    border: 3px solid #000;
+    box-shadow: 5px 5px 0px #000;
+    overflow-x: auto;
+    display: block;
+}
+
+/* Evitiamo che il tema scuro del sito renda il testo del codice nero */
+.code-block code, .code-block span {
+    color: inherit; 
+}

@@ -40,6 +40,21 @@ title: DevLog - Appunti di Programmazione
         </article>
         {% endfor %}
     </div>
+
+    <div class="posts-grid">
+      {% for post in site.posts %}
+        <article class="post-item article-card" data-tags="{{ post.tags | join: ',' | downcase }}">
+          <h2>{{ post.title }}</h2>
+          <div class="tags">
+            {% for tag in post.tags %}
+              <span class="tag-label">{{ tag }}</span>
+            {% endfor %}
+          </div>
+          <p>{{ post.sintesi }}</p>
+          <a href="{{ post.url | relative_url }}" class="read-more">Leggi tutto →</a>
+        </article>
+      {% endfor %}
+    </div>
 </div>
 
 <script>
@@ -67,11 +82,12 @@ title: DevLog - Appunti di Programmazione
      */
     // Nella logica di filtraggio dell'index
     function filterByTag(tag) {
+        // Cerchiamo .post-item (che abbiamo aggiunto sopra)
         const articles = document.querySelectorAll('.post-item');
         const cleanTag = tag.toLowerCase().trim();
 
         articles.forEach(article => {
-            const articleTags = article.getAttribute('data-tags').toLowerCase();
+            const articleTags = (article.getAttribute('data-tags') || "").toLowerCase();
             if (cleanTag === 'tutti' || articleTags.includes(cleanTag)) {
                 article.style.display = 'block';
             } else {

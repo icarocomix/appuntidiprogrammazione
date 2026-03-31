@@ -36,25 +36,23 @@
     {{ content }}
 
     <script>
+    function toggleTheme() {
+        const html = document.documentElement;
+        const btn = document.getElementById('theme-btn');
+        const current = html.getAttribute('data-theme');
+        const next = current === 'dark' ? 'light' : 'dark';
+        
+        html.setAttribute('data-theme', next);
+        btn.innerHTML = next === 'dark' ? '☀️' : '🌙';
+        localStorage.setItem('theme', next);
+    }
+    
     document.addEventListener('DOMContentLoaded', () => {
-        function toggleTheme() {
-            const html = document.documentElement;
-            const btn = document.getElementById('theme-btn');
-            const current = html.getAttribute('data-theme');
-            const next = current === 'dark' ? 'light' : 'dark';
-            
-            html.setAttribute('data-theme', next);
-            btn.innerHTML = next === 'dark' ? '☀️' : '🌙';
-            
-            // Salviamo la preferenza nel browser
-            localStorage.setItem('theme', next);
-        }
-
-        // Al caricamento, controlla se c'era una preferenza salvata
         const savedTheme = localStorage.getItem('theme');
         if (savedTheme) {
             document.documentElement.setAttribute('data-theme', savedTheme);
-            document.getElementById('theme-btn').innerHTML = savedTheme === 'dark' ? '☀️' : '🌙';
+            const btn = document.getElementById('theme-btn');
+            if(btn) btn.innerHTML = savedTheme === 'dark' ? '☀️' : '🌙';
         }
     });
     </script>
