@@ -32,9 +32,9 @@ TECH_CONFIG = {
 }
 
 SQUARE_SIZE = 1080 
-MAX_CHARS_WIDTH = 70 
-MAX_CODE_LINES_PER_SLIDE = 18 
-MAX_TOTAL_SLIDES = 10 
+MAX_CHARS_WIDTH = 55
+MAX_CODE_LINES_PER_SLIDE = 12
+MAX_TOTAL_SLIDES = 10
 
 def smart_wrap_code(code_text, width=70):
     code_text = str(code_text).replace("\\n", "\n")
@@ -79,46 +79,105 @@ def process_text_formatting(text):
     if in_list: processed_lines.append('</ul>')
     return "".join(processed_lines)
 
+def pre_format_cleanup(code):
+    # Rimuoviamo gli eccessi di spazi bianchi orizzontali ma manteniamo i newline
+    code = str(code).replace("\\n", "\n").strip()
+
+    # 1. ISOLAMENTO GRAFFE: Forza la graffa ad essere l'unico carattere della riga
+    # Gestisce casi come '}public' o '){return'
+    code = re.sub(r'\{', r'\n{\n', code)
+    code = re.sub(r'\}', r'\n}\n', code)
+
+    # 2. MODIFICATORI E PAROLE CHIAVE: A capo prima di iniziare un blocco
+    keywords = r'public|private|protected|class|interface|static|final|return|SELECT|FROM|WHERE|UPDATE|DELETE|INSERT'
+    code = re.sub(rf'\b({keywords})\b', r'\n\1', code, flags=re.IGNORECASE)
+
+    # 3. COMMENTI: Isolamento dai blocchi di codice
+    code = re.sub(r'/\*', r'\n/* ', code)
+    code = re.sub(r'\*/', r' */\n', code)
+    code = re.sub(r'(?<!:)\/\/', r'\n// ', code) # Evita di rompere gli URL http://
+
+    # 4. NORMALIZZAZIONE: Pulizia delle righe vuote create dai passaggi sopra
+    lines = []
+    for line in code.splitlines():
+        clean_line = line.strip()
+        if clean_line:
+            lines.append(clean_line)
+    
+    # Riuniamo tutto
+    code = "\n".join(lines)
+    
+    # 5. RESPIRO: Massimo un rigo vuoto (2 newline) per non sprecare spazio nelle slide
+    code = re.sub(r'\n{3,}', '\n\n', code)
+    
+    return code.strip()
+    
 def format_code(code_text, tech):
     actual_tech = "java" if tech=="thymeleaf" and any(re.search(p, str(code_text)) for p in [r"@Controller", r"package\s+"]) else tech
     cfg = TECH_CONFIG.get(actual_tech, TECH_CONFIG["default"])
+    
+    # Primo passo: Prettier (se fallisce usiamo il codice originale)
     code = str(code_text).replace("\\n", "\n").strip()
-    code = re.sub(r"```[a-zA-Z]*\n?", "", code).replace("```", "")
-    code = re.sub(r'(?<!\n)/\*', r'\n/*', code)
-    code = smart_wrap_code(code, width=MAX_CHARS_WIDTH)
-
-    if actual_tech == "db":
-        try:
-            cmd = ['npx', 'sql-formatter', '-l', 'postgresql', '--config', '{"keywordCase": "upper"}']
-            p = subprocess.Popen(cmd, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, text=True)
-            stdout, _ = p.communicate(input=code)
-            if p.returncode == 0: return smart_wrap_code(stdout.replace("/*", "\n/*").replace("*/", "*/\n"), MAX_CHARS_WIDTH)
-        except: pass
     try:
         cmd = ['npx', 'prettier', '--parser', cfg["parser"], '--tab-width', '4', '--print-width', str(MAX_CHARS_WIDTH)]
         for pl in cfg.get("plugins", []): cmd.extend(['--plugin', pl])
         p = subprocess.Popen(cmd, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, text=True)
         stdout, _ = p.communicate(input=code)
-        if p.returncode == 0: return smart_wrap_code(stdout, MAX_CHARS_WIDTH)
-    except: pass
+        if p.returncode == 0: 
+            code = stdout
+    except: 
+        pass
+
+    # Secondo passo: SQL Formatter (se tech è db)
+    if actual_tech == "db":
+        try:
+            cmd = ['npx', 'sql-formatter', '-l', 'postgresql', '--config', '{"keywordCase": "upper"}']
+            p = subprocess.Popen(cmd, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, text=True)
+            stdout, _ = p.communicate(input=code)
+            if p.returncode == 0: code = stdout
+        except: pass
+
+    # Terzo passo: LA TUA PULIZIA (deve essere l'ultima parola)
+    code = pre_format_cleanup(code)
+    
+    # Quarto passo: Smart Wrap per i commenti lunghi
+    code = smart_wrap_code(code, width=MAX_CHARS_WIDTH)
+    
     return code
 
 def get_css(color, is_insta=False):
     w, h = (SQUARE_SIZE, SQUARE_SIZE) if is_insta else (1920, 1080)
+    
+    # Solo per Insta aumentiamo leggermente il corpo del testo e i margini di sicurezza
+    fs_body = "28px" if is_insta else "22px"
+    fs_code = "21px" if is_insta else "19px" # Incremento minimo per non rompere il layout
+    padding_slide = "90px" if is_insta else "70px" # Più spazio dai bordi UI di Instagram
+
     return f"""
     @import url('https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500&family=Montserrat:wght@700;900&family=Poppins:wght@300;400;600&display=swap');
     :root {{ --tech-accent: {color}; --neon-green: #4AF626; }}
     body {{ margin: 0; background: #000; color: white; font-family: 'Poppins', sans-serif; }}
-    .slide {{ width: {w}px; height: {h}px; padding: 70px; box-sizing: border-box; display: flex; flex-direction: column; position: relative; background: #0a0a0a; }}
+    
+    .slide {{ width: {w}px; height: {h}px; padding: {padding_slide}; box-sizing: border-box; display: flex; flex-direction: column; position: relative; background: #0a0a0a; }}
+    
+    /* 1. RIPRISTINO COVER (Stile Originale) */
     .cover-slide {{ justify-content: center; text-align: center; border: 20px solid var(--tech-accent); }}
     .cover-badge {{ background: var(--tech-accent); color: #000; font-family: 'Montserrat'; font-weight: 900; font-size: 28px; padding: 12px 30px; display: inline-block; margin-bottom: 25px; }}
     .cover-title {{ font-family: 'Montserrat'; font-weight: 900; font-size: 65px; line-height: 1.1; margin: 0; text-transform: uppercase; }}
+    
+    /* 2. ANALISI TECNICA (Ottimizzata per leggibilità) */
     .header {{ border-left: 12px solid var(--tech-accent); padding-left: 25px; margin-bottom: 30px; }}
     .section-label {{ font-family: 'Montserrat'; font-weight: 700; color: var(--tech-accent); text-transform: uppercase; font-size: 20px; margin-bottom: 10px; display: block; }}
+    .section-content {{ font-size: {fs_body}; line-height: 1.6; }} /* Testo più leggibile su smartphone */
+    .section-content li {{ margin-bottom: 12px; }}
+
+    /* 3. CODICE (Quasi originale, solo leggermente più definito) */
     .code-container {{ background: #121212; padding: 35px; border-radius: 6px; border: 1px solid #222; flex-grow: 1; }}
-    pre {{ font-family: 'Fira Code', monospace; font-size: 19px; color: #E0E0E0; line-height: 1.5; margin: 0; white-space: pre-wrap; }}
+    pre {{ font-family: 'Fira Code', monospace; font-size: {fs_code}; color: #E0E0E0; line-height: 1.5; margin: 0; white-space: pre-wrap; }}
+    
     .footer-page {{ position: absolute; bottom: 30px; right: 60px; font-size: 18px; color: #333; font-weight: 900; }}
     
+    /* 4. RIPRISTINO CONSOLE DEBUG (Stile Originale) */
     .cta-debug {{ justify-content: center; font-family: 'Fira Code', monospace; padding: 100px; background: #0a0a0a; }}
     .console-title {{ font-family: 'Montserrat'; font-weight: 900; font-size: 45px; color: white; margin-bottom: 60px; text-transform: uppercase; text-align: center; letter-spacing: 2px; }}
     .console-line {{ font-size: 32px; margin-bottom: 25px; line-height: 1.4; }}
@@ -180,7 +239,10 @@ async def run_gen(selected_techs, output_format):
                     for c_idx, chunk in enumerate(chunks):
                         if (c_idx + 3) >= MAX_TOTAL_SLIDES:
                             truncated = True; break
-                        slides.append(f'<div class="slide"><div class="header"><span class="section-label">Codice Part {c_idx+1}</span></div><div class="code-container"><pre><code>{html.escape("\\n".join(chunk))}</code></pre></div><div class="footer-page">{c_idx+3}/{len(chunks)+2}</div></div>')
+                            # Uso "\n" (singolo) per unire le righe, così html.escape preserva i newline reali
+                        code_content = html.escape("\n".join(chunk))
+                        slides.append(f'<div class="slide"><div class="header"><span class="section-label">Codice Part {c_idx+1}</span></div><div class="code-container"><pre><code>{code_content}</code></pre></div><div class="footer-page">{c_idx+3}/{len(chunks)+2}</div></div>')
+                        # slides.append(f'<div class="slide"><div class="header"><span class="section-label">Codice Part {c_idx+1}</span></div><div class="code-container"><pre><code>{html.escape("\\n".join(chunk))}</code></pre></div><div class="footer-page">{c_idx+3}/{len(chunks)+2}</div></div>')
 
                     # 4. CTA DEBUG CONSOLE
                     final_msg = "scopri_di_più()" if truncated else "salva_post_ora()"

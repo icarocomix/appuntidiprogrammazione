@@ -22,24 +22,37 @@ TECH_CONFIG = {
 }
 
 def pre_format_cleanup(code):
-    """Applica le regole di spaziatura manuale richieste prima del formatting"""
-    # 1. Ogni // deve essere preceduto da un ritorno a capo (se non è già all'inizio)
+    """
+    Svolgo una pulizia manuale preventiva del codice estratto da Excel.
+    L'obiettivo è 'far respirare' i blocchi critici (graffe e commenti) 
+    prima di darli in pasto al formatter automatico, evitando l'effetto muro di testo.
+    """
+
+    # Voglio che ogni commento a riga singola inizi su una nuova riga.
+    # Cerco '//' e, se non è già preceduto da un ritorno a capo, ne aggiungo uno.
     code = re.sub(r'(?<!\n)//', r'\n//', code)
     
-    # 2. Ogni /* deve essere preceduto da un ritorno a capo
+    # Stessa logica per l'apertura dei commenti multi-riga.
+    # Mi assicuro che '/*' non resti attaccato al codice precedente.
     code = re.sub(r'(?<!\n)/\*', r'\n/*', code)
     
-    # 3. Ogni */ deve aggiungere un ritorno a capo dopo
+    # Per la chiusura del commento '*/', voglio l'effetto opposto:
+    # deve esserci un ritorno a capo subito dopo, così il codice seguente scende sotto.
     code = re.sub(r'\*/(?!\n)', r'*/\n', code)
     
-    # 4. Ogni { deve essere preceduto da un ritorno a capo
+    # Le parentesi graffe sono il cuore della struttura.
+    # Spingo ogni apertura '{' a riga nuova se è compressa sulla riga precedente.
     code = re.sub(r'(?<!\n)\{', r'\n{', code)
     
-    # 5. Ogni } deve aggiungere un ritorno a capo dopo
+    # Dopo la chiusura '}', forzo un a capo. 
+    # Questo aiuta a separare nettamente i blocchi di logica o i metodi.
     code = re.sub(r'\}(?!\n)', r'}\n', code)
     
-    # Pulizia extra: rimuove eventuali righe bianche triple create dalle sostituzioni
+    # Dopo tutte queste sostituzioni, potrebbero essersi creati troppi spazi vuoti.
+    # Riduco ogni sequenza di 3 o più ritorni a capo in un doppio a capo pulito.
     code = re.sub(r'\n{3,}', '\n\n', code)
+    
+    # Restituisco il codice rifilato dagli spazi bianchi inutili agli estremi.
     return code.strip()
 
 def smart_wrap_code(code_text, width=80):
