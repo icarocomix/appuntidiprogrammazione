@@ -1,28 +1,49 @@
+/* --- VARIABILI E BASE --- */
 :root {
-    --bg: #03040a; --card: #0c0e14; --border: rgba(255, 255, 255, 0.08);
-    --text: #f0f0f0; --sub-text: #94a3b8; --accent: #7c4dff;
+    --bg: #03040a; 
+    --card: #0c0e14; 
+    --border: rgba(255, 255, 255, 0.08);
+    --text: #f0f0f0; 
+    --sub-text: #94a3b8; 
+    --accent: #7c4dff;
 }
 
 [data-theme="light"] {
-    --bg: #f5f5f7; --card: #ffffff; --border: rgba(0, 0, 0, 0.05);
-    --text: #1d1d1f; --sub-text: #86868b; --accent: #0066cc;
+    --bg: #f5f5f7; 
+    --card: #ffffff; 
+    --border: rgba(0, 0, 0, 0.05);
+    --text: #1d1d1f; 
+    --sub-text: #86868b; 
+    --accent: #0066cc;
 }
 
 * { box-sizing: border-box; }
-body { background: var(--bg); color: var(--text); font-family: 'Inter', sans-serif; margin: 0; transition: background 0.3s; }
-.container { max-width: 1100px; margin: 0 auto; padding: 20px; }
+body { 
+    background: var(--bg); 
+    color: var(--text); 
+    font-family: 'Inter', sans-serif; 
+    margin: 0; 
+    transition: background 0.3s; 
+}
 
+.container { max-width: 1200px; margin: 0 auto; padding: 20px; }
+
+/* --- HEADER E NAVIGAZIONE (Home) --- */
 .main-header { display: flex; justify-content: space-between; align-items: center; padding: 40px 0; }
-.logo { font-size: 1.5rem; font-weight: 800; cursor: pointer; }
+.logo { font-size: 1.5rem; font-weight: 800; cursor: pointer; text-transform: uppercase; }
 .logo span { color: var(--accent); }
 
-.tag-nav { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 25px; }
-.tag-btn { 
-    background: var(--card); border: 1px solid var(--border); color: var(--sub-text);
-    padding: 8px 16px; border-radius: 10px; cursor: pointer; font-weight: 600; font-size: 0.75rem;
+.theme-toggle { 
+    background: var(--card); 
+    border: 1px solid var(--border); 
+    border-radius: 10px; 
+    cursor: pointer; 
+    padding: 10px; 
+    font-size: 1.2rem; 
+    color: var(--text);
 }
-.tag-btn.active { background: var(--accent); color: white; border-color: var(--accent); }
 
+/* --- RICERCA E GRIGLIA ARTICOLI --- */
 #searchInput {
     width: 100%; padding: 15px 20px; border-radius: 15px; border: 1px solid var(--border);
     background: var(--card); color: var(--text); margin-bottom: 40px; outline: none;
@@ -37,76 +58,129 @@ body { background: var(--bg); color: var(--text); font-family: 'Inter', sans-ser
 .article-title a { color: var(--text); text-decoration: none; font-size: 1.3rem; font-weight: 700; line-height: 1.2; }
 .sintesi { color: var(--sub-text); font-size: 0.9rem; margin: 15px 0; line-height: 1.5; }
 
-.theme-toggle { background: var(--card); border: 1px solid var(--border); border-radius: 10px; cursor: pointer; padding: 10px; font-size: 1.2rem; }
-
-/* Contenitore principale */
+/* --- NUOVO LAYOUT POST (Due Colonne) --- */
 .post-container {
     display: flex;
     gap: 40px;
     max-width: 1200px;
     margin: 0 auto;
     padding: 20px;
+    align-items: flex-start;
 }
 
-/* Sidebar a sinistra */
+/* Sidebar a sinistra: occupa metà altezza viewport per sezione */
 .post-sidebar {
-    width: 250px;
+    width: 280px;
     flex-shrink: 0;
     display: flex;
     flex-direction: column;
-    height: fit-content;
-    position: sticky; /* Resta visibile mentre scorri il post */
-    top: 20px;
+    gap: 20px;
+    position: sticky;
+    top: 40px;
+    height: calc(100vh - 80px); /* Altezza dinamica rispetto allo schermo */
 }
 
-/* Stile comune per le sezioni della sidebar */
 .sidebar-section {
-    padding: 15px;
-    background: #1a1a1a; /* Leggermente più chiaro dello sfondo nero */
-    border-left: 4px solid var(--tech-accent);
-    margin-bottom: 20px;
-    border-radius: 4px;
+    background: var(--card);
+    border: 1px solid var(--border);
+    padding: 25px;
+    border-radius: 20px;
+    display: flex;
+    flex-direction: column;
+    flex: 1; /* Forza le sezioni a dividersi lo spazio 50/50 */
+    overflow-y: auto;
 }
 
-/* Sezione Libri - Copertine */
+.sidebar-section h3 {
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    color: var(--sub-text);
+    margin-top: 0;
+    margin-bottom: 20px;
+}
+
+/* Lista Tag in Sidebar (Stile bottoni bento) */
+.tag-list-sidebar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.sidebar-tag {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 6px 12px;
+    border-radius: 8px;
+    font-size: 0.7rem;
+    font-weight: 600;
+    text-decoration: none;
+    transition: 0.2s;
+}
+
+.sidebar-tag:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+}
+
+/* Sezione Libri */
 .book-item {
-    margin-top: 15px;
     text-align: center;
+    margin: auto 0; /* Centra il libro verticalmente nel suo spazio */
 }
 
 .book-item img {
     width: 100%;
-    max-width: 150px;
-    height: auto;
-    border-radius: 4px;
-    box-shadow: 0 4px 8px rgba(0,0,0,0.5);
-    transition: transform 0.3s;
+    max-width: 160px;
+    border-radius: 12px;
+    box-shadow: 0 10px 20px rgba(0,0,0,0.4);
+    transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    border: 1px solid var(--border);
 }
 
 .book-item img:hover {
-    transform: scale(1.05);
+    transform: scale(1.08) rotate(2deg);
+    border-color: var(--accent);
 }
 
 .book-item span {
     display: block;
-    font-size: 14px;
-    margin-top: 8px;
-    color: #ccc;
+    font-size: 0.85rem;
+    font-weight: 500;
+    margin-top: 15px;
+    color: var(--text);
+    line-height: 1.4;
 }
 
-/* Contenuto del post */
+/* Contenuto del post (Colonna destra) */
 .post-content {
     flex-grow: 1;
-    min-width: 0; /* Previene overflow del codice */
+    min-width: 0;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 24px;
+    padding: 40px;
 }
 
-/* Responsive: su mobile mettiamo tutto in colonna */
-@media (max-width: 768px) {
+/* --- RESPONSIVE --- */
+@media (max-width: 1000px) {
     .post-container {
         flex-direction: column;
     }
     .post-sidebar {
         width: 100%;
+        height: auto;
         position: static;
+        flex-direction: row; /* Su tablet i due box vanno uno accanto all'altro */
+    }
+}
+
+@media (max-width: 600px) {
+    .post-sidebar {
+        flex-direction: column; /* Su smartphone tornano in colonna */
+    }
+    .post-content {
+        padding: 20px;
     }
 }

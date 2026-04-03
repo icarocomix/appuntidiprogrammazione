@@ -1,28 +1,44 @@
-<div class="post-container">
+<div class="post-layout-wrapper">
+  
   <aside class="post-sidebar">
     
-    <div class="sidebar-section tags-section">
-      <h3>Argomenti</h3>
-      <ul class="tag-list">
+    <div class="sidebar-box tags-box">
+      <span class="box-label">Argomenti</span>
+      <div class="tag-cloud-sidebar">
         {% for tag in page.tags %}
-          <li><a href="/tags#{{ tag | slugify }}">{{ tag }}</a></li>
+          <a href="/tags#{{ tag | slugify }}" class="sidebar-tag">{{ tag }}</a>
         {% endfor %}
-      </ul>
+      </div>
     </div>
 
-    <div class="sidebar-section books-section">
-      <h3>Letture Consigliate</h3>
-      <div class="book-item">
-        <a href="URL_AMAZON" target="_blank">
-          <img src="/assets/img/books/java-clean-code.jpg" alt="Clean Code">
-          <span>Clean Code (Robert Martin)</span>
-        </a>
+    <div class="sidebar-box books-box">
+      <span class="box-label">Letture Consigliate</span>
+      <div class="book-card">
+        {% if page.tech == "java" %}
+          <a href="https://amzn.to/example-java" target="_blank">
+            <img src="/assets/img/books/clean-code.jpg" alt="Clean Code">
+            <p>Clean Code: A Handbook of Agile Software Craftsmanship</p>
+          </a>
+        {% elif page.tech == "js" %}
+          <a href="https://amzn.to/example-js" target="_blank">
+            <img src="/assets/img/books/eloquent-js.jpg" alt="Eloquent JS">
+            <p>Eloquent JavaScript: A Modern Introduction</p>
+          </a>
+        {% else %}
+          <a href="https://amzn.to/example-generic" target="_blank">
+            <img src="/assets/img/books/pragmatic-programmer.jpg" alt="Pragmatic Programmer">
+            <p>The Pragmatic Programmer</p>
+          </a>
+        {% endif %}
       </div>
-      </div>
-
+    </div>
+    
   </aside>
 
-  <article class="post-content">
-    {{ content }}
-  </article>
+  <main class="post-main">
+    <article class="post-article-body">
+      {{ content }}
+    </article>
+  </main>
+
 </div>
