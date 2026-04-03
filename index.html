@@ -3,46 +3,73 @@ layout: default
 title: Home
 ---
 
-<div class="container">
-    <nav class="tag-nav" id="dynamic-tags">
-        <button class="tag-btn active" onclick="filterByTag('tutti', this)">Tutti</button>
-        </nav>
+<div class="main-layout-container">
+    <main class="content-area">
+        <section class="search-section">
+            <input type="text" id="search-bar" placeholder="Cerca negli appunti..." onkeyup="applyFilters()">
+        </section>
 
-    <section class="search-section">
-        <input type="text" id="search-bar" placeholder="Cerca negli appunti..." onkeyup="applyFilters()">
-    </section>
-
-    <main class="post-grid" id="post-grid">
-        {% for post in site.articoli %}
-        <article class="post-item" 
-                 data-tags="{{ post.tags | join: ',' | slugify }}" 
-                 data-title="{{ post.title | downcase }}">
-            <div class="post-meta">{{ post.tech | upcase }} • {{ post.date | date: "%d/%m/%Y" }}</div>
-            <h2 class="post-title">
-                <a href="{{ post.url | relative_url }}">{{ post.title }}</a>
-            </h2>
-            <p class="post-sintesi">{{ post.sintesi }}</p>
-        </article>
-        {% endfor %}
+        <div class="post-grid" id="post-grid">
+            {% for post in site.articoli %}
+            <article class="post-item" 
+                     data-tags="{{ post.tags | join: ',' | slugify }}" 
+                     data-title="{{ post.title | downcase }}">
+                <div class="post-meta">{{ post.tech | upcase }} • {{ post.date | date: "%d/%m/%Y" }}</div>
+                <h2 class="post-title">
+                    <a href="{{ post.url | relative_url }}">{{ post.title }}</a>
+                </h2>
+                <p class="post-sintesi">{{ post.sintesi }}</p>
+            </article>
+            {% endfor %}
+        </div>
     </main>
+
+    <aside class="main-sidebar">
+        <div class="sidebar-box">
+            <span class="box-label">Argomenti Caldi</span>
+            <nav class="tag-nav-vertical" id="dynamic-tags">
+                <button class="tag-btn active" onclick="filterByTag('tutti', this)">TUTTI</button>
+                </nav>
+        </div>
+
+        <div class="sidebar-box">
+            <span class="box-label">Letture Fondamentali</span>
+            <div class="featured-books">
+                <a href="#" class="mini-book-card">
+                    <img src="/assets/img/books/clean-code.jpg" alt="Clean Code">
+                    <div>
+                        <strong>Clean Code</strong>
+                        <p>Il pilastro per ogni dev Java/Spring.</p>
+                    </div>
+                </a>
+                <a href="#" class="mini-book-card">
+                    <img src="/assets/img/books/ddd.jpg" alt="DDD">
+                    <div>
+                        <strong>Domain-Driven Design</strong>
+                        <p>Gestire la complessità nel software.</p>
+                    </div>
+                </a>
+            </div>
+        </div>
+    </aside>
 </div>
 
 <script>
-    // 1. Generazione dinamica dei tag all'avvio (lato client)
+    // Logica JS per estrarre i tag e filtrare (stessa di prima, ma punta alla sidebar)
     document.addEventListener('DOMContentLoaded', () => {
         const articles = document.querySelectorAll('.post-item');
         const tagContainer = document.getElementById('dynamic-tags');
         const allTags = new Set();
 
         articles.forEach(article => {
-            const tags = article.getAttribute('data-tags').split('-'); // slugify usa '-'
-            tags.forEach(t => { if(t) allTags.add(t) });
+            const tags = article.getAttribute('data-tags').split(',');
+            tags.forEach(t => { if(t) allTags.add(t.trim()) });
         });
 
         allTags.forEach(tag => {
             const btn = document.createElement('button');
             btn.className = 'tag-btn';
-            btn.innerText = tag.toUpperCase();
+            btn.innerText = tag.replace(/-/g, ' ').toUpperCase();
             btn.onclick = (e) => filterByTag(tag, e.target);
             tagContainer.appendChild(btn);
         });
