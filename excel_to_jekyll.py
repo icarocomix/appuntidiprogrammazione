@@ -8,6 +8,7 @@ from pathlib import Path
 # --- CONFIGURAZIONE ---
 INPUT_DIR = "excel_input"
 OUTPUT_DIR = "_articoli"
+CALENDARIO_CSV = "generazione_slide/calendario_instagram.csv"
 MAX_CHARS_WIDTH = 80 
 
 TECH_CONFIG = {
@@ -21,6 +22,22 @@ TECH_CONFIG = {
     "default": {"parser": "babel", "plugin": ""}
 }
 
+def load_calendar():
+    """Carica il calendario e crea un dizionario { 'Tech: Titolo': 'Data' }"""
+    calendar_dict = {}
+    if os.path.exists(CALENDARIO_CSV):
+        # Assumiamo CSV con separatore virgola o punto e virgola
+        df_cal = pd.read_csv(CALENDARIO_CSV)
+        # Pulizia nomi colonne per sicurezza
+        df_cal.columns = [c.strip() for c in df_cal.columns]
+        
+        for _, row in df_cal.iterrows():
+            # Colonna 0: Data, Colonna 2: Identificativo (Tech: Titolo)
+            data_pub = str(row.iloc[0]).strip()
+            chiave = str(row.iloc[2]).strip()
+            calendar_dict[chiave] = data_pub
+    return calendar_dict
+
 def pre_format_cleanup(code):
     """Pulizia preventiva per far respirare i blocchi di codice."""
     code = re.sub(r'(?<!\n)//', r'\n//', code)
@@ -32,18 +49,16 @@ def pre_format_cleanup(code):
     return code.strip()
 
 def smart_wrap_code(code_text, width=80):
-    """Spezza le righe lunghe mantenendo indentazione."""
     lines = code_text.splitlines()
     wrapped_lines = []
     for line in lines:
         if len(line) > width:
             indent = re.match(r"^\s*", line).group(0)
-            # Corretto il SyntaxWarning con raw string 'r'
             if line.strip().startswith('//') or line.strip().startswith('*') or line.strip().startswith('/*'):
                 content = line.lstrip(r'/\* ').lstrip('* ')
                 prefix = indent + ("// " if "//" in line else "* ")
                 sub_wrapped = textwrap.wrap(content, width=width-len(prefix), break_long_words=False)
-                for i, w_line in enumerate(sub_wrapped):
+                for w_line in sub_wrapped:
                     wrapped_lines.append(prefix + w_line)
             else:
                 wrapped_lines.extend(textwrap.wrap(line, width=width, break_long_words=False, replace_whitespace=False))
@@ -52,7 +67,6 @@ def smart_wrap_code(code_text, width=80):
     return "\n".join(wrapped_lines)
 
 def format_code_pro(code_text, tech):
-    """Pipeline di formattazione codice."""
     code = str(code_text).replace("\\n", "\n").replace("\r", "").strip()
     code = re.sub(r"```[a-zA-Z]*\n?", "", code).replace("```", "")
     code = pre_format_cleanup(code)
@@ -62,19 +76,15 @@ def format_code_pro(code_text, tech):
         actual_tech = "java"
     
     cfg = TECH_CONFIG.get(actual_tech, TECH_CONFIG["default"])
-
     try:
         cmd = ['npx', 'prettier', '--parser', cfg["parser"], '--tab-width', '4', '--print-width', str(MAX_CHARS_WIDTH)]
         if cfg["plugin"]: cmd.extend(['--plugin', cfg["plugin"]])
-
         process = subprocess.Popen(cmd, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, text=True, encoding='utf-8')
         stdout, _ = process.communicate(input=code)
-        
         if process.returncode == 0 and stdout.strip():
             return smart_wrap_code(stdout, width=MAX_CHARS_WIDTH)
     except:
         pass
-    
     return smart_wrap_code(code, width=MAX_CHARS_WIDTH)
 
 def sanitize_filename(text):
@@ -87,10 +97,14 @@ def process_excels():
     out_path = Path(OUTPUT_DIR)
     if not input_path.exists(): return
 
+    # Carichiamo il calendario Instagram
+    calendario = load_calendar()
+
     out_path.mkdir(parents=True, exist_ok=True)
     for old_file in out_path.glob("*.md"): old_file.unlink()
 
     for file in input_path.glob("*.xlsx"):
+        tech_prefix = file.stem.capitalize() # Es: "Db" o "Java"
         tech_name = file.stem.lower()
         print(f"🚀 Processing: {tech_name.upper()}")
         
@@ -101,32 +115,35 @@ def process_excels():
                 df.columns = [str(c).strip().upper() for c in df.columns]
                 
                 for idx, row in df.iterrows():
-                    # --- PULIZIA TITOLO ---
-                    titolo = str(row.get('TITOLO', f'Topic-{idx}')).replace('"', '').replace("'", "")
-                    # Rimuoviamo caratteri non-ASCII solo per sicurezza, ma manteniamo la leggibilità
-                    titolo_clean = titolo.encode('ascii', 'ignore').decode('ascii')
+                    # --- RECUPERO TITOLO E DATA DAL CALENDARIO ---
+                    titolo_originale = str(row.get('TITOLO', f'Topic-{idx}'))
+                    titolo_clean = titolo_originale.replace('"', '').replace("'", "").encode('ascii', 'ignore').decode('ascii')
                     
-                    filename = f"{pd.Timestamp.now().strftime('%Y-%m-%d')}-{sanitize_filename(titolo_clean)}.md"
+                    # Costruiamo la chiave per il CSV (es: "Db: Hot Standby Feedback")
+                    chiave_ricerca = f"{tech_prefix}: {titolo_originale}"
                     
-                    # --- PULIZIA SINTESI (USO LITERAL BLOCK PER SICUREZZA) ---
+                    # Cerchiamo la data nel calendario. Se non esiste, usiamo oggi.
+                    data_pub = calendario.get(chiave_ricerca, pd.Timestamp.now().strftime('%Y-%m-%d'))
+                    
+                    # Prepariamo il nome file con la data del calendario
+                    filename = f"{data_pub}-{sanitize_filename(titolo_clean)}.md"
+                    
+                    # --- PULIZIA SINTESI ---
                     sintesi = str(row.get('SINTESI DEL PROBLEMA', '')).replace("\\n", " ").replace("\n", " ")
-                    # Sostituiamo caratteri problematici per YAML
                     sintesi = sintesi.replace('"', "'").strip()[:250]
 
                     code_cols = [col for col in df.columns if 'ESEMPIO' in col and pd.notna(row[col])]
                     raw_code = "\n".join([str(row[col]) for col in code_cols])
                     
                     formatted_code = format_code_pro(raw_code, tech_name)
-                    
-                    # Determiniamo il linguaggio per il blocco Markdown (db -> sql)
                     code_lang = "sql" if tech_name == "db" else tech_name
 
                     with open(out_path / filename, "w", encoding="utf-8") as f:
                         f.write("---\n")
                         f.write(f"layout: post\n")
                         f.write(f"title: \"{titolo_clean}\"\n")
-                        f.write(f"date: {pd.Timestamp.now().strftime('%Y-%m-%d %H:%M:%S')}\n")
-                        # Usiamo '>' per permettere sintesi multi-riga o con caratteri speciali
+                        # Usiamo la data del calendario (formato YYYY-MM-DD)
+                        f.write(f"date: {data_pub} 12:00:00\n")
                         f.write(f"sintesi: >\n  {sintesi}\n")
                         f.write(f"tech: \"{tech_name}\"\n")
                         f.write(f"tags: [\"{tech_name}\", \"{sheet_name.lower().strip()}\"]\n")
@@ -136,14 +153,13 @@ def process_excels():
                         for section in ['ESIGENZA REALE', 'ANALISI TECNICA']:
                             content = str(row.get(section, '')).replace("\\n", "\n")
                             if content and content != 'nan':
-                                # Escaping per tag Liquid che mandano in crash Jekyll
                                 content = content.replace("{{", "{ {").replace("}}", "} }")
                                 f.write(f"## {section.title()}\n{content}\n\n")
                         
                         if formatted_code:
                             f.write(f"## Esempio Implementativo\n\n```{code_lang}\n{formatted_code}\n```\n")
                     
-                    print(f"  ✅ {filename}")
+                    print(f"  ✅ {filename} (Data: {data_pub})")
         except Exception as e:
             print(f"  ❌ Error in {file.name}: {e}")
 

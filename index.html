@@ -4,23 +4,27 @@ title: Home
 ---
 
 <!--
-    Homepage: layout a due colonne gestito dal CSS (.main-layout-container).
-    - Sinistra (.content-area): barra ricerca + griglia articoli
-    - Destra (.main-sidebar): 
-        box 1 — tag filtrabili (scrollabile, max 50vh)
-        box 2 — libro consigliato
-    
-    I tag sono popolati dinamicamente da JS al DOMContentLoaded:
-    li estrae dagli attributi data-tags di ogni .post-item.
+    Homepage: layout a due colonne.
+
+    LOGICA DI PUBBLICAZIONE A DATA:
+    - Livello 1 (Liquid/Jekyll): il filtro `post.date <= site.time`
+      esclude dal build gli articoli futuri. Funziona perché il
+      workflow GitHub Actions riesegue il build ogni giorno, quindi
+      site.time avanza e nuovi articoli diventano visibili.
+
+    - Livello 2 (JS client-side): ogni .post-item ha un attributo
+      data-date con la data ISO dell'articolo. Il JS nasconde gli
+      articoli la cui data supera oggi — è un safety net per il caso
+      in cui il sito venisse servito da una cache aggiornata prima
+      del build notturno.
+
+    I due livelli si completano: Liquid è la fonte di verità,
+    JS è la protezione client in caso di cache stale.
 -->
 <div class="main-layout-container">
 
-    <!-- ========================
-         COLONNA SINISTRA
-         ======================== -->
     <main class="content-area">
 
-        <!-- Barra di ricerca: filtra per titolo in tempo reale -->
         <section class="search-section">
             <input
                 type="search"
@@ -32,45 +36,50 @@ title: Home
             >
         </section>
 
-        <!-- Griglia articoli: ordinati per data decrescente (Jekyll lo fa in automatico) -->
         <div class="post-grid" id="post-grid">
-            {% assign articoli_ordinati = site.articoli | sort: 'date' | reverse %}
-            {% for post in articoli_ordinati %}
-            <article
-                class="post-item"
-                data-tags="{{ post.tags | join: ',' | slugify }}"
-                data-title="{{ post.title | downcase }}"
-            >
-                <!-- Metadati: tecnologia + data -->
-                <div class="post-meta">
-                    {{ post.tech | upcase }} &nbsp;·&nbsp; {{ post.date | date: "%d/%m/%Y" }}
-                </div>
 
-                <!-- Titolo cliccabile -->
-                <h2 class="post-title">
-                    <a href="{{ post.url | relative_url }}">{{ post.title }}</a>
-                </h2>
+            <!--
+                FILTRO LIQUID A DUE STADI:
+                1. sort: 'date' | reverse  → ordine cronologico decrescente
+                2. controllo post.date <= site.time → escludo articoli futuri
 
-                <!-- Sintesi breve -->
-                <p class="post-sintesi">{{ post.sintesi }}</p>
-            </article>
+                Nota: in Liquid le date si confrontano come oggetti Time,
+                quindi il confronto <= funziona correttamente anche con
+                articoli pubblicati lo stesso giorno del build.
+                Il _config.yml deve avere future: false (o assente):
+                con future: true Jekyll builda comunque i post futuri
+                e il filtro Liquid qui sotto diventa l'unica barriera.
+            -->
+            {% assign articoli_per_data = site.articoli | sort: 'date' | reverse %}
+            {% for post in articoli_per_data %}
+                {% if post.date <= site.time %}
+                <article
+                    class="post-item"
+                    data-tags="{{ post.tags | join: ',' | slugify }}"
+                    data-title="{{ post.title | downcase }}"
+                    data-date="{{ post.date | date: '%Y-%m-%d' }}"
+                >
+                    <div class="post-meta">
+                        {{ post.tech | upcase }} &nbsp;·&nbsp; {{ post.date | date: "%d/%m/%Y" }}
+                    </div>
+
+                    <h2 class="post-title">
+                        <a href="{{ post.url | relative_url }}">{{ post.title }}</a>
+                    </h2>
+
+                    <p class="post-sintesi">{{ post.sintesi }}</p>
+                </article>
+                {% endif %}
             {% endfor %}
+
         </div>
 
     </main>
 
-    <!-- ========================
-         COLONNA DESTRA — SIDEBAR
-         ======================== -->
     <aside class="main-sidebar">
 
-        <!-- BOX 1: Tag filtrabili — scrollabile, altezza max 50vh via CSS -->
         <div class="sidebar-box">
             <span class="box-label">Argomenti Caldi</span>
-            <!--
-                Il nav viene popolato da JS dopo il DOMContentLoaded.
-                Parto con il solo bottone "TUTTI" come stato iniziale attivo.
-            -->
             <nav class="tag-nav-vertical" id="dynamic-tags" aria-label="Filtra per argomento">
                 <button
                     class="tag-btn active"
@@ -82,7 +91,6 @@ title: Home
             </nav>
         </div>
 
-        <!-- BOX 2: Libri consigliati -->
         <div class="sidebar-box">
             <span class="box-label">Letture Fondamentali</span>
             <div class="featured-books">
@@ -109,39 +117,79 @@ title: Home
 
 <script>
     /*
-     * Stato del filtro attivo: parto con 'tutti' per mostrare
-     * tutti gli articoli senza alcun filtro di tag.
+     * LIVELLO 2 — Safety net client-side.
+     *
+     * Anche se Liquid ha già filtrato gli articoli futuri lato server,
+     * un CDN o browser cache potrebbe servire una versione del sito
+     * buildato giorni fa. Confronto la data ISO dell'articolo
+     * (data-date="YYYY-MM-DD") con la data locale del browser.
+     *
+     * Il confronto lessicografico su stringhe ISO funziona correttamente
+     * perché il formato YYYY-MM-DD è a lunghezza fissa e ordinato
+     * dal campo più significativo (anno) al meno (giorno).
      */
-    let activeTag = 'tutti';
+
+    function getTodayISO() {
+        const now = new Date();
+        const y   = now.getFullYear();
+        const m   = String(now.getMonth() + 1).padStart(2, '0');
+        const d   = String(now.getDate()).padStart(2, '0');
+        return `${y}-${m}-${d}`;
+    }
 
     /*
-     * Al caricamento della pagina estraggo tutti i tag unici
-     * dagli attributi data-tags dei .post-item e popolo il nav.
-     * 
-     * Uso un Set per deduplicare automaticamente i tag duplicati
-     * tra più articoli. L'ordinamento alfabetico aiuta la navigazione.
+     * Eseguo il nascondimento IIFE sincrono: lo script è in fondo
+     * al body, quindi gli articoli sono già nel DOM e posso
+     * operare su di essi senza attendere DOMContentLoaded.
      */
-    document.addEventListener('DOMContentLoaded', () => {
-        const articles  = document.querySelectorAll('.post-item');
+    (function hideArticoliFuturi() {
+        const oggi     = getTodayISO();
+        const articoli = document.querySelectorAll('.post-item[data-date]');
+
+        articoli.forEach(function(article) {
+            const dataArticolo = article.getAttribute('data-date');
+            if (dataArticolo > oggi) {
+                /*
+                 * hidden è più corretto di display:none per semantica:
+                 * l'elemento è trattato come inesistente dagli screen reader
+                 * e non viene conteggiato nel :not([hidden]) usato sotto.
+                 */
+                article.hidden = true;
+            }
+        });
+    })();
+
+    /* ------------------------------------------------
+       Logica filtri: tag + ricerca testuale.
+       Tutto opera su :not([hidden]) per ignorare
+       automaticamente gli articoli futuri nascosti sopra.
+       ------------------------------------------------ */
+
+    let activeTag = 'tutti';
+
+    document.addEventListener('DOMContentLoaded', function() {
+        /*
+         * Popolo i tag dai soli articoli visibili: non voglio mostrare
+         * tag di articoli che l'utente non può ancora leggere.
+         */
+        const articoli  = document.querySelectorAll('.post-item:not([hidden])');
         const container = document.getElementById('dynamic-tags');
         const allTags   = new Set();
 
-        articles.forEach(article => {
+        articoli.forEach(function(article) {
             const raw = article.getAttribute('data-tags') || '';
-            raw.split(',').forEach(t => {
+            raw.split(',').forEach(function(t) {
                 const trimmed = t.trim();
                 if (trimmed) allTags.add(trimmed);
             });
         });
 
-        /* Ordino i tag alfabeticamente prima di renderizzarli */
-        Array.from(allTags).sort().forEach(tag => {
+        Array.from(allTags).sort().forEach(function(tag) {
             const btn = document.createElement('button');
             btn.className   = 'tag-btn';
             btn.textContent = tag.replace(/-/g, ' ').toUpperCase();
             btn.setAttribute('aria-pressed', 'false');
 
-            /* Uso una closure per catturare il valore corretto di `tag` */
             btn.addEventListener('click', function() {
                 filterByTag(tag, this);
             });
@@ -150,15 +198,10 @@ title: Home
         });
     });
 
-    /*
-     * filterByTag: aggiorna lo stato activeTag, rimuove la classe
-     * 'active' da tutti i bottoni e la assegna solo a quello cliccato,
-     * poi delega il filtraggio visivo ad applyFilters().
-     */
     function filterByTag(tag, btn) {
         activeTag = tag.toLowerCase();
 
-        document.querySelectorAll('.tag-btn').forEach(b => {
+        document.querySelectorAll('.tag-btn').forEach(function(b) {
             b.classList.remove('active');
             b.setAttribute('aria-pressed', 'false');
         });
@@ -170,19 +213,19 @@ title: Home
     }
 
     /*
-     * applyFilters: combina il filtro per tag con la ricerca testuale
-     * sul titolo. Uso display:block/none invece di visibility per
-     * evitare spazio vuoto tra le card filtrate.
+     * applyFilters: combina tag + ricerca testuale.
+     * Il selettore :not([hidden]) garantisce che gli articoli futuri
+     * rimangano esclusi anche dopo un cambio di filtro.
      */
     function applyFilters() {
         const query    = document.getElementById('search-bar').value.toLowerCase().trim();
-        const articles = document.querySelectorAll('.post-item');
+        const articoli = document.querySelectorAll('.post-item:not([hidden])');
 
-        articles.forEach(article => {
-            const title       = article.getAttribute('data-title') || '';
-            const tags        = article.getAttribute('data-tags')  || '';
-            const matchesTag  = (activeTag === 'tutti' || tags.split(',').includes(activeTag));
-            const matchesTxt  = !query || title.includes(query);
+        articoli.forEach(function(article) {
+            const title      = article.getAttribute('data-title') || '';
+            const tags       = article.getAttribute('data-tags')  || '';
+            const matchesTag = (activeTag === 'tutti' || tags.split(',').includes(activeTag));
+            const matchesTxt = !query || title.includes(query);
 
             article.style.display = (matchesTag && matchesTxt) ? '' : 'none';
         });

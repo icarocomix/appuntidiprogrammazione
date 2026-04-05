@@ -12,8 +12,20 @@ description: >-
 # ==========================================
 baseurl: "/appuntidiprogrammazione"
 url: "https://icarocomix.github.io"
-theme: null # Forza Jekyll a usare solo i tuoi layout
-future: true # Lo teniamo per evitare i 404
+theme: null
+
+# NOTA IMPORTANTE — future: rimosso intenzionalmente.
+#
+# Con future: true Jekyll builda TUTTI i post anche se la loro
+# data è nel futuro, rendendo impossibile il filtro automatico
+# per data. Rimuovendo questa opzione (default: false), Jekyll
+# esclude dal build i post con data > site.time.
+#
+# Il workflow GitHub Actions (.github/workflows/daily-publish.yml)
+# riesegue il build ogni notte, facendo avanzare site.time e
+# sbloccando progressivamente gli articoli programmati.
+#
+# future: true   ← ERA QUI, l'ho rimosso
 
 # ==========================================
 # 3. BACKEND & AUTENTICAZIONE (Decap CMS)
@@ -36,7 +48,6 @@ collections:
     output: true
     permalink: /articoli/:title/
 
-# Impostazioni di default per i file nella cartella _articoli
 defaults:
   - scope:
       path: ""
