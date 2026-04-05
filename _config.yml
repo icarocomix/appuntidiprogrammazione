@@ -14,18 +14,18 @@ baseurl: "/appuntidiprogrammazione"
 url: "https://icarocomix.github.io"
 theme: null
 
-# NOTA IMPORTANTE — future: rimosso intenzionalmente.
+# NOTA — future: true è necessario per questo schema di pubblicazione.
 #
-# Con future: true Jekyll builda TUTTI i post anche se la loro
-# data è nel futuro, rendendo impossibile il filtro automatico
-# per data. Rimuovendo questa opzione (default: false), Jekyll
-# esclude dal build i post con data > site.time.
+# Con future: false (default) Jekyll esclude dal build i post la cui
+# data+ORA è > site.time. Un articolo datato "2026-04-05 15:05:50"
+# verrebbe escluso se il build gira alle 00:05 UTC del 05/04
+# (00:05 < 15:05), rompendo la pubblicazione giornaliera.
 #
-# Il workflow GitHub Actions (.github/workflows/daily-publish.yml)
-# riesegue il build ogni notte, facendo avanzare site.time e
-# sbloccando progressivamente gli articoli programmati.
-#
-# future: true   ← ERA QUI, l'ho rimosso
+# Tenendo future: true Jekyll builda TUTTI i post, e la responsabilità
+# del filtraggio passa all'index.html, dove confronto solo
+# la parte YYYY-MM-DD di post.date e site.time — eliminando
+# l'ambiguità dell'ora e del fuso orario.
+future: true
 
 # ==========================================
 # 3. BACKEND & AUTENTICAZIONE (Decap CMS)

@@ -4,22 +4,23 @@ title: Home
 ---
 
 <!--
-    Homepage: layout a due colonne.
+    LOGICA DI PUBBLICAZIONE A DATA — versione corretta.
 
-    LOGICA DI PUBBLICAZIONE A DATA:
-    - Livello 1 (Liquid/Jekyll): il filtro `post.date <= site.time`
-      esclude dal build gli articoli futuri. Funziona perché il
-      workflow GitHub Actions riesegue il build ogni giorno, quindi
-      site.time avanza e nuovi articoli diventano visibili.
+    Il problema del confronto post.date <= site.time:
+    Jekyll tratta le date del frontmatter come UTC. Un articolo
+    datato "2026-04-05 15:05:50" con future: false viene escluso
+    dal build se site.time è "2026-04-05 00:05:00 UTC" (build
+    notturno), perché 15:05 > 00:05.
 
-    - Livello 2 (JS client-side): ogni .post-item ha un attributo
-      data-date con la data ISO dell'articolo. Il JS nasconde gli
-      articoli la cui data supera oggi — è un safety net per il caso
-      in cui il sito venisse servito da una cache aggiornata prima
-      del build notturno.
+    SOLUZIONE: normalizzo entrambe le date al giorno (YYYY-MM-DD)
+    e confronto solo stringhe. In questo modo un articolo del 05/04
+    è visibile in qualunque momento del 05/04, indipendentemente
+    dall'ora scritta nel frontmatter.
 
-    I due livelli si completano: Liquid è la fonte di verità,
-    JS è la protezione client in caso di cache stale.
+    Struttura a due livelli:
+    1. Liquid: include nel build solo articoli con data-giorno <= oggi
+    2. JS (safety net): nasconde lato client eventuali articoli futuri
+       in caso di cache stale — usa lo stesso confronto su data-date.
 -->
 <div class="main-layout-container">
 
@@ -39,25 +40,29 @@ title: Home
         <div class="post-grid" id="post-grid">
 
             <!--
-                FILTRO LIQUID A DUE STADI:
-                1. sort: 'date' | reverse  → ordine cronologico decrescente
-                2. controllo post.date <= site.time → escludo articoli futuri
+                FILTRO LIQUID CORRETTO:
+                Normalizzo entrambe le date al formato YYYY-MM-DD
+                e confronto come stringhe. Il confronto lessicografico
+                su ISO date funziona perché il formato è a lunghezza
+                fissa e ordinato anno > mese > giorno.
 
-                Nota: in Liquid le date si confrontano come oggetti Time,
-                quindi il confronto <= funziona correttamente anche con
-                articoli pubblicati lo stesso giorno del build.
-                Il _config.yml deve avere future: false (o assente):
-                con future: true Jekyll builda comunque i post futuri
-                e il filtro Liquid qui sotto diventa l'unica barriera.
+                - post.date | date: '%Y-%m-%d'  → "2026-04-05"
+                - site.time | date: '%Y-%m-%d'  → "2026-04-05"
+
+                Così un articolo del 05/04 con ora 15:05 è visibile
+                in qualsiasi momento del 05/04, anche se il build
+                è girato alle 00:05 UTC.
             -->
+            {% assign oggi_str = site.time | date: '%Y-%m-%d' %}
             {% assign articoli_per_data = site.articoli | sort: 'date' | reverse %}
             {% for post in articoli_per_data %}
-                {% if post.date <= site.time %}
+                {% assign data_post_str = post.date | date: '%Y-%m-%d' %}
+                {% if data_post_str <= oggi_str %}
                 <article
                     class="post-item"
                     data-tags="{{ post.tags | join: ',' | slugify }}"
                     data-title="{{ post.title | downcase }}"
-                    data-date="{{ post.date | date: '%Y-%m-%d' }}"
+                    data-date="{{ data_post_str }}"
                 >
                     <div class="post-meta">
                         {{ post.tech | upcase }} &nbsp;·&nbsp; {{ post.date | date: "%d/%m/%Y" }}
@@ -117,61 +122,31 @@ title: Home
 
 <script>
     /*
-     * LIVELLO 2 — Safety net client-side.
-     *
-     * Anche se Liquid ha già filtrato gli articoli futuri lato server,
-     * un CDN o browser cache potrebbe servire una versione del sito
-     * buildato giorni fa. Confronto la data ISO dell'articolo
-     * (data-date="YYYY-MM-DD") con la data locale del browser.
-     *
-     * Il confronto lessicografico su stringhe ISO funziona correttamente
-     * perché il formato YYYY-MM-DD è a lunghezza fissa e ordinato
-     * dal campo più significativo (anno) al meno (giorno).
+     * SAFETY NET client-side: stesso confronto YYYY-MM-DD del Liquid.
+     * Protegge da cache stale che potrebbero servire un build vecchio.
      */
-
     function getTodayISO() {
         const now = new Date();
         const y   = now.getFullYear();
         const m   = String(now.getMonth() + 1).padStart(2, '0');
         const d   = String(now.getDate()).padStart(2, '0');
-        return `${y}-${m}-${d}`;
+        return y + '-' + m + '-' + d;
     }
 
-    /*
-     * Eseguo il nascondimento IIFE sincrono: lo script è in fondo
-     * al body, quindi gli articoli sono già nel DOM e posso
-     * operare su di essi senza attendere DOMContentLoaded.
-     */
     (function hideArticoliFuturi() {
         const oggi     = getTodayISO();
         const articoli = document.querySelectorAll('.post-item[data-date]');
-
         articoli.forEach(function(article) {
-            const dataArticolo = article.getAttribute('data-date');
-            if (dataArticolo > oggi) {
-                /*
-                 * hidden è più corretto di display:none per semantica:
-                 * l'elemento è trattato come inesistente dagli screen reader
-                 * e non viene conteggiato nel :not([hidden]) usato sotto.
-                 */
+            if (article.getAttribute('data-date') > oggi) {
                 article.hidden = true;
             }
         });
     })();
 
-    /* ------------------------------------------------
-       Logica filtri: tag + ricerca testuale.
-       Tutto opera su :not([hidden]) per ignorare
-       automaticamente gli articoli futuri nascosti sopra.
-       ------------------------------------------------ */
-
     let activeTag = 'tutti';
 
     document.addEventListener('DOMContentLoaded', function() {
-        /*
-         * Popolo i tag dai soli articoli visibili: non voglio mostrare
-         * tag di articoli che l'utente non può ancora leggere.
-         */
+        /* Popolo i tag solo dagli articoli visibili (non futuri) */
         const articoli  = document.querySelectorAll('.post-item:not([hidden])');
         const container = document.getElementById('dynamic-tags');
         const allTags   = new Set();
@@ -189,44 +164,30 @@ title: Home
             btn.className   = 'tag-btn';
             btn.textContent = tag.replace(/-/g, ' ').toUpperCase();
             btn.setAttribute('aria-pressed', 'false');
-
-            btn.addEventListener('click', function() {
-                filterByTag(tag, this);
-            });
-
+            btn.addEventListener('click', function() { filterByTag(tag, this); });
             container.appendChild(btn);
         });
     });
 
     function filterByTag(tag, btn) {
         activeTag = tag.toLowerCase();
-
         document.querySelectorAll('.tag-btn').forEach(function(b) {
             b.classList.remove('active');
             b.setAttribute('aria-pressed', 'false');
         });
-
         btn.classList.add('active');
         btn.setAttribute('aria-pressed', 'true');
-
         applyFilters();
     }
 
-    /*
-     * applyFilters: combina tag + ricerca testuale.
-     * Il selettore :not([hidden]) garantisce che gli articoli futuri
-     * rimangano esclusi anche dopo un cambio di filtro.
-     */
     function applyFilters() {
         const query    = document.getElementById('search-bar').value.toLowerCase().trim();
         const articoli = document.querySelectorAll('.post-item:not([hidden])');
-
         articoli.forEach(function(article) {
             const title      = article.getAttribute('data-title') || '';
             const tags       = article.getAttribute('data-tags')  || '';
             const matchesTag = (activeTag === 'tutti' || tags.split(',').includes(activeTag));
             const matchesTxt = !query || title.includes(query);
-
             article.style.display = (matchesTag && matchesTxt) ? '' : 'none';
         });
     }
