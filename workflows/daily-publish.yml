@@ -11,9 +11,10 @@
 #     tenendo conto del fuso +1/+2 uso 22:01 UTC per sicurezza)
 #   - workflow_dispatch: permette il trigger manuale da UI GitHub
 #     (utile per testare o forzare una pubblicazione immediata)
-#   - push su main: rebuild normale ad ogni push 
+#   - push su main: rebuild normale ad ogni push
 # ============================================================
 
+# workflow pubblicazione giornaliera
 name: Daily Publish
 
 on:
