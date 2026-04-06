@@ -55,7 +55,7 @@ jobs:
           python-version: '3.12'
           # Cache delle dipendenze pip: velocizza i run successivi
           # da ~60s a ~10s per l'installazione dei pacchetti.
-          cache: 'pip'
+          # cache: 'pip'
 
       # 3. Installo le dipendenze
       # instagrapi ha dipendenze pesanti (cryptography, pillow…):
