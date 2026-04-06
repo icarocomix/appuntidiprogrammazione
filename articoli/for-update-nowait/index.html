@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="it" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FOR UPDATE NOWAIT — DevLog</title>
+    <meta name="description" content="Quando un'applicazione deve acquisire un lock su una riga per modificarla, il comportamento standard è aspettare se la riga è già bloccata. In scenari interattivi (es. un utente che apre una scheda per modifica), l'attesa può sembrare un blocco del s
+">
+    <link rel="stylesheet" href="/appuntidiprogrammazione/assets/css/style.css">
+
+    <script>
+        /*
+         * Applico il tema PRIMA del rendering per evitare il flash di contenuto
+         * (FOUC). Lo script è inline e bloccante di proposito: deve girare
+         * prima che il browser disegni qualsiasi elemento.
+         */
+        (function() {
+            var saved = localStorage.getItem('theme') || 'dark';
+            document.documentElement.setAttribute('data-theme', saved);
+        })();
+    </script>
+</head>
+<body>
+
+    <header class="main-header">
+        <div class="logo" onclick="window.location.href='/appuntidiprogrammazione/'">
+            APPUNTI DI <span>PROGRAMMAZIONE</span>
+        </div>
+
+        <!-- 
+            Il pulsante aggiorna l'attributo data-theme sull'<html> e
+            persiste la scelta nel localStorage per le sessioni future.
+        -->
+        <button onclick="toggleTheme()" class="theme-toggle" aria-label="Cambia tema">🌓</button>
+    </header>
+
+    <!--
+    Layout post: struttura a due colonne.
+    - Sinistra (post-content): breadcrumb → tags → link PDF → articolo MD
+    - Destra (post-sidebar): tags argomento + libro consigliato
+    
+    Ordine DOM: post-content prima, post-sidebar dopo.
+    Grid-template-areas in CSS li posiziona visivamente:
+    "content sidebar" su desktop, stacked su mobile.
+-->
+<div class="post-container">
+
+    <!-- COLONNA SINISTRA: contenuto principale -->
+    <main class="post-content">
+
+        <!-- Breadcrumb: navigazione verso la home -->
+        <nav class="post-breadcrumb" aria-label="Breadcrumb">
+            <a href="/appuntidiprogrammazione/">Appunti di Programmazione</a>
+            <span class="separator" aria-hidden="true">/</span>
+            <span>FOR UPDATE NOWAIT</span>
+        </nav>
+
+        <!-- Tags legati all'articolo -->
+        
+        <div class="post-tags-header" aria-label="Argomenti">
+            
+                <span class="post-tag-chip">db</span>
+            
+                <span class="post-tag-chip">concorrenza e locking approfond</span>
+            
+        </div>
+        
+
+        <!-- Link al/ai PDF allegati all'articolo -->
+        
+        <div class="pdf-link-wrapper">
+            <a class="pdf-link"
+               href="/appuntidiprogrammazione/assets/pdf/for-update-nowait.pdf"
+               target="_blank"
+               rel="noopener noreferrer"
+               aria-label="Scarica il PDF: FOR UPDATE NOWAIT">
+                Scarica PDF
+            </a>
+        </div>
+        
+
+        <!-- Corpo dell'articolo renderizzato da Kramdown -->
+        <article class="post-article-body">
+            <h2 id="esigenza-reale">Esigenza Reale</h2>
+<p>Implementare un sistema di editing collaborativo “ottimista” dove il primo che arriva blocca la risorsa e gli altri vengono avvisati subito.</p>
+
+<h2 id="analisi-tecnica">Analisi Tecnica</h2>
+<p>Problema: L’utente rimane in attesa indefinita se un altro processo ha lasciato una transazione appesa su quel record. Perché: Uso FOR UPDATE NOWAIT. Ho scelto questa opzione perché voglio un feedback immediato: se non posso avere il lock, l’applicazione deve gestire l’errore 54P01 istantaneamente.</p>
+
+<h2 id="esempio-implementativo">Esempio Implementativo</h2>
+
+<div class="language-sql highlighter-rouge"><div class="highlight"><pre class="highlight"><code><table class="rouge-table"><tbody><tr><td class="rouge-gutter gl"><pre class="lineno">1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+</pre></td><td class="rouge-code"><pre><span class="o">*</span> <span class="n">Tento</span> <span class="n">il</span> <span class="k">lock</span> <span class="n">sulla</span> <span class="n">riga</span><span class="p">.</span> <span class="n">Se</span> <span class="n">un</span> <span class="n">altro</span> <span class="n">utente</span> <span class="n">la</span> <span class="n">sta</span> <span class="n">modificando</span><span class="p">,</span> <span class="n">Postgres</span>
+<span class="o">*</span> <span class="n">lancia</span> <span class="n">immediatamente</span> <span class="n">un</span><span class="s1">'eccezione senza attendere, che catturo a livello
+* applicativo. */
+ BEGIN; SELECT id, title, content, version FROM documents WHERE id = 1024 FOR
+UPDATE NOWAIT;
+* Se arrivo qui, il record è mio. Procedo con la modifica includendo il campo
+* '</span><span class="k">version</span><span class="s1">' per un ottimistic locking di secondo livello. */
+ UPDATE documents SET content = '</span><span class="n">nuovo</span> <span class="n">contenuto</span><span class="s1">', version = version + 1,
+updated_at = now() WHERE id = 1024 AND version = 3; -- Controllo che version non
+sia cambiata nel frattempo GET DIAGNOSTICS rows_affected = ROW_COUNT; IF
+rows_affected = 0 THEN RAISE EXCEPTION '</span><span class="n">Conflitto</span> <span class="n">di</span> <span class="n">versione</span><span class="p">:</span> <span class="n">il</span> <span class="n">documento</span> <span class="err">è</span>
+<span class="n">stato</span> <span class="n">modificato</span> <span class="n">da</span> <span class="n">un</span> <span class="n">altro</span> <span class="n">utente</span><span class="p">.</span><span class="s1">'; END IF; COMMIT;
+* A livello applicativo (Java/Spring), gestisco l'</span><span class="n">eccezione</span> <span class="n">PSQLException</span> <span class="n">con</span>
+<span class="o">*</span> <span class="k">SQLSTATE</span> <span class="mi">55</span><span class="n">P03</span> <span class="p">(</span><span class="n">lock_not_available</span><span class="p">):</span> <span class="n">try</span>
+<span class="p">{</span> <span class="n">documentRepository</span><span class="p">.</span><span class="n">lockAndUpdate</span><span class="p">(</span><span class="n">docId</span><span class="p">,</span> <span class="n">content</span><span class="p">,</span> <span class="k">version</span><span class="p">);</span> <span class="p">}</span>
+ <span class="n">catch</span> <span class="p">(</span><span class="n">PSQLException</span> <span class="n">e</span><span class="p">)</span> 
+<span class="p">{</span> <span class="n">if</span> <span class="p">(</span><span class="nv">"55P03"</span><span class="p">.</span><span class="k">equals</span><span class="p">(</span><span class="n">e</span><span class="p">.</span><span class="n">getSQLState</span><span class="p">()))</span> 
+<span class="p">{</span> 
+<span class="o">//</span> <span class="n">Restituisco</span> <span class="n">HTTP</span> <span class="mi">409</span> <span class="n">Conflict</span> <span class="n">con</span> <span class="n">messaggio</span> <span class="n">leggibile</span> <span class="n">dall</span><span class="s1">'utente throw new
+// DocumentLockedException("Il documento è in uso da un altro operatore."); }
+ }
+ */
+ 
+* In alternativa a NOWAIT, SKIP LOCKED è utile per sistemi a coda (job queue):
+* SELECT * FROM tasks WHERE status = '</span><span class="n">pending</span><span class="s1">' ORDER BY created_at FOR UPDATE
+* SKIP LOCKED LIMIT 1; -- Ogni worker prende un task diverso senza bloccarsi a
+* vicenda */
+</span></pre></td></tr></tbody></table></code></pre></div></div>
+
+        </article>
+
+    </main>
+
+    <!-- COLONNA DESTRA: sidebar post -->
+    <aside class="post-sidebar">
+
+        <!-- Box 1: tags argomento (stessa lista dei chip sopra, ma nella sidebar) -->
+        
+        <div class="sidebar-box tags-box">
+            <span class="box-label">Argomenti</span>
+            <div class="tag-cloud-sidebar">
+                
+                    <span class="sidebar-tag">db</span>
+                
+                    <span class="sidebar-tag">concorrenza e locking approfond</span>
+                
+            </div>
+        </div>
+        
+
+        <!-- Box 2: libro consigliato -->
+        <div class="sidebar-box books-box">
+            <span class="box-label">Letture Consigliate</span>
+            <div class="book-card">
+                <a href="https://www.amazon.it/Appunti-Programmazione-Pensieri-soluzioni-Applicazioni-ebook/dp/B0FMFRHKTF/"
+                   target="_blank"
+                   rel="noopener noreferrer"
+                   aria-label="Acquista Appunti di Programmazione su Amazon">
+                    <img src="https://m.media-amazon.com/images/I/61Ck5eMzGYL._SY466_.jpg"
+                         alt="Copertina: Appunti di Programmazione"
+                         width="80">
+                    <p>Appunti di Programmazione: Pensieri e soluzioni per Applicazioni WEB</p>
+                </a>
+            </div>
+        </div>
+
+    </aside>
+
+</div>
+
+    <footer class="main-footer">
+        DevLog — Appunti di Programmazione &nbsp;·&nbsp; cosimociraci@gmail.com
+    </footer>
+
+    <script>
+        /*
+         * toggleTheme: legge il tema corrente dall'attributo HTML,
+         * calcola l'opposto e lo salva. Il CSS reagisce via [data-theme].
+         * Non uso classi sul body per mantenere tutto centralizzato
+         * sull'elemento radice.
+         */
+        function toggleTheme() {
+            var html = document.documentElement;
+            var current = html.getAttribute('data-theme');
+            var next = current === 'dark' ? 'light' : 'dark';
+            html.setAttribute('data-theme', next);
+            localStorage.setItem('theme', next);
+        }
+    </script>
+
+</body>
+</html>

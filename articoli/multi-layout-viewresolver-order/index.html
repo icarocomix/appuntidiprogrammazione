@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="it" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Multi-Layout ViewResolver Order — DevLog</title>
+    <meta name="description" content="In progetti grandi convivono spesso diverse tecnologie (Thymeleaf per il frontend, JSP per il legacy, JSON per API). Configurando correttamente la proprietà order del ViewResolver, Spring sa quale motore interpellare per primo. Questo permette una mi
+">
+    <link rel="stylesheet" href="/appuntidiprogrammazione/assets/css/style.css">
+
+    <script>
+        /*
+         * Applico il tema PRIMA del rendering per evitare il flash di contenuto
+         * (FOUC). Lo script è inline e bloccante di proposito: deve girare
+         * prima che il browser disegni qualsiasi elemento.
+         */
+        (function() {
+            var saved = localStorage.getItem('theme') || 'dark';
+            document.documentElement.setAttribute('data-theme', saved);
+        })();
+    </script>
+</head>
+<body>
+
+    <header class="main-header">
+        <div class="logo" onclick="window.location.href='/appuntidiprogrammazione/'">
+            APPUNTI DI <span>PROGRAMMAZIONE</span>
+        </div>
+
+        <!-- 
+            Il pulsante aggiorna l'attributo data-theme sull'<html> e
+            persiste la scelta nel localStorage per le sessioni future.
+        -->
+        <button onclick="toggleTheme()" class="theme-toggle" aria-label="Cambia tema">🌓</button>
+    </header>
+
+    <!--
+    Layout post: struttura a due colonne.
+    - Sinistra (post-content): breadcrumb → tags → link PDF → articolo MD
+    - Destra (post-sidebar): tags argomento + libro consigliato
+    
+    Ordine DOM: post-content prima, post-sidebar dopo.
+    Grid-template-areas in CSS li posiziona visivamente:
+    "content sidebar" su desktop, stacked su mobile.
+-->
+<div class="post-container">
+
+    <!-- COLONNA SINISTRA: contenuto principale -->
+    <main class="post-content">
+
+        <!-- Breadcrumb: navigazione verso la home -->
+        <nav class="post-breadcrumb" aria-label="Breadcrumb">
+            <a href="/appuntidiprogrammazione/">Appunti di Programmazione</a>
+            <span class="separator" aria-hidden="true">/</span>
+            <span>Multi-Layout ViewResolver Order</span>
+        </nav>
+
+        <!-- Tags legati all'articolo -->
+        
+        <div class="post-tags-header" aria-label="Argomenti">
+            
+                <span class="post-tag-chip">thymeleaf</span>
+            
+                <span class="post-tag-chip">spring integration & flow archi</span>
+            
+        </div>
+        
+
+        <!-- Link al/ai PDF allegati all'articolo -->
+        
+        <div class="pdf-link-wrapper">
+            <a class="pdf-link"
+               href="/appuntidiprogrammazione/assets/pdf/multi-layout-viewresolver-order.pdf"
+               target="_blank"
+               rel="noopener noreferrer"
+               aria-label="Scarica il PDF: Multi-Layout ViewResolver Order">
+                Scarica PDF
+            </a>
+        </div>
+        
+
+        <!-- Corpo dell'articolo renderizzato da Kramdown -->
+        <article class="post-article-body">
+            <h2 id="esigenza-reale">Esigenza Reale</h2>
+<p>Integrare nuovi moduli Thymeleaf in una vecchia applicazione Enterprise che usa ancora tecnologie di templating legacy.</p>
+
+<h2 id="analisi-tecnica">Analisi Tecnica</h2>
+<p>Problema: Conflitti tra motori di template diversi che tentano di risolvere la stessa vista, causando errori di “Template Not Found”. Perché: Configuro la catena dei ViewResolver. Ho scelto di assegnare indici di priorità espliciti per garantire che il DispatcherServlet trovi sempre il renderer corretto nel minor tempo possibile.</p>
+
+<h2 id="esempio-implementativo">Esempio Implementativo</h2>
+
+<pre><code class="language-thymeleaf">* Disabilito la auto-configurazione di Thymeleaf per prendere il controllo
+* completo della chain. */
+ @SpringBootApplication(exclude = 
+{ThymeleafAutoConfiguration.class}
+) public class Application 
+{ public static void main(String[] args) 
+{ SpringApplication.run(Application.class, args); }
+ }
+ 
+* Configuro la catena completa di ViewResolver con ordine di priorità esplicito.
+* */
+ @Configuration public class ViewResolverConfig 
+{ 
+* 1. ContentNegotiatingViewResolver: smista in base al Content-Type della
+* richiesta. Priorità assoluta: gestisce le richieste API (JSON/XML) prima di
+* qualsiasi motore di template. */
+ @Bean public ContentNegotiatingViewResolver contentNegotiatingViewResolver(
+List&lt;ViewResolver&gt; resolvers, List&lt;HttpMessageConverter&lt;?&gt;&gt; converters)
+{ ContentNegotiatingViewResolver cnvr = new ContentNegotiatingViewResolver(); 
+// Le richieste con Accept: application/json vanno a Jackson direttamente 
+// Le richieste con Accept: text/html vanno ai template engine return cnvr; }
+ 
+* 2. ThymeleafViewResolver: gestisce i file .html (order=1: alta priorità tra i
+* template engine). */
+ @Bean public ThymeleafViewResolver thymeleafViewResolver(SpringTemplateEngine
+engine)
+{ ThymeleafViewResolver resolver = new ThymeleafViewResolver();
+resolver.setTemplateEngine(engine); resolver.setOrder(1);
+// Prima scelta per le view resolver.setCharacterEncoding("UTF-8"); 
+// Thymeleaf gestisce SOLO i template .html: passa agli altri per .jsp e .vm
+// resolver.setViewNames(new String[]
+{"*.html", "thymeleaf
+/*"}
+); 
+// Pattern inclusione 
+// Oppure esclusione esplicita dei suffissi legacy: 
+// resolver.setExcludedViewNames(new String[]
+{"*.jsp", "*.jspx"}
+); resolver.setCache(true); 
+// Obbligatorio in produzione return resolver; }
+ 
+* 3. InternalResourceViewResolver: gestisce i file JSP legacy (order=2:
+* fallback). */
+ @Bean public InternalResourceViewResolver jspViewResolver() 
+{ InternalResourceViewResolver resolver = new InternalResourceViewResolver();
+resolver.setPrefix("/WEB-INF/jsp/"); resolver.setSuffix(".jsp");
+resolver.setOrder(2);
+// Secondo nella catena: usato solo se Thymeleaf non trova la vista return
+// resolver; }
+ 
+* 4. FreeMarkerViewResolver: per template legacy Velocity/FreeMarker (order=3:
+* ultima risorsa). */
+ @Bean public FreeMarkerViewResolver freeMarkerViewResolver() 
+{ FreeMarkerViewResolver resolver = new FreeMarkerViewResolver();
+resolver.setSuffix(".ftl"); resolver.setOrder(3); return resolver; }
+ }
+ 
+* Configuro il TemplateResolver di Thymeleaf per risolvere SOLO da /templates:
+* */
+ @Bean public SpringResourceTemplateResolver thymeleafTemplateResolver() 
+{ SpringResourceTemplateResolver resolver = new
+SpringResourceTemplateResolver(); resolver.setPrefix("classpath:/templates/");
+resolver.setSuffix(".html"); resolver.setTemplateMode(TemplateMode.HTML);
+resolver.setCacheable(true);
+// Thymeleaf lancia TemplateInputException se il file non esiste: 
+// il ContentNegotiatingViewResolver lo intercetta e passa al resolver
+// successivo resolver.setCheckExistence(true);
+// Fondamentale per la coesistenza return resolver; }
+ 
+* Controller che dimostra la coesistenza: la stessa URL risponde con template
+* diversi. */
+ @Controller @RequestMapping("/reports") public class ReportController 
+{ @GetMapping("/summary") public String summary(Model model) 
+{ model.addAttribute("data", reportService.getSummary()); return
+"reports/summary";
+// Risolto da Thymeleaf: /templates/reports/summary.html }
+ @GetMapping("/legacy-detail") public String legacyDetail(Model model) 
+{ model.addAttribute("data", reportService.getDetail()); return
+"reports/detail";
+// NON trovato da Thymeleaf -&gt; passa a JSP: /WEB-INF/jsp/reports/detail.jsp }
+ 
+/* Migrazione graduale: richieste API esistenti non cambiano comportamento. */
+ @GetMapping(value = "/api/summary", produces =
+MediaType.APPLICATION_JSON_VALUE) @ResponseBody public ReportSummaryDto
+apiSummary()
+{ return reportService.getSummaryDto(); 
+// JSON via Jackson: ContentNegotiating lo gestisce prima dei template }
+ }
+</code></pre>
+
+        </article>
+
+    </main>
+
+    <!-- COLONNA DESTRA: sidebar post -->
+    <aside class="post-sidebar">
+
+        <!-- Box 1: tags argomento (stessa lista dei chip sopra, ma nella sidebar) -->
+        
+        <div class="sidebar-box tags-box">
+            <span class="box-label">Argomenti</span>
+            <div class="tag-cloud-sidebar">
+                
+                    <span class="sidebar-tag">thymeleaf</span>
+                
+                    <span class="sidebar-tag">spring integration & flow archi</span>
+                
+            </div>
+        </div>
+        
+
+        <!-- Box 2: libro consigliato -->
+        <div class="sidebar-box books-box">
+            <span class="box-label">Letture Consigliate</span>
+            <div class="book-card">
+                <a href="https://www.amazon.it/Appunti-Programmazione-Pensieri-soluzioni-Applicazioni-ebook/dp/B0FMFRHKTF/"
+                   target="_blank"
+                   rel="noopener noreferrer"
+                   aria-label="Acquista Appunti di Programmazione su Amazon">
+                    <img src="https://m.media-amazon.com/images/I/61Ck5eMzGYL._SY466_.jpg"
+                         alt="Copertina: Appunti di Programmazione"
+                         width="80">
+                    <p>Appunti di Programmazione: Pensieri e soluzioni per Applicazioni WEB</p>
+                </a>
+            </div>
+        </div>
+
+    </aside>
+
+</div>
+
+    <footer class="main-footer">
+        DevLog — Appunti di Programmazione &nbsp;·&nbsp; cosimociraci@gmail.com
+    </footer>
+
+    <script>
+        /*
+         * toggleTheme: legge il tema corrente dall'attributo HTML,
+         * calcola l'opposto e lo salva. Il CSS reagisce via [data-theme].
+         * Non uso classi sul body per mantenere tutto centralizzato
+         * sull'elemento radice.
+         */
+        function toggleTheme() {
+            var html = document.documentElement;
+            var current = html.getAttribute('data-theme');
+            var next = current === 'dark' ? 'light' : 'dark';
+            html.setAttribute('data-theme', next);
+            localStorage.setItem('theme', next);
+        }
+    </script>
+
+</body>
+</html>

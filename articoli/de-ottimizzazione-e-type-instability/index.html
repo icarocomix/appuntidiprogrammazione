@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html lang="it" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>De-ottimizzazione e Type Instability — DevLog</title>
+    <meta name="description" content="La pipeline JIT (TurboFan) ottimizza il codice basandosi sui tipi visti finora. Passare tipi diversi (es. a volte un int, a volte una string) a una funzione 'calda' causa una 'Deopt': V8 deve scartare il codice macchina ottimizzato e tornare all'inte
+">
+    <link rel="stylesheet" href="/appuntidiprogrammazione/assets/css/style.css">
+
+    <script>
+        /*
+         * Applico il tema PRIMA del rendering per evitare il flash di contenuto
+         * (FOUC). Lo script è inline e bloccante di proposito: deve girare
+         * prima che il browser disegni qualsiasi elemento.
+         */
+        (function() {
+            var saved = localStorage.getItem('theme') || 'dark';
+            document.documentElement.setAttribute('data-theme', saved);
+        })();
+    </script>
+</head>
+<body>
+
+    <header class="main-header">
+        <div class="logo" onclick="window.location.href='/appuntidiprogrammazione/'">
+            APPUNTI DI <span>PROGRAMMAZIONE</span>
+        </div>
+
+        <!-- 
+            Il pulsante aggiorna l'attributo data-theme sull'<html> e
+            persiste la scelta nel localStorage per le sessioni future.
+        -->
+        <button onclick="toggleTheme()" class="theme-toggle" aria-label="Cambia tema">🌓</button>
+    </header>
+
+    <!--
+    Layout post: struttura a due colonne.
+    - Sinistra (post-content): breadcrumb → tags → link PDF → articolo MD
+    - Destra (post-sidebar): tags argomento + libro consigliato
+    
+    Ordine DOM: post-content prima, post-sidebar dopo.
+    Grid-template-areas in CSS li posiziona visivamente:
+    "content sidebar" su desktop, stacked su mobile.
+-->
+<div class="post-container">
+
+    <!-- COLONNA SINISTRA: contenuto principale -->
+    <main class="post-content">
+
+        <!-- Breadcrumb: navigazione verso la home -->
+        <nav class="post-breadcrumb" aria-label="Breadcrumb">
+            <a href="/appuntidiprogrammazione/">Appunti di Programmazione</a>
+            <span class="separator" aria-hidden="true">/</span>
+            <span>De-ottimizzazione e Type Instability</span>
+        </nav>
+
+        <!-- Tags legati all'articolo -->
+        
+        <div class="post-tags-header" aria-label="Argomenti">
+            
+                <span class="post-tag-chip">js</span>
+            
+                <span class="post-tag-chip">v8 engine & runtime performance</span>
+            
+        </div>
+        
+
+        <!-- Link al/ai PDF allegati all'articolo -->
+        
+        <div class="pdf-link-wrapper">
+            <a class="pdf-link"
+               href="/appuntidiprogrammazione/assets/pdf/de-ottimizzazione-e-type-instability.pdf"
+               target="_blank"
+               rel="noopener noreferrer"
+               aria-label="Scarica il PDF: De-ottimizzazione e Type Instability">
+                Scarica PDF
+            </a>
+        </div>
+        
+
+        <!-- Corpo dell'articolo renderizzato da Kramdown -->
+        <article class="post-article-body">
+            <h2 id="esigenza-reale">Esigenza Reale</h2>
+<p>Garantire performance costanti in una libreria di utility usata trasversalmente in un ecosistema micro-frontend.</p>
+
+<h2 id="analisi-tecnica">Analisi Tecnica</h2>
+<p>Problema: Jitter nelle performance causato dal compilatore JIT che scarta continuamente il codice ottimizzato per instabilità dei tipi. Perché: Isolo i path di esecuzione per tipo. Ho scelto di creare funzioni specifiche per tipi diversi invece di una funzione “overloaded” generica per mantenere il call site monomorfico.</p>
+
+<h2 id="esempio-implementativo">Esempio Implementativo</h2>
+
+<div class="language-js highlighter-rouge"><div class="highlight"><pre class="highlight"><code><table class="rouge-table"><tbody><tr><td class="rouge-gutter gl"><pre class="lineno">1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+</pre></td><td class="rouge-code"><pre><span class="cm">/* Dimostro il problema della Deopt con un esempio misurabile. */</span>
+ 
+<span class="c1">// FUNZIONE POLIMORFICA: causa deopt quando riceve tipi diversi function</span>
+<span class="c1">// addPolymorphic(a, b)</span>
+<span class="p">{</span> <span class="k">return</span> <span class="nx">a</span> <span class="o">+</span> <span class="nx">b</span><span class="p">;</span> 
+<span class="c1">// L'operatore + ha semantica diversa per number vs string }</span>
+ <span class="nx">addPolymorphic</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">);</span> 
+<span class="c1">// TurboFan ottimizza per number + number addPolymorphic('hello', ' world'); </span>
+<span class="c1">// DEOPT: tipo diverso, TurboFan scarta il codice addPolymorphic(1, 2); </span>
+<span class="c1">// Re-ottimizzazione per gestire entrambi i tipi (megamorphic) </span>
+<span class="cm">/* Verifico le Deopt in Node.js con il flag --trace-deopt: */</span>
+ 
+<span class="c1">// node --trace-deopt --allow-natives-syntax app.js </span>
+<span class="c1">// Output: [deoptimize] reason: wrong type at addPolymorphic </span>
+<span class="cm">/* SOLUZIONE 1: funzioni separate e monomorfiche per tipo. */</span>
+ <span class="kd">function</span> <span class="nx">addNumbers</span><span class="p">(</span><span class="nx">a</span><span class="p">,</span> <span class="nx">b</span><span class="p">)</span> 
+<span class="p">{</span> 
+<span class="c1">// Sempre chiamata con number: TurboFan ottimizza una sola volta return a + b; }</span>
+ <span class="kd">function</span> <span class="nx">concatStrings</span><span class="p">(</span><span class="nx">a</span><span class="p">,</span> <span class="nx">b</span><span class="p">)</span> 
+<span class="p">{</span> 
+<span class="c1">// Sempre chiamata con string: path separato return a + b; }</span>
+ 
+<span class="o">*</span> <span class="nx">SOLUZIONE</span> <span class="mi">2</span><span class="p">:</span> <span class="nx">TypeScript</span> <span class="nx">per</span> <span class="nx">intercettare</span> <span class="nx">la</span> <span class="nx">polimorfizzazione</span> <span class="nx">a</span> <span class="nx">compile</span> <span class="nx">time</span><span class="p">.</span>
+<span class="o">*</span> <span class="nx">Con</span> <span class="nx">TypeScript</span><span class="p">,</span> <span class="nx">l</span><span class="dl">'</span><span class="s1">errore è a compile time, non a runtime: */
+ 
+// function add(a: number, b: number): number 
+{ return a + b; }
+ 
+// add(1, 2); 
+// OK 
+// add(</span><span class="dl">'</span><span class="nx">hello</span><span class="dl">'</span><span class="s1">, </span><span class="dl">'</span> <span class="nx">world</span><span class="dl">'</span><span class="s1">); 
+// Error TS: Argument of type </span><span class="dl">'</span><span class="nx">string</span><span class="dl">'</span><span class="s1"> is not assignable to parameter of type
+// </span><span class="dl">'</span><span class="nx">number</span><span class="dl">'</span><span class="s1">
+* SOLUZIONE 3: guard espliciti che stabilizzano il tipo prima della funzione
+* calda. */
+ function processValue(value) 
+{ 
+// Normalizzo il tipo all</span><span class="dl">'</span><span class="nx">ingresso</span><span class="p">:</span> <span class="nx">la</span> <span class="nx">funzione</span> <span class="nx">interna</span> <span class="nx">rimane</span> <span class="nx">monomorfica</span> <span class="k">if</span>
+<span class="c1">// (typeof value === 'string')</span>
+<span class="p">{</span> <span class="k">return</span> <span class="nx">processString</span><span class="p">(</span><span class="nx">value</span><span class="p">);</span> <span class="p">}</span>
+ <span class="k">if</span> <span class="p">(</span><span class="k">typeof</span> <span class="nx">value</span> <span class="o">===</span> <span class="dl">'</span><span class="s1">number</span><span class="dl">'</span><span class="p">)</span> 
+<span class="p">{</span> <span class="k">return</span> <span class="nx">processNumber</span><span class="p">(</span><span class="nx">value</span><span class="p">);</span> <span class="p">}</span>
+ <span class="k">throw</span> <span class="k">new</span> <span class="nx">TypeError</span><span class="p">(</span><span class="dl">'</span><span class="s1">Tipo non supportato: </span><span class="dl">'</span> <span class="o">+</span> <span class="k">typeof</span> <span class="nx">value</span><span class="p">);</span> <span class="p">}</span>
+ 
+<span class="c1">// Queste funzioni sono sempre chiamate con un solo tipo: TurboFan le ottimizza</span>
+<span class="c1">// perfettamente function processNumber(n)</span>
+<span class="p">{</span> <span class="k">return</span> <span class="nx">n</span> <span class="o">*</span> <span class="mi">2</span> <span class="o">+</span> <span class="mi">1</span><span class="p">;</span> <span class="p">}</span>
+ <span class="kd">function</span> <span class="nx">processString</span><span class="p">(</span><span class="nx">s</span><span class="p">)</span> 
+<span class="p">{</span> <span class="k">return</span> <span class="nx">s</span><span class="p">.</span><span class="nx">trim</span><span class="p">().</span><span class="nx">toLowerCase</span><span class="p">();</span> <span class="p">}</span>
+ 
+<span class="cm">/* Identifico le funzioni con Deopt frequenti tramite profiling V8: */</span>
+ 
+<span class="c1">// node --prof app.js </span>
+<span class="c1">// node --prof-process isolate-*.log &gt; profile.txt </span>
+<span class="c1">// grep -A 5 "DeoptimizeReason" profile.txt </span>
+<span class="o">*</span> <span class="nx">In</span> <span class="nx">un</span><span class="dl">'</span><span class="s1">applicazione real-world con loop stretto su array di oggetti, garantisco
+* la monomorfia pre-filtrando i tipi: */
+ function sumValues(items) 
+{ 
+// Pre-condizione: tutti gli elementi devono essere number 
+// Se items è un array misto, questa funzione andrà in Deopt al primo elemento
+// non-number let total = 0; for (let i = 0; i &lt; items.length; i++)
+{ total += items[i]; 
+// Monomorfico se items è sempre number[] }
+ return total; }
+ 
+// Uso corretto: sumValues(new Float64Array([1.1, 2.2, 3.3])); 
+// Monomorfico garantito sumValues([1, 2, 3]); 
+// Monomorfico se non mescolo tipi 
+* Monitoro le Deopt in produzione tramite un custom V8 profiler integrato nel
+* server: */
+ if (process.env.NODE_ENV === </span><span class="dl">'</span><span class="nx">development</span><span class="dl">'</span><span class="s1">) 
+{ 
+// Esporto le statistiche di ottimizzazione delle funzioni critiche
+// setInterval(() =&gt;
+{ 
+// %GetOptimizationStatus richiede --allow-natives-syntax const status =
+// %GetOptimizationStatus(sumValues);
+// 1=interpreted, 2=optimized, 3=always_optimized, 4=never_optimized,
+// 6=maybe_deoptimized console.log(</span><span class="dl">'</span><span class="nx">sumValues</span> <span class="nx">optimization</span> <span class="nx">status</span><span class="p">:</span><span class="dl">'</span><span class="s1">, status); }
+, 5000); }
+</span></pre></td></tr></tbody></table></code></pre></div></div>
+
+        </article>
+
+    </main>
+
+    <!-- COLONNA DESTRA: sidebar post -->
+    <aside class="post-sidebar">
+
+        <!-- Box 1: tags argomento (stessa lista dei chip sopra, ma nella sidebar) -->
+        
+        <div class="sidebar-box tags-box">
+            <span class="box-label">Argomenti</span>
+            <div class="tag-cloud-sidebar">
+                
+                    <span class="sidebar-tag">js</span>
+                
+                    <span class="sidebar-tag">v8 engine & runtime performance</span>
+                
+            </div>
+        </div>
+        
+
+        <!-- Box 2: libro consigliato -->
+        <div class="sidebar-box books-box">
+            <span class="box-label">Letture Consigliate</span>
+            <div class="book-card">
+                <a href="https://www.amazon.it/Appunti-Programmazione-Pensieri-soluzioni-Applicazioni-ebook/dp/B0FMFRHKTF/"
+                   target="_blank"
+                   rel="noopener noreferrer"
+                   aria-label="Acquista Appunti di Programmazione su Amazon">
+                    <img src="https://m.media-amazon.com/images/I/61Ck5eMzGYL._SY466_.jpg"
+                         alt="Copertina: Appunti di Programmazione"
+                         width="80">
+                    <p>Appunti di Programmazione: Pensieri e soluzioni per Applicazioni WEB</p>
+                </a>
+            </div>
+        </div>
+
+    </aside>
+
+</div>
+
+    <footer class="main-footer">
+        DevLog — Appunti di Programmazione &nbsp;·&nbsp; cosimociraci@gmail.com
+    </footer>
+
+    <script>
+        /*
+         * toggleTheme: legge il tema corrente dall'attributo HTML,
+         * calcola l'opposto e lo salva. Il CSS reagisce via [data-theme].
+         * Non uso classi sul body per mantenere tutto centralizzato
+         * sull'elemento radice.
+         */
+        function toggleTheme() {
+            var html = document.documentElement;
+            var current = html.getAttribute('data-theme');
+            var next = current === 'dark' ? 'light' : 'dark';
+            html.setAttribute('data-theme', next);
+            localStorage.setItem('theme', next);
+        }
+    </script>
+
+</body>
+</html>

@@ -1,0 +1,364 @@
+<!DOCTYPE html>
+<html lang="it" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Discriminated Unions ed Exhaustiveness Checking — DevLog</title>
+    <meta name="description" content="Gestire stati complessi dove alcune proprietà esistono solo se altre hanno valori specifici. Le Discriminated Unions usano un 'tag' comune per discriminare tra casi. L'uso del tipo never per l'exhaustiveness checking garantisce che ogni caso sia gest
+">
+    <link rel="stylesheet" href="/appuntidiprogrammazione/assets/css/style.css">
+
+    <script>
+        /*
+         * Applico il tema PRIMA del rendering per evitare il flash di contenuto
+         * (FOUC). Lo script è inline e bloccante di proposito: deve girare
+         * prima che il browser disegni qualsiasi elemento.
+         */
+        (function() {
+            var saved = localStorage.getItem('theme') || 'dark';
+            document.documentElement.setAttribute('data-theme', saved);
+        })();
+    </script>
+</head>
+<body>
+
+    <header class="main-header">
+        <div class="logo" onclick="window.location.href='/appuntidiprogrammazione/'">
+            APPUNTI DI <span>PROGRAMMAZIONE</span>
+        </div>
+
+        <!-- 
+            Il pulsante aggiorna l'attributo data-theme sull'<html> e
+            persiste la scelta nel localStorage per le sessioni future.
+        -->
+        <button onclick="toggleTheme()" class="theme-toggle" aria-label="Cambia tema">🌓</button>
+    </header>
+
+    <!--
+    Layout post: struttura a due colonne.
+    - Sinistra (post-content): breadcrumb → tags → link PDF → articolo MD
+    - Destra (post-sidebar): tags argomento + libro consigliato
+    
+    Ordine DOM: post-content prima, post-sidebar dopo.
+    Grid-template-areas in CSS li posiziona visivamente:
+    "content sidebar" su desktop, stacked su mobile.
+-->
+<div class="post-container">
+
+    <!-- COLONNA SINISTRA: contenuto principale -->
+    <main class="post-content">
+
+        <!-- Breadcrumb: navigazione verso la home -->
+        <nav class="post-breadcrumb" aria-label="Breadcrumb">
+            <a href="/appuntidiprogrammazione/">Appunti di Programmazione</a>
+            <span class="separator" aria-hidden="true">/</span>
+            <span>Discriminated Unions ed Exhaustiveness Checking</span>
+        </nav>
+
+        <!-- Tags legati all'articolo -->
+        
+        <div class="post-tags-header" aria-label="Argomenti">
+            
+                <span class="post-tag-chip">js</span>
+            
+                <span class="post-tag-chip">typescript & advanced types</span>
+            
+        </div>
+        
+
+        <!-- Link al/ai PDF allegati all'articolo -->
+        
+        <div class="pdf-link-wrapper">
+            <a class="pdf-link"
+               href="/appuntidiprogrammazione/assets/pdf/discriminated-unions-ed-exhaustiveness-checking.pdf"
+               target="_blank"
+               rel="noopener noreferrer"
+               aria-label="Scarica il PDF: Discriminated Unions ed Exhaustiveness Checking">
+                Scarica PDF
+            </a>
+        </div>
+        
+
+        <!-- Corpo dell'articolo renderizzato da Kramdown -->
+        <article class="post-article-body">
+            <h2 id="esigenza-reale">Esigenza Reale</h2>
+<p>Modellare lo stato di una richiesta HTTP (Idle, Loading, Success, Error) evitando che l’app acceda ai dati quando è in errore.</p>
+
+<h2 id="analisi-tecnica">Analisi Tecnica</h2>
+<p>Problema: Accesso a proprietà inesistenti in determinati stati (es. leggere data quando loading è true) e bug logici dovuti a casi non gestiti. Perché: Uso il controllo di esaustività. Ho scelto questa tecnica per rendere illegali gli stati impossibili già a livello di compilatore.</p>
+
+<h2 id="esempio-implementativo">Esempio Implementativo</h2>
+
+<div class="language-js highlighter-rouge"><div class="highlight"><pre class="highlight"><code><table class="rouge-table"><tbody><tr><td class="rouge-gutter gl"><pre class="lineno">1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+</pre></td><td class="rouge-code"><pre><span class="o">*</span> <span class="nx">Modello</span> <span class="nx">gli</span> <span class="nx">stati</span> <span class="nx">di</span> <span class="nx">una</span> <span class="nx">richiesta</span> <span class="nx">HTTP</span> <span class="nx">come</span> <span class="nx">Discriminated</span> <span class="nx">Union</span><span class="p">.</span> <span class="nx">Il</span> <span class="nx">campo</span>
+<span class="o">*</span> <span class="dl">'</span><span class="s1">status</span><span class="dl">'</span> <span class="nx">è</span> <span class="nx">il</span> <span class="dl">"</span><span class="s2">discriminante</span><span class="dl">"</span><span class="p">:</span> <span class="nx">TypeScript</span> <span class="nx">lo</span> <span class="nx">usa</span> <span class="nx">per</span> <span class="nx">restringere</span> <span class="nx">il</span> <span class="nx">tipo</span> <span class="k">in</span>
+<span class="o">*</span> <span class="nx">ogni</span> <span class="nx">branch</span><span class="p">.</span> <span class="o">*</span><span class="sr">/</span><span class="err">
+</span> <span class="nx">type</span> <span class="nx">IdleState</span> <span class="o">=</span> 
+<span class="p">{</span> <span class="na">status</span><span class="p">:</span> <span class="dl">'</span><span class="s1">idle</span><span class="dl">'</span> <span class="p">}</span>
+<span class="p">;</span> <span class="nx">type</span> <span class="nx">LoadingState</span> <span class="o">=</span> 
+<span class="p">{</span> <span class="na">status</span><span class="p">:</span> <span class="dl">'</span><span class="s1">loading</span><span class="dl">'</span><span class="p">;</span> <span class="nl">startedAt</span><span class="p">:</span> <span class="nb">Date</span> <span class="p">}</span>
+<span class="p">;</span> <span class="nx">type</span> <span class="nx">SuccessState</span><span class="o">&lt;</span><span class="nx">T</span><span class="o">&gt;</span> <span class="o">=</span> 
+<span class="p">{</span> <span class="na">status</span><span class="p">:</span> <span class="dl">'</span><span class="s1">success</span><span class="dl">'</span><span class="p">;</span> <span class="nl">data</span><span class="p">:</span> <span class="nx">T</span><span class="p">;</span> <span class="nl">fetchedAt</span><span class="p">:</span> <span class="nb">Date</span> <span class="p">}</span>
+<span class="p">;</span> <span class="nx">type</span> <span class="nx">ErrorState</span> <span class="o">=</span> 
+<span class="p">{</span> <span class="na">status</span><span class="p">:</span> <span class="dl">'</span><span class="s1">error</span><span class="dl">'</span><span class="p">;</span> <span class="nl">error</span><span class="p">:</span> <span class="nb">Error</span><span class="p">;</span> <span class="nl">retriesLeft</span><span class="p">:</span> <span class="nx">number</span> <span class="p">}</span>
+<span class="p">;</span> <span class="nx">type</span> <span class="nx">RequestState</span><span class="o">&lt;</span><span class="nx">T</span><span class="o">&gt;</span> <span class="o">=</span> <span class="nx">IdleState</span> <span class="o">|</span> <span class="nx">LoadingState</span> <span class="o">|</span> <span class="nx">SuccessState</span><span class="o">&lt;</span><span class="nx">T</span><span class="o">&gt;</span> <span class="o">|</span>
+<span class="nx">ErrorState</span><span class="p">;</span>
+<span class="o">*</span> <span class="nx">Funzione</span> <span class="nx">di</span> <span class="nx">exhaustiveness</span> <span class="nx">checking</span><span class="p">:</span> <span class="nx">se</span> <span class="nx">tutti</span> <span class="nx">i</span> <span class="nx">casi</span> <span class="nx">sono</span> <span class="nx">coperti</span><span class="p">,</span> <span class="dl">'</span><span class="s1">state</span><span class="dl">'</span> <span class="nx">ha</span>
+<span class="o">*</span> <span class="nx">tipo</span> <span class="dl">'</span><span class="s1">never</span><span class="dl">'</span><span class="p">.</span> <span class="nx">Se</span> <span class="nx">aggiungo</span> <span class="nx">un</span> <span class="nx">nuovo</span> <span class="nx">stato</span> <span class="nx">alla</span> <span class="nx">Union</span> <span class="nx">senza</span> <span class="nx">aggiornare</span> <span class="nx">lo</span>
+<span class="o">*</span> <span class="k">switch</span><span class="p">,</span> <span class="nx">TypeScript</span> <span class="nx">genera</span> <span class="nx">un</span> <span class="nx">errore</span><span class="p">.</span> <span class="o">*</span><span class="sr">/</span><span class="err">
+</span> <span class="kd">function</span> <span class="nx">assertNever</span><span class="p">(</span><span class="nx">state</span><span class="p">:</span> <span class="nx">never</span><span class="p">):</span> <span class="nx">never</span> 
+<span class="p">{</span> <span class="k">throw</span> <span class="k">new</span> <span class="nb">Error</span><span class="p">(</span><span class="dl">'</span><span class="s1">Stato non gestito: </span><span class="dl">'</span> <span class="o">+</span> <span class="nx">JSON</span><span class="p">.</span><span class="nx">stringify</span><span class="p">(</span><span class="nx">state</span><span class="p">));</span> <span class="p">}</span>
+ 
+<span class="o">*</span> <span class="nx">Componente</span> <span class="nx">che</span> <span class="nx">usa</span> <span class="nx">il</span> <span class="nx">tipo</span> <span class="nx">corretto</span> <span class="k">in</span> <span class="nx">ogni</span> <span class="nx">branch</span><span class="p">:</span> <span class="nx">TypeScript</span> <span class="nx">impedisce</span>
+<span class="o">*</span> <span class="nx">accessi</span> <span class="nx">illegali</span><span class="p">.</span> <span class="o">*</span><span class="sr">/</span><span class="err">
+</span> <span class="kd">function</span> <span class="nx">renderRequestState</span><span class="o">&lt;</span><span class="nx">T</span><span class="o">&gt;</span><span class="p">(</span><span class="nx">state</span><span class="p">:</span> <span class="nx">RequestState</span><span class="o">&lt;</span><span class="nx">T</span><span class="o">&gt;</span><span class="p">):</span> <span class="nx">string</span> 
+<span class="p">{</span> <span class="k">switch</span> <span class="p">(</span><span class="nx">state</span><span class="p">.</span><span class="nx">status</span><span class="p">)</span> 
+<span class="p">{</span> <span class="k">case</span> <span class="dl">'</span><span class="s1">idle</span><span class="dl">'</span><span class="p">:</span> <span class="k">return</span> <span class="dl">'</span><span class="s1">In attesa di avvio...</span><span class="dl">'</span><span class="p">;</span> <span class="k">case</span> <span class="dl">'</span><span class="s1">loading</span><span class="dl">'</span><span class="p">:</span> 
+<span class="c1">// TypeScript sa che state: LoadingState: posso accedere a startedAt const</span>
+<span class="c1">// elapsed = Date.now() - state.startedAt.getTime(); return `Caricamento in</span>
+<span class="c1">// corso... ($</span>
+<span class="p">{</span><span class="nx">elapsed</span><span class="p">}</span>
+<span class="nx">ms</span><span class="p">)</span><span class="s2">`; case 'success': 
+// TypeScript sa che state: SuccessState&lt;T&gt;: posso accedere a data e fetchedAt
+// return `</span><span class="nx">Dati</span> <span class="nx">caricati</span> <span class="nx">alle</span> <span class="nx">$</span>
+<span class="p">{</span><span class="nx">state</span><span class="p">.</span><span class="nx">fetchedAt</span><span class="p">.</span><span class="nx">toLocaleTimeString</span><span class="p">()}</span>
+<span class="p">:</span> <span class="nx">$</span>
+<span class="p">{</span><span class="nx">JSON</span><span class="p">.</span><span class="nx">stringify</span><span class="p">(</span><span class="nx">state</span><span class="p">.</span><span class="nx">data</span><span class="p">)}</span>
+<span class="s2">`; case 'error': 
+// TypeScript sa che state: ErrorState: posso accedere a error e retriesLeft
+// return `</span><span class="nx">Errore</span><span class="p">:</span> <span class="nx">$</span>
+<span class="p">{</span><span class="nx">state</span><span class="p">.</span><span class="nx">error</span><span class="p">.</span><span class="nx">message</span><span class="p">}</span>
+<span class="p">.</span> <span class="nx">Tentativi</span> <span class="nx">rimasti</span><span class="p">:</span> <span class="nx">$</span>
+<span class="p">{</span><span class="nx">state</span><span class="p">.</span><span class="nx">retriesLeft</span><span class="p">}</span>
+<span class="s2">`; default: 
+// Exhaustiveness check: se tutti i casi sono coperti, state è never return
+// assertNever(state);
+// Errore a compile time se manca un caso }
+ }
+ 
+/* Dimostro il valore dell'exhaustiveness: aggiungo un nuovo stato. */
+ type CancelledState = 
+{ status: 'cancelled'; cancelledBy: string }
+; type RequestStateV2&lt;T&gt; = RequestState&lt;T&gt; | CancelledState; function
+renderRequestStateV2&lt;T&gt;(state: RequestStateV2&lt;T&gt;): string
+{ switch (state.status) 
+{ case 'idle': return 'In attesa...'; case 'loading': return `</span><span class="nx">Caricamento</span><span class="p">...</span> <span class="p">(</span><span class="nx">$</span>
+<span class="p">{</span><span class="nb">Date</span><span class="p">.</span><span class="nx">now</span><span class="p">()</span> <span class="o">-</span> <span class="nx">state</span><span class="p">.</span><span class="nx">startedAt</span><span class="p">.</span><span class="nx">getTime</span><span class="p">()}</span>
+<span class="nx">ms</span><span class="p">)</span><span class="s2">`; case 'success': return `</span><span class="nx">Dati</span><span class="p">:</span> <span class="nx">$</span>
+<span class="p">{</span><span class="nx">JSON</span><span class="p">.</span><span class="nx">stringify</span><span class="p">(</span><span class="nx">state</span><span class="p">.</span><span class="nx">data</span><span class="p">)}</span>
+<span class="s2">`; case 'error': return `</span><span class="nx">Errore</span><span class="p">:</span> <span class="nx">$</span>
+<span class="p">{</span><span class="nx">state</span><span class="p">.</span><span class="nx">error</span><span class="p">.</span><span class="nx">message</span><span class="p">}</span>
+<span class="s2">`; 
+// case 'cancelled': mancante -&gt; TypeScript ERRORE su assertNever(state): 
+// Argument of type 'CancelledState' is not assignable to parameter of type
+// 'never' default: return assertNever(state);
+// Compile error finché non aggiungo il case 'cancelled' }
+ }
+ 
+/* Applico il pattern a un sistema di pagamento con stati complessi: */
+ type PaymentState = | 
+{ status: 'draft'; amount: number; currency: string }
+ | 
+{ status: 'pending_authorization'; amount: number; authToken: string }
+ | 
+{ status: 'authorized'; amount: number; authToken: string; authorizedAt: Date }
+ | 
+{ status: 'captured'; amount: number; capturedAt: Date; receiptUrl: string }
+ | 
+{ status: 'refunded'; originalAmount: number; refundedAmount: number;
+refundedAt: Date }
+ | 
+{ status: 'failed'; reason: string; failedAt: Date; retryable: boolean }
+; function processPayment(payment: PaymentState): void 
+{ switch (payment.status) 
+{ case 'draft': console.log(`</span><span class="nx">Bozza</span><span class="p">:</span> <span class="err">€</span><span class="nx">$</span>
+<span class="p">{</span><span class="nx">payment</span><span class="p">.</span><span class="nx">amount</span><span class="p">}</span>
+ <span class="nx">$</span>
+<span class="p">{</span><span class="nx">payment</span><span class="p">.</span><span class="nx">currency</span><span class="p">}</span>
+<span class="s2">`); break; case 'pending_authorization': console.log(`</span><span class="nx">In</span> <span class="nx">autorizzazione</span> <span class="nx">con</span>
+<span class="nx">token</span><span class="p">:</span> <span class="nx">$</span>
+<span class="p">{</span><span class="nx">payment</span><span class="p">.</span><span class="nx">authToken</span><span class="p">}</span>
+<span class="s2">`); break; case 'authorized': console.log(`</span><span class="nx">Autorizzato</span> <span class="nx">il</span> <span class="nx">$</span>
+<span class="p">{</span><span class="nx">payment</span><span class="p">.</span><span class="nx">authorizedAt</span><span class="p">.</span><span class="nx">toISOString</span><span class="p">()}</span>
+<span class="s2">`); break; case 'captured': console.log(`</span><span class="nx">Catturato</span><span class="p">.</span> <span class="nx">Ricevuta</span><span class="p">:</span> <span class="nx">$</span>
+<span class="p">{</span><span class="nx">payment</span><span class="p">.</span><span class="nx">receiptUrl</span><span class="p">}</span>
+<span class="s2">`); break; case 'refunded': console.log(`</span><span class="nx">Rimborsato</span> <span class="err">€</span><span class="nx">$</span>
+<span class="p">{</span><span class="nx">payment</span><span class="p">.</span><span class="nx">refundedAmount</span><span class="p">}</span>
+ <span class="nx">di</span> <span class="err">€</span><span class="nx">$</span>
+<span class="p">{</span><span class="nx">payment</span><span class="p">.</span><span class="nx">originalAmount</span><span class="p">}</span>
+<span class="s2">`); break; case 'failed': const action = payment.retryable ? 'Riprovo' :
+'Terminato'; console.log(`</span><span class="nx">Fallito</span><span class="p">:</span> <span class="nx">$</span>
+<span class="p">{</span><span class="nx">payment</span><span class="p">.</span><span class="nx">reason</span><span class="p">}</span>
+<span class="p">.</span> <span class="nx">$</span>
+<span class="p">{</span><span class="nx">action</span><span class="p">}</span>
+<span class="p">.</span><span class="s2">`); break; default: assertNever(payment); 
+// Compile error se aggiungo un nuovo stato senza gestirlo }
+ }
+</span></pre></td></tr></tbody></table></code></pre></div></div>
+
+        </article>
+
+    </main>
+
+    <!-- COLONNA DESTRA: sidebar post -->
+    <aside class="post-sidebar">
+
+        <!-- Box 1: tags argomento (stessa lista dei chip sopra, ma nella sidebar) -->
+        
+        <div class="sidebar-box tags-box">
+            <span class="box-label">Argomenti</span>
+            <div class="tag-cloud-sidebar">
+                
+                    <span class="sidebar-tag">js</span>
+                
+                    <span class="sidebar-tag">typescript & advanced types</span>
+                
+            </div>
+        </div>
+        
+
+        <!-- Box 2: libro consigliato -->
+        <div class="sidebar-box books-box">
+            <span class="box-label">Letture Consigliate</span>
+            <div class="book-card">
+                <a href="https://www.amazon.it/Appunti-Programmazione-Pensieri-soluzioni-Applicazioni-ebook/dp/B0FMFRHKTF/"
+                   target="_blank"
+                   rel="noopener noreferrer"
+                   aria-label="Acquista Appunti di Programmazione su Amazon">
+                    <img src="https://m.media-amazon.com/images/I/61Ck5eMzGYL._SY466_.jpg"
+                         alt="Copertina: Appunti di Programmazione"
+                         width="80">
+                    <p>Appunti di Programmazione: Pensieri e soluzioni per Applicazioni WEB</p>
+                </a>
+            </div>
+        </div>
+
+    </aside>
+
+</div>
+
+    <footer class="main-footer">
+        DevLog — Appunti di Programmazione &nbsp;·&nbsp; cosimociraci@gmail.com
+    </footer>
+
+    <script>
+        /*
+         * toggleTheme: legge il tema corrente dall'attributo HTML,
+         * calcola l'opposto e lo salva. Il CSS reagisce via [data-theme].
+         * Non uso classi sul body per mantenere tutto centralizzato
+         * sull'elemento radice.
+         */
+        function toggleTheme() {
+            var html = document.documentElement;
+            var current = html.getAttribute('data-theme');
+            var next = current === 'dark' ? 'light' : 'dark';
+            html.setAttribute('data-theme', next);
+            localStorage.setItem('theme', next);
+        }
+    </script>
+
+</body>
+</html>

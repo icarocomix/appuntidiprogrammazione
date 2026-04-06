@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="it" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GiST e il problema delle Bounding Box — DevLog</title>
+    <meta name="description" content="L'indice GiST (Generalized Search Tree) è il motore di PostGIS, ma la sua efficienza dipende dalla 'qualità' delle Bounding Box (MBR) create. Se le geometrie sono molto sovrapposte o disperse, l'albero GiST diventa inefficiente perché deve scansionar
+">
+    <link rel="stylesheet" href="/appuntidiprogrammazione/assets/css/style.css">
+
+    <script>
+        /*
+         * Applico il tema PRIMA del rendering per evitare il flash di contenuto
+         * (FOUC). Lo script è inline e bloccante di proposito: deve girare
+         * prima che il browser disegni qualsiasi elemento.
+         */
+        (function() {
+            var saved = localStorage.getItem('theme') || 'dark';
+            document.documentElement.setAttribute('data-theme', saved);
+        })();
+    </script>
+</head>
+<body>
+
+    <header class="main-header">
+        <div class="logo" onclick="window.location.href='/appuntidiprogrammazione/'">
+            APPUNTI DI <span>PROGRAMMAZIONE</span>
+        </div>
+
+        <!-- 
+            Il pulsante aggiorna l'attributo data-theme sull'<html> e
+            persiste la scelta nel localStorage per le sessioni future.
+        -->
+        <button onclick="toggleTheme()" class="theme-toggle" aria-label="Cambia tema">🌓</button>
+    </header>
+
+    <!--
+    Layout post: struttura a due colonne.
+    - Sinistra (post-content): breadcrumb → tags → link PDF → articolo MD
+    - Destra (post-sidebar): tags argomento + libro consigliato
+    
+    Ordine DOM: post-content prima, post-sidebar dopo.
+    Grid-template-areas in CSS li posiziona visivamente:
+    "content sidebar" su desktop, stacked su mobile.
+-->
+<div class="post-container">
+
+    <!-- COLONNA SINISTRA: contenuto principale -->
+    <main class="post-content">
+
+        <!-- Breadcrumb: navigazione verso la home -->
+        <nav class="post-breadcrumb" aria-label="Breadcrumb">
+            <a href="/appuntidiprogrammazione/">Appunti di Programmazione</a>
+            <span class="separator" aria-hidden="true">/</span>
+            <span>GiST e il problema delle Bounding Box</span>
+        </nav>
+
+        <!-- Tags legati all'articolo -->
+        
+        <div class="post-tags-header" aria-label="Argomenti">
+            
+                <span class="post-tag-chip">db</span>
+            
+                <span class="post-tag-chip">indexing internals</span>
+            
+        </div>
+        
+
+        <!-- Link al/ai PDF allegati all'articolo -->
+        
+        <div class="pdf-link-wrapper">
+            <a class="pdf-link"
+               href="/appuntidiprogrammazione/assets/pdf/gist-e-il-problema-delle-bounding-box.pdf"
+               target="_blank"
+               rel="noopener noreferrer"
+               aria-label="Scarica il PDF: GiST e il problema delle Bounding Box">
+                Scarica PDF
+            </a>
+        </div>
+        
+
+        <!-- Corpo dell'articolo renderizzato da Kramdown -->
+        <article class="post-article-body">
+            <h2 id="esigenza-reale">Esigenza Reale</h2>
+<p>Accelerare le query di geo-fencing che devono identificare in quali aree urbane si trova un veicolo tra milioni di poligoni di quartieri.</p>
+
+<h2 id="analisi-tecnica">Analisi Tecnica</h2>
+<p>Problema: Scansione di troppi nodi dell’albero GiST a causa di un’organizzazione spaziale dei dati frammentata. Perché: Ho scelto di ordinare i dati spazialmente prima di indicizzarli. Questo processo, chiamato “Clustering”, massimizza la selettività di ogni ramo dell’indice GiST.</p>
+
+<h2 id="esempio-implementativo">Esempio Implementativo</h2>
+
+<div class="language-sql highlighter-rouge"><div class="highlight"><pre class="highlight"><code><table class="rouge-table"><tbody><tr><td class="rouge-gutter gl"><pre class="lineno">1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+</pre></td><td class="rouge-code"><pre><span class="o">*</span> <span class="n">Creo</span> <span class="n">prima</span> <span class="n">l</span><span class="s1">'indice GiST, poi eseguo il CLUSTER per riordinare fisicamente la
+* tabella seguendo l'</span><span class="n">ordine</span> <span class="n">spaziale</span> <span class="n">dell</span><span class="s1">'indice. Le zone geograficamente vicine
+* vengono così scritte in pagine disco adiacenti. */
+ CREATE INDEX idx_geo_polygons ON city_zones USING GIST (geom); CLUSTER
+city_zones USING idx_geo_polygons; ANALYZE city_zones;
+* Verifico il miglioramento con una query di geo-fencing tipica. Cerco il
+* quartiere che contiene una coordinata GPS specifica. */
+ EXPLAIN (ANALYZE, BUFFERS) SELECT zone_name, municipality FROM city_zones WHERE
+ST_Contains(geom, ST_SetSRID(ST_MakePoint(10.2035, 45.5416), 4326));
+* Confronto "Buffers: shared read" prima e dopo il CLUSTER: se le bounding box
+* si sovrappongono meno, il Planner percorre meno rami e legge meno pagine
+* disco. */
+ 
+* Per query k-Nearest Neighbor (trova i 5 quartieri più vicini a un punto),
+* l'</span><span class="n">indice</span> <span class="n">GiST</span> <span class="n">usa</span> <span class="n">l</span><span class="s1">'operatore &lt;-&gt;. Dopo il CLUSTER, le performance migliorano
+* sensibilmente: */
+ SELECT zone_name, geom &lt;-&gt; ST_SetSRID(ST_MakePoint(10.2035, 45.5416), 4326) AS
+dist FROM city_zones ORDER BY dist LIMIT 5;
+* Il CLUSTER non mantiene l'</span><span class="n">ordine</span> <span class="n">per</span> <span class="n">i</span> <span class="n">nuovi</span> <span class="n">inserimenti</span><span class="p">.</span> <span class="n">Schedulo</span> <span class="n">una</span>
+<span class="o">*</span> <span class="n">manutenzione</span> <span class="n">periodica</span> <span class="n">notturna</span><span class="p">:</span> <span class="o">*/</span>
+ <span class="c1">-- CLUSTER city_zones USING idx_geo_polygons; -- ANALYZE city_zones; </span>
+<span class="o">*</span> <span class="n">Per</span> <span class="n">evitare</span> <span class="n">il</span> <span class="k">lock</span> <span class="n">esclusivo</span> <span class="n">del</span> <span class="k">CLUSTER</span> <span class="n">su</span> <span class="n">tabelle</span> <span class="n">molto</span> <span class="n">trafficate</span><span class="p">,</span> <span class="n">uso</span>
+<span class="o">*</span> <span class="n">pg_repack</span> <span class="n">con</span> <span class="n">ordinamento</span> <span class="n">spaziale</span> <span class="n">come</span> <span class="n">alternativa</span> <span class="n">non</span> <span class="n">bloccante</span><span class="p">:</span> <span class="o">*/</span>
+ <span class="c1">-- pg_repack -t city_zones --order-by "ST_GeoHash(ST_Centroid(geom), 10)" mydb </span>
+<span class="o">*</span> <span class="k">In</span> <span class="n">Spring</span> <span class="n">Boot</span> <span class="n">con</span> <span class="n">Spring</span> <span class="k">Data</span> <span class="n">JPA</span> <span class="o">+</span> <span class="n">Hibernate</span> <span class="n">Spatial</span><span class="p">,</span> <span class="n">la</span> <span class="n">query</span> <span class="n">k</span><span class="o">-</span><span class="n">NN</span> <span class="n">si</span>
+<span class="o">*</span> <span class="n">traduce</span> <span class="k">in</span><span class="p">:</span> <span class="o">*/</span>
+ <span class="o">@</span><span class="n">Query</span><span class="p">(</span><span class="n">value</span> <span class="o">=</span> <span class="nv">"</span><span class="se">""</span><span class="nv"> SELECT zone_name FROM city_zones ORDER BY geom &lt;-&gt;
+ST_SetSRID(ST_MakePoint(:lon, :lat), 4326) LIMIT :k </span><span class="se">""</span><span class="nv">"</span><span class="p">,</span> <span class="n">nativeQuery</span> <span class="o">=</span> <span class="k">true</span><span class="p">)</span>
+<span class="n">List</span><span class="o">&lt;</span><span class="n">String</span><span class="o">&gt;</span> <span class="n">findNearestZones</span><span class="p">(</span><span class="o">@</span><span class="n">Param</span><span class="p">(</span><span class="nv">"lon"</span><span class="p">)</span> <span class="nb">double</span> <span class="n">lon</span><span class="p">,</span> <span class="o">@</span><span class="n">Param</span><span class="p">(</span><span class="nv">"lat"</span><span class="p">)</span> <span class="nb">double</span>
+<span class="n">lat</span><span class="p">,</span> <span class="o">@</span><span class="n">Param</span><span class="p">(</span><span class="nv">"k"</span><span class="p">)</span> <span class="nb">int</span> <span class="n">k</span><span class="p">);</span>
+</pre></td></tr></tbody></table></code></pre></div></div>
+
+        </article>
+
+    </main>
+
+    <!-- COLONNA DESTRA: sidebar post -->
+    <aside class="post-sidebar">
+
+        <!-- Box 1: tags argomento (stessa lista dei chip sopra, ma nella sidebar) -->
+        
+        <div class="sidebar-box tags-box">
+            <span class="box-label">Argomenti</span>
+            <div class="tag-cloud-sidebar">
+                
+                    <span class="sidebar-tag">db</span>
+                
+                    <span class="sidebar-tag">indexing internals</span>
+                
+            </div>
+        </div>
+        
+
+        <!-- Box 2: libro consigliato -->
+        <div class="sidebar-box books-box">
+            <span class="box-label">Letture Consigliate</span>
+            <div class="book-card">
+                <a href="https://www.amazon.it/Appunti-Programmazione-Pensieri-soluzioni-Applicazioni-ebook/dp/B0FMFRHKTF/"
+                   target="_blank"
+                   rel="noopener noreferrer"
+                   aria-label="Acquista Appunti di Programmazione su Amazon">
+                    <img src="https://m.media-amazon.com/images/I/61Ck5eMzGYL._SY466_.jpg"
+                         alt="Copertina: Appunti di Programmazione"
+                         width="80">
+                    <p>Appunti di Programmazione: Pensieri e soluzioni per Applicazioni WEB</p>
+                </a>
+            </div>
+        </div>
+
+    </aside>
+
+</div>
+
+    <footer class="main-footer">
+        DevLog — Appunti di Programmazione &nbsp;·&nbsp; cosimociraci@gmail.com
+    </footer>
+
+    <script>
+        /*
+         * toggleTheme: legge il tema corrente dall'attributo HTML,
+         * calcola l'opposto e lo salva. Il CSS reagisce via [data-theme].
+         * Non uso classi sul body per mantenere tutto centralizzato
+         * sull'elemento radice.
+         */
+        function toggleTheme() {
+            var html = document.documentElement;
+            var current = html.getAttribute('data-theme');
+            var next = current === 'dark' ? 'light' : 'dark';
+            html.setAttribute('data-theme', next);
+            localStorage.setItem('theme', next);
+        }
+    </script>
+
+</body>
+</html>

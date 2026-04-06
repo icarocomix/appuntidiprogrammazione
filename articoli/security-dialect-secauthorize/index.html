@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="it" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Security Dialect: sec:authorize — DevLog</title>
+    <meta name="description" content="Nascondere elementi via CSS (display:none) non è sicurezza: l'HTML è visibile nel sorgente. L'attributo sec:authorize='hasRole(...)' impedisce fisicamente al server di generare e inviare il markup al browser se l'utente non ha i permessi. Questo ridu
+">
+    <link rel="stylesheet" href="/appuntidiprogrammazione/assets/css/style.css">
+
+    <script>
+        /*
+         * Applico il tema PRIMA del rendering per evitare il flash di contenuto
+         * (FOUC). Lo script è inline e bloccante di proposito: deve girare
+         * prima che il browser disegni qualsiasi elemento.
+         */
+        (function() {
+            var saved = localStorage.getItem('theme') || 'dark';
+            document.documentElement.setAttribute('data-theme', saved);
+        })();
+    </script>
+</head>
+<body>
+
+    <header class="main-header">
+        <div class="logo" onclick="window.location.href='/appuntidiprogrammazione/'">
+            APPUNTI DI <span>PROGRAMMAZIONE</span>
+        </div>
+
+        <!-- 
+            Il pulsante aggiorna l'attributo data-theme sull'<html> e
+            persiste la scelta nel localStorage per le sessioni future.
+        -->
+        <button onclick="toggleTheme()" class="theme-toggle" aria-label="Cambia tema">🌓</button>
+    </header>
+
+    <!--
+    Layout post: struttura a due colonne.
+    - Sinistra (post-content): breadcrumb → tags → link PDF → articolo MD
+    - Destra (post-sidebar): tags argomento + libro consigliato
+    
+    Ordine DOM: post-content prima, post-sidebar dopo.
+    Grid-template-areas in CSS li posiziona visivamente:
+    "content sidebar" su desktop, stacked su mobile.
+-->
+<div class="post-container">
+
+    <!-- COLONNA SINISTRA: contenuto principale -->
+    <main class="post-content">
+
+        <!-- Breadcrumb: navigazione verso la home -->
+        <nav class="post-breadcrumb" aria-label="Breadcrumb">
+            <a href="/appuntidiprogrammazione/">Appunti di Programmazione</a>
+            <span class="separator" aria-hidden="true">/</span>
+            <span>Security Dialect: sec:authorize</span>
+        </nav>
+
+        <!-- Tags legati all'articolo -->
+        
+        <div class="post-tags-header" aria-label="Argomenti">
+            
+                <span class="post-tag-chip">thymeleaf</span>
+            
+                <span class="post-tag-chip">security & spel expressions</span>
+            
+        </div>
+        
+
+        <!-- Link al/ai PDF allegati all'articolo -->
+        
+        <div class="pdf-link-wrapper">
+            <a class="pdf-link"
+               href="/appuntidiprogrammazione/assets/pdf/security-dialect-secauthorize.pdf"
+               target="_blank"
+               rel="noopener noreferrer"
+               aria-label="Scarica il PDF: Security Dialect: sec:authorize">
+                Scarica PDF
+            </a>
+        </div>
+        
+
+        <!-- Corpo dell'articolo renderizzato da Kramdown -->
+        <article class="post-article-body">
+            <h2 id="esigenza-reale">Esigenza Reale</h2>
+<p>Mostrare il pannello di controllo o i pulsanti di eliminazione solo agli utenti con privilegi amministrativi.</p>
+
+<h2 id="analisi-tecnica">Analisi Tecnica</h2>
+<p>Problema: Esposizione di informazioni riservate o strutture URL sensibili nel codice sorgente della pagina inviata a utenti comuni. Perché: Autorizzazione lato server. Ho scelto il dialetto di sicurezza per rimuovere i nodi DOM alla radice, garantendo che nessun dato sensibile lasci mai la memoria del server per utenti non autorizzati.</p>
+
+<h2 id="esempio-implementativo">Esempio Implementativo</h2>
+
+<pre><code class="language-thymeleaf">/* Aggiungo la dipendenza del Security Dialect al pom.xml: */
+ 
+// &lt;dependency&gt; 
+//   &lt;groupId&gt;org.thymeleaf.extras&lt;/groupId&gt; 
+//   &lt;artifactId&gt;thymeleaf-extras-springsecurity6&lt;/artifactId&gt; 
+// &lt;/dependency&gt; 
+* Spring Boot auto-configura il dialetto se la dipendenza è nel classpath. Per
+* configurazione esplicita: */
+ @Configuration public class ThymeleafSecurityConfig 
+{ @Bean public SpringSecurityDialect springSecurityDialect() 
+{ return new SpringSecurityDialect(); }
+ }
+ &lt;!-- Namespace da aggiungere al tag html: --&gt; &lt;!-- &lt;html xmlns:sec="http:
+// www.thymeleaf.org/extras/spring-security"&gt; --&gt; &lt;!-- CASO 1: Visibilità basata
+// su ruolo. Il div NON viene nemmeno generato per gli utenti non-admin: il
+// browser non riceve l'HTML, non solo non lo vede. --&gt; &lt;div
+// sec:authorize="hasRole('ADMIN')"&gt; &lt;h3&gt;Pannello Amministrazione&lt;/h3&gt; &lt;p
+// th:text="$
+{adminStats.totalUsers}
+"&gt;0&lt;/p&gt; &lt;a href="/admin/users"&gt;Gestisci Utenti&lt;/a&gt; &lt;button
+th:onclick="'deleteAll()'"&gt;Elimina tutto&lt;/button&gt; &lt;/div&gt; &lt;!-- CASO 2:
+Espressioni SpEL di sicurezza complesse. --&gt; &lt;!-- Visibile solo a MANAGER o
+ADMIN nella stessa organizzazione dell'utente corrente --&gt; &lt;div
+sec:authorize="hasAnyRole('ADMIN','MANAGER') and
+@securityService.isSameOrg(authentication, #orgId)"&gt; &lt;h4&gt;Report
+Organizzazione&lt;/h4&gt; &lt;/div&gt; &lt;!-- CASO 3: Accesso basato su permessi granulari
+(non solo ruoli). --&gt; &lt;button sec:authorize="hasAuthority('product:delete')"
+th:attr="data-id=$
+{product.id}
+" class="btn btn-danger" onclick="deleteProduct(this.dataset.id)"&gt; Elimina
+&lt;/button&gt; &lt;!-- CASO 4: Autenticazione e informazioni utente nel template. --&gt;
+&lt;!-- Mostro il profilo solo se autenticato --&gt; &lt;div
+sec:authorize="isAuthenticated()"&gt; &lt;span&gt;Benvenuto, &lt;/span&gt; &lt;!-- Accedo ai
+dettagli dell'utente autenticato --&gt; &lt;span
+sec:authentication="principal.username"&gt;utente&lt;/span&gt; &lt;span&gt; (&lt;/span&gt;&lt;span
+sec:authentication="principal.authorities"&gt;ruoli&lt;/span&gt;&lt;span&gt;)&lt;/span&gt; &lt;/div&gt;
+&lt;!-- Link di login/logout condizionale --&gt; &lt;a sec:authorize="isAnonymous()"
+href="/login"&gt;Accedi&lt;/a&gt; &lt;form sec:authorize="isAuthenticated()" th:action="@
+{/logout}
+" method="post"&gt; &lt;input type="hidden" th:name="$
+{_csrf.parameterName}
+" th:value="$
+{_csrf.token}
+"&gt; &lt;button type="submit" class="btn btn-outline-secondary"&gt;Esci&lt;/button&gt; &lt;/form&gt;
+&lt;!-- CASO 5: Combinare sec:authorize con th:if per logica mista. --&gt; &lt;tr
+th:each="user : $
+{users}
+" th:with="isOwner=$
+{user.id == #authentication.principal.id}
+"&gt; &lt;td th:text="$
+{user.name}
+"&gt;Nome&lt;/td&gt; &lt;!-- Il pulsante "Modifica" è visibile solo se l'utente è il
+proprietario o admin --&gt; &lt;td&gt; &lt;a th:if="$
+{isOwner}
+" th:href="@
+{'/users/' + $
+{user.id}
+ + '/edit'}
+"&gt;Modifica&lt;/a&gt; &lt;button sec:authorize="hasRole('ADMIN')" th:attr="data-userid=$
+{user.id}
+" class="btn btn-danger btn-sm"&gt; Elimina (Admin) &lt;/button&gt; &lt;/td&gt; &lt;/tr&gt; 
+* Definisco un SecurityService per logiche di autorizzazione complesse
+* richiamabili da SpEL: */
+ @Service("securityService") public class SecurityService 
+{ public boolean isSameOrg(Authentication auth, Long orgId) 
+{ if (!(auth.getPrincipal() instanceof UserDetails userDetails)) return false;
+UserEntity user = userRepository.findByUsername(userDetails.getUsername());
+return user != null &amp;&amp; user.getOrganizationId().equals(orgId); }
+ public boolean canEditProduct(Authentication auth, Long productId) 
+{ return hasRole(auth, "ADMIN") || productRepository.isOwner(productId,
+auth.getName()); }
+ }
+</code></pre>
+
+        </article>
+
+    </main>
+
+    <!-- COLONNA DESTRA: sidebar post -->
+    <aside class="post-sidebar">
+
+        <!-- Box 1: tags argomento (stessa lista dei chip sopra, ma nella sidebar) -->
+        
+        <div class="sidebar-box tags-box">
+            <span class="box-label">Argomenti</span>
+            <div class="tag-cloud-sidebar">
+                
+                    <span class="sidebar-tag">thymeleaf</span>
+                
+                    <span class="sidebar-tag">security & spel expressions</span>
+                
+            </div>
+        </div>
+        
+
+        <!-- Box 2: libro consigliato -->
+        <div class="sidebar-box books-box">
+            <span class="box-label">Letture Consigliate</span>
+            <div class="book-card">
+                <a href="https://www.amazon.it/Appunti-Programmazione-Pensieri-soluzioni-Applicazioni-ebook/dp/B0FMFRHKTF/"
+                   target="_blank"
+                   rel="noopener noreferrer"
+                   aria-label="Acquista Appunti di Programmazione su Amazon">
+                    <img src="https://m.media-amazon.com/images/I/61Ck5eMzGYL._SY466_.jpg"
+                         alt="Copertina: Appunti di Programmazione"
+                         width="80">
+                    <p>Appunti di Programmazione: Pensieri e soluzioni per Applicazioni WEB</p>
+                </a>
+            </div>
+        </div>
+
+    </aside>
+
+</div>
+
+    <footer class="main-footer">
+        DevLog — Appunti di Programmazione &nbsp;·&nbsp; cosimociraci@gmail.com
+    </footer>
+
+    <script>
+        /*
+         * toggleTheme: legge il tema corrente dall'attributo HTML,
+         * calcola l'opposto e lo salva. Il CSS reagisce via [data-theme].
+         * Non uso classi sul body per mantenere tutto centralizzato
+         * sull'elemento radice.
+         */
+        function toggleTheme() {
+            var html = document.documentElement;
+            var current = html.getAttribute('data-theme');
+            var next = current === 'dark' ? 'light' : 'dark';
+            html.setAttribute('data-theme', next);
+            localStorage.setItem('theme', next);
+        }
+    </script>
+
+</body>
+</html>

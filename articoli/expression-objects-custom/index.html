@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="it" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Expression Objects Custom — DevLog</title>
+    <meta name="description" content="Spesso servono utility nel template (formattazione date particolari, calcoli finanziari) che non appartengono al modello dati. Registrando oggetti tramite IExpressionObjectFactory, è possibile richiamarli con la sintassi ${#myUtils...}, simile ai bui
+">
+    <link rel="stylesheet" href="/appuntidiprogrammazione/assets/css/style.css">
+
+    <script>
+        /*
+         * Applico il tema PRIMA del rendering per evitare il flash di contenuto
+         * (FOUC). Lo script è inline e bloccante di proposito: deve girare
+         * prima che il browser disegni qualsiasi elemento.
+         */
+        (function() {
+            var saved = localStorage.getItem('theme') || 'dark';
+            document.documentElement.setAttribute('data-theme', saved);
+        })();
+    </script>
+</head>
+<body>
+
+    <header class="main-header">
+        <div class="logo" onclick="window.location.href='/appuntidiprogrammazione/'">
+            APPUNTI DI <span>PROGRAMMAZIONE</span>
+        </div>
+
+        <!-- 
+            Il pulsante aggiorna l'attributo data-theme sull'<html> e
+            persiste la scelta nel localStorage per le sessioni future.
+        -->
+        <button onclick="toggleTheme()" class="theme-toggle" aria-label="Cambia tema">🌓</button>
+    </header>
+
+    <!--
+    Layout post: struttura a due colonne.
+    - Sinistra (post-content): breadcrumb → tags → link PDF → articolo MD
+    - Destra (post-sidebar): tags argomento + libro consigliato
+    
+    Ordine DOM: post-content prima, post-sidebar dopo.
+    Grid-template-areas in CSS li posiziona visivamente:
+    "content sidebar" su desktop, stacked su mobile.
+-->
+<div class="post-container">
+
+    <!-- COLONNA SINISTRA: contenuto principale -->
+    <main class="post-content">
+
+        <!-- Breadcrumb: navigazione verso la home -->
+        <nav class="post-breadcrumb" aria-label="Breadcrumb">
+            <a href="/appuntidiprogrammazione/">Appunti di Programmazione</a>
+            <span class="separator" aria-hidden="true">/</span>
+            <span>Expression Objects Custom</span>
+        </nav>
+
+        <!-- Tags legati all'articolo -->
+        
+        <div class="post-tags-header" aria-label="Argomenti">
+            
+                <span class="post-tag-chip">thymeleaf</span>
+            
+                <span class="post-tag-chip">custom dialects & processors</span>
+            
+        </div>
+        
+
+        <!-- Link al/ai PDF allegati all'articolo -->
+        
+        <div class="pdf-link-wrapper">
+            <a class="pdf-link"
+               href="/appuntidiprogrammazione/assets/pdf/expression-objects-custom.pdf"
+               target="_blank"
+               rel="noopener noreferrer"
+               aria-label="Scarica il PDF: Expression Objects Custom">
+                Scarica PDF
+            </a>
+        </div>
+        
+
+        <!-- Corpo dell'articolo renderizzato da Kramdown -->
+        <article class="post-article-body">
+            <h2 id="esigenza-reale">Esigenza Reale</h2>
+<p>Fornire ai designer un modo semplice per formattare valute o gestire traduzioni complesse direttamente nel template.</p>
+
+<h2 id="analisi-tecnica">Analisi Tecnica</h2>
+<p>Problema: Inserimento di logica di formattazione pesante nei Controller o nei DTO, violando la separazione delle responsabilità. Perché: Implemento un Expression Object. Ho scelto di creare un oggetto utility registrato nel dialetto per centralizzare le funzioni di supporto alla view.</p>
+
+<h2 id="esempio-implementativo">Esempio Implementativo</h2>
+
+<pre><code class="language-thymeleaf">* Definisco la classe utility con i metodi helper che voglio esporre ai
+* template. */
+ public class FinanceUtils 
+{ 
+/* Formatta un importo con la valuta locale e gestisce i casi null. */
+ public String formatCurrency(BigDecimal amount, String currencyCode) 
+{ if (amount == null) return "N/D"; NumberFormat formatter =
+NumberFormat.getCurrencyInstance(Locale.ITALY);
+formatter.setCurrency(Currency.getInstance(currencyCode)); return
+formatter.format(amount); }
+ 
+* Calcola la percentuale con arrotondamento e gestione della divisione per zero.
+* */
+ public String formatPercentage(BigDecimal value, BigDecimal total) 
+{ if (total == null || total.compareTo(BigDecimal.ZERO) == 0) return "0%";
+BigDecimal percentage = value.divide(total, 4, RoundingMode.HALF_UP)
+.multiply(BigDecimal.valueOf(100)); return String.format("%.1f%%", percentage);
+}
+ 
+* Restituisce la classe CSS Bootstrap in base al segno del valore (per dashboard
+* finanziarie). */
+ public String trendClass(BigDecimal value) 
+{ if (value == null || value.compareTo(BigDecimal.ZERO) == 0) return "text-
+secondary"; return value.compareTo(BigDecimal.ZERO) &gt; 0 ? "text-success" :
+"text-danger"; }
+ 
+* Tronca una stringa al numero di caratteri specificato aggiungendo "..." se
+* necessario. */
+ public String truncate(String text, int maxLength) 
+{ if (text == null) return ""; return text.length() &lt;= maxLength ? text :
+text.substring(0, maxLength) + "..."; }
+ }
+ 
+/* Implemento la factory che registra l'utility nel contesto Thymeleaf. */
+ public class CompanyExpressionFactory implements IExpressionObjectFactory 
+{ private static final String FINANCE_UTILS_NAME = "finance"; private static
+final String STRING_UTILS_NAME = "strUtils"; private static final Set&lt;String&gt;
+NAMES = new HashSet&lt;&gt;(Arrays.asList(FINANCE_UTILS_NAME, STRING_UTILS_NAME));
+@Override public Set&lt;String&gt; getAllExpressionObjectNames()
+{ return NAMES; 
+// Thymeleaf chiama questo metodo per sapere quali nomi sono disponibili }
+ @Override public Object buildObject(IExpressionContext context, String
+expressionObjectName)
+{ 
+// Creo l'oggetto utility su richiesta: potrei usare un singleton per
+// performance switch (expressionObjectName)
+{ case FINANCE_UTILS_NAME: return new FinanceUtils(); case STRING_UTILS_NAME:
+return new StringUtils(); default: return null; }
+ }
+ @Override public boolean isCacheable(String expressionObjectName) 
+{ return true; 
+// L'oggetto è stateless: posso cacharlo per tutta la richiesta }
+ }
+ 
+* Registro la factory nel dialetto aziendale aggiungendola al metodo
+* getExpressionObjectFactory(): */
+ public class CompanyDialect implements IProcessorDialect 
+{ 
+// ... altri metodi ... @Override public IExpressionObjectFactory
+// getExpressionObjectFactory()
+{ return new CompanyExpressionFactory(); }
+ }
+ 
+/* Uso nei template: sintassi identica agli oggetti built-in di Thymeleaf. */
+ 
+// &lt;td th:class="$
+{#finance.trendClass(order.profit)}
+"&gt; 
+//   &lt;span th:text="$
+{#finance.formatCurrency(order.total, 'EUR')}
+"&gt;€ 0,00&lt;/span&gt; 
+// &lt;/td&gt; 
+// &lt;p th:text="$
+{#finance.formatPercentage(product.sold, product.stock)}
+"&gt;0%&lt;/p&gt; 
+// &lt;span th:text="$
+{#strUtils.truncate(article.content, 150)}
+"&gt;Descrizione...&lt;/span&gt;
+</code></pre>
+
+        </article>
+
+    </main>
+
+    <!-- COLONNA DESTRA: sidebar post -->
+    <aside class="post-sidebar">
+
+        <!-- Box 1: tags argomento (stessa lista dei chip sopra, ma nella sidebar) -->
+        
+        <div class="sidebar-box tags-box">
+            <span class="box-label">Argomenti</span>
+            <div class="tag-cloud-sidebar">
+                
+                    <span class="sidebar-tag">thymeleaf</span>
+                
+                    <span class="sidebar-tag">custom dialects & processors</span>
+                
+            </div>
+        </div>
+        
+
+        <!-- Box 2: libro consigliato -->
+        <div class="sidebar-box books-box">
+            <span class="box-label">Letture Consigliate</span>
+            <div class="book-card">
+                <a href="https://www.amazon.it/Appunti-Programmazione-Pensieri-soluzioni-Applicazioni-ebook/dp/B0FMFRHKTF/"
+                   target="_blank"
+                   rel="noopener noreferrer"
+                   aria-label="Acquista Appunti di Programmazione su Amazon">
+                    <img src="https://m.media-amazon.com/images/I/61Ck5eMzGYL._SY466_.jpg"
+                         alt="Copertina: Appunti di Programmazione"
+                         width="80">
+                    <p>Appunti di Programmazione: Pensieri e soluzioni per Applicazioni WEB</p>
+                </a>
+            </div>
+        </div>
+
+    </aside>
+
+</div>
+
+    <footer class="main-footer">
+        DevLog — Appunti di Programmazione &nbsp;·&nbsp; cosimociraci@gmail.com
+    </footer>
+
+    <script>
+        /*
+         * toggleTheme: legge il tema corrente dall'attributo HTML,
+         * calcola l'opposto e lo salva. Il CSS reagisce via [data-theme].
+         * Non uso classi sul body per mantenere tutto centralizzato
+         * sull'elemento radice.
+         */
+        function toggleTheme() {
+            var html = document.documentElement;
+            var current = html.getAttribute('data-theme');
+            var next = current === 'dark' ? 'light' : 'dark';
+            html.setAttribute('data-theme', next);
+            localStorage.setItem('theme', next);
+        }
+    </script>
+
+</body>
+</html>

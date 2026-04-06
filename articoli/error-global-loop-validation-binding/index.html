@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="it" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Error Global Loop & Validation Binding — DevLog</title>
+    <meta name="description" content="L'oggetto #fields di Thymeleaf permette di catturare errori che non appartengono a un campo specifico (es. 'Credenziali non valide' o 'Password non corrispondenti') tramite th:each='err : ${#fields.errors('global')}'. L'attributo th:errorclass applic
+">
+    <link rel="stylesheet" href="/appuntidiprogrammazione/assets/css/style.css">
+
+    <script>
+        /*
+         * Applico il tema PRIMA del rendering per evitare il flash di contenuto
+         * (FOUC). Lo script è inline e bloccante di proposito: deve girare
+         * prima che il browser disegni qualsiasi elemento.
+         */
+        (function() {
+            var saved = localStorage.getItem('theme') || 'dark';
+            document.documentElement.setAttribute('data-theme', saved);
+        })();
+    </script>
+</head>
+<body>
+
+    <header class="main-header">
+        <div class="logo" onclick="window.location.href='/appuntidiprogrammazione/'">
+            APPUNTI DI <span>PROGRAMMAZIONE</span>
+        </div>
+
+        <!-- 
+            Il pulsante aggiorna l'attributo data-theme sull'<html> e
+            persiste la scelta nel localStorage per le sessioni future.
+        -->
+        <button onclick="toggleTheme()" class="theme-toggle" aria-label="Cambia tema">🌓</button>
+    </header>
+
+    <!--
+    Layout post: struttura a due colonne.
+    - Sinistra (post-content): breadcrumb → tags → link PDF → articolo MD
+    - Destra (post-sidebar): tags argomento + libro consigliato
+    
+    Ordine DOM: post-content prima, post-sidebar dopo.
+    Grid-template-areas in CSS li posiziona visivamente:
+    "content sidebar" su desktop, stacked su mobile.
+-->
+<div class="post-container">
+
+    <!-- COLONNA SINISTRA: contenuto principale -->
+    <main class="post-content">
+
+        <!-- Breadcrumb: navigazione verso la home -->
+        <nav class="post-breadcrumb" aria-label="Breadcrumb">
+            <a href="/appuntidiprogrammazione/">Appunti di Programmazione</a>
+            <span class="separator" aria-hidden="true">/</span>
+            <span>Error Global Loop & Validation Binding</span>
+        </nav>
+
+        <!-- Tags legati all'articolo -->
+        
+        <div class="post-tags-header" aria-label="Argomenti">
+            
+                <span class="post-tag-chip">thymeleaf</span>
+            
+                <span class="post-tag-chip">spring integration & flow archi</span>
+            
+        </div>
+        
+
+        <!-- Link al/ai PDF allegati all'articolo -->
+        
+        <div class="pdf-link-wrapper">
+            <a class="pdf-link"
+               href="/appuntidiprogrammazione/assets/pdf/error-global-loop-validation-binding.pdf"
+               target="_blank"
+               rel="noopener noreferrer"
+               aria-label="Scarica il PDF: Error Global Loop & Validation Binding">
+                Scarica PDF
+            </a>
+        </div>
+        
+
+        <!-- Corpo dell'articolo renderizzato da Kramdown -->
+        <article class="post-article-body">
+            <h2 id="esigenza-reale">Esigenza Reale</h2>
+<p>Gestire la validazione di form complessi con regole cross-field (es. la data di fine deve essere dopo la data di inizio).</p>
+
+<h2 id="analisi-tecnica">Analisi Tecnica</h2>
+<p>Problema: Codice di template sporco e ripetitivo per gestire la visualizzazione degli errori di validazione del backend. Perché: Uso l’astrazione #fields. Ho scelto di centralizzare la logica di visualizzazione degli errori per garantire che ogni feedback del server sia mappato correttamente agli elementi UI corrispondenti nel DOM.</p>
+
+<h2 id="esempio-implementativo">Esempio Implementativo</h2>
+
+<pre><code class="language-thymeleaf">* Definisco validatori cross-field tramite annotazione custom a livello di
+* classe. */
+ @Target(ElementType.TYPE) @Retention(RetentionPolicy.RUNTIME)
+@Constraint(validatedBy = DateRangeValidator.class) public @interface
+ValidDateRange
+{ String message() default "La data di fine deve essere successiva alla data di
+inizio"; Class&lt;?&gt;[] groups() default
+{}
+; Class&lt;? extends Payload&gt;[] payload() default 
+{}
+; }
+ public class DateRangeValidator implements ConstraintValidator&lt;ValidDateRange,
+EventFormDto&gt;
+{ @Override public boolean isValid(EventFormDto form, ConstraintValidatorContext
+ctx)
+{ if (form.getStartDate() == null || form.getEndDate() == null) return true; if
+(form.getEndDate().isBefore(form.getStartDate()))
+{ 
+// Aggiungo l'errore come global (non legato a un campo):
+// ctx.disableDefaultConstraintViolation();
+// ctx.buildConstraintViolationWithTemplate( "La data di fine (" +
+// form.getEndDate() + ") deve essere dopo la data di inizio (" +
+// form.getStartDate() + ")") .addConstraintViolation(); return false; }
+ return true; }
+ }
+ 
+/* DTO con validazioni a livello di campo e cross-field. */
+ @ValidDateRange 
+// Validazione cross-field: errore "global" public class EventFormDto 
+{ @NotBlank(message = "Il titolo è obbligatorio") @Size(min = 3, max = 100,
+message = "Il titolo deve avere tra 3 e 100 caratteri") private String title;
+@NotNull(message = "La data di inizio è obbligatoria") @FutureOrPresent(message
+= "La data di inizio non può essere nel passato") @DateTimeFormat(pattern =
+"yyyy-MM-dd") private LocalDate startDate; @NotNull(message = "La data di fine è
+obbligatoria") @DateTimeFormat(pattern = "yyyy-MM-dd") private LocalDate
+endDate; @Min(value = 1, message = "La capienza minima è 1 partecipante")
+@Max(value = 10000, message = "La capienza massima è 10.000 partecipanti")
+private Integer capacity; @Email(message = "L'email del contatto non è valida")
+private String contactEmail; }
+ 
+/* Controller che gestisce gli errori di binding e validazione. */
+ @PostMapping("/events") public String createEvent(@ModelAttribute @Valid
+EventFormDto form, BindingResult result, Model model)
+{ if (result.hasErrors()) 
+{ 
+// Non devo aggiungere form al model: Spring lo mantiene automaticamente come
+// "eventFormDto" return "events/new";
+// Torno al form con gli errori popolati }
+ eventService.create(form); return "redirect:/events"; }
+ &lt;!-- Template events/new.html: gestione completa degli errori con #fields. --&gt;
+&lt;form th:object="$
+{eventFormDto}
+" th:action="@
+{/events}
+" method="post"&gt; &lt;!-- ERRORI GLOBALI (cross-field): non associati a un campo
+specifico --&gt; &lt;div th:if="$
+{#fields.hasGlobalErrors()}
+" class="alert alert-danger" role="alert"&gt; &lt;strong&gt;Errori di
+validazione:&lt;/strong&gt; &lt;ul class="mb-0"&gt; &lt;li th:each="err : $
+{#fields.globalErrors()}
+" th:text="$
+{err}
+"&gt;Errore globale&lt;/li&gt; &lt;/ul&gt; &lt;/div&gt; &lt;!-- Alternativa: mostro TUTTI gli errori in
+cima (globali + di campo) --&gt; &lt;div th:if="$
+{#fields.hasAnyErrors()}
+" class="alert alert-warning d-none d-print-block"&gt; &lt;!-- Utile per la stampa o
+per screen reader --&gt; &lt;ul&gt; &lt;li th:each="err : $
+{#fields.allErrors()}
+" th:text="$
+{err}
+"&gt;Errore&lt;/li&gt; &lt;/ul&gt; &lt;/div&gt; &lt;!-- CAMPO TITOLO: th:errorclass aggiunge 'is-
+invalid' se il campo ha errori --&gt; &lt;div class="mb-3"&gt; &lt;label for="title"
+class="form-label"&gt;Titolo *&lt;/label&gt; &lt;!-- th:errorclass: aggiunge la classe CSS
+solo se #fields.hasErrors('title') è true --&gt; &lt;input type="text" th:field="*
+{title}
+" th:errorclass="is-invalid" class="form-control" id="title"&gt; &lt;!-- Mostra il
+primo messaggio di errore per questo campo --&gt; &lt;div th:if="$
+{#fields.hasErrors('title')}
+" class="invalid-feedback"&gt; &lt;span th:errors="*
+{title}
+"&gt;Errore titolo&lt;/span&gt; &lt;/div&gt; &lt;/div&gt; &lt;!-- CAMPO DATA INIZIO: con indicatore
+visivo dello stato --&gt; &lt;div class="mb-3"&gt; &lt;label for="startDate" class="form-
+label"&gt;Data inizio *&lt;/label&gt; &lt;input type="date" th:field="*
+{startDate}
+" th:errorclass="is-invalid" th:classappend="$
+{#fields.hasErrors('startDate')}
+ ? '' : ($
+{eventFormDto.startDate}
+ != null ? 'is-valid' : '')" class="form-control" id="startDate"&gt; &lt;div th:if="$
+{#fields.hasErrors('startDate')}
+" class="invalid-feedback"&gt; &lt;span th:errors="*
+{startDate}
+"&gt;Errore data&lt;/span&gt; &lt;/div&gt; &lt;/div&gt; &lt;!-- CAMPO CAPIENZA: errori multipli su
+stesso campo --&gt; &lt;div class="mb-3"&gt; &lt;label for="capacity" class="form-
+label"&gt;Capienza massima *&lt;/label&gt; &lt;input type="number" th:field="*
+{capacity}
+" th:errorclass="is-invalid" class="form-control" id="capacity" min="1"
+max="10000"&gt; &lt;!-- Se ci sono più errori sullo stesso campo, li mostro tutti --&gt;
+&lt;div th:if="$
+{#fields.hasErrors('capacity')}
+" class="invalid-feedback"&gt; &lt;ul class="mb-0 ps-3"&gt; &lt;li th:each="err : $
+{#fields.errors('capacity')}
+" th:text="$
+{err}
+"&gt;Errore&lt;/li&gt; &lt;/ul&gt; &lt;/div&gt; &lt;/div&gt; &lt;button type="submit" class="btn btn-
+primary"&gt;Crea Evento&lt;/button&gt; &lt;/form&gt;
+</code></pre>
+
+        </article>
+
+    </main>
+
+    <!-- COLONNA DESTRA: sidebar post -->
+    <aside class="post-sidebar">
+
+        <!-- Box 1: tags argomento (stessa lista dei chip sopra, ma nella sidebar) -->
+        
+        <div class="sidebar-box tags-box">
+            <span class="box-label">Argomenti</span>
+            <div class="tag-cloud-sidebar">
+                
+                    <span class="sidebar-tag">thymeleaf</span>
+                
+                    <span class="sidebar-tag">spring integration & flow archi</span>
+                
+            </div>
+        </div>
+        
+
+        <!-- Box 2: libro consigliato -->
+        <div class="sidebar-box books-box">
+            <span class="box-label">Letture Consigliate</span>
+            <div class="book-card">
+                <a href="https://www.amazon.it/Appunti-Programmazione-Pensieri-soluzioni-Applicazioni-ebook/dp/B0FMFRHKTF/"
+                   target="_blank"
+                   rel="noopener noreferrer"
+                   aria-label="Acquista Appunti di Programmazione su Amazon">
+                    <img src="https://m.media-amazon.com/images/I/61Ck5eMzGYL._SY466_.jpg"
+                         alt="Copertina: Appunti di Programmazione"
+                         width="80">
+                    <p>Appunti di Programmazione: Pensieri e soluzioni per Applicazioni WEB</p>
+                </a>
+            </div>
+        </div>
+
+    </aside>
+
+</div>
+
+    <footer class="main-footer">
+        DevLog — Appunti di Programmazione &nbsp;·&nbsp; cosimociraci@gmail.com
+    </footer>
+
+    <script>
+        /*
+         * toggleTheme: legge il tema corrente dall'attributo HTML,
+         * calcola l'opposto e lo salva. Il CSS reagisce via [data-theme].
+         * Non uso classi sul body per mantenere tutto centralizzato
+         * sull'elemento radice.
+         */
+        function toggleTheme() {
+            var html = document.documentElement;
+            var current = html.getAttribute('data-theme');
+            var next = current === 'dark' ? 'light' : 'dark';
+            html.setAttribute('data-theme', next);
+            localStorage.setItem('theme', next);
+        }
+    </script>
+
+</body>
+</html>

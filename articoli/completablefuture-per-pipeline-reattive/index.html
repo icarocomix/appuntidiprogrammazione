@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="it" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CompletableFuture per Pipeline Reattive — DevLog</title>
+    <meta name="description" content="Gestire callback annidate (callback hell) rende il codice multithread illeggibile. CompletableFuture permette di costruire pipeline funzionali: 'fai questo, poi quello, se fallisce gestisci così'. Il vantaggio tecnico è la possibilità di comporre ris
+">
+    <link rel="stylesheet" href="/appuntidiprogrammazione/assets/css/style.css">
+
+    <script>
+        /*
+         * Applico il tema PRIMA del rendering per evitare il flash di contenuto
+         * (FOUC). Lo script è inline e bloccante di proposito: deve girare
+         * prima che il browser disegni qualsiasi elemento.
+         */
+        (function() {
+            var saved = localStorage.getItem('theme') || 'dark';
+            document.documentElement.setAttribute('data-theme', saved);
+        })();
+    </script>
+</head>
+<body>
+
+    <header class="main-header">
+        <div class="logo" onclick="window.location.href='/appuntidiprogrammazione/'">
+            APPUNTI DI <span>PROGRAMMAZIONE</span>
+        </div>
+
+        <!-- 
+            Il pulsante aggiorna l'attributo data-theme sull'<html> e
+            persiste la scelta nel localStorage per le sessioni future.
+        -->
+        <button onclick="toggleTheme()" class="theme-toggle" aria-label="Cambia tema">🌓</button>
+    </header>
+
+    <!--
+    Layout post: struttura a due colonne.
+    - Sinistra (post-content): breadcrumb → tags → link PDF → articolo MD
+    - Destra (post-sidebar): tags argomento + libro consigliato
+    
+    Ordine DOM: post-content prima, post-sidebar dopo.
+    Grid-template-areas in CSS li posiziona visivamente:
+    "content sidebar" su desktop, stacked su mobile.
+-->
+<div class="post-container">
+
+    <!-- COLONNA SINISTRA: contenuto principale -->
+    <main class="post-content">
+
+        <!-- Breadcrumb: navigazione verso la home -->
+        <nav class="post-breadcrumb" aria-label="Breadcrumb">
+            <a href="/appuntidiprogrammazione/">Appunti di Programmazione</a>
+            <span class="separator" aria-hidden="true">/</span>
+            <span>CompletableFuture per Pipeline Reattive</span>
+        </nav>
+
+        <!-- Tags legati all'articolo -->
+        
+        <div class="post-tags-header" aria-label="Argomenti">
+            
+                <span class="post-tag-chip">java</span>
+            
+                <span class="post-tag-chip">concurrency & multithreading</span>
+            
+        </div>
+        
+
+        <!-- Link al/ai PDF allegati all'articolo -->
+        
+        <div class="pdf-link-wrapper">
+            <a class="pdf-link"
+               href="/appuntidiprogrammazione/assets/pdf/completablefuture-per-pipeline-reattive.pdf"
+               target="_blank"
+               rel="noopener noreferrer"
+               aria-label="Scarica il PDF: CompletableFuture per Pipeline Reattive">
+                Scarica PDF
+            </a>
+        </div>
+        
+
+        <!-- Corpo dell'articolo renderizzato da Kramdown -->
+        <article class="post-article-body">
+            <h2 id="esigenza-reale">Esigenza Reale</h2>
+<p>Comporre un profilo utente aggregando dati provenienti da tre diversi microservizi (Ordini, Preferenze, Anagrafica) in parallelo.</p>
+
+<h2 id="analisi-tecnica">Analisi Tecnica</h2>
+<p>Problema: Codice asincrono difficile da mantenere, debuggare e testare a causa di logiche di sincronizzazione manuali. Perché: Uso l’API fluent di CompletableFuture. Ho scelto questo approccio per rendere esplicita la sequenza delle operazioni e gestire le eccezioni in modo centralizzato lungo tutta la catena.</p>
+
+<h2 id="esempio-implementativo">Esempio Implementativo</h2>
+
+<div class="language-java highlighter-rouge"><div class="highlight"><pre class="highlight"><code><table class="rouge-table"><tbody><tr><td class="rouge-gutter gl"><pre class="lineno">1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+</pre></td><td class="rouge-code"><pre><span class="o">*</span> <span class="nc">Definisco</span> <span class="n">un</span> <span class="n">executor</span> <span class="n">dedicato</span> <span class="n">per</span> <span class="n">le</span> <span class="n">chiamate</span> <span class="no">I</span><span class="o">/</span><span class="no">O</span> <span class="n">asincrone</span><span class="o">.</span> <span class="nc">Non</span> <span class="n">uso</span> <span class="n">il</span>
+<span class="o">*</span> <span class="nc">ForkJoinPool</span> <span class="n">comune</span> <span class="n">perché</span> <span class="n">è</span> <span class="n">pensato</span> <span class="n">per</span> <span class="n">task</span> <span class="no">CPU</span><span class="o">-</span><span class="n">bound</span> <span class="n">e</span> <span class="n">potrei</span> <span class="n">saturarlo</span> <span class="n">con</span>
+<span class="o">*</span> <span class="n">operazioni</span> <span class="n">bloccanti</span><span class="o">.</span> <span class="o">*/</span>
+ <span class="kd">private</span> <span class="kd">final</span> <span class="nc">ExecutorService</span> <span class="n">ioExecutor</span> <span class="o">=</span>
+<span class="nc">Executors</span><span class="o">.</span><span class="na">newVirtualThreadPerTaskExecutor</span><span class="o">();</span>
+<span class="o">*</span> <span class="nc">Avvio</span> <span class="n">i</span> <span class="n">tre</span> <span class="n">recuperi</span> <span class="n">in</span> <span class="n">parallelo</span> <span class="n">senza</span> <span class="n">bloccare</span> <span class="n">il</span> <span class="n">thread</span> <span class="n">chiamante</span><span class="o">.</span> <span class="nc">Ogni</span>
+<span class="o">*</span> <span class="n">supplyAsync</span> <span class="n">parte</span> <span class="n">immediatamente</span> <span class="n">su</span> <span class="n">un</span> <span class="n">virtual</span> <span class="n">thread</span> <span class="n">dell</span><span class="err">'</span><span class="n">ioExecutor</span><span class="o">.</span> <span class="o">*/</span>
+ <span class="kd">public</span> <span class="nc">CompletableFuture</span><span class="o">&lt;</span><span class="nc">UserProfile</span><span class="o">&gt;</span> <span class="nf">buildUserProfile</span><span class="o">(</span><span class="nc">String</span> <span class="n">userId</span><span class="o">)</span> 
+<span class="o">{</span> <span class="nc">CompletableFuture</span><span class="o">&lt;</span><span class="nc">UserData</span><span class="o">&gt;</span> <span class="n">userFuture</span> <span class="o">=</span> <span class="nc">CompletableFuture</span><span class="o">.</span><span class="na">supplyAsync</span><span class="o">(</span> <span class="o">()</span> <span class="o">-&gt;</span>
+<span class="n">userService</span><span class="o">.</span><span class="na">fetchUser</span><span class="o">(</span><span class="n">userId</span><span class="o">),</span> <span class="n">ioExecutor</span> <span class="o">);</span> <span class="nc">CompletableFuture</span><span class="o">&lt;</span><span class="nc">List</span><span class="o">&lt;</span><span class="nc">Order</span><span class="o">&gt;&gt;</span>
+<span class="n">ordersFuture</span> <span class="o">=</span> <span class="nc">CompletableFuture</span><span class="o">.</span><span class="na">supplyAsync</span><span class="o">(</span> <span class="o">()</span> <span class="o">-&gt;</span>
+<span class="n">orderService</span><span class="o">.</span><span class="na">fetchOrders</span><span class="o">(</span><span class="n">userId</span><span class="o">),</span> <span class="n">ioExecutor</span> <span class="o">);</span> <span class="nc">CompletableFuture</span><span class="o">&lt;</span><span class="nc">Preferences</span><span class="o">&gt;</span>
+<span class="n">prefsFuture</span> <span class="o">=</span> <span class="nc">CompletableFuture</span><span class="o">.</span><span class="na">supplyAsync</span><span class="o">(</span> <span class="o">()</span> <span class="o">-&gt;</span>
+<span class="n">prefsService</span><span class="o">.</span><span class="na">fetchPreferences</span><span class="o">(</span><span class="n">userId</span><span class="o">),</span> <span class="n">ioExecutor</span> <span class="o">);</span>
+<span class="o">*</span> <span class="nc">Aspetto</span> <span class="n">che</span> <span class="n">tutti</span> <span class="n">e</span> <span class="n">tre</span> <span class="n">siano</span> <span class="n">completati</span><span class="o">,</span> <span class="n">poi</span> <span class="n">combino</span> <span class="n">i</span> <span class="n">risultati</span><span class="o">.</span> <span class="n">allOf</span> <span class="n">non</span>
+<span class="o">*</span> <span class="n">restituisce</span> <span class="nl">valori:</span> <span class="n">serve</span> <span class="nf">join</span><span class="o">()</span> <span class="n">su</span> <span class="n">ciascun</span> <span class="n">future</span> <span class="n">dopo</span><span class="o">.</span> <span class="o">*/</span>
+ <span class="k">return</span> <span class="nc">CompletableFuture</span><span class="o">.</span><span class="na">allOf</span><span class="o">(</span><span class="n">userFuture</span><span class="o">,</span> <span class="n">ordersFuture</span><span class="o">,</span> <span class="n">prefsFuture</span><span class="o">)</span>
+<span class="o">.</span><span class="na">thenApply</span><span class="o">(</span><span class="n">ignored</span> <span class="o">-&gt;</span>
+<span class="o">{</span> <span class="nc">UserData</span> <span class="n">user</span> <span class="o">=</span> <span class="n">userFuture</span><span class="o">.</span><span class="na">join</span><span class="o">();</span> <span class="nc">List</span><span class="o">&lt;</span><span class="nc">Order</span><span class="o">&gt;</span> <span class="n">orders</span> <span class="o">=</span> <span class="n">ordersFuture</span><span class="o">.</span><span class="na">join</span><span class="o">();</span>
+<span class="nc">Preferences</span> <span class="n">prefs</span> <span class="o">=</span> <span class="n">prefsFuture</span><span class="o">.</span><span class="na">join</span><span class="o">();</span> <span class="k">return</span> <span class="k">new</span> <span class="nc">UserProfile</span><span class="o">(</span><span class="n">user</span><span class="o">,</span> <span class="n">orders</span><span class="o">,</span>
+<span class="n">prefs</span><span class="o">);</span> <span class="o">}</span>
+<span class="o">)</span> <span class="o">.</span><span class="na">exceptionally</span><span class="o">(</span><span class="n">ex</span> <span class="o">-&gt;</span> 
+<span class="o">{</span> 
+<span class="c1">// Gestione centralizzata degli errori di qualsiasi step della pipeline</span>
+<span class="c1">// log.error("Errore nella costruzione del profilo per userId=</span>
+<span class="o">{}</span>
+<span class="s">", userId, ex); return UserProfile.empty(userId); }
+); }
+ 
+* Aggiungo un timeout globale per non lasciare il client in attesa infinita se
+* un microservizio è lento: */
+ public UserProfile buildUserProfileWithTimeout(String userId) 
+{ try 
+{ return buildUserProfile(userId) .orTimeout(3, TimeUnit.SECONDS)
+.exceptionally(ex -&gt;
+{ if (ex instanceof TimeoutException) 
+{ log.warn("</span><span class="nc">Timeout</span> <span class="n">nella</span> <span class="n">costruzione</span> <span class="n">del</span> <span class="n">profilo</span> <span class="n">per</span> <span class="n">userId</span><span class="o">=</span>
+<span class="o">{}</span>
+<span class="s">", userId); }
+ return UserProfile.empty(userId); }
+) .get(); }
+ catch (InterruptedException | ExecutionException e) 
+{ Thread.currentThread().interrupt(); return UserProfile.empty(userId); }
+ }
+ 
+* In Spring Boot, espongo il metodo come endpoint REST che restituisce il
+* profilo in modo non bloccante. Con virtual thread abilitati, il thread HTTP
+* aspetta senza occupare thread OS: */
+ @RestController @RequiredArgsConstructor public class ProfileController 
+{ private final ProfileService profileService; @GetMapping("</span><span class="o">/</span><span class="n">profile</span><span class="o">/</span>
+<span class="o">{</span><span class="n">userId</span><span class="o">}</span>
+<span class="s">") public UserProfile getProfile(@PathVariable String userId) 
+{ 
+// Con virtual thread, questa get() non blocca thread OS return
+// profileService.buildUserProfileWithTimeout(userId); }
+ }
+ 
+/* Per comporre pipeline sequenziali (output di uno è input del successivo): */
+ CompletableFuture&lt;String&gt; pipeline = CompletableFuture .supplyAsync(() -&gt;
+fetchRawData(userId), ioExecutor) .thenApplyAsync(raw -&gt; enrichData(raw),
+ioExecutor) .thenApplyAsync(enriched -&gt; formatForResponse(enriched), ioExecutor)
+.exceptionally(ex -&gt; "</span><span class="n">fallback</span><span class="o">-</span><span class="n">data</span><span class="err">"</span><span class="o">);</span>
+</pre></td></tr></tbody></table></code></pre></div></div>
+
+        </article>
+
+    </main>
+
+    <!-- COLONNA DESTRA: sidebar post -->
+    <aside class="post-sidebar">
+
+        <!-- Box 1: tags argomento (stessa lista dei chip sopra, ma nella sidebar) -->
+        
+        <div class="sidebar-box tags-box">
+            <span class="box-label">Argomenti</span>
+            <div class="tag-cloud-sidebar">
+                
+                    <span class="sidebar-tag">java</span>
+                
+                    <span class="sidebar-tag">concurrency & multithreading</span>
+                
+            </div>
+        </div>
+        
+
+        <!-- Box 2: libro consigliato -->
+        <div class="sidebar-box books-box">
+            <span class="box-label">Letture Consigliate</span>
+            <div class="book-card">
+                <a href="https://www.amazon.it/Appunti-Programmazione-Pensieri-soluzioni-Applicazioni-ebook/dp/B0FMFRHKTF/"
+                   target="_blank"
+                   rel="noopener noreferrer"
+                   aria-label="Acquista Appunti di Programmazione su Amazon">
+                    <img src="https://m.media-amazon.com/images/I/61Ck5eMzGYL._SY466_.jpg"
+                         alt="Copertina: Appunti di Programmazione"
+                         width="80">
+                    <p>Appunti di Programmazione: Pensieri e soluzioni per Applicazioni WEB</p>
+                </a>
+            </div>
+        </div>
+
+    </aside>
+
+</div>
+
+    <footer class="main-footer">
+        DevLog — Appunti di Programmazione &nbsp;·&nbsp; cosimociraci@gmail.com
+    </footer>
+
+    <script>
+        /*
+         * toggleTheme: legge il tema corrente dall'attributo HTML,
+         * calcola l'opposto e lo salva. Il CSS reagisce via [data-theme].
+         * Non uso classi sul body per mantenere tutto centralizzato
+         * sull'elemento radice.
+         */
+        function toggleTheme() {
+            var html = document.documentElement;
+            var current = html.getAttribute('data-theme');
+            var next = current === 'dark' ? 'light' : 'dark';
+            html.setAttribute('data-theme', next);
+            localStorage.setItem('theme', next);
+        }
+    </script>
+
+</body>
+</html>

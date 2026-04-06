@@ -1,0 +1,1809 @@
+<!DOCTYPE html>
+<html lang="it" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Home — DevLog</title>
+    <meta name="description" content="Hub tecnico per appunti di programmazione, analisi di problemi reali  e soluzioni implementative in ambito Spring Boot, Java e Web Dev.">
+    <link rel="stylesheet" href="/appuntidiprogrammazione/assets/css/style.css">
+
+    <script>
+        /*
+         * Applico il tema PRIMA del rendering per evitare il flash di contenuto
+         * (FOUC). Lo script è inline e bloccante di proposito: deve girare
+         * prima che il browser disegni qualsiasi elemento.
+         */
+        (function() {
+            var saved = localStorage.getItem('theme') || 'dark';
+            document.documentElement.setAttribute('data-theme', saved);
+        })();
+    </script>
+</head>
+<body>
+
+    <header class="main-header">
+        <div class="logo" onclick="window.location.href='/appuntidiprogrammazione/'">
+            APPUNTI DI <span>PROGRAMMAZIONE</span>
+        </div>
+
+        <!-- 
+            Il pulsante aggiorna l'attributo data-theme sull'<html> e
+            persiste la scelta nel localStorage per le sessioni future.
+        -->
+        <button onclick="toggleTheme()" class="theme-toggle" aria-label="Cambia tema">🌓</button>
+    </header>
+
+    <div class="container">
+    <nav class="tag-nav" id="dynamic-tags">
+        <button class="tag-btn active" onclick="filterByTag('tutti', this)">Tutti</button>
+        </nav>
+
+    <section class="search-section">
+        <input type="text" id="search-bar" placeholder="Cerca negli appunti..." onkeyup="applyFilters()">
+    </section>
+
+    <main class="post-grid" id="post-grid">
+        
+        <article class="post-item" 
+                 data-tags="thymeleaf-security-spel-expressions" 
+                 data-title="restrizione type reference in spel">
+            <div class="post-meta">THYMELEAF • 01/04/2026</div>
+            <h2 class="post-title">
+                <a href="/appuntidiprogrammazione/articoli/restrizione-type-reference-in-spel/">Restrizione Type Reference in SpEL</a>
+            </h2>
+            <p class="post-sintesi">SpEL permette di accedere a classi Java statiche via T(java.lang.Runtime). In ambienti CMS dove gli utenti possono modificare parzialmente i template, è fondamentale configurare lo StandardEvaluationContext per limitare i pacchetti accessibili, disab
+</p>
+        </article>
+        
+        <article class="post-item" 
+                 data-tags="java-advanced-reflection-metaprogr" 
+                 data-title="annotation processing (jsr 269)">
+            <div class="post-meta">JAVA • 05/04/2026</div>
+            <h2 class="post-title">
+                <a href="/appuntidiprogrammazione/articoli/annotation-processing-jsr-269/">Annotation Processing (JSR 269)</a>
+            </h2>
+            <p class="post-sintesi">Leggere le annotazioni tramite Reflection a runtime rallenta lo startup dell'applicazione. Gli Annotation Processors spostano la logica a 'Compile Time': framework come MapStruct o Lombok generano codice Java reale durante la compilazione. Questo eli
+</p>
+        </article>
+        
+        <article class="post-item" 
+                 data-tags="js-security-cryptography" 
+                 data-title="argon2 e key derivation (kdf)">
+            <div class="post-meta">JS • 05/04/2026</div>
+            <h2 class="post-title">
+                <a href="/appuntidiprogrammazione/articoli/argon2-e-key-derivation-kdf/">Argon2 e Key Derivation (KDF)</a>
+            </h2>
+            <p class="post-sintesi">Usare MD5 o SHA256 per le password è inutile contro le GPU moderne (Rainbow Tables). Argon2, vincitore della Password Hashing Competition, è progettato per essere 'Memory-Hard': i parametri di memoria, tempo e parallelismo costringono l'attaccante a 
+</p>
+        </article>
+        
+        <article class="post-item" 
+                 data-tags="java-concurrency-multithreading" 
+                 data-title="atomicfieldupdater per ridurre loverhead">
+            <div class="post-meta">JAVA • 05/04/2026</div>
+            <h2 class="post-title">
+                <a href="/appuntidiprogrammazione/articoli/atomicfieldupdater-per-ridurre-loverhead/">AtomicFieldUpdater per ridurre loverhead</a>
+            </h2>
+            <p class="post-sintesi">Creare migliaia di oggetti AtomicInteger ha un costo in termini di memoria (overhead dell'oggetto wrapper). AtomicIntegerFieldUpdater permette di eseguire operazioni atomiche su un normale campo volatile di una classe. L'updater è statico e unico per
+</p>
+        </article>
+        
+        <article class="post-item" 
+                 data-tags="db-vacuum-storage" 
+                 data-title="autovacuum tuning (cost-based)">
+            <div class="post-meta">DB • 05/04/2026</div>
+            <h2 class="post-title">
+                <a href="/appuntidiprogrammazione/articoli/autovacuum-tuning-cost-based/">Autovacuum Tuning (Cost-Based)</a>
+            </h2>
+            <p class="post-sintesi">L'Autovacuum è fondamentale per recuperare lo spazio delle tuple morte, ma se non configurato correttamente può essere troppo timido o troppo aggressivo. PostgreSQL usa un sistema a 'punti' (costo) per limitare l'impatto dell'I/O: ogni operazione con
+</p>
+        </article>
+        
+        <article class="post-item" 
+                 data-tags="db-indexing-internals" 
+                 data-title="b-tree index bloat & fillfactor">
+            <div class="post-meta">DB • 05/04/2026</div>
+            <h2 class="post-title">
+                <a href="/appuntidiprogrammazione/articoli/b-tree-index-bloat-fillfactor/">B-Tree Index Bloat & Fillfactor</a>
+            </h2>
+            <p class="post-sintesi">Gli indici B-Tree tendono a frammentarsi (bloat) a causa di frequenti update e delete, poiché PostgreSQL non può riutilizzare immediatamente lo spazio delle pagine degli indici fino al passaggio del Vacuum. Un B-Tree 'gonfio' aumenta il numero di liv
+</p>
+        </article>
+        
+        <article class="post-item" 
+                 data-tags="db-vacuum-storage" 
+                 data-title="bloat analysis & pg_repack">
+            <div class="post-meta">DB • 05/04/2026</div>
+            <h2 class="post-title">
+                <a href="/appuntidiprogrammazione/articoli/bloat-analysis-pgrepack/">Bloat Analysis & pg_repack</a>
+            </h2>
+            <p class="post-sintesi">Il Vacuum recupera lo spazio all'interno del file, ma non lo restituisce al sistema operativo. Una tabella con molto 'bloat' è come una spugna con troppi buchi: occupa molto spazio ma contiene pochi dati utili. Se il bloat è eccessivo (es. >30%), le 
+</p>
+        </article>
+        
+        <article class="post-item" 
+                 data-tags="db-indexing-internals" 
+                 data-title="brin: indici per dataset massivi">
+            <div class="post-meta">DB • 05/04/2026</div>
+            <h2 class="post-title">
+                <a href="/appuntidiprogrammazione/articoli/brin-indici-per-dataset-massivi/">BRIN: Indici per dataset massivi</a>
+            </h2>
+            <p class="post-sintesi">Quando una tabella raggiunge i terabyte, un indice B-Tree può diventare più grande della RAM disponibile. Gli indici BRIN (Block Range Indexes) nascono per questo scenario: invece di salvare ogni singola riga, memorizzano solo il valore minimo e mass
+</p>
+        </article>
+        
+        <article class="post-item" 
+                 data-tags="db-advanced-replication-ha" 
+                 data-title="cascading replication per scalabilit geografica">
+            <div class="post-meta">DB • 05/04/2026</div>
+            <h2 class="post-title">
+                <a href="/appuntidiprogrammazione/articoli/cascading-replication-per-scalabilit-geografica/">Cascading Replication per Scalabilit Geografica</a>
+            </h2>
+            <p class="post-sintesi">In architetture distribuite globalmente, avere 100 repliche collegate a un unico Master saturerebbe la sua banda di rete. La 'Cascading Replication' permette a una replica di comportarsi a sua volta come un publisher per altre repliche 'nipoti'. Ques
+</p>
+        </article>
+        
+        <article class="post-item" 
+                 data-tags="java-memory-performance" 
+                 data-title="charsequence vs string.substring">
+            <div class="post-meta">JAVA • 05/04/2026</div>
+            <h2 class="post-title">
+                <a href="/appuntidiprogrammazione/articoli/charsequence-vs-stringsubstring/">CharSequence vs String.substring</a>
+            </h2>
+            <p class="post-sintesi">In Java, String.substring crea una nuova copia dell'array di caratteri (dalla versione 7u6). Usando CharSequence o viste custom sul buffer originale, si possono manipolare porzioni di testo senza allocare nuova memoria. Passando interfacce CharSequen
+</p>
+        </article>
+        
+        <article class="post-item" 
+                 data-tags="java-advanced-reflection-metaprogr" 
+                 data-title="class data sharing (cds)">
+            <div class="post-meta">JAVA • 05/04/2026</div>
+            <h2 class="post-title">
+                <a href="/appuntidiprogrammazione/articoli/class-data-sharing-cds/">Class Data Sharing (CDS)</a>
+            </h2>
+            <p class="post-sintesi">Il caricamento delle classi (parsing dei byte, verifica, creazione metadati) è un costo fisso allo startup. AppCDS permette di scattare una 'fotografia' (archivio .jsa) delle classi già caricate e mapparle direttamente in memoria ai successivi avvii.
+</p>
+        </article>
+        
+        <article class="post-item" 
+                 data-tags="thymeleaf-advanced-layout-templating" 
+                 data-title="component-based architecture (fragment parameters)">
+            <div class="post-meta">THYMELEAF • 05/04/2026</div>
+            <h2 class="post-title">
+                <a href="/appuntidiprogrammazione/articoli/component-based-architecture-fragment-parameters/">Component-Based Architecture (Fragment Parameters)</a>
+            </h2>
+            <p class="post-sintesi">Passare dati semplici ai frammenti non permette di creare componenti veramente isolati. Passando interi oggetti, classi CSS e fallback ai frammenti, e usando il no-op token _, è possibile definire un valore predefinito nel mockup HTML che viene mante
+</p>
+        </article>
+        
+        <article class="post-item" 
+                 data-tags="js-typescript-advanced-types" 
+                 data-title="conditional types e inferenza (infer)">
+            <div class="post-meta">JS • 05/04/2026</div>
+            <h2 class="post-title">
+                <a href="/appuntidiprogrammazione/articoli/conditional-types-e-inferenza-infer/">Conditional Types e Inferenza (infer)</a>
+            </h2>
+            <p class="post-sintesi">Creare utility types che si adattano dinamicamente alla struttura dei dati. La sintassi T extends U ? X : Y permette di creare logiche decisionali a livello di tipo. La keyword infer, usata all'interno di un conditional type, permette di 'estrarre' u
+</p>
+        </article>
+        
+        <article class="post-item" 
+                 data-tags="js-security-cryptography" 
+                 data-title="content security policy (csp) e nonces">
+            <div class="post-meta">JS • 05/04/2026</div>
+            <h2 class="post-title">
+                <a href="/appuntidiprogrammazione/articoli/content-security-policy-csp-e-nonces/">Content Security Policy (CSP) e Nonces</a>
+            </h2>
+            <p class="post-sintesi">Gli attacchi XSS iniettano script malevoli nel DOM. Una CSP rigorosa può bloccare l'esecuzione di script non autorizzati. I Nonces (numeri usati una sola volta) sono token casuali generati dal server a ogni richiesta, inclusi sia nell'header HTTP che
+</p>
+        </article>
+        
+        <article class="post-item" 
+                 data-tags="db-indexing-internals" 
+                 data-title="covering indexes (clausola include)">
+            <div class="post-meta">DB • 05/04/2026</div>
+            <h2 class="post-title">
+                <a href="/appuntidiprogrammazione/articoli/covering-indexes-clausola-include/">Covering Indexes (Clausola INCLUDE)</a>
+            </h2>
+            <p class="post-sintesi">Introdotta in Postgres 11, la clausola INCLUDE permette di creare indici 'coprenti'. Questo permette di aggiungere colonne extra ai nodi foglia dell'indice che non fanno parte della chiave di ricerca. Il vantaggio tecnico è rilevante: permette gli 'I
+</p>
+        </article>
+        
+        <article class="post-item" 
+                 data-tags="js-design-patterns-architecture" 
+                 data-title="cqrs (command query responsibility segregation)">
+            <div class="post-meta">JS • 05/04/2026</div>
+            <h2 class="post-title">
+                <a href="/appuntidiprogrammazione/articoli/cqrs-command-query-responsibility-segregation/">CQRS (Command Query Responsibility Segregation)</a>
+            </h2>
+            <p class="post-sintesi">Usare lo stesso modello per leggere e scrivere dati porta a compromessi sulle performance. La separazione tra Command (scrive/modifica) e Query (legge) permette di ottimizzare i Command per la consistenza e le Query per la velocità (es. usando viste 
+</p>
+        </article>
+        
+        <article class="post-item" 
+                 data-tags="js-v8-engine-runtime-performance" 
+                 data-title="de-ottimizzazione e type instability">
+            <div class="post-meta">JS • 05/04/2026</div>
+            <h2 class="post-title">
+                <a href="/appuntidiprogrammazione/articoli/de-ottimizzazione-e-type-instability/">De-ottimizzazione e Type Instability</a>
+            </h2>
+            <p class="post-sintesi">La pipeline JIT (TurboFan) ottimizza il codice basandosi sui tipi visti finora. Passare tipi diversi (es. a volte un int, a volte una string) a una funzione 'calda' causa una 'Deopt': V8 deve scartare il codice macchina ottimizzato e tornare all'inte
+</p>
+        </article>
+        
+        <article class="post-item" 
+                 data-tags="thymeleaf-custom-dialects-processors" 
+                 data-title="decoupled logic (th:ref)">
+            <div class="post-meta">THYMELEAF • 05/04/2026</div>
+            <h2 class="post-title">
+                <a href="/appuntidiprogrammazione/articoli/decoupled-logic-thref/">Decoupled Logic (th:ref)</a>
+            </h2>
+            <p class="post-sintesi">Mantenere i file HTML 'puri' per i designer, separando la logica Thymeleaf in file .th.xml, permette ai grafici di lavorare su file HTML standard senza vedere attributi th:, mentre il server applica la logica di binding esternamente. I selettori CSS 
+</p>
+        </article>
+        
+        <article class="post-item" 
+                 data-tags="java-advanced-reflection-metaprogr" 
+                 data-title="deep reflection e moduli (project jigsaw)">
+            <div class="post-meta">JAVA • 05/04/2026</div>
+            <h2 class="post-title">
+                <a href="/appuntidiprogrammazione/articoli/deep-reflection-e-moduli-project-jigsaw/">Deep Reflection e Moduli (Project Jigsaw)</a>
+            </h2>
+            <p class="post-sintesi">Da Java 9, l'incapsulamento è diventato reale: non si può più accedere ai campi privati di librerie esterne se il modulo non lo permette. Gestire gli errori di 'Access Denied' usando i flag --add-opens è la soluzione immediata, ma la reflection 'prof
+</p>
+        </article>
+        
+        <article class="post-item" 
+                 data-tags="java-jni-project-panama" 
+                 data-title="diagnostica: outofmemory nativo">
+            <div class="post-meta">JAVA • 05/04/2026</div>
+            <h2 class="post-title">
+                <a href="/appuntidiprogrammazione/articoli/diagnostica-outofmemory-nativo/">Diagnostica: OutOfMemory Nativo</a>
+            </h2>
+            <p class="post-sintesi">Se la memoria nativa finisce, la JVM crasha senza un java.lang.OutOfMemoryError classico. Monitorare il processo a livello di sistema operativo (RSS - Resident Set Size) è fondamentale. Se l'heap è vuoto ma il processo occupa 32GB di RAM, il colpevol
+</p>
+        </article>
+        
+        <article class="post-item" 
+                 data-tags="thymeleaf-custom-dialects-processors" 
+                 data-title="element tag processors (web components)">
+            <div class="post-meta">THYMELEAF • 05/04/2026</div>
+            <h2 class="post-title">
+                <a href="/appuntidiprogrammazione/articoli/element-tag-processors-web-components/">Element Tag Processors (Web Components)</a>
+            </h2>
+            <p class="post-sintesi">Sostituire interi tag custom (es. <app:navbar>) con markup generato lato server permette di incapsulare logiche di navigazione complesse che appaiono come semplici tag nel file HTML. IElementTagProcessor, combinato con IModelFactory, permette di cost
+</p>
+        </article>
+        
+        <article class="post-item" 
+                 data-tags="thymeleaf-spring-integration-flow-archi" 
+                 data-title="error global loop & validation binding">
+            <div class="post-meta">THYMELEAF • 05/04/2026</div>
+            <h2 class="post-title">
+                <a href="/appuntidiprogrammazione/articoli/error-global-loop-validation-binding/">Error Global Loop & Validation Binding</a>
+            </h2>
+            <p class="post-sintesi">L'oggetto #fields di Thymeleaf permette di catturare errori che non appartengono a un campo specifico (es. 'Credenziali non valide' o 'Password non corrispondenti') tramite th:each='err : ${#fields.errors('global')}'. L'attributo th:errorclass applic
+</p>
+        </article>
+        
+        <article class="post-item" 
+                 data-tags="thymeleaf-security-spel-expressions" 
+                 data-title="escaping avanzato: th:text vs th:utext">
+            <div class="post-meta">THYMELEAF • 05/04/2026</div>
+            <h2 class="post-title">
+                <a href="/appuntidiprogrammazione/articoli/escaping-avanzato-thtext-vs-thutext/">Escaping Avanzato: th:text vs th:utext</a>
+            </h2>
+            <p class="post-sintesi">L'uso di th:utext (unescaped) per renderizzare contenuti HTML salvati nel DB è la causa principale di XSS. Prima di passare una stringa HTML alla view, questa deve essere processata nel Service layer con un parser come OWASP Java HTML Sanitizer per r
+</p>
+        </article>
+        
+        <article class="post-item" 
+                 data-tags="java-concurrency-multithreading" 
+                 data-title="evitare il false sharing con @contended">
+            <div class="post-meta">JAVA • 05/04/2026</div>
+            <h2 class="post-title">
+                <a href="/appuntidiprogrammazione/articoli/evitare-il-false-sharing-con-contended/">Evitare il False Sharing con @Contended</a>
+            </h2>
+            <p class="post-sintesi">A livello hardware, la CPU carica i dati in cache lines (solitamente 64 byte). Se due variabili diverse usate da thread diversi finiscono nella stessa linea, la modifica di una invalida la cache dell'altro core, facendo crollare le performance. L'ann
+</p>
+        </article>
+        
+        <article class="post-item" 
+                 data-tags="thymeleaf-performance-tuning-caching" 
+                 data-title="evitare il reflection stack con th:with">
+            <div class="post-meta">THYMELEAF • 05/04/2026</div>
+            <h2 class="post-title">
+                <a href="/appuntidiprogrammazione/articoli/evitare-il-reflection-stack-con-thwith/">Evitare il Reflection Stack con th:with</a>
+            </h2>
+            <p class="post-sintesi">Accedere ripetutamente a metodi complessi tramite SpEL all'interno di un ciclo è costoso. L'istruzione th:with crea una variabile locale nel contesto di Thymeleaf. Memorizzando il risultato di una computazione o di una lookup una sola volta per itera
+</p>
+        </article>
+        
+        <article class="post-item" 
+                 data-tags="java-memory-performance" 
+                 data-title="evitare lautoboxing nei loop">
+            <div class="post-meta">JAVA • 05/04/2026</div>
+            <h2 class="post-title">
+                <a href="/appuntidiprogrammazione/articoli/evitare-lautoboxing-nei-loop/">Evitare lAutoboxing nei Loop</a>
+            </h2>
+            <p class="post-sintesi">Java converte automaticamente i tipi primitivi (int) nei loro wrapper (Integer). All'interno di un loop critico, questo causa l'allocazione di milioni di oggetti inutili, saturando l'Eden space e innescando il GC. La soluzione è usare collezioni prim
+</p>
+        </article>
+        
+        <article class="post-item" 
+                 data-tags="java-memory-performance" 
+                 data-title="exception handling: il costo dello stacktrace">
+            <div class="post-meta">JAVA • 05/04/2026</div>
+            <h2 class="post-title">
+                <a href="/appuntidiprogrammazione/articoli/exception-handling-il-costo-dello-stacktrace/">Exception Handling: il costo dello Stacktrace</a>
+            </h2>
+            <p class="post-sintesi">Creare un'eccezione è costoso non per l'oggetto in sé, ma per il metodo fillInStackTrace(), che deve percorrere l'intero call stack nativo. Per errori di business frequenti (es. UserNotFound), non dovremmo usare eccezioni con stacktrace. Una tecnica 
+</p>
+        </article>
+        
+        <article class="post-item" 
+                 data-tags="db-concorrenza-e-locking-approfond" 
+                 data-title="explicit table locking (share/exclusive)">
+            <div class="post-meta">DB • 05/04/2026</div>
+            <h2 class="post-title">
+                <a href="/appuntidiprogrammazione/articoli/explicit-table-locking-shareexclusive/">Explicit Table Locking (SHARE/EXCLUSIVE)</a>
+            </h2>
+            <p class="post-sintesi">Sebbene il locking automatico di Postgres sia eccellente, a volte è necessario un controllo manuale tramite il comando LOCK TABLE. Esistono diversi modi: SHARE (permette letture, blocca scritture) o EXCLUSIVE (blocca tutto). L'uso di lock espliciti è
+</p>
+        </article>
+        
+        <article class="post-item" 
+                 data-tags="db-query-opt-planner" 
+                 data-title="extended statistics (create statistics)">
+            <div class="post-meta">DB • 05/04/2026</div>
+            <h2 class="post-title">
+                <a href="/appuntidiprogrammazione/articoli/extended-statistics-create-statistics/">Extended Statistics (CREATE STATISTICS)</a>
+            </h2>
+            <p class="post-sintesi">Il Planner assume solitamente che le colonne siano indipendenti tra loro. Se interroghiamo una tabella filtrando per 'Marca' e 'Modello', Postgres moltiplica le selettività singole, spesso sottostimando il numero di righe risultanti. CREATE STATISTIC
+</p>
+        </article>
+        
+        <article class="post-item" 
+                 data-tags="thymeleaf-performance-tuning-caching" 
+                 data-title="fragment caching (jcache/redis)">
+            <div class="post-meta">THYMELEAF • 05/04/2026</div>
+            <h2 class="post-title">
+                <a href="/appuntidiprogrammazione/articoli/fragment-caching-jcacheredis/">Fragment Caching (JCache/Redis)</a>
+            </h2>
+            <p class="post-sintesi">Elaborare lo stesso menu o footer per ogni utente è uno spreco di risorse. Wrappando i TemplateResolver con sistemi di caching (Redis o Ehcache) per i frammenti statici è possibile servire pezzi di HTML pre-renderizzati direttamente dalla RAM, bypass
+</p>
+        </article>
+        
+        <article class="post-item" 
+                 data-tags="db-vacuum-storage" 
+                 data-title="freezing & wraparound prevention">
+            <div class="post-meta">DB • 05/04/2026</div>
+            <h2 class="post-title">
+                <a href="/appuntidiprogrammazione/articoli/freezing-wraparound-prevention/">Freezing & Wraparound Prevention</a>
+            </h2>
+            <p class="post-sintesi">Ogni riga ha un Transaction ID (XID). Poiché il contatore è a 32 bit, dopo 2 miliardi di transazioni il database va in 'wraparound' (i vecchi dati diventano invisibili). Il 'Freezing' è il processo con cui il Vacuum marca le righe vecchie come 'conge
+</p>
+        </article>
+        
+        <article class="post-item" 
+                 data-tags="db-vacuum-storage" 
+                 data-title="fsm e vm: gestione dello spazio libero">
+            <div class="post-meta">DB • 05/04/2026</div>
+            <h2 class="post-title">
+                <a href="/appuntidiprogrammazione/articoli/fsm-e-vm-gestione-dello-spazio-libero/">FSM e VM: Gestione dello spazio libero</a>
+            </h2>
+            <p class="post-sintesi">La Free Space Map (FSM) tiene traccia di dove c'è spazio libero nelle pagine esistenti per nuovi inserimenti. Se la FSM è corrotta o insufficiente, Postgres inizierà a creare nuove pagine anche se c'è spazio disponibile, gonfiando la tabella inutilme
+</p>
+        </article>
+        
+        <article class="post-item" 
+                 data-tags="js-v8-engine-runtime-performance" 
+                 data-title="garbage collection: scavenger vs mark-sweep">
+            <div class="post-meta">JS • 05/04/2026</div>
+            <h2 class="post-title">
+                <a href="/appuntidiprogrammazione/articoli/garbage-collection-scavenger-vs-mark-sweep/">Garbage Collection: Scavenger vs Mark-Sweep</a>
+            </h2>
+            <p class="post-sintesi">V8 divide l'heap in 'New Space' (piccolo e veloce) e 'Old Space'. La maggior parte degli oggetti muore giovane nello Scavenger GC (copia veloce). Se un oggetto sopravvive troppo, finisce nell'Old Space dove il Mark-Sweep è molto più costoso. Per ridu
+</p>
+        </article>
+        
+        <article class="post-item" 
+                 data-tags="thymeleaf-advanced-layout-templating" 
+                 data-title="headless-ready: fragment rendering (htmx)">
+            <div class="post-meta">THYMELEAF • 05/04/2026</div>
+            <h2 class="post-title">
+                <a href="/appuntidiprogrammazione/articoli/headless-ready-fragment-rendering-htmx/">Headless-Ready: Fragment Rendering (HTMX)</a>
+            </h2>
+            <p class="post-sintesi">Spesso serve ritornare solo un pezzo di HTML per aggiornamenti AJAX/HTMX, non l'intera pagina. Thymeleaf può processare solo una porzione del file .html (es. return 'page :: my-fragment'). Questo abilita pattern 'HTML over the wire', permettendo a Sp
+</p>
+        </article>
+        
+        <article class="post-item" 
+                 data-tags="js-v8-engine-runtime-performance" 
+                 data-title="hidden classes (shapes) e inline caching">
+            <div class="post-meta">JS • 05/04/2026</div>
+            <h2 class="post-title">
+                <a href="/appuntidiprogrammazione/articoli/hidden-classes-shapes-e-inline-caching/">Hidden Classes (Shapes) e Inline Caching</a>
+            </h2>
+            <p class="post-sintesi">V8 non usa dizionari per gli oggetti ma 'Hidden Classes'. Inizializzare proprietà in ordine diverso o aggiungerle dinamicamente rompe la 'Shape', forzando il motore a creare nuove classi nascoste. Questo invalida l'Inline Cache (IC): se la Shape camb
+</p>
+        </article>
+        
+        <article class="post-item" 
+                 data-tags="db-concorrenza-e-locking-approfond" 
+                 data-title="index-only scans e visibilit">
+            <div class="post-meta">DB • 05/04/2026</div>
+            <h2 class="post-title">
+                <a href="/appuntidiprogrammazione/articoli/index-only-scans-e-visibilit/">Index-Only Scans e Visibilit</a>
+            </h2>
+            <p class="post-sintesi">Un Index-Only Scan permette a Postgres di rispondere a una query leggendo solo l'indice, senza toccare la tabella (heap). Tuttavia, a causa di MVCC, l'indice non sa se una riga è visibile per la transazione corrente. Per confermarlo, Postgres usa la 
+</p>
+        </article>
+        
+        <article class="post-item" 
+                 data-tags="db-indexing-internals" 
+                 data-title="indici su espressioni (functional indexes)">
+            <div class="post-meta">DB • 05/04/2026</div>
+            <h2 class="post-title">
+                <a href="/appuntidiprogrammazione/articoli/indici-su-espressioni-functional-indexes/">Indici su Espressioni (Functional Indexes)</a>
+            </h2>
+            <p class="post-sintesi">Molte query falliscono l'uso degli indici perché applicano funzioni alle colonne (es. WHERE lower(name) = 'rossi'). Un indice standard su name non serve in questo caso. La soluzione è un indice su espressione, dove il risultato della funzione viene p
+</p>
+        </article>
+        
+        <article class="post-item" 
+                 data-tags="js-design-patterns-architecture" 
+                 data-title="inversion of control (ioc) e dependency injection">
+            <div class="post-meta">JS • 05/04/2026</div>
+            <h2 class="post-title">
+                <a href="/appuntidiprogrammazione/articoli/inversion-of-control-ioc-e-dependency-injection/">Inversion of Control (IoC) e Dependency Injection</a>
+            </h2>
+            <p class="post-sintesi">L'accoppiamento rigido tra moduli rende il testing isolato quasi impossibile e il codice fragile. Il pattern Hexagonal Architecture permette di separare il core logico dai dettagli implementativi (DB, API). Invece di importare direttamente le dipende
+</p>
+        </article>
+        
+        <article class="post-item" 
+                 data-tags="java-jvm-tuning-garbage-collection" 
+                 data-title="java flight recorder (jfr) in prod">
+            <div class="post-meta">JAVA • 05/04/2026</div>
+            <h2 class="post-title">
+                <a href="/appuntidiprogrammazione/articoli/java-flight-recorder-jfr-in-prod/">Java Flight Recorder (JFR) in Prod</a>
+            </h2>
+            <p class="post-sintesi">Diagnosticare problemi di performance dopo che sono avvenuti è quasi impossibile senza dati storici. JFR è uno strumento a basso overhead (<1%) da tenere sempre attivo in produzione. JFR registra eventi interni della JVM (allocazioni, lock, pause GC,
+</p>
+        </article>
+        
+        <article class="post-item" 
+                 data-tags="db-query-opt-planner" 
+                 data-title="join order control (join_collapse_limit)">
+            <div class="post-meta">DB • 05/04/2026</div>
+            <h2 class="post-title">
+                <a href="/appuntidiprogrammazione/articoli/join-order-control-joincollapselimit/">Join Order Control (join_collapse_limit)</a>
+            </h2>
+            <p class="post-sintesi">Quando una query ha molti join, il Planner tenta di rimescolarli per trovare l'ordine più efficiente. Tuttavia, il numero di combinazioni cresce esponenzialmente. Se superiamo il join_collapse_limit, il Planner smette di cercare l'ordine perfetto e i
+</p>
+        </article>
+        
+        <article class="post-item" 
+                 data-tags="js-security-cryptography" 
+                 data-title="jwt signature bypass e algorithm none">
+            <div class="post-meta">JS • 05/04/2026</div>
+            <h2 class="post-title">
+                <a href="/appuntidiprogrammazione/articoli/jwt-signature-bypass-e-algorithm-none/">JWT Signature Bypass e Algorithm none</a>
+            </h2>
+            <p class="post-sintesi">Molte librerie JWT accettano l'algoritmo 'none', permettendo a un utente di modificare il payload e rimuovere la firma. Il server deve forzare esplicitamente l'algoritmo atteso (es. HS256 o RS256) e rifiutare qualsiasi token che non corrisponda, igno
+</p>
+        </article>
+        
+        <article class="post-item" 
+                 data-tags="js-node-js-internals-libuv" 
+                 data-title="libuv thread pool & uv_threadpool_size">
+            <div class="post-meta">JS • 05/04/2026</div>
+            <h2 class="post-title">
+                <a href="/appuntidiprogrammazione/articoli/libuv-thread-pool-uvthreadpoolsize/">Libuv Thread Pool & UV_THREADPOOL_SIZE</a>
+            </h2>
+            <p class="post-sintesi">Non tutto in Node è single-threaded: operazioni come FS, DNS e Crypto usano un pool di thread interno. Il default è di soli 4 thread. Saturando questo pool (es. con molti fs.readFile simultanei), le performance crollano. Ottimizzare questa variabile 
+</p>
+        </article>
+        
+        <article class="post-item" 
+                 data-tags="java-memory-performance" 
+                 data-title="locality of reference e l1/l2 cache">
+            <div class="post-meta">JAVA • 05/04/2026</div>
+            <h2 class="post-title">
+                <a href="/appuntidiprogrammazione/articoli/locality-of-reference-e-l1l2-cache/">Locality of Reference e L1/L2 Cache</a>
+            </h2>
+            <p class="post-sintesi">La CPU legge la memoria a blocchi (cache lines da 64 byte). Un array di oggetti in Java è in realtà un array di puntatori a oggetti sparsi nell'heap (scarsa località). Per massimizzare le performance, la soluzione è usare array di primitivi 1D dove i
+</p>
+        </article>
+        
+        <article class="post-item" 
+                 data-tags="db-concorrenza-e-locking-approfond" 
+                 data-title="lock monitoring & diagnosis">
+            <div class="post-meta">DB • 05/04/2026</div>
+            <h2 class="post-title">
+                <a href="/appuntidiprogrammazione/articoli/lock-monitoring-diagnosis/">Lock Monitoring & Diagnosis</a>
+            </h2>
+            <p class="post-sintesi">In un sistema di produzione, i lock 'silenziosi' sono i peggiori nemici delle performance. Una transazione dimenticata aperta può bloccare l'intero sistema (es. un VACUUM o una migrazione di schema). È fondamentale avere una vista chiara di chi sta b
+</p>
+        </article>
+        
+        <article class="post-item" 
+                 data-tags="db-advanced-replication-ha" 
+                 data-title="logical decoding & replication slots">
+            <div class="post-meta">DB • 05/04/2026</div>
+            <h2 class="post-title">
+                <a href="/appuntidiprogrammazione/articoli/logical-decoding-replication-slots/">Logical Decoding & Replication Slots</a>
+            </h2>
+            <p class="post-sintesi">La replica logica permette di trasmettere solo le modifiche ai dati (INSERT/UPDATE/DELETE) invece di interi blocchi di disco. Il problema principale sorge quando il ricevente (subscriber) si disconnette: il mittente (publisher) deve conservare tutti 
+</p>
+        </article>
+        
+        <article class="post-item" 
+                 data-tags="db-advanced-replication-ha" 
+                 data-title="logical replication slots e upgrade near-zero downtime">
+            <div class="post-meta">DB • 05/04/2026</div>
+            <h2 class="post-title">
+                <a href="/appuntidiprogrammazione/articoli/logical-replication-slots-e-upgrade-near-zero-downtime/">Logical Replication Slots e Upgrade Near-Zero Downtime</a>
+            </h2>
+            <p class="post-sintesi">La replica logica è lo strumento principe per eseguire upgrade di versione (es. da PG 15 a 17) con downtime minimo. La procedura prevede: creare un nuovo cluster con la versione recente, attivare la replica logica dal vecchio al nuovo, aspettare che 
+</p>
+        </article>
+        
+        <article class="post-item" 
+                 data-tags="java-jni-project-panama" 
+                 data-title="migrazione a ffm api (panama)">
+            <div class="post-meta">JAVA • 05/04/2026</div>
+            <h2 class="post-title">
+                <a href="/appuntidiprogrammazione/articoli/migrazione-a-ffm-api-panama/">Migrazione a FFM API (Panama)</a>
+            </h2>
+            <p class="post-sintesi">JNI richiede la scrittura di codice C 'glue' (stub) e ha un alto costo di transizione (context switch). La Foreign Function & Memory API (Java 21/22) permette di chiamare funzioni C direttamente da Java usando Linker e SymbolLookup. Questo elimina la
+</p>
+        </article>
+        
+        <article class="post-item" 
+                 data-tags="js-design-patterns-architecture" 
+                 data-title="monadi (maybe, either) per error handling">
+            <div class="post-meta">JS • 05/04/2026</div>
+            <h2 class="post-title">
+                <a href="/appuntidiprogrammazione/articoli/monadi-maybe-either-per-error-handling/">Monadi (Maybe, Either) per Error Handling</a>
+            </h2>
+            <p class="post-sintesi">L'abuso di try...catch e controlli if(null) sporca il dominio core. Il pattern Either incapsula effetti collaterali e potenziali fallimenti: Left rappresenta l'errore, Right il successo. Questo permette di concatenare operazioni (.map, .chain) in una
+</p>
+        </article>
+        
+        <article class="post-item" 
+                 data-tags="db-vacuum-storage" 
+                 data-title="monitoring i/o con pg_stat_bgwriter">
+            <div class="post-meta">DB • 05/04/2026</div>
+            <h2 class="post-title">
+                <a href="/appuntidiprogrammazione/articoli/monitoring-io-con-pgstatbgwriter/">Monitoring I/O con pg_stat_bgwriter</a>
+            </h2>
+            <p class="post-sintesi">Il Background Writer ha il compito di scrivere le pagine sporche dalla memoria al disco in modo graduale, evitando picchi durante i Checkpoint. Se il numero di buffers_backend è alto, significa che le query degli utenti sono costrette a scrivere i da
+</p>
+        </article>
+        
+        <article class="post-item" 
+                 data-tags="db-advanced-replication-ha" 
+                 data-title="monitoring replication lag (lsn algebra)">
+            <div class="post-meta">DB • 05/04/2026</div>
+            <h2 class="post-title">
+                <a href="/appuntidiprogrammazione/articoli/monitoring-replication-lag-lsn-algebra/">Monitoring Replication Lag (LSN Algebra)</a>
+            </h2>
+            <p class="post-sintesi">Il 'Replication Lag' non si misura solo in secondi, ma in byte di scarto tramite i Log Sequence Numbers (LSN). Sottraendo l'LSN di ricezione della replica dall'LSN di scrittura del Master si ottiene la distanza reale tra i due nodi. Se la differenza 
+</p>
+        </article>
+        
+        <article class="post-item" 
+                 data-tags="db-indexing-internals" 
+                 data-title="multi-column indexes e lordine delle colonne">
+            <div class="post-meta">DB • 05/04/2026</div>
+            <h2 class="post-title">
+                <a href="/appuntidiprogrammazione/articoli/multi-column-indexes-e-lordine-delle-colonne/">Multi-column Indexes e lordine delle colonne</a>
+            </h2>
+            <p class="post-sintesi">L'ordine delle colonne in un indice composto (B-Tree) è critico. La 'regola del prefisso' stabilisce che un indice su (A, B) può essere usato per ricerche su A e su A+B, ma è quasi inutile per ricerche solo su B. Le colonne con la maggiore selettivit
+</p>
+        </article>
+        
+        <article class="post-item" 
+                 data-tags="thymeleaf-spring-integration-flow-archi" 
+                 data-title="multi-layout viewresolver order">
+            <div class="post-meta">THYMELEAF • 05/04/2026</div>
+            <h2 class="post-title">
+                <a href="/appuntidiprogrammazione/articoli/multi-layout-viewresolver-order/">Multi-Layout ViewResolver Order</a>
+            </h2>
+            <p class="post-sintesi">In progetti grandi convivono spesso diverse tecnologie (Thymeleaf per il frontend, JSP per il legacy, JSON per API). Configurando correttamente la proprietà order del ViewResolver, Spring sa quale motore interpellare per primo. Questo permette una mi
+</p>
+        </article>
+        
+        <article class="post-item" 
+                 data-tags="db-concorrenza-e-locking-approfond" 
+                 data-title="multiversion concurrency control (mvcc) internals">
+            <div class="post-meta">DB • 05/04/2026</div>
+            <h2 class="post-title">
+                <a href="/appuntidiprogrammazione/articoli/multiversion-concurrency-control-mvcc-internals/">Multiversion Concurrency Control (MVCC) Internals</a>
+            </h2>
+            <p class="post-sintesi">MVCC è il cuore di PostgreSQL: permette ai lettori di non bloccare gli scrittori e viceversa. Ogni riga ha dei metadati nascosti (xmin, xmax) che determinano la visibilità per una specifica transazione. Quando si esegue un UPDATE, Postgres non sovras
+</p>
+        </article>
+        
+        <article class="post-item" 
+                 data-tags="js-node-js-internals-libuv" 
+                 data-title="node.js cluster & shared sockets">
+            <div class="post-meta">JS • 05/04/2026</div>
+            <h2 class="post-title">
+                <a href="/appuntidiprogrammazione/articoli/nodejs-cluster-shared-sockets/">Node.js Cluster & Shared Sockets</a>
+            </h2>
+            <p class="post-sintesi">Node.js non scala sui core per default. Il modulo cluster permette al master di creare worker e condividere con loro i file descriptor dei socket. Questo permette a più processi di ascoltare sulla stessa porta. Il master usa un algoritmo Round-Robin 
+</p>
+        </article>
+        
+        <article class="post-item" 
+                 data-tags="js-v8-engine-runtime-performance" 
+                 data-title="off-main-thread (omt) e workers">
+            <div class="post-meta">JS • 05/04/2026</div>
+            <h2 class="post-title">
+                <a href="/appuntidiprogrammazione/articoli/off-main-thread-omt-e-workers/">Off-Main-Thread (OMT) e Workers</a>
+            </h2>
+            <p class="post-sintesi">JS è single-threaded, ma il parsing di grandi JSON o il calcolo pesante bloccano l'Event Loop, causando 'jank' (scatti) nella UI. Worker Threads (Node) e Web Workers (Browser) permettono di spostare il lavoro CPU-bound su thread isolati. L'uso di Tra
+</p>
+        </article>
+        
+        <article class="post-item" 
+                 data-tags="thymeleaf-performance-tuning-caching" 
+                 data-title="ottimizzazione inline js (jackson integration)">
+            <div class="post-meta">THYMELEAF • 05/04/2026</div>
+            <h2 class="post-title">
+                <a href="/appuntidiprogrammazione/articoli/ottimizzazione-inline-js-jackson-integration/">Ottimizzazione Inline JS (Jackson Integration)</a>
+            </h2>
+            <p class="post-sintesi">Inserire liste Java in script JS tramite inlining standard è lento per grandi array. Usare Jackson nel controller per generare una stringa JSON e iniettarla come variabile raw evita che Thymeleaf debba iterare sull'oggetto Java per costruire la strin
+</p>
+        </article>
+        
+        <article class="post-item" 
+                 data-tags="db-indexing-internals" 
+                 data-title="partial indexes per ridurre loverhead">
+            <div class="post-meta">DB • 05/04/2026</div>
+            <h2 class="post-title">
+                <a href="/appuntidiprogrammazione/articoli/partial-indexes-per-ridurre-loverhead/">Partial Indexes per ridurre loverhead</a>
+            </h2>
+            <p class="post-sintesi">Un errore comune è indicizzare l'intera tabella quando le query filtrano sempre per una condizione specifica (es. solo i record 'attivi'). I Partial Indexes includono solo le righe che soddisfano un predicato WHERE. Questo li rende minuscoli, velocis
+</p>
+        </article>
+        
+        <article class="post-item" 
+                 data-tags="thymeleaf-spring-integration-flow-archi" 
+                 data-title="post-redirect-get (prg) & flash attributes">
+            <div class="post-meta">THYMELEAF • 05/04/2026</div>
+            <h2 class="post-title">
+                <a href="/appuntidiprogrammazione/articoli/post-redirect-get-prg-flash-attributes/">Post-Redirect-Get (PRG) & Flash Attributes</a>
+            </h2>
+            <p class="post-sintesi">Il refresh della pagina dopo un invio form causa il re-invio dei dati (doppio ordine). Il pattern PRG usa RedirectAttributes.addFlashAttribute(): gli attributi vengono salvati temporaneamente nella sessione e rimossi automaticamente dopo il primo ren
+</p>
+        </article>
+        
+        <article class="post-item" 
+                 data-tags="db-advanced-replication-ha" 
+                 data-title="quorum-based synchronous replication">
+            <div class="post-meta">DB • 05/04/2026</div>
+            <h2 class="post-title">
+                <a href="/appuntidiprogrammazione/articoli/quorum-based-synchronous-replication/">Quorum-based Synchronous Replication</a>
+            </h2>
+            <p class="post-sintesi">Dalla versione 10, PostgreSQL supporta la replica sincrona basata su quorum: la transazione è sicura se N nodi su una lista di M confermano la ricezione. Questo meccanismo evita il 'Single Point of Failure' della replica sincrona classica: se uno sta
+</p>
+        </article>
+        
+        <article class="post-item" 
+                 data-tags="thymeleaf-spring-integration-flow-archi" 
+                 data-title="reactive sse (server-sent events) streaming">
+            <div class="post-meta">THYMELEAF • 05/04/2026</div>
+            <h2 class="post-title">
+                <a href="/appuntidiprogrammazione/articoli/reactive-sse-server-sent-events-streaming/">Reactive SSE (Server-Sent Events) Streaming</a>
+            </h2>
+            <p class="post-sintesi">Aggiornare parti della pagina in tempo reale senza WebSocket complessi è possibile con SpringWebFluxThymeleafView. Usando WebFlux, si può restituire un Flux<Data> al template: Thymeleaf renderizza i frammenti man mano che i dati arrivano dallo stream
+</p>
+        </article>
+        
+        <article class="post-item" 
+                 data-tags="db-concorrenza-e-locking-approfond" 
+                 data-title="row-level security (rls) e concorrenza">
+            <div class="post-meta">DB • 05/04/2026</div>
+            <h2 class="post-title">
+                <a href="/appuntidiprogrammazione/articoli/row-level-security-rls-e-concorrenza/">Row-Level Security (RLS) e Concorrenza</a>
+            </h2>
+            <p class="post-sintesi">La sicurezza a livello di riga (RLS) aggiunge un filtro invisibile a ogni query. Sebbene potente, può impattare sulla concorrenza se le policy includono subquery complesse che acquisiscono lock su altre tabelle. Ogni volta che un utente accede a una 
+</p>
+        </article>
+        
+        <article class="post-item" 
+                 data-tags="thymeleaf-security-spel-expressions" 
+                 data-title="security dialect: sec:authorize">
+            <div class="post-meta">THYMELEAF • 05/04/2026</div>
+            <h2 class="post-title">
+                <a href="/appuntidiprogrammazione/articoli/security-dialect-secauthorize/">Security Dialect: sec:authorize</a>
+            </h2>
+            <p class="post-sintesi">Nascondere elementi via CSS (display:none) non è sicurezza: l'HTML è visibile nel sorgente. L'attributo sec:authorize='hasRole(...)' impedisce fisicamente al server di generare e inviare il markup al browser se l'utente non ha i permessi. Questo ridu
+</p>
+        </article>
+        
+        <article class="post-item" 
+                 data-tags="db-concorrenza-e-locking-approfond" 
+                 data-title="serializable snapshot isolation (ssi)">
+            <div class="post-meta">DB • 05/04/2026</div>
+            <h2 class="post-title">
+                <a href="/appuntidiprogrammazione/articoli/serializable-snapshot-isolation-ssi/">Serializable Snapshot Isolation (SSI)</a>
+            </h2>
+            <p class="post-sintesi">Il livello di isolamento SERIALIZABLE in PostgreSQL non si limita a bloccare le righe, ma monitora le dipendenze tra le transazioni per prevenire anomalie di 'vizio di scrittura' (write skew). Mentre REPEATABLE READ garantisce che i dati letti non ca
+</p>
+        </article>
+        
+        <article class="post-item" 
+                 data-tags="db-indexing-internals" 
+                 data-title="sp-gist per dati non bilanciati">
+            <div class="post-meta">DB • 05/04/2026</div>
+            <h2 class="post-title">
+                <a href="/appuntidiprogrammazione/articoli/sp-gist-per-dati-non-bilanciati/">SP-GiST per Dati Non Bilanciati</a>
+            </h2>
+            <p class="post-sintesi">Lo Space-Partitioned GiST (SP-GiST) è un'evoluzione per strutture dati non bilanciate come alberi radi (quadtree, k-d trees). A differenza di GiST, che divide il set di dati in sotto-insiemi potenzialmente sovrapposti, SP-GiST divide lo spazio in reg
+</p>
+        </article>
+        
+        <article class="post-item" 
+                 data-tags="thymeleaf-security-spel-expressions" 
+                 data-title="ssti (server-side template injection) prevention">
+            <div class="post-meta">THYMELEAF • 05/04/2026</div>
+            <h2 class="post-title">
+                <a href="/appuntidiprogrammazione/articoli/ssti-server-side-template-injection-prevention/">SSTI (Server-Side Template Injection) Prevention</a>
+            </h2>
+            <p class="post-sintesi">Una vulnerabilità storica di Thymeleaf permette l'esecuzione di codice se il nome della vista è costruito con input utente. Concatenare parametri della request nel percorso della view (return 'user/' + lang + '/index') è pericoloso. È necessario usar
+</p>
+        </article>
+        
+        <article class="post-item" 
+                 data-tags="db-query-opt-planner" 
+                 data-title="statistics target e selettivit">
+            <div class="post-meta">DB • 05/04/2026</div>
+            <h2 class="post-title">
+                <a href="/appuntidiprogrammazione/articoli/statistics-target-e-selettivit/">Statistics Target e Selettivit</a>
+            </h2>
+            <p class="post-sintesi">La qualità del piano dipende dalla precisione degli istogrammi salvati nelle statistiche. Per impostazione predefinita, Postgres campiona 100 valori comuni per ogni colonna. Per colonne con distribuzioni di dati molto irregolari (es. pochi clienti co
+</p>
+        </article>
+        
+        <article class="post-item" 
+                 data-tags="java-memory-performance" 
+                 data-title="string.intern() e stringtable">
+            <div class="post-meta">JAVA • 05/04/2026</div>
+            <h2 class="post-title">
+                <a href="/appuntidiprogrammazione/articoli/stringintern-e-stringtable/">String.intern() e StringTable</a>
+            </h2>
+            <p class="post-sintesi">Se l'applicazione gestisce milioni di stringhe identiche (es. nomi di stati, codici valuta), la memoria viene sprecata. String.intern() sposta la stringa in un pool globale condiviso, permettendo a oggetti diversi di condividere la stessa istanza. La
+</p>
+        </article>
+        
+        <article class="post-item" 
+                 data-tags="js-security-cryptography" 
+                 data-title="subresource integrity (sri)">
+            <div class="post-meta">JS • 05/04/2026</div>
+            <h2 class="post-title">
+                <a href="/appuntidiprogrammazione/articoli/subresource-integrity-sri/">Subresource Integrity (SRI)</a>
+            </h2>
+            <p class="post-sintesi">Caricare librerie da CDN esterne è un rischio: se la CDN viene compromessa, lo script può essere sostituito con malware. Lo standard SRI richiede l'aggiunta dell'attributo integrity con l'hash crittografico del file. Il browser scaricherà il file, ne
+</p>
+        </article>
+        
+        <article class="post-item" 
+                 data-tags="db-advanced-replication-ha" 
+                 data-title="synchronous commit & performance trade-off">
+            <div class="post-meta">DB • 05/04/2026</div>
+            <h2 class="post-title">
+                <a href="/appuntidiprogrammazione/articoli/synchronous-commit-performance-trade-off/">Synchronous Commit & Performance Trade-off</a>
+            </h2>
+            <p class="post-sintesi">La replica sincrona garantisce che una transazione sia confermata solo dopo essere stata scritta su almeno un nodo standby. Questo elimina il rischio di perdere dati in caso di failover, ma introduce una latenza pari al Round Trip Time (RTT) tra i se
+</p>
+        </article>
+        
+        <article class="post-item" 
+                 data-tags="thymeleaf-advanced-layout-templating" 
+                 data-title="synthetic local variables (#ids)">
+            <div class="post-meta">THYMELEAF • 05/04/2026</div>
+            <h2 class="post-title">
+                <a href="/appuntidiprogrammazione/articoli/synthetic-local-variables-ids/">Synthetic Local Variables (#ids)</a>
+            </h2>
+            <p class="post-sintesi">In loop complessi, generare ID univoci per l'accessibilità (ARIA) o per JS è difficile. L'oggetto #ids.seq('myId') genera una sequenza incrementale che persiste per tutta la richiesta. Questo garantisce che i tag label e input siano sempre sincronizz
+</p>
+        </article>
+        
+        <article class="post-item" 
+                 data-tags="js-typescript-advanced-types" 
+                 data-title="template literal types (ts 4.0+)">
+            <div class="post-meta">JS • 05/04/2026</div>
+            <h2 class="post-title">
+                <a href="/appuntidiprogrammazione/articoli/template-literal-types-ts-40/">Template Literal Types (TS 4.0+)</a>
+            </h2>
+            <p class="post-sintesi">Manipolare stringhe a livello di tipo per validare pattern testuali. Combinando stringhe con la sintassi `${A}${B}` è possibile generare set di tipi dinamici. Questo permette di tipizzare con precisione millimetrica eventi, percorsi di routing o stil
+</p>
+        </article>
+        
+        <article class="post-item" 
+                 data-tags="java-jni-project-panama" 
+                 data-title="thread-safety e native state">
+            <div class="post-meta">JAVA • 05/04/2026</div>
+            <h2 class="post-title">
+                <a href="/appuntidiprogrammazione/articoli/thread-safety-e-native-state/">Thread-Safety e Native State</a>
+            </h2>
+            <p class="post-sintesi">La memoria nativa non rispetta le regole di visibilità di Java. Due thread Java che accedono allo stesso MemorySegment possono causare data race impossibili da rilevare per la JVM (niente ConcurrentModificationException). La soluzione è usare Arena.o
+</p>
+        </article>
+        
+        <article class="post-item" 
+                 data-tags="thymeleaf-advanced-layout-templating" 
+                 data-title="thymeleaf layout dialect (decoration)">
+            <div class="post-meta">THYMELEAF • 05/04/2026</div>
+            <h2 class="post-title">
+                <a href="/appuntidiprogrammazione/articoli/thymeleaf-layout-dialect-decoration/">Thymeleaf Layout Dialect (Decoration)</a>
+            </h2>
+            <p class="post-sintesi">Il semplice th:replace causa duplicazione di intestazioni e meta-tag. Il pattern layout:decorate permette a un 'Base Layout' di definire punti di inserimento (layout:fragment) che le pagine figlie sovrascrivono. Le pagine non includono il layout, ma 
+</p>
+        </article>
+        
+        <article class="post-item" 
+                 data-tags="thymeleaf-performance-tuning-caching" 
+                 data-title="thymeleaf reactive (data-driven)">
+            <div class="post-meta">THYMELEAF • 05/04/2026</div>
+            <h2 class="post-title">
+                <a href="/appuntidiprogrammazione/articoli/thymeleaf-reactive-data-driven/">Thymeleaf Reactive (Data-Driven)</a>
+            </h2>
+            <p class="post-sintesi">Caricare una lista enorme blocca il thread finché tutto il template non è pronto. IReactiveDataDriverContextVariable, in stack WebFlux, permette a Thymeleaf di renderizzare il template in modo 'chunked'. Non appena un elemento della lista è disponibi
+</p>
+        </article>
+        
+        <article class="post-item" 
+                 data-tags="js-security-cryptography" 
+                 data-title="timing attacks e constant-time comparison">
+            <div class="post-meta">JS • 05/04/2026</div>
+            <h2 class="post-title">
+                <a href="/appuntidiprogrammazione/articoli/timing-attacks-e-constant-time-comparison/">Timing Attacks e Constant-Time Comparison</a>
+            </h2>
+            <p class="post-sintesi">Un attaccante può indovinare una password o un token misurando quanto tempo impiega il server a rispondere. Il confronto if (a === b) termina non appena trova un carattere diverso (early exit). Il metodo crypto.timingSafeEqual confronta tutti i byte 
+</p>
+        </article>
+        
+        <article class="post-item" 
+                 data-tags="java-jvm-tuning-garbage-collection" 
+                 data-title="tlab (thread-local allocation buffers)">
+            <div class="post-meta">JAVA • 05/04/2026</div>
+            <h2 class="post-title">
+                <a href="/appuntidiprogrammazione/articoli/tlab-thread-local-allocation-buffers/">TLAB (Thread-Local Allocation Buffers)</a>
+            </h2>
+            <p class="post-sintesi">L'Eden space è una risorsa condivisa: se ogni thread dovesse bloccare l'intero spazio per ogni new, il multithreading sarebbe lentissimo. I TLAB assegnano a ogni thread una piccola porzione privata dell'Eden dove allocare oggetti senza lock. Se i TLA
+</p>
+        </article>
+        
+        <article class="post-item" 
+                 data-tags="db-concorrenza-e-locking-approfond" 
+                 data-title="transaction id (xid) wraparound">
+            <div class="post-meta">DB • 05/04/2026</div>
+            <h2 class="post-title">
+                <a href="/appuntidiprogrammazione/articoli/transaction-id-xid-wraparound/">Transaction ID (XID) Wraparound</a>
+            </h2>
+            <p class="post-sintesi">Ogni transazione in Postgres riceve un ID numerico a 32 bit. Poiché i numeri finiscono (circa 4 miliardi), Postgres deve riutilizzarli. Se non gestito, questo porta al 'wraparound', un evento catastrofico dove i vecchi dati sembrano sparire o diventa
+</p>
+        </article>
+        
+        <article class="post-item" 
+                 data-tags="thymeleaf-spring-integration-flow-archi" 
+                 data-title="type conversion & formatter system">
+            <div class="post-meta">THYMELEAF • 05/04/2026</div>
+            <h2 class="post-title">
+                <a href="/appuntidiprogrammazione/articoli/type-conversion-formatter-system/">Type Conversion & Formatter System</a>
+            </h2>
+            <p class="post-sintesi">Visualizzare oggetti complessi (es. Money, Coordinate, Entità) nei form richiede conversioni bidirezionali. Annotando i campi del DTO con @DateTimeFormat o @NumberFormat, Thymeleaf delega automaticamente la formattazione al sistema di conversione di 
+</p>
+        </article>
+        
+        <article class="post-item" 
+                 data-tags="java-jni-project-panama" 
+                 data-title="upcalls: chiamare java dal c">
+            <div class="post-meta">JAVA • 05/04/2026</div>
+            <h2 class="post-title">
+                <a href="/appuntidiprogrammazione/articoli/upcalls-chiamare-java-dal-c/">Upcalls: Chiamare Java dal C</a>
+            </h2>
+            <p class="post-sintesi">A volte è il codice C che deve inviare una notifica a Java (callback). Panama permette di creare 'stub' per le upcall tramite linker.upcallStub(). Le upcall sono più lente delle downcall (Java -> C) perché devono ricreare il contesto Java. Vanno prog
+</p>
+        </article>
+        
+        <article class="post-item" 
+                 data-tags="db-concorrenza-e-locking-approfond" 
+                 data-title="vacuum pre-emptive locking">
+            <div class="post-meta">DB • 05/04/2026</div>
+            <h2 class="post-title">
+                <a href="/appuntidiprogrammazione/articoli/vacuum-pre-emptive-locking/">Vacuum Pre-emptive Locking</a>
+            </h2>
+            <p class="post-sintesi">Il Vacuum è un processo di background, ma per finalizzare la pulizia o per troncare una tabella alla fine, ha bisogno di un lock breve ma forte (Access Exclusive). Se la tabella è costantemente sotto query, il Vacuum potrebbe non riuscire mai a finir
+</p>
+        </article>
+        
+        <article class="post-item" 
+                 data-tags="java-concurrency-multithreading" 
+                 data-title="virtual threads & i/o bound tasks">
+            <div class="post-meta">JAVA • 05/04/2026</div>
+            <h2 class="post-title">
+                <a href="/appuntidiprogrammazione/articoli/virtual-threads-io-bound-tasks/">Virtual Threads & I/O Bound Tasks</a>
+            </h2>
+            <p class="post-sintesi">Con Java 21, i Virtual Threads cambiano il paradigma: non dobbiamo più preoccuparci di saturare il pool di thread dell'OS. Per task bloccanti (chiamate HTTP, JDBC), non serve più usare complessi approcci reattivi. I Virtual Threads sono leggeri e ges
+</p>
+        </article>
+        
+        <article class="post-item" 
+                 data-tags="db-advanced-replication-ha" 
+                 data-title="wal archiving & point-in-time recovery (pitr)">
+            <div class="post-meta">DB • 05/04/2026</div>
+            <h2 class="post-title">
+                <a href="/appuntidiprogrammazione/articoli/wal-archiving-point-in-time-recovery-pitr/">WAL Archiving & Point-In-Time Recovery (PITR)</a>
+            </h2>
+            <p class="post-sintesi">Il PITR permette di riportare il database a un istante preciso nel passato (es. un secondo prima di un DROP TABLE accidentale). Il flusso si basa su due componenti: un base backup periodico unito a una catena ininterrotta di file WAL archiviati. L'af
+</p>
+        </article>
+        
+        <article class="post-item" 
+                 data-tags="java-concurrency-multithreading" 
+                 data-title="work-stealing con forkjoinpool">
+            <div class="post-meta">JAVA • 05/04/2026</div>
+            <h2 class="post-title">
+                <a href="/appuntidiprogrammazione/articoli/work-stealing-con-forkjoinpool/">Work-Stealing con ForkJoinPool</a>
+            </h2>
+            <p class="post-sintesi">Per calcoli computazionali pesanti (CPU bound), un pool a dimensione fissa può essere inefficiente se alcuni task sono più lunghi di altri. ForkJoinPool implementa l'algoritmo di work-stealing: i thread inattivi 'rubano' lavoro dalle code degli altri
+</p>
+        </article>
+        
+        <article class="post-item" 
+                 data-tags="js-node-js-internals-libuv" 
+                 data-title="zero-copy con buffer.allocunsafe">
+            <div class="post-meta">JS • 05/04/2026</div>
+            <h2 class="post-title">
+                <a href="/appuntidiprogrammazione/articoli/zero-copy-con-bufferallocunsafe/">Zero-Copy con Buffer.allocUnsafe</a>
+            </h2>
+            <p class="post-sintesi">Buffer.alloc inizializza la memoria a zero, operazione costosa per buffer enormi. Buffer.allocUnsafe alloca un blocco di memoria 'sporca' che potrebbe contenere dati sensibili di precedenti operazioni. È estremamente veloce perché bypassa l'inizializ
+</p>
+        </article>
+        
+        <article class="post-item" 
+                 data-tags="java-jni-project-panama" 
+                 data-title="zero-copy i/o con memory mapping">
+            <div class="post-meta">JAVA • 05/04/2026</div>
+            <h2 class="post-title">
+                <a href="/appuntidiprogrammazione/articoli/zero-copy-io-con-memory-mapping/">Zero-Copy I/O con Memory Mapping</a>
+            </h2>
+            <p class="post-sintesi">Leggere un file da 10GB in Java solitamente richiede di copiarlo dal kernel allo user-space. Il FileChannel.map unito a Panama permette il vero Zero-Copy: il file viene mappato direttamente in un MemorySegment e il sistema operativo caricherà le pagi
+</p>
+        </article>
+        
+        <article class="post-item" 
+                 data-tags="thymeleaf-security-spel-expressions" 
+                 data-title="csrf token injection in ajax">
+            <div class="post-meta">THYMELEAF • 13/04/2026</div>
+            <h2 class="post-title">
+                <a href="/appuntidiprogrammazione/articoli/csrf-token-injection-in-ajax/">CSRF Token Injection in AJAX</a>
+            </h2>
+            <p class="post-sintesi">I form standard di Thymeleaf gestiscono i token CSRF automaticamente, ma le chiamate AJAX/VanillaJS no. Le espressioni ${_csrf.parameterName} e ${_csrf.token} permettono di iniettare i valori nei tag meta. Questo permette agli script lato client di l
+</p>
+        </article>
+        
+        <article class="post-item" 
+                 data-tags="thymeleaf-performance-tuning-caching" 
+                 data-title="spel compilation mode">
+            <div class="post-meta">THYMELEAF • 27/04/2026</div>
+            <h2 class="post-title">
+                <a href="/appuntidiprogrammazione/articoli/spel-compilation-mode/">SpEL Compilation Mode</a>
+            </h2>
+            <p class="post-sintesi">Di default, Spring interpreta le espressioni SpEL ogni volta, il che è lento. La modalità spring.expression.compiler.mode=IMMEDIATE forza il compilatore a generare bytecode Java reale per le espressioni più frequenti. Questo riduce drasticamente i ci
+</p>
+        </article>
+        
+        <article class="post-item" 
+                 data-tags="thymeleaf-custom-dialects-processors" 
+                 data-title="precedenza dei processori">
+            <div class="post-meta">THYMELEAF • 11/05/2026</div>
+            <h2 class="post-title">
+                <a href="/appuntidiprogrammazione/articoli/precedenza-dei-processori/">Precedenza dei Processori</a>
+            </h2>
+            <p class="post-sintesi">Quando più attributi th:* sono sullo stesso tag, l'ordine di esecuzione è critico. Un processore che altera la struttura del DOM (come un th:each custom) deve avere una precedenza numerica inferiore (viene eseguito prima) rispetto a quelli che modifi
+</p>
+        </article>
+        
+        <article class="post-item" 
+                 data-tags="thymeleaf-custom-dialects-processors" 
+                 data-title="expression objects custom">
+            <div class="post-meta">THYMELEAF • 18/05/2026</div>
+            <h2 class="post-title">
+                <a href="/appuntidiprogrammazione/articoli/expression-objects-custom/">Expression Objects Custom</a>
+            </h2>
+            <p class="post-sintesi">Spesso servono utility nel template (formattazione date particolari, calcoli finanziari) che non appartengono al modello dati. Registrando oggetti tramite IExpressionObjectFactory, è possibile richiamarli con la sintassi ${#myUtils...}, simile ai bui
+</p>
+        </article>
+        
+        <article class="post-item" 
+                 data-tags="thymeleaf-custom-dialects-processors" 
+                 data-title="custom dialects e iprocessor">
+            <div class="post-meta">THYMELEAF • 20/05/2026</div>
+            <h2 class="post-title">
+                <a href="/appuntidiprogrammazione/articoli/custom-dialects-e-iprocessor/">Custom Dialects e IProcessor</a>
+            </h2>
+            <p class="post-sintesi">I frammenti standard (th:replace) non bastano per logiche UI molto complesse o componenti riutilizzabili tra progetti diversi. Implementando un IProcessorDialect è possibile introdurre nuovi attributi (es. app:chart) o tag che vengono elaborati dal s
+</p>
+        </article>
+        
+        <article class="post-item" 
+                 data-tags="thymeleaf-advanced-layout-templating" 
+                 data-title="dynamic fragment injection">
+            <div class="post-meta">THYMELEAF • 27/05/2026</div>
+            <h2 class="post-title">
+                <a href="/appuntidiprogrammazione/articoli/dynamic-fragment-injection/">Dynamic Fragment Injection</a>
+            </h2>
+            <p class="post-sintesi">A volte non si sa quale frammento caricare finché non si è a runtime (es. blocchi di un CMS). L'espressione ~{${path} :: ${name}} permette a Thymeleaf di risolvere prima le stringhe dentro ${} e poi cercare il frammento. Questo permette di implementa
+</p>
+        </article>
+        
+        <article class="post-item" 
+                 data-tags="js-design-patterns-architecture" 
+                 data-title="pattern observer e rxjs multicasting">
+            <div class="post-meta">JS • 01/07/2026</div>
+            <h2 class="post-title">
+                <a href="/appuntidiprogrammazione/articoli/pattern-observer-e-rxjs-multicasting/">Pattern Observer e RxJS Multicasting</a>
+            </h2>
+            <p class="post-sintesi">I semplici EventEmitter possono causare memory leak se i listener non vengono rimossi. Subject e ReplaySubject permettono di gestire flussi di dati multi-consumatore. L'operatore takeUntil deregistra automaticamente gli osservatori, evitando che 'gho
+</p>
+        </article>
+        
+        <article class="post-item" 
+                 data-tags="js-design-patterns-architecture" 
+                 data-title="event sourcing e state reconstitution">
+            <div class="post-meta">JS • 08/07/2026</div>
+            <h2 class="post-title">
+                <a href="/appuntidiprogrammazione/articoli/event-sourcing-e-state-reconstitution/">Event Sourcing e State Reconstitution</a>
+            </h2>
+            <p class="post-sintesi">Gestire lo stato attuale non permette di capire come ci si è arrivati (audit log). L'Event Sourcing non salva lo stato, ma una sequenza immutabile di eventi (append-only). Lo stato attuale viene ricostruito ('proiezione') riducendo (folding) l'array 
+</p>
+        </article>
+        
+        <article class="post-item" 
+                 data-tags="js-v8-engine-runtime-performance" 
+                 data-title="typed arrays e unboxed numerics">
+            <div class="post-meta">JS • 27/07/2026</div>
+            <h2 class="post-title">
+                <a href="/appuntidiprogrammazione/articoli/typed-arrays-e-unboxed-numerics/">Typed Arrays e Unboxed Numerics</a>
+            </h2>
+            <p class="post-sintesi">In JS standard, i numeri sono solitamente allocati nell'heap come 'Boxed Doubles'. Per il calcolo intensivo, gli array standard [] introducono overhead di puntatori. Float64Array o Int32Array allocano un blocco di memoria continua (C-style), permette
+</p>
+        </article>
+        
+        <article class="post-item" 
+                 data-tags="js-security-cryptography" 
+                 data-title="webcrypto api vs node crypto">
+            <div class="post-meta">JS • 19/08/2026</div>
+            <h2 class="post-title">
+                <a href="/appuntidiprogrammazione/articoli/webcrypto-api-vs-node-crypto/">WebCrypto API vs Node Crypto</a>
+            </h2>
+            <p class="post-sintesi">Storicamente, la crittografia nel browser era lenta e insicura. La WebCrypto API espone operazioni hardware-accelerate e isolate. La differenza fondamentale è tra CryptoKey (oggetti non estraibili dalla memoria JS) e i buffer grezzi: usare chiavi 'no
+</p>
+        </article>
+        
+        <article class="post-item" 
+                 data-tags="js-node-js-internals-libuv" 
+                 data-title="backpressure in stream pipeline">
+            <div class="post-meta">JS • 31/08/2026</div>
+            <h2 class="post-title">
+                <a href="/appuntidiprogrammazione/articoli/backpressure-in-stream-pipeline/">Backpressure in Stream Pipeline</a>
+            </h2>
+            <p class="post-sintesi">Leggere dati più velocemente di quanto si riesca a scriverli causa il riempimento del buffer (RAM). Il segnale di 'backpressure' indica al readable di fermarsi finché il writable non ha svuotato il suo buffer. L'uso di stream.pipeline() invece di .pi
+</p>
+        </article>
+        
+        <article class="post-item" 
+                 data-tags="js-node-js-internals-libuv" 
+                 data-title="microtask vs macrotask queue">
+            <div class="post-meta">JS • 02/09/2026</div>
+            <h2 class="post-title">
+                <a href="/appuntidiprogrammazione/articoli/microtask-vs-macrotask-queue/">Microtask vs Macrotask Queue</a>
+            </h2>
+            <p class="post-sintesi">Non tutte le callback hanno la stessa priorità. process.nextTick e Promise.then (microtasks) vengono eseguiti immediatamente dopo ogni operazione, prima del ciclo successivo dell'Event Loop. Un abuso di nextTick può causare la 'starvation' dell'I/O, 
+</p>
+        </article>
+        
+        <article class="post-item" 
+                 data-tags="js-typescript-advanced-types" 
+                 data-title="discriminated unions ed exhaustiveness checking">
+            <div class="post-meta">JS • 09/09/2026</div>
+            <h2 class="post-title">
+                <a href="/appuntidiprogrammazione/articoli/discriminated-unions-ed-exhaustiveness-checking/">Discriminated Unions ed Exhaustiveness Checking</a>
+            </h2>
+            <p class="post-sintesi">Gestire stati complessi dove alcune proprietà esistono solo se altre hanno valori specifici. Le Discriminated Unions usano un 'tag' comune per discriminare tra casi. L'uso del tipo never per l'exhaustiveness checking garantisce che ogni caso sia gest
+</p>
+        </article>
+        
+        <article class="post-item" 
+                 data-tags="db-advanced-replication-ha" 
+                 data-title="fencing e stonith in high availability">
+            <div class="post-meta">DB • 23/09/2026</div>
+            <h2 class="post-title">
+                <a href="/appuntidiprogrammazione/articoli/fencing-e-stonith-in-high-availability/">Fencing e STONITH in High Availability</a>
+            </h2>
+            <p class="post-sintesi">In sistemi HA con failover automatico (es. Patroni), il rischio peggiore è lo 'Split Brain', dove due nodi credono di essere entrambi il Master. Il 'Fencing' isola il vecchio master mentre 'STONITH' (Shoot The Other Node In The Head) ne interrompe fi
+</p>
+        </article>
+        
+        <article class="post-item" 
+                 data-tags="db-advanced-replication-ha" 
+                 data-title="titolo">
+            <div class="post-meta">DB • 30/09/2026</div>
+            <h2 class="post-title">
+                <a href="/appuntidiprogrammazione/articoli/titolo/">Titolo</a>
+            </h2>
+            <p class="post-sintesi">Sintesi del problema
+</p>
+        </article>
+        
+        <article class="post-item" 
+                 data-tags="db-advanced-replication-ha" 
+                 data-title="conflict detection in logical replication">
+            <div class="post-meta">DB • 12/10/2026</div>
+            <h2 class="post-title">
+                <a href="/appuntidiprogrammazione/articoli/conflict-detection-in-logical-replication/">Conflict Detection in Logical Replication</a>
+            </h2>
+            <p class="post-sintesi">A differenza della replica fisica, quella logica può incontrare conflitti (es. un inserimento sulla replica di una riga con una chiave primaria già esistente). Quando ciò accade, la replica si blocca e smette di applicare le modifiche, creando un lag
+</p>
+        </article>
+        
+        <article class="post-item" 
+                 data-tags="db-query-opt-planner" 
+                 data-title="jit compilation tuning">
+            <div class="post-meta">DB • 28/10/2026</div>
+            <h2 class="post-title">
+                <a href="/appuntidiprogrammazione/articoli/jit-compilation-tuning/">JIT Compilation Tuning</a>
+            </h2>
+            <p class="post-sintesi">La Just-In-Time (JIT) compilation trasforma parte della query in codice macchina nativo. Sebbene sembri un vantaggio, ha un costo di 'startup' non indifferente. Per query OLTP veloci (che durano millisecondi), il tempo speso per compilare il codice J
+</p>
+        </article>
+        
+        <article class="post-item" 
+                 data-tags="db-query-opt-planner" 
+                 data-title="materialized cte vs inline">
+            <div class="post-meta">DB • 02/11/2026</div>
+            <h2 class="post-title">
+                <a href="/appuntidiprogrammazione/articoli/materialized-cte-vs-inline/">Materialized CTE vs Inline</a>
+            </h2>
+            <p class="post-sintesi">Prima di PostgreSQL 12, le Common Table Expressions (CTE) erano 'optimization fences': venivano sempre calcolate e caricate in memoria (materializzate) prima del resto della query. Oggi il Planner le 'inlinea' per ottimizzarle. Tuttavia, a volte è ne
+</p>
+        </article>
+        
+        <article class="post-item" 
+                 data-tags="db-query-opt-planner" 
+                 data-title="interpretazione di explain buffers">
+            <div class="post-meta">DB • 04/11/2026</div>
+            <h2 class="post-title">
+                <a href="/appuntidiprogrammazione/articoli/interpretazione-di-explain-buffers/">Interpretazione di EXPLAIN BUFFERS</a>
+            </h2>
+            <p class="post-sintesi">La metrica più onesta per misurare una query non è il tempo (che dipende dal carico del server), ma i blocchi letti (BUFFERS). La differenza tra shared hit (dati in RAM), read (dati letti dal disco) e dirtied (pagine modificate) rivela l'impatto real
+</p>
+        </article>
+        
+        <article class="post-item" 
+                 data-tags="db-query-opt-planner" 
+                 data-title="index scan vs bitmap scan">
+            <div class="post-meta">DB • 09/11/2026</div>
+            <h2 class="post-title">
+                <a href="/appuntidiprogrammazione/articoli/index-scan-vs-bitmap-scan/">Index Scan vs Bitmap Scan</a>
+            </h2>
+            <p class="post-sintesi">PostgreSQL ha due modi principali di usare un indice: Index Scan (legge l'indice e va subito alla tabella riga per riga) e Bitmap Index Scan (legge tutto l'indice, crea una mappa di bit delle righe e poi accede alla tabella in modo ordinato). Il Bitm
+</p>
+        </article>
+        
+        <article class="post-item" 
+                 data-tags="db-query-opt-planner" 
+                 data-title="funzioni volatili e optimization fence">
+            <div class="post-meta">DB • 16/11/2026</div>
+            <h2 class="post-title">
+                <a href="/appuntidiprogrammazione/articoli/funzioni-volatili-e-optimization-fence/">Funzioni Volatili e Optimization Fence</a>
+            </h2>
+            <p class="post-sintesi">Le funzioni in Postgres hanno tre livelli di volatilità: VOLATILE, STABLE e IMMUTABLE. Il Planner tratta diversamente le query che le contengono. Una funzione definita erroneamente come VOLATILE (il default) impedisce al Planner di ottimizzare la que
+</p>
+        </article>
+        
+        <article class="post-item" 
+                 data-tags="db-query-opt-planner" 
+                 data-title="tuning del random page cost">
+            <div class="post-meta">DB • 18/11/2026</div>
+            <h2 class="post-title">
+                <a href="/appuntidiprogrammazione/articoli/tuning-del-random-page-cost/">Tuning del Random Page Cost</a>
+            </h2>
+            <p class="post-sintesi">Il Planner di PostgreSQL stima il costo delle scansioni degli indici basandosi sul parametro random_page_cost. Per impostazione predefinita, questo valore è 4.0, un retaggio dell'era dei dischi rotanti (HDD) dove l'accesso casuale era molto più lento
+</p>
+        </article>
+        
+        <article class="post-item" 
+                 data-tags="db-query-opt-planner" 
+                 data-title="parallel query tuning">
+            <div class="post-meta">DB • 23/11/2026</div>
+            <h2 class="post-title">
+                <a href="/appuntidiprogrammazione/articoli/parallel-query-tuning/">Parallel Query Tuning</a>
+            </h2>
+            <p class="post-sintesi">PostgreSQL può usare più core della CPU per eseguire una singola query tramite i nodi 'Gather' e 'Parallel Scan'. Tuttavia, il parallelismo non è sempre un vantaggio: creare e coordinare i worker ha un costo. Se la tabella è piccola o se max_parallel
+</p>
+        </article>
+        
+        <article class="post-item" 
+                 data-tags="db-vacuum-storage" 
+                 data-title="visibility map e index scans">
+            <div class="post-meta">DB • 02/12/2026</div>
+            <h2 class="post-title">
+                <a href="/appuntidiprogrammazione/articoli/visibility-map-e-index-scans/">Visibility Map e Index Scans</a>
+            </h2>
+            <p class="post-sintesi">La Visibility Map (VM) è un file che indica a Postgres quali blocchi contengono solo tuple visibili a tutti. Senza una VM aggiornata, gli 'Index-Only Scans' non funzionano: il DB deve comunque leggere la tabella per verificare la visibilità. Il Vacuu
+</p>
+        </article>
+        
+        <article class="post-item" 
+                 data-tags="db-vacuum-storage" 
+                 data-title="toast storage strategies">
+            <div class="post-meta">DB • 16/12/2026</div>
+            <h2 class="post-title">
+                <a href="/appuntidiprogrammazione/articoli/toast-storage-strategies/">TOAST Storage Strategies</a>
+            </h2>
+            <p class="post-sintesi">Quando una colonna supera i 2KB (es. testi lunghi o JSONB), Postgres usa il sistema TOAST (The Oversized-Attribute Storage Technique) per spostarla in una tabella separata 'fuori riga'. Esistono diverse strategie: EXTENDED (compressione + fuori riga)
+</p>
+        </article>
+        
+        <article class="post-item" 
+                 data-tags="db-vacuum-storage" 
+                 data-title="fillfactor e hot updates">
+            <div class="post-meta">DB • 23/12/2026</div>
+            <h2 class="post-title">
+                <a href="/appuntidiprogrammazione/articoli/fillfactor-e-hot-updates/">Fillfactor e HOT Updates</a>
+            </h2>
+            <p class="post-sintesi">PostgreSQL permette di fare update 'in riga' (Heap Only Tuple) se c'è spazio sufficiente nella stessa pagina disco e se non vengono cambiate colonne indicizzate. Gli HOT updates sono incredibilmente veloci perché non richiedono l'aggiornamento degli 
+</p>
+        </article>
+        
+        <article class="post-item" 
+                 data-tags="db-vacuum-storage" 
+                 data-title="index bloat e reindex concurrently">
+            <div class="post-meta">DB • 28/12/2026</div>
+            <h2 class="post-title">
+                <a href="/appuntidiprogrammazione/articoli/index-bloat-e-reindex-concurrently/">Index Bloat e REINDEX CONCURRENTLY</a>
+            </h2>
+            <p class="post-sintesi">Anche gli indici soffrono di bloat, spesso più delle tabelle. Un indice frammentato rallenta tutte le query di ricerca. Postgres 12+ permette il comando REINDEX CONCURRENTLY che ricostruisce l'indice da zero senza bloccare le scritture sulla tabella.
+</p>
+        </article>
+        
+        <article class="post-item" 
+                 data-tags="db-indexing-internals" 
+                 data-title="indici gin su array e jsonb">
+            <div class="post-meta">DB • 30/12/2026</div>
+            <h2 class="post-title">
+                <a href="/appuntidiprogrammazione/articoli/indici-gin-su-array-e-jsonb/">Indici GIN su Array e JSONB</a>
+            </h2>
+            <p class="post-sintesi">PostgreSQL eccelle nel gestire dati non strutturati grazie agli indici GIN applicati ad array o oggetti JSONB. Questi indici permettono di interrogare 'l'interno' del dato: trovare tutti i documenti che contengono un certo tag o una specifica chiave/
+</p>
+        </article>
+        
+        <article class="post-item" 
+                 data-tags="db-indexing-internals" 
+                 data-title="gin index e pending list tuning">
+            <div class="post-meta">DB • 06/01/2027</div>
+            <h2 class="post-title">
+                <a href="/appuntidiprogrammazione/articoli/gin-index-e-pending-list-tuning/">GIN Index e Pending List Tuning</a>
+            </h2>
+            <p class="post-sintesi">Gli indici GIN (Generalized Inverted Index) sono fondamentali per la ricerca Full Text e per i campi JSONB, ma sono notoriamente lenti in fase di inserimento perché ogni riga genera molteplici voci nell'indice. Il ruolo della pending_list è centrale:
+</p>
+        </article>
+        
+        <article class="post-item" 
+                 data-tags="db-indexing-internals" 
+                 data-title="gist e il problema delle bounding box">
+            <div class="post-meta">DB • 13/01/2027</div>
+            <h2 class="post-title">
+                <a href="/appuntidiprogrammazione/articoli/gist-e-il-problema-delle-bounding-box/">GiST e il problema delle Bounding Box</a>
+            </h2>
+            <p class="post-sintesi">L'indice GiST (Generalized Search Tree) è il motore di PostGIS, ma la sua efficienza dipende dalla 'qualità' delle Bounding Box (MBR) create. Se le geometrie sono molto sovrapposte o disperse, l'albero GiST diventa inefficiente perché deve scansionar
+</p>
+        </article>
+        
+        <article class="post-item" 
+                 data-tags="db-concorrenza-e-locking-approfond" 
+                 data-title="wait queues e lock priority">
+            <div class="post-meta">DB • 08/02/2027</div>
+            <h2 class="post-title">
+                <a href="/appuntidiprogrammazione/articoli/wait-queues-e-lock-priority/">Wait Queues e Lock Priority</a>
+            </h2>
+            <p class="post-sintesi">PostgreSQL gestisce i lock tramite una coda FIFO (First-In-First-Out). Se un processo chiede un Access Exclusive Lock (es. per un ALTER TABLE), si mette in coda. Tutti i processi che arrivano dopo, anche se chiedono solo una semplice SELECT, rimarran
+</p>
+        </article>
+        
+        <article class="post-item" 
+                 data-tags="db-concorrenza-e-locking-approfond" 
+                 data-title="subtransactions e lock overflow">
+            <div class="post-meta">DB • 10/02/2027</div>
+            <h2 class="post-title">
+                <a href="/appuntidiprogrammazione/articoli/subtransactions-e-lock-overflow/">Subtransactions e Lock Overflow</a>
+            </h2>
+            <p class="post-sintesi">L'uso eccessivo di subtransazioni (spesso create da blocchi EXCEPTION nei loop PL/pgSQL o dai Savepoint) può degradare drasticamente le performance dei lock. PostgreSQL tiene traccia delle transazioni in memoria (nello Shared Buffer). Se una transazi
+</p>
+        </article>
+        
+        <article class="post-item" 
+                 data-tags="db-concorrenza-e-locking-approfond" 
+                 data-title="predicate locking in ssi">
+            <div class="post-meta">DB • 15/02/2027</div>
+            <h2 class="post-title">
+                <a href="/appuntidiprogrammazione/articoli/predicate-locking-in-ssi/">Predicate Locking in SSI</a>
+            </h2>
+            <p class="post-sintesi">Il Predicate Locking è la tecnologia che permette al livello SERIALIZABLE di funzionare. A differenza dei lock normali, non blocca i dati esistenti, ma 'segna' le condizioni di ricerca (i predicati). Se una transazione A legge tutti gli utenti 'attiv
+</p>
+        </article>
+        
+        <article class="post-item" 
+                 data-tags="db-concorrenza-e-locking-approfond" 
+                 data-title="locking su partizioni">
+            <div class="post-meta">DB • 22/02/2027</div>
+            <h2 class="post-title">
+                <a href="/appuntidiprogrammazione/articoli/locking-su-partizioni/">Locking su Partizioni</a>
+            </h2>
+            <p class="post-sintesi">Quando si usano tabelle partizionate, i lock possono propagarsi in modo gerarchico. Un lock sulla tabella 'padre' (es. per una manutenzione dello schema) si propaga a tutte le partizioni 'figlie'. Tuttavia, nelle query DML standard (SELECT, UPDATE), 
+</p>
+        </article>
+        
+        <article class="post-item" 
+                 data-tags="db-concorrenza-e-locking-approfond" 
+                 data-title="deadlock timeout e analisi log">
+            <div class="post-meta">DB • 01/03/2027</div>
+            <h2 class="post-title">
+                <a href="/appuntidiprogrammazione/articoli/deadlock-timeout-e-analisi-log/">Deadlock Timeout e Analisi Log</a>
+            </h2>
+            <p class="post-sintesi">Il parametro deadlock_timeout (default 1s) definisce quanto tempo Postgres aspetta prima di lanciare il controllo del grafo dei lock. Abbassare troppo questo valore aumenta il carico sulla CPU, mentre alzarlo rende il sistema pigro nel risolvere i co
+</p>
+        </article>
+        
+        <article class="post-item" 
+                 data-tags="db-concorrenza-e-locking-approfond" 
+                 data-title="locking in full text search">
+            <div class="post-meta">DB • 10/03/2027</div>
+            <h2 class="post-title">
+                <a href="/appuntidiprogrammazione/articoli/locking-in-full-text-search/">Locking in Full Text Search</a>
+            </h2>
+            <p class="post-sintesi">La ricerca testuale (FTS) in Postgres usa indici GIN. Questi indici sono molto efficienti in lettura ma costosi da aggiornare. Durante un inserimento massivo, l'aggiornamento dell'indice GIN può diventare un punto di contesa per i lock, poiché deve i
+</p>
+        </article>
+        
+        <article class="post-item" 
+                 data-tags="db-concorrenza-e-locking-approfond" 
+                 data-title="for update nowait">
+            <div class="post-meta">DB • 15/03/2027</div>
+            <h2 class="post-title">
+                <a href="/appuntidiprogrammazione/articoli/for-update-nowait/">FOR UPDATE NOWAIT</a>
+            </h2>
+            <p class="post-sintesi">Quando un'applicazione deve acquisire un lock su una riga per modificarla, il comportamento standard è aspettare se la riga è già bloccata. In scenari interattivi (es. un utente che apre una scheda per modifica), l'attesa può sembrare un blocco del s
+</p>
+        </article>
+        
+        <article class="post-item" 
+                 data-tags="db-concorrenza-e-locking-approfond" 
+                 data-title="hot standby feedback">
+            <div class="post-meta">DB • 29/03/2027</div>
+            <h2 class="post-title">
+                <a href="/appuntidiprogrammazione/articoli/hot-standby-feedback/">Hot Standby Feedback</a>
+            </h2>
+            <p class="post-sintesi">In una configurazione Master-Replica, può succedere che una query lunga sulla replica venga interrotta perché il Master ha rimosso dei dati (tramite Vacuum) che la replica deve ancora processare. Questo è il 'replication conflict'. Il meccanismo hot_
+</p>
+        </article>
+        
+        <article class="post-item" 
+                 data-tags="java-jni-project-panama" 
+                 data-title="evitare il context switch overhead">
+            <div class="post-meta">JAVA • 07/04/2027</div>
+            <h2 class="post-title">
+                <a href="/appuntidiprogrammazione/articoli/evitare-il-context-switch-overhead/">Evitare il Context Switch Overhead</a>
+            </h2>
+            <p class="post-sintesi">Passare da Java a Native ha un costo: la JVM deve salvare lo stato dei registri e gestire i safepoint. Chiamate native troppo frequenti a funzioni microscopiche sono controproducenti. La soluzione è 'batchare' il lavoro: meglio passare un intero Memo
+</p>
+        </article>
+        
+        <article class="post-item" 
+                 data-tags="java-jni-project-panama" 
+                 data-title="linker options e variadic functions">
+            <div class="post-meta">JAVA • 19/04/2027</div>
+            <h2 class="post-title">
+                <a href="/appuntidiprogrammazione/articoli/linker-options-e-variadic-functions/">Linker Options e Variadic Functions</a>
+            </h2>
+            <p class="post-sintesi">Alcune funzioni C (come printf o ioctl) accettano un numero variabile di argomenti. Configurare i FunctionDescriptor variadici in Panama richiede di definire gli 'specializzatori' per ogni combinazione di argomenti usata. Questo livello di dettaglio 
+</p>
+        </article>
+        
+        <article class="post-item" 
+                 data-tags="java-jni-project-panama" 
+                 data-title="memory layouts e c structs">
+            <div class="post-meta">JAVA • 21/04/2027</div>
+            <h2 class="post-title">
+                <a href="/appuntidiprogrammazione/articoli/memory-layouts-e-c-structs/">Memory Layouts e C Structs</a>
+            </h2>
+            <p class="post-sintesi">Leggere una struct C da Java con JNI richiede di mappare ogni campo manualmente. I GroupLayout di Panama permettono di definire la struttura esatta della memoria (padding compreso) per farla combaciare con quella del C. Tramite i VarHandle generati d
+</p>
+        </article>
+        
+        <article class="post-item" 
+                 data-tags="java-jni-project-panama" 
+                 data-title="jni critical sections e gc">
+            <div class="post-meta">JAVA • 26/04/2027</div>
+            <h2 class="post-title">
+                <a href="/appuntidiprogrammazione/articoli/jni-critical-sections-e-gc/">JNI Critical Sections e GC</a>
+            </h2>
+            <p class="post-sintesi">Quando il codice nativo JNI è in esecuzione, il GC potrebbe aver bisogno di spostare gli oggetti nell'heap, ma non può farlo se il C sta usando i puntatori (pinning). Il rischio è bloccare il GC (Stop-The-World prolungato) a causa di thread nativi 'l
+</p>
+        </article>
+        
+        <article class="post-item" 
+                 data-tags="java-jni-project-panama" 
+                 data-title="gestione della memoria con arena">
+            <div class="post-meta">JAVA • 03/05/2027</div>
+            <h2 class="post-title">
+                <a href="/appuntidiprogrammazione/articoli/gestione-della-memoria-con-arena/">Gestione della Memoria con Arena</a>
+            </h2>
+            <p class="post-sintesi">La memoria nativa (off-heap) non è vista dal GC: se non viene liberata correttamente, il server crasha. L'Arena di Panama definisce il ciclo di vita della memoria: quando l'Arena viene chiusa (try-with-resources), tutta la memoria allocata al suo int
+</p>
+        </article>
+        
+        <article class="post-item" 
+                 data-tags="java-jvm-tuning-garbage-collection" 
+                 data-title="metaspace e classloader leaks">
+            <div class="post-meta">JAVA • 05/05/2027</div>
+            <h2 class="post-title">
+                <a href="/appuntidiprogrammazione/articoli/metaspace-e-classloader-leaks/">Metaspace e ClassLoader Leaks</a>
+            </h2>
+            <p class="post-sintesi">Il Metaspace contiene i metadati delle classi. Caricare dinamicamente classi (es. tramite proxy o script) senza un limite può saturare la memoria fisica del server. Se il Metaspace cresce all'infinito, significa che i ClassLoader non vengono scaricat
+</p>
+        </article>
+        
+        <article class="post-item" 
+                 data-tags="java-jvm-tuning-garbage-collection" 
+                 data-title="g1gc e humongous objects">
+            <div class="post-meta">JAVA • 10/05/2027</div>
+            <h2 class="post-title">
+                <a href="/appuntidiprogrammazione/articoli/g1gc-e-humongous-objects/">G1GC e Humongous Objects</a>
+            </h2>
+            <p class="post-sintesi">G1 divide l'heap in regioni. Se un oggetto occupa più del 50% di una regione, viene considerato 'Humongous' e allocato direttamente nella Old Generation, saltando l'Eden. Troppi Humongous objects causano frammentazione e pause pesanti. Aumentare G1He
+</p>
+        </article>
+        
+        <article class="post-item" 
+                 data-tags="java-jvm-tuning-garbage-collection" 
+                 data-title="container awareness e maxrampercentage">
+            <div class="post-meta">JAVA • 12/05/2027</div>
+            <h2 class="post-title">
+                <a href="/appuntidiprogrammazione/articoli/container-awareness-e-maxrampercentage/">Container Awareness e MaxRAMPercentage</a>
+            </h2>
+            <p class="post-sintesi">Eseguire Java in un container senza parametri specifici è pericoloso: la JVM potrebbe vedere la memoria totale dell'host invece dei limiti del container, portando al crash (OOM Kill). L'uso di -XX:MaxRAMPercentage invece di -Xmx statico rende l'immag
+</p>
+        </article>
+        
+        <article class="post-item" 
+                 data-tags="java-jvm-tuning-garbage-collection" 
+                 data-title="zgc e low latency sotto i 10ms">
+            <div class="post-meta">JAVA • 17/05/2027</div>
+            <h2 class="post-title">
+                <a href="/appuntidiprogrammazione/articoli/zgc-e-low-latency-sotto-i-10ms/">ZGC e Low Latency sotto i 10ms</a>
+            </h2>
+            <p class="post-sintesi">Con heap molto grandi (>100GB), i classici GC come G1 possono avere pause 'Stop-The-World' percepibili. ZGC esegue quasi tutto il lavoro in concorrenza con i thread dell'applicazione. Il vantaggio tecnico è che i tempi di pausa sono costanti e non di
+</p>
+        </article>
+        
+        <article class="post-item" 
+                 data-tags="java-jvm-tuning-garbage-collection" 
+                 data-title="diagnosticare il gc thrashing">
+            <div class="post-meta">JAVA • 19/05/2027</div>
+            <h2 class="post-title">
+                <a href="/appuntidiprogrammazione/articoli/diagnosticare-il-gc-thrashing/">Diagnosticare il GC Thrashing</a>
+            </h2>
+            <p class="post-sintesi">Quando l'heap è quasi pieno, il GC gira continuamente cercando di liberare pochi KB (thrashing). Se il tempo di GC supera il 90% del tempo totale e libera meno del 2% della memoria, l'applicazione è in coma. I flag GCTimeLimit e GCHeapFreeLimit perme
+</p>
+        </article>
+        
+        <article class="post-item" 
+                 data-tags="java-jvm-tuning-garbage-collection" 
+                 data-title="alwayspretouch per il cold start">
+            <div class="post-meta">JAVA • 26/05/2027</div>
+            <h2 class="post-title">
+                <a href="/appuntidiprogrammazione/articoli/alwayspretouch-per-il-cold-start/">AlwaysPreTouch per il Cold Start</a>
+            </h2>
+            <p class="post-sintesi">Di default, la JVM riserva la memoria all'avvio ma non la occupa realmente (lazy allocation). Questo causa un calo di performance quando l'applicazione inizia a lavorare seriamente. Il parametro -XX:+AlwaysPreTouch forza la JVM a scrivere uno zero in
+</p>
+        </article>
+        
+        <article class="post-item" 
+                 data-tags="java-jvm-tuning-garbage-collection" 
+                 data-title="string deduplication in g1gc">
+            <div class="post-meta">JAVA • 31/05/2027</div>
+            <h2 class="post-title">
+                <a href="/appuntidiprogrammazione/articoli/string-deduplication-in-g1gc/">String Deduplication in G1GC</a>
+            </h2>
+            <p class="post-sintesi">Le stringhe duplicate sono la causa principale di spreco di memoria in Java. La funzione -XX:+UseStringDeduplication, disponibile per G1GC, analizza l'heap in background e, se trova stringhe identiche, fa sì che puntino allo stesso array di caratteri
+</p>
+        </article>
+        
+        <article class="post-item" 
+                 data-tags="java-jvm-tuning-garbage-collection" 
+                 data-title="direct memory e nio buffers">
+            <div class="post-meta">JAVA • 07/06/2027</div>
+            <h2 class="post-title">
+                <a href="/appuntidiprogrammazione/articoli/direct-memory-e-nio-buffers/">Direct Memory e NIO Buffers</a>
+            </h2>
+            <p class="post-sintesi">Molte librerie (Netty, gRPC) usano la Direct Memory (off-heap) per l'I/O veloce. Questa memoria non è gestita dal GC standard e non appare nel grafico dell'heap. Se non limitata con -XX:MaxDirectMemorySize, può crescere fino a rubare RAM al kernel. M
+</p>
+        </article>
+        
+        <article class="post-item" 
+                 data-tags="java-advanced-reflection-metaprogr" 
+                 data-title="varhandle per accesso atomico">
+            <div class="post-meta">JAVA • 09/06/2027</div>
+            <h2 class="post-title">
+                <a href="/appuntidiprogrammazione/articoli/varhandle-per-accesso-atomico/">VarHandle per Accesso Atomico</a>
+            </h2>
+            <p class="post-sintesi">Prima di Java 9, per l'accesso low-level alla memoria si usava sun.misc.Unsafe, una API interna e pericolosa. VarHandle offre la stessa potenza di Unsafe (operazioni CAS, memory fences) ma in modo sicuro e standard. Un VarHandle permette di manipolar
+</p>
+        </article>
+        
+        <article class="post-item" 
+                 data-tags="java-advanced-reflection-metaprogr" 
+                 data-title="bytebuddy e il runtime proxying">
+            <div class="post-meta">JAVA • 14/06/2027</div>
+            <h2 class="post-title">
+                <a href="/appuntidiprogrammazione/articoli/bytebuddy-e-il-runtime-proxying/">ByteBuddy e il Runtime Proxying</a>
+            </h2>
+            <p class="post-sintesi">I proxy dinamici di Java (JDK Proxy) funzionano solo per le interfacce. ByteBuddy permette di sottoclassare classi concrete a runtime per iniettare logica (es. @Transactional). ByteBuddy genera direttamente bytecode invece di usare la reflection per 
+</p>
+        </article>
+        
+        <article class="post-item" 
+                 data-tags="java-advanced-reflection-metaprogr" 
+                 data-title="dynamic proxy e interface invocation">
+            <div class="post-meta">JAVA • 16/06/2027</div>
+            <h2 class="post-title">
+                <a href="/appuntidiprogrammazione/articoli/dynamic-proxy-e-interface-invocation/">Dynamic Proxy e Interface Invocation</a>
+            </h2>
+            <p class="post-sintesi">I proxy dinamici sono il cuore di @Mapper in MyBatis o FeignClient. Quando si chiama un metodo su un'interfaccia 'magica', si sta invocando un InvocationHandler. Ogni chiamata passa per un array di Object[] per gli argomenti, con relativo boxing. Per
+</p>
+        </article>
+        
+        <article class="post-item" 
+                 data-tags="java-advanced-reflection-metaprogr" 
+                 data-title="methodhandle vs reflection">
+            <div class="post-meta">JAVA • 28/06/2027</div>
+            <h2 class="post-title">
+                <a href="/appuntidiprogrammazione/articoli/methodhandle-vs-reflection/">MethodHandle vs Reflection</a>
+            </h2>
+            <p class="post-sintesi">L'API java.lang.reflect.Method è lenta perché esegue controlli di accesso a ogni chiamata e non viene facilmente 'inlineata' dal compilatore JIT. MethodHandle (introdotto in Java 7) agisce come un puntatore a funzione tipizzato e costante. Se memoriz
+</p>
+        </article>
+        
+        <article class="post-item" 
+                 data-tags="java-advanced-reflection-metaprogr" 
+                 data-title="instrumenting java agents">
+            <div class="post-meta">JAVA • 30/06/2027</div>
+            <h2 class="post-title">
+                <a href="/appuntidiprogrammazione/articoli/instrumenting-java-agents/">Instrumenting Java Agents</a>
+            </h2>
+            <p class="post-sintesi">I Java Agent, tramite l'API Instrumentation, possono intercettare il caricamento di ogni classe e modificarne il bytecode prima che venga eseguito. Questa è la tecnica usata dai tool di monitoraggio APM (NewRelic, Dynatrace) per iniettare sonde di te
+</p>
+        </article>
+        
+        <article class="post-item" 
+                 data-tags="java-advanced-reflection-metaprogr" 
+                 data-title="reflection inflation e jit">
+            <div class="post-meta">JAVA • 05/07/2027</div>
+            <h2 class="post-title">
+                <a href="/appuntidiprogrammazione/articoli/reflection-inflation-e-jit/">Reflection Inflation e JIT</a>
+            </h2>
+            <p class="post-sintesi">La JVM ha un'ottimizzazione interna: per le prime 15 chiamate a un metodo via reflection, usa il codice nativo (lento), poi genera una classe bytecode dedicata (veloce). Questo processo si chiama 'Inflation'. Non bisogna preoccuparsi troppo della len
+</p>
+        </article>
+        
+        <article class="post-item" 
+                 data-tags="java-advanced-reflection-metaprogr" 
+                 data-title="invokedynamic e lambda metafactory">
+            <div class="post-meta">JAVA • 07/07/2027</div>
+            <h2 class="post-title">
+                <a href="/appuntidiprogrammazione/articoli/invokedynamic-e-lambda-metafactory/">Invokedynamic e Lambda Metafactory</a>
+            </h2>
+            <p class="post-sintesi">Le Lambda in Java non sono semplici classi anonime, ma usano l'istruzione invokedynamic. La LambdaMetafactory permette di generare 'al volo' un'implementazione di un'interfaccia funzionale collegandola a un metodo esistente. Questo evita la creazione
+</p>
+        </article>
+        
+        <article class="post-item" 
+                 data-tags="java-memory-performance" 
+                 data-title="eliminare i memory leak da listener">
+            <div class="post-meta">JAVA • 14/07/2027</div>
+            <h2 class="post-title">
+                <a href="/appuntidiprogrammazione/articoli/eliminare-i-memory-leak-da-listener/">Eliminare i Memory Leak da Listener</a>
+            </h2>
+            <p class="post-sintesi">I listener e i callback registrati in oggetti Singleton o statici sono una causa comune di memory leak. Se un oggetto 'Short-Lived' si registra presso un oggetto 'Long-Lived' e non si deregistra, non verrà mai rimosso dal GC. L'uso di WeakReference p
+</p>
+        </article>
+        
+        <article class="post-item" 
+                 data-tags="java-memory-performance" 
+                 data-title="microbenchmarking con jmh">
+            <div class="post-meta">JAVA • 26/07/2027</div>
+            <h2 class="post-title">
+                <a href="/appuntidiprogrammazione/articoli/microbenchmarking-con-jmh/">Microbenchmarking con JMH</a>
+            </h2>
+            <p class="post-sintesi">Misurare le performance con System.currentTimeMillis() è sbagliato a causa del JIT warmup e delle ottimizzazioni JVM. JMH (Java Microbenchmark Harness) è lo standard industriale per misurare nanosecondi reali, gestendo le fasi di riscaldamento e evit
+</p>
+        </article>
+        
+        <article class="post-item" 
+                 data-tags="java-memory-performance" 
+                 data-title="object pooling per risorse native">
+            <div class="post-meta">JAVA • 28/07/2027</div>
+            <h2 class="post-title">
+                <a href="/appuntidiprogrammazione/articoli/object-pooling-per-risorse-native/">Object Pooling per Risorse Native</a>
+            </h2>
+            <p class="post-sintesi">Creare oggetti Java è veloce, ma creare risorse che toccano il sistema operativo (connessioni DB, contesti crittografici, buffer off-heap) è estremamente costoso. Il pooling non va abusato per i POJO (il GC è più efficiente), ma è obbligatorio per og
+</p>
+        </article>
+        
+        <article class="post-item" 
+                 data-tags="java-memory-performance" 
+                 data-title="hashmap e il carico di collisione">
+            <div class="post-meta">JAVA • 02/08/2027</div>
+            <h2 class="post-title">
+                <a href="/appuntidiprogrammazione/articoli/hashmap-e-il-carico-di-collisione/">HashMap e il carico di collisione</a>
+            </h2>
+            <p class="post-sintesi">Quando molti oggetti hanno lo stesso hashCode, le performance della HashMap degradano da O(1) a O(n) (o O(log n) in Java 8+ grazie ai TreeNode). Monitorare la distribuzione dei bucket nelle mappe critiche è essenziale. Per chiavi custom, l'hashCode d
+</p>
+        </article>
+        
+        <article class="post-item" 
+                 data-tags="java-memory-performance" 
+                 data-title="jackson afterburner per il parsing json">
+            <div class="post-meta">JAVA • 04/08/2027</div>
+            <h2 class="post-title">
+                <a href="/appuntidiprogrammazione/articoli/jackson-afterburner-per-il-parsing-json/">Jackson Afterburner per il Parsing JSON</a>
+            </h2>
+            <p class="post-sintesi">La reflection standard usata dai parser JSON è lenta. I moduli jackson-module-afterburner (Java 8) e jackson-module-blackbird (Java 11+) usano la generazione di bytecode a runtime per creare 'accessori' diretti ai campi della classe, eliminando l'ove
+</p>
+        </article>
+        
+        <article class="post-item" 
+                 data-tags="java-concurrency-multithreading" 
+                 data-title="phaser per sincronizzazione dinamica">
+            <div class="post-meta">JAVA • 18/08/2027</div>
+            <h2 class="post-title">
+                <a href="/appuntidiprogrammazione/articoli/phaser-per-sincronizzazione-dinamica/">Phaser per Sincronizzazione Dinamica</a>
+            </h2>
+            <p class="post-sintesi">CountDownLatch e CyclicBarrier sono rigidi: il numero di thread deve essere noto in anticipo. Phaser permette a thread di registrarsi e deregistrarsi dinamicamente. È ideale per algoritmi a fasi dove il numero di partecipanti può cambiare nel tempo (
+</p>
+        </article>
+        
+        <article class="post-item" 
+                 data-tags="java-concurrency-multithreading" 
+                 data-title="threadlocal e memory leak">
+            <div class="post-meta">JAVA • 25/08/2027</div>
+            <h2 class="post-title">
+                <a href="/appuntidiprogrammazione/articoli/threadlocal-e-memory-leak/">ThreadLocal e Memory Leak</a>
+            </h2>
+            <p class="post-sintesi">ThreadLocal è utile per trasportare contesti (es. SecurityContext o TransactionID) senza passarli come parametri. In ambienti con thread pool (come Spring Boot), i thread non muoiono mai. Dimenticare di chiamare .remove() causa memory leak gravissimi
+</p>
+        </article>
+        
+        <article class="post-item" 
+                 data-tags="java-concurrency-multithreading" 
+                 data-title="completablefuture per pipeline reattive">
+            <div class="post-meta">JAVA • 30/08/2027</div>
+            <h2 class="post-title">
+                <a href="/appuntidiprogrammazione/articoli/completablefuture-per-pipeline-reattive/">CompletableFuture per Pipeline Reattive</a>
+            </h2>
+            <p class="post-sintesi">Gestire callback annidate (callback hell) rende il codice multithread illeggibile. CompletableFuture permette di costruire pipeline funzionali: 'fai questo, poi quello, se fallisce gestisci così'. Il vantaggio tecnico è la possibilità di comporre ris
+</p>
+        </article>
+        
+        <article class="post-item" 
+                 data-tags="java-concurrency-multithreading" 
+                 data-title="backpressure con semaphores">
+            <div class="post-meta">JAVA • 01/09/2027</div>
+            <h2 class="post-title">
+                <a href="/appuntidiprogrammazione/articoli/backpressure-con-semaphores/">Backpressure con Semaphores</a>
+            </h2>
+            <p class="post-sintesi">In sistemi asincroni, è facile che un produttore veloce inondi un consumatore lento, esaurendo la memoria (unbounded queue). L'uso di Semaphore come meccanismo di backpressure è semplice ma efficace. Il produttore deve acquisire un permesso prima di 
+</p>
+        </article>
+        
+        <article class="post-item" 
+                 data-tags="java-concurrency-multithreading" 
+                 data-title="optimistic locking con stampedlock">
+            <div class="post-meta">JAVA • 06/09/2027</div>
+            <h2 class="post-title">
+                <a href="/appuntidiprogrammazione/articoli/optimistic-locking-con-stampedlock/">Optimistic Locking con StampedLock</a>
+            </h2>
+            <p class="post-sintesi">Il classico ReentrantReadWriteLock può soffrire di 'write starvation' se ci sono troppi lettori. StampedLock offre una modalità di lettura ottimistica che non blocca affatto i thread di scrittura. Il trucco è validare il 'ticket' (stamp) dopo la lett
+</p>
+        </article>
+        
+        <article class="post-item" 
+                 data-tags="java-concurrency-multithreading" 
+                 data-title="timeout e safety nei lock">
+            <div class="post-meta">JAVA • 08/09/2027</div>
+            <h2 class="post-title">
+                <a href="/appuntidiprogrammazione/articoli/timeout-e-safety-nei-lock/">Timeout e Safety nei Lock</a>
+            </h2>
+            <p class="post-sintesi">L'uso di synchronized o lock() senza parametri può portare a deadlock infiniti se un thread non rilascia mai la risorsa. L'uso sistematico di tryLock(timeout, unit) permette al thread di 'arrendersi' se non ottiene il lock entro un tempo ragionevole,
+</p>
+        </article>
+        
+    </main>
+</div>
+
+<script>
+    // 1. Generazione dinamica dei tag all'avvio (lato client)
+    document.addEventListener('DOMContentLoaded', () => {
+        const articles = document.querySelectorAll('.post-item');
+        const tagContainer = document.getElementById('dynamic-tags');
+        const allTags = new Set();
+
+        articles.forEach(article => {
+            const tags = article.getAttribute('data-tags').split('-'); // slugify usa '-'
+            tags.forEach(t => { if(t) allTags.add(t) });
+        });
+
+        allTags.forEach(tag => {
+            const btn = document.createElement('button');
+            btn.className = 'tag-btn';
+            btn.innerText = tag.toUpperCase();
+            btn.onclick = (e) => filterByTag(tag, e.target);
+            tagContainer.appendChild(btn);
+        });
+    });
+
+    let activeTag = 'tutti';
+
+    function filterByTag(tag, btn) {
+        activeTag = tag.toLowerCase();
+        document.querySelectorAll('.tag-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        applyFilters();
+    }
+
+    function applyFilters() {
+        const query = document.getElementById('search-bar').value.toLowerCase();
+        const articles = document.querySelectorAll('.post-item');
+
+        articles.forEach(article => {
+            const title = article.getAttribute('data-title');
+            const tags = article.getAttribute('data-tags');
+            const matchesTag = (activeTag === 'tutti' || tags.includes(activeTag));
+            const matchesSearch = title.includes(query);
+            article.style.display = (matchesTag && matchesSearch) ? "block" : "none";
+        });
+    }
+</script>
+
+    <footer class="main-footer">
+        DevLog — Appunti di Programmazione &nbsp;·&nbsp; cosimociraci@gmail.com
+    </footer>
+
+    <script>
+        /*
+         * toggleTheme: legge il tema corrente dall'attributo HTML,
+         * calcola l'opposto e lo salva. Il CSS reagisce via [data-theme].
+         * Non uso classi sul body per mantenere tutto centralizzato
+         * sull'elemento radice.
+         */
+        function toggleTheme() {
+            var html = document.documentElement;
+            var current = html.getAttribute('data-theme');
+            var next = current === 'dark' ? 'light' : 'dark';
+            html.setAttribute('data-theme', next);
+            localStorage.setItem('theme', next);
+        }
+    </script>
+
+</body>
+</html>

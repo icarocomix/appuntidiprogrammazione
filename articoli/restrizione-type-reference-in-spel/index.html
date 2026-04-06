@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="it" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Restrizione Type Reference in SpEL — DevLog</title>
+    <meta name="description" content="SpEL permette di accedere a classi Java statiche via T(java.lang.Runtime). In ambienti CMS dove gli utenti possono modificare parzialmente i template, è fondamentale configurare lo StandardEvaluationContext per limitare i pacchetti accessibili, disab
+">
+    <link rel="stylesheet" href="/appuntidiprogrammazione/assets/css/style.css">
+
+    <script>
+        /*
+         * Applico il tema PRIMA del rendering per evitare il flash di contenuto
+         * (FOUC). Lo script è inline e bloccante di proposito: deve girare
+         * prima che il browser disegni qualsiasi elemento.
+         */
+        (function() {
+            var saved = localStorage.getItem('theme') || 'dark';
+            document.documentElement.setAttribute('data-theme', saved);
+        })();
+    </script>
+</head>
+<body>
+
+    <header class="main-header">
+        <div class="logo" onclick="window.location.href='/appuntidiprogrammazione/'">
+            APPUNTI DI <span>PROGRAMMAZIONE</span>
+        </div>
+
+        <!-- 
+            Il pulsante aggiorna l'attributo data-theme sull'<html> e
+            persiste la scelta nel localStorage per le sessioni future.
+        -->
+        <button onclick="toggleTheme()" class="theme-toggle" aria-label="Cambia tema">🌓</button>
+    </header>
+
+    <!--
+    Layout post: struttura a due colonne.
+    - Sinistra (post-content): breadcrumb → tags → link PDF → articolo MD
+    - Destra (post-sidebar): tags argomento + libro consigliato
+    
+    Ordine DOM: post-content prima, post-sidebar dopo.
+    Grid-template-areas in CSS li posiziona visivamente:
+    "content sidebar" su desktop, stacked su mobile.
+-->
+<div class="post-container">
+
+    <!-- COLONNA SINISTRA: contenuto principale -->
+    <main class="post-content">
+
+        <!-- Breadcrumb: navigazione verso la home -->
+        <nav class="post-breadcrumb" aria-label="Breadcrumb">
+            <a href="/appuntidiprogrammazione/">Appunti di Programmazione</a>
+            <span class="separator" aria-hidden="true">/</span>
+            <span>Restrizione Type Reference in SpEL</span>
+        </nav>
+
+        <!-- Tags legati all'articolo -->
+        
+        <div class="post-tags-header" aria-label="Argomenti">
+            
+                <span class="post-tag-chip">thymeleaf</span>
+            
+                <span class="post-tag-chip">security & spel expressions</span>
+            
+        </div>
+        
+
+        <!-- Link al/ai PDF allegati all'articolo -->
+        
+        <div class="pdf-link-wrapper">
+            <a class="pdf-link"
+               href="/appuntidiprogrammazione/assets/pdf/restrizione-type-reference-in-spel.pdf"
+               target="_blank"
+               rel="noopener noreferrer"
+               aria-label="Scarica il PDF: Restrizione Type Reference in SpEL">
+                Scarica PDF
+            </a>
+        </div>
+        
+
+        <!-- Corpo dell'articolo renderizzato da Kramdown -->
+        <article class="post-article-body">
+            <h2 id="esigenza-reale">Esigenza Reale</h2>
+<p>Mettere in sicurezza ambienti CMS dove gli utenti “Power User” possono modificare parzialmente i template HTML.</p>
+
+<h2 id="analisi-tecnica">Analisi Tecnica</h2>
+<p>Problema: Un utente malintenzionato potrebbe inserire un’espressione nel database che, una volta renderizzata, esegue codice sulla JVM. Perché: Sandbox dell’engine SpEL. Ho scelto di limitare le classi risolvibili dal compilatore SpEL per impedire l’invocazione di metodi di sistema pericolosi.</p>
+
+<h2 id="esempio-implementativo">Esempio Implementativo</h2>
+
+<pre><code class="language-thymeleaf">* Implemento un TypeLocator restrittivo che blocca l'accesso alle classi
+* pericolose. Il TypeLocator è il componente SpEL responsabile di risolvere
+* T(java.lang.Runtime): sostituendolo con uno personalizzato, posso bloccare
+* selettivamente le classi. */
+ public class RestrictedTypeLocator implements TypeLocator 
+{ private static final Set&lt;String&gt; BLOCKED_PACKAGES = Set.of(
+"java.lang.Runtime", "java.lang.ProcessBuilder", "java.lang.Process",
+"java.lang.reflect", "java.lang.ClassLoader", "sun.misc.Unsafe", "java.io.File",
+"java.nio.file", "java.net.URL", "java.net.Socket" ); @Override public Class&lt;?&gt;
+findType(String typeName) throws EvaluationException
+{ 
+// Blocco l'accesso a qualsiasi classe nei package pericolosi for (String
+// blocked : BLOCKED_PACKAGES)
+{ if (typeName.startsWith(blocked)) 
+{ throw new EvaluationException( "Accesso negato alla classe: " + typeName + ".
+Tipo non consentito nel contesto sandbox."); }
+ }
+ try 
+{ return ClassUtils.forName(typeName, ClassUtils.getDefaultClassLoader()); }
+ catch (ClassNotFoundException e) 
+{ throw new EvaluationException("Classe non trovata: " + typeName); }
+ }
+ }
+ 
+/* Configuro il contesto di valutazione SpEL sandbox per il motore del CMS: */
+ @Configuration public class SpelSandboxConfig 
+{ @Bean public SpelSandboxEvaluator spelSandboxEvaluator() 
+{ return new SpelSandboxEvaluator(); }
+ }
+ @Service public class SpelSandboxEvaluator 
+{ private final SpelExpressionParser parser = new SpelExpressionParser(); public
+Object evaluate(String expression, Map&lt;String, Object&gt; variables)
+{ StandardEvaluationContext context = new StandardEvaluationContext(); 
+// Sostituisco il TypeLocator di default con quello restrittivo
+// context.setTypeLocator(new RestrictedTypeLocator());
+// Imposto solo le variabili esplicitamente consentite: zero bean Spring
+// accessibili variables.forEach(context::setVariable);
+// NON chiamo context.setBeanResolver(): impedisco l'accesso ai bean Spring try 
+{ Expression expr = parser.parseExpression(expression); return
+expr.getValue(context); }
+ catch (EvaluationException e) 
+{ log.warn("Espressione SpEL bloccata: '
+{}
+' - Motivo: 
+{}
+", expression, e.getMessage()); throw new SecurityException("Espressione non
+consentita: " + e.getMessage()); }
+ }
+ }
+ 
+/* Uso il valutatore sandbox nel servizio del CMS: */
+ @Service public class CmsTemplateService 
+{ @Autowired private SpelSandboxEvaluator sandbox; public String
+renderCmsBlock(CmsBlock block, PageContext pageContext)
+{ 
+// Valuto le espressioni SpEL presenti nel template CMS in modo sicuro
+// Map&lt;String, Object&gt; safeVariables = Map.of( "page",
+// pageContext.getPageData(),
+// Solo i dati della pagina "user", pageContext.getPublicUserData() 
+// Solo i dati pubblici dell'utente 
+// NON espongo: applicationContext, environment, system properties ); 
+// Processo le espressioni $
+{...}
+ nel contenuto del blocco CMS return processExpressions(block.getContent(),
+safeVariables); }
+ private String processExpressions(String content, Map&lt;String, Object&gt; vars) 
+{ 
+// Pattern per trovare le espressioni $
+{...}
+ nel contenuto del CMS return content.replaceAll("\\$\\
+{([^}
+]+)}
+", match -&gt; 
+{ String expression = match.replaceAll("\\$\\
+{|}
+", ""); try 
+{ Object result = sandbox.evaluate(expression, vars); return result != null ?
+result.toString() : ""; }
+ catch (SecurityException e) 
+{ return "[Espressione non consentita]"; 
+// Non espongo l'errore all'utente finale }
+ }
+); }
+ }
+</code></pre>
+
+        </article>
+
+    </main>
+
+    <!-- COLONNA DESTRA: sidebar post -->
+    <aside class="post-sidebar">
+
+        <!-- Box 1: tags argomento (stessa lista dei chip sopra, ma nella sidebar) -->
+        
+        <div class="sidebar-box tags-box">
+            <span class="box-label">Argomenti</span>
+            <div class="tag-cloud-sidebar">
+                
+                    <span class="sidebar-tag">thymeleaf</span>
+                
+                    <span class="sidebar-tag">security & spel expressions</span>
+                
+            </div>
+        </div>
+        
+
+        <!-- Box 2: libro consigliato -->
+        <div class="sidebar-box books-box">
+            <span class="box-label">Letture Consigliate</span>
+            <div class="book-card">
+                <a href="https://www.amazon.it/Appunti-Programmazione-Pensieri-soluzioni-Applicazioni-ebook/dp/B0FMFRHKTF/"
+                   target="_blank"
+                   rel="noopener noreferrer"
+                   aria-label="Acquista Appunti di Programmazione su Amazon">
+                    <img src="https://m.media-amazon.com/images/I/61Ck5eMzGYL._SY466_.jpg"
+                         alt="Copertina: Appunti di Programmazione"
+                         width="80">
+                    <p>Appunti di Programmazione: Pensieri e soluzioni per Applicazioni WEB</p>
+                </a>
+            </div>
+        </div>
+
+    </aside>
+
+</div>
+
+    <footer class="main-footer">
+        DevLog — Appunti di Programmazione &nbsp;·&nbsp; cosimociraci@gmail.com
+    </footer>
+
+    <script>
+        /*
+         * toggleTheme: legge il tema corrente dall'attributo HTML,
+         * calcola l'opposto e lo salva. Il CSS reagisce via [data-theme].
+         * Non uso classi sul body per mantenere tutto centralizzato
+         * sull'elemento radice.
+         */
+        function toggleTheme() {
+            var html = document.documentElement;
+            var current = html.getAttribute('data-theme');
+            var next = current === 'dark' ? 'light' : 'dark';
+            html.setAttribute('data-theme', next);
+            localStorage.setItem('theme', next);
+        }
+    </script>
+
+</body>
+</html>

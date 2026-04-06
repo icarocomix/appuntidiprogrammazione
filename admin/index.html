@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>DevLog Admin</title>
+</head>
+<body>
+  <script>
+    // Questo script aiuta a debuggare se il file config non viene caricato
+    CMS.registerEventListener({
+      name: 'prePublish',
+      handler: ({ entry }) => {
+        console.log('Articolo in fase di salvataggio...', entry.get('data').toJS());
+      },
+    });
+    // Forza il CMS a riconoscere l'ambiente di sviluppo locale
+    if (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1") {
+      window.CMS_ENV = "development";
+    }
+  </script>
+  <script src="https://unpkg.com/decap-cms@^3.0.0/dist/decap-cms.js"></script>
+</body>
+</html>

@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="it" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AlwaysPreTouch per il Cold Start — DevLog</title>
+    <meta name="description" content="Di default, la JVM riserva la memoria all'avvio ma non la occupa realmente (lazy allocation). Questo causa un calo di performance quando l'applicazione inizia a lavorare seriamente. Il parametro -XX:+AlwaysPreTouch forza la JVM a scrivere uno zero in
+">
+    <link rel="stylesheet" href="/appuntidiprogrammazione/assets/css/style.css">
+
+    <script>
+        /*
+         * Applico il tema PRIMA del rendering per evitare il flash di contenuto
+         * (FOUC). Lo script è inline e bloccante di proposito: deve girare
+         * prima che il browser disegni qualsiasi elemento.
+         */
+        (function() {
+            var saved = localStorage.getItem('theme') || 'dark';
+            document.documentElement.setAttribute('data-theme', saved);
+        })();
+    </script>
+</head>
+<body>
+
+    <header class="main-header">
+        <div class="logo" onclick="window.location.href='/appuntidiprogrammazione/'">
+            APPUNTI DI <span>PROGRAMMAZIONE</span>
+        </div>
+
+        <!-- 
+            Il pulsante aggiorna l'attributo data-theme sull'<html> e
+            persiste la scelta nel localStorage per le sessioni future.
+        -->
+        <button onclick="toggleTheme()" class="theme-toggle" aria-label="Cambia tema">🌓</button>
+    </header>
+
+    <!--
+    Layout post: struttura a due colonne.
+    - Sinistra (post-content): breadcrumb → tags → link PDF → articolo MD
+    - Destra (post-sidebar): tags argomento + libro consigliato
+    
+    Ordine DOM: post-content prima, post-sidebar dopo.
+    Grid-template-areas in CSS li posiziona visivamente:
+    "content sidebar" su desktop, stacked su mobile.
+-->
+<div class="post-container">
+
+    <!-- COLONNA SINISTRA: contenuto principale -->
+    <main class="post-content">
+
+        <!-- Breadcrumb: navigazione verso la home -->
+        <nav class="post-breadcrumb" aria-label="Breadcrumb">
+            <a href="/appuntidiprogrammazione/">Appunti di Programmazione</a>
+            <span class="separator" aria-hidden="true">/</span>
+            <span>AlwaysPreTouch per il Cold Start</span>
+        </nav>
+
+        <!-- Tags legati all'articolo -->
+        
+        <div class="post-tags-header" aria-label="Argomenti">
+            
+                <span class="post-tag-chip">java</span>
+            
+                <span class="post-tag-chip">jvm tuning & garbage collection</span>
+            
+        </div>
+        
+
+        <!-- Link al/ai PDF allegati all'articolo -->
+        
+        <div class="pdf-link-wrapper">
+            <a class="pdf-link"
+               href="/appuntidiprogrammazione/assets/pdf/alwayspretouch-per-il-cold-start.pdf"
+               target="_blank"
+               rel="noopener noreferrer"
+               aria-label="Scarica il PDF: AlwaysPreTouch per il Cold Start">
+                Scarica PDF
+            </a>
+        </div>
+        
+
+        <!-- Corpo dell'articolo renderizzato da Kramdown -->
+        <article class="post-article-body">
+            <h2 id="esigenza-reale">Esigenza Reale</h2>
+<p>Eliminare le micro-latenze iniziali nei nodi di un cluster che vengono accesi durante i picchi di traffico (autoscaling).</p>
+
+<h2 id="analisi-tecnica">Analisi Tecnica</h2>
+<p>Problema: Latenze elevate nelle prime transazioni post-avvio a causa del page-faulting dell’OS durante l’espansione dell’heap. Perché: Uso il PreTouch. Ho scelto di pagare un prezzo in fase di boot per garantire che tutta la memoria dichiarata sia fisicamente pronta e “calda” prima che l’applicazione inizi ad accettare traffico.</p>
+
+<h2 id="esempio-implementativo">Esempio Implementativo</h2>
+
+<div class="language-java highlighter-rouge"><div class="highlight"><pre class="highlight"><code><table class="rouge-table"><tbody><tr><td class="rouge-gutter gl"><pre class="lineno">1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+</pre></td><td class="rouge-code"><pre><span class="o">*</span> <span class="nc">Forzo</span> <span class="n">l</span><span class="err">'</span><span class="n">allocazione</span> <span class="n">fisica</span> <span class="n">immediata</span> <span class="n">di</span> <span class="n">tutto</span> <span class="n">l</span><span class="err">'</span><span class="n">heap</span> <span class="n">dichiarato</span><span class="o">.</span> <span class="nc">Con</span> <span class="o">-</span><span class="nc">Xms</span> <span class="o">=</span>
+<span class="o">*</span> <span class="o">-</span><span class="nc">Xmx</span> <span class="n">e</span> <span class="nc">AlwaysPreTouch</span><span class="o">,</span> <span class="n">la</span> <span class="no">JVM</span> <span class="n">scrive</span> <span class="n">un</span> <span class="kt">byte</span> <span class="n">in</span> <span class="n">ogni</span> <span class="n">pagina</span> <span class="n">da</span> <span class="mi">4</span><span class="no">KB</span> <span class="n">dell</span><span class="err">'</span><span class="n">heap</span>
+<span class="o">*</span> <span class="n">durante</span> <span class="n">lo</span> <span class="n">startup</span><span class="o">,</span> <span class="n">causando</span> <span class="n">il</span> <span class="n">page</span><span class="o">-</span><span class="n">fault</span> <span class="n">in</span> <span class="n">modo</span> <span class="n">controllato</span> <span class="n">prima</span> <span class="n">che</span>
+<span class="o">*</span> <span class="n">arrivi</span> <span class="n">traffico</span> <span class="n">reale</span><span class="o">.</span> <span class="o">*/</span>
+ <span class="n">java</span> <span class="o">-</span><span class="nc">Xms8G</span> <span class="o">-</span><span class="nc">Xmx8G</span> <span class="err">\</span> <span class="o">-</span><span class="nl">XX:</span><span class="o">+</span><span class="nc">AlwaysPreTouch</span> <span class="err">\</span> <span class="o">-</span><span class="nl">XX:</span><span class="o">+</span><span class="nc">UseZGC</span> <span class="err">\</span> <span class="o">-</span><span class="n">jar</span> <span class="n">latency</span><span class="o">-</span>
+<span class="n">sensitive</span><span class="o">-</span><span class="n">app</span><span class="o">.</span><span class="na">jar</span>
+<span class="cm">/* Misuro l'impatto sul tempo di avvio prima e dopo: */</span>
+ 
+<span class="c1">// Senza AlwaysPreTouch: avvio in 3.2s, prima richiesta in 45ms, p99 prime 100</span>
+<span class="c1">// richieste: 320ms</span>
+<span class="c1">// Con AlwaysPreTouch: avvio in 8.1s, prima richiesta in 8ms, p99 prime 100</span>
+<span class="c1">// richieste: 12ms</span>
+<span class="o">*</span> <span class="nc">In</span> <span class="nc">Kubernetes</span><span class="o">,</span> <span class="nc">AlwaysPreTouch</span> <span class="n">interagisce</span> <span class="n">con</span> <span class="n">i</span> <span class="nl">readinessProbe:</span> <span class="n">devo</span>
+<span class="o">*</span> <span class="n">assicurarmi</span> <span class="n">che</span> <span class="n">il</span> <span class="n">probe</span> <span class="n">non</span> <span class="n">scatti</span> <span class="n">prima</span> <span class="n">che</span> <span class="n">il</span> <span class="nc">PreTouch</span> <span class="n">sia</span> <span class="n">completato</span><span class="o">,</span>
+<span class="o">*</span> <span class="n">altrimenti</span> <span class="nc">K8s</span> <span class="n">riceve</span> <span class="n">traffico</span> <span class="n">su</span> <span class="n">un</span> <span class="n">pod</span> <span class="n">non</span> <span class="n">ancora</span> <span class="s">"caldo"</span><span class="o">.</span> <span class="o">*/</span>
+ 
+<span class="c1">// readinessProbe: </span>
+<span class="c1">// httpGet: </span>
+<span class="c1">// path: /actuator/health/readiness </span>
+<span class="c1">// port: 8080 </span>
+<span class="c1">// initialDelaySeconds: 30 </span>
+<span class="c1">// Aspetto che il PreTouch sia completato </span>
+<span class="c1">// periodSeconds: 5 </span>
+<span class="o">*</span> <span class="nc">In</span> <span class="nc">Spring</span> <span class="nc">Boot</span><span class="o">,</span> <span class="n">posso</span> <span class="n">segnalare</span> <span class="n">esplicitamente</span> <span class="n">la</span> <span class="n">readiness</span> <span class="n">solo</span> <span class="n">dopo</span> <span class="n">che</span>
+<span class="o">*</span> <span class="n">l</span><span class="err">'</span><span class="n">applicazione</span> <span class="n">è</span> <span class="n">davvero</span> <span class="n">pronta</span><span class="o">,</span> <span class="n">includendo</span> <span class="n">un</span> <span class="n">warm</span><span class="o">-</span><span class="n">up</span> <span class="n">delle</span> <span class="nl">cache:</span> <span class="o">*/</span>
+ <span class="nd">@Component</span> <span class="kd">public</span> <span class="kd">class</span> <span class="nc">WarmupReadinessIndicator</span> <span class="kd">implements</span>
+<span class="nc">ReadinessHealthContributor</span>
+<span class="o">{</span> <span class="kd">private</span> <span class="kd">final</span> <span class="nc">AtomicBoolean</span> <span class="n">warmedUp</span> <span class="o">=</span> <span class="k">new</span> <span class="nc">AtomicBoolean</span><span class="o">(</span><span class="kc">false</span><span class="o">);</span>
+<span class="nd">@EventListener</span><span class="o">(</span><span class="nc">ApplicationReadyEvent</span><span class="o">.</span><span class="na">class</span><span class="o">)</span> <span class="kd">public</span> <span class="kt">void</span> <span class="nf">onApplicationReady</span><span class="o">()</span>
+<span class="o">{</span> 
+<span class="c1">// Eseguo query di warm-up per portare i dati in cache warmupCriticalCaches();</span>
+<span class="c1">// warmedUp.set(true); }</span>
+ <span class="nd">@Override</span> <span class="kd">public</span> <span class="nc">HealthComponent</span> <span class="nf">getHealth</span><span class="o">(</span><span class="kt">boolean</span> <span class="n">includeDetails</span><span class="o">)</span> 
+<span class="o">{</span> <span class="k">return</span> <span class="n">warmedUp</span><span class="o">.</span><span class="na">get</span><span class="o">()</span> <span class="o">?</span> <span class="nc">Health</span><span class="o">.</span><span class="na">up</span><span class="o">().</span><span class="na">build</span><span class="o">()</span> <span class="o">:</span>
+<span class="nc">Health</span><span class="o">.</span><span class="na">down</span><span class="o">().</span><span class="na">withDetail</span><span class="o">(</span><span class="s">"reason"</span><span class="o">,</span> <span class="s">"Warm-up in corso"</span><span class="o">).</span><span class="na">build</span><span class="o">();</span> <span class="o">}</span>
+ <span class="kd">private</span> <span class="kt">void</span> <span class="nf">warmupCriticalCaches</span><span class="o">()</span> 
+<span class="o">{</span> <span class="n">log</span><span class="o">.</span><span class="na">info</span><span class="o">(</span><span class="s">"Avvio warm-up cache critiche..."</span><span class="o">);</span> 
+<span class="c1">// Pre-carico le configurazioni più accedute</span>
+<span class="c1">// configRepository.findAll().forEach(configCache::put);</span>
+<span class="c1">// Pre-carico gli utenti VIP per evitare cache miss nelle prime richieste</span>
+<span class="c1">// userRepository.findVipUsers().forEach(userCache::put); log.info("Warm-up</span>
+<span class="c1">// completato:</span>
+<span class="o">{}</span>
+ <span class="n">config</span><span class="o">,</span> 
+<span class="o">{}</span>
+ <span class="n">utenti</span> <span class="no">VIP</span> <span class="n">in</span> <span class="n">cache</span><span class="s">", configCache.size(), userCache.size()); }
+ }
+ 
+* Per ambienti con autoscaling orizzontale, combino AlwaysPreTouch con un
+* lifecycle hook preStop per dare tempo al pod di drenare le connessioni prima
+* dello spegnimento: */
+ 
+// lifecycle: 
+// preStop: 
+// exec: 
+// command: ["</span><span class="n">sh</span><span class="s">", "</span><span class="o">-</span><span class="n">c</span><span class="s">", "</span><span class="n">sleep</span> <span class="mi">15</span><span class="err">"</span><span class="o">]</span> 
+<span class="c1">// 15 secondi per drenare le connessioni in corso</span>
+</pre></td></tr></tbody></table></code></pre></div></div>
+
+        </article>
+
+    </main>
+
+    <!-- COLONNA DESTRA: sidebar post -->
+    <aside class="post-sidebar">
+
+        <!-- Box 1: tags argomento (stessa lista dei chip sopra, ma nella sidebar) -->
+        
+        <div class="sidebar-box tags-box">
+            <span class="box-label">Argomenti</span>
+            <div class="tag-cloud-sidebar">
+                
+                    <span class="sidebar-tag">java</span>
+                
+                    <span class="sidebar-tag">jvm tuning & garbage collection</span>
+                
+            </div>
+        </div>
+        
+
+        <!-- Box 2: libro consigliato -->
+        <div class="sidebar-box books-box">
+            <span class="box-label">Letture Consigliate</span>
+            <div class="book-card">
+                <a href="https://www.amazon.it/Appunti-Programmazione-Pensieri-soluzioni-Applicazioni-ebook/dp/B0FMFRHKTF/"
+                   target="_blank"
+                   rel="noopener noreferrer"
+                   aria-label="Acquista Appunti di Programmazione su Amazon">
+                    <img src="https://m.media-amazon.com/images/I/61Ck5eMzGYL._SY466_.jpg"
+                         alt="Copertina: Appunti di Programmazione"
+                         width="80">
+                    <p>Appunti di Programmazione: Pensieri e soluzioni per Applicazioni WEB</p>
+                </a>
+            </div>
+        </div>
+
+    </aside>
+
+</div>
+
+    <footer class="main-footer">
+        DevLog — Appunti di Programmazione &nbsp;·&nbsp; cosimociraci@gmail.com
+    </footer>
+
+    <script>
+        /*
+         * toggleTheme: legge il tema corrente dall'attributo HTML,
+         * calcola l'opposto e lo salva. Il CSS reagisce via [data-theme].
+         * Non uso classi sul body per mantenere tutto centralizzato
+         * sull'elemento radice.
+         */
+        function toggleTheme() {
+            var html = document.documentElement;
+            var current = html.getAttribute('data-theme');
+            var next = current === 'dark' ? 'light' : 'dark';
+            html.setAttribute('data-theme', next);
+            localStorage.setItem('theme', next);
+        }
+    </script>
+
+</body>
+</html>

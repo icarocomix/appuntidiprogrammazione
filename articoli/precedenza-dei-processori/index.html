@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="it" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Precedenza dei Processori — DevLog</title>
+    <meta name="description" content="Quando più attributi th:* sono sullo stesso tag, l'ordine di esecuzione è critico. Un processore che altera la struttura del DOM (come un th:each custom) deve avere una precedenza numerica inferiore (viene eseguito prima) rispetto a quelli che modifi
+">
+    <link rel="stylesheet" href="/appuntidiprogrammazione/assets/css/style.css">
+
+    <script>
+        /*
+         * Applico il tema PRIMA del rendering per evitare il flash di contenuto
+         * (FOUC). Lo script è inline e bloccante di proposito: deve girare
+         * prima che il browser disegni qualsiasi elemento.
+         */
+        (function() {
+            var saved = localStorage.getItem('theme') || 'dark';
+            document.documentElement.setAttribute('data-theme', saved);
+        })();
+    </script>
+</head>
+<body>
+
+    <header class="main-header">
+        <div class="logo" onclick="window.location.href='/appuntidiprogrammazione/'">
+            APPUNTI DI <span>PROGRAMMAZIONE</span>
+        </div>
+
+        <!-- 
+            Il pulsante aggiorna l'attributo data-theme sull'<html> e
+            persiste la scelta nel localStorage per le sessioni future.
+        -->
+        <button onclick="toggleTheme()" class="theme-toggle" aria-label="Cambia tema">🌓</button>
+    </header>
+
+    <!--
+    Layout post: struttura a due colonne.
+    - Sinistra (post-content): breadcrumb → tags → link PDF → articolo MD
+    - Destra (post-sidebar): tags argomento + libro consigliato
+    
+    Ordine DOM: post-content prima, post-sidebar dopo.
+    Grid-template-areas in CSS li posiziona visivamente:
+    "content sidebar" su desktop, stacked su mobile.
+-->
+<div class="post-container">
+
+    <!-- COLONNA SINISTRA: contenuto principale -->
+    <main class="post-content">
+
+        <!-- Breadcrumb: navigazione verso la home -->
+        <nav class="post-breadcrumb" aria-label="Breadcrumb">
+            <a href="/appuntidiprogrammazione/">Appunti di Programmazione</a>
+            <span class="separator" aria-hidden="true">/</span>
+            <span>Precedenza dei Processori</span>
+        </nav>
+
+        <!-- Tags legati all'articolo -->
+        
+        <div class="post-tags-header" aria-label="Argomenti">
+            
+                <span class="post-tag-chip">thymeleaf</span>
+            
+                <span class="post-tag-chip">custom dialects & processors</span>
+            
+        </div>
+        
+
+        <!-- Link al/ai PDF allegati all'articolo -->
+        
+        <div class="pdf-link-wrapper">
+            <a class="pdf-link"
+               href="/appuntidiprogrammazione/assets/pdf/precedenza-dei-processori.pdf"
+               target="_blank"
+               rel="noopener noreferrer"
+               aria-label="Scarica il PDF: Precedenza dei Processori">
+                Scarica PDF
+            </a>
+        </div>
+        
+
+        <!-- Corpo dell'articolo renderizzato da Kramdown -->
+        <article class="post-article-body">
+            <h2 id="esigenza-reale">Esigenza Reale</h2>
+<p>Gestire correttamente tag che hanno sia un’iterazione custom che una validazione di sicurezza nello stesso elemento.</p>
+
+<h2 id="analisi-tecnica">Analisi Tecnica</h2>
+<p>Problema: Errori di rendering o variabili non trovate perché il processore di visualizzazione scatta prima di quello di popolamento dati. Perché: Regolo il valore di Precedence. Ho scelto di assegnare valori distanziati (es. 100, 200, 1000) per garantire un ciclo di vita del tag deterministico e prevedibile.</p>
+
+<h2 id="esempio-implementativo">Esempio Implementativo</h2>
+
+<pre><code class="language-thymeleaf">* La tabella di precedenza dei processori standard di Thymeleaf (valori numerici
+* bassi = alta priorità): th:insert, th:replace -&gt; 100 (struttura del DOM: prima
+* di tutto) th:each -&gt; 200 (iterazione: popola le variabili di loop) th:if,
+* th:unless, th:switch -&gt; 300 (condizionale: decide se renderizzare) th:object
+* -&gt; 400 (binding dell'oggetto form) th:attr, th:attrappend -&gt; 700 (attributi
+* HTML) th:text, th:utext -&gt; 1400 (contenuto testuale: dopo che il DOM è
+* stabile) th:fragment -&gt; 20000 (markup solo: non altera il DOM) */
+ 
+* Definisco tre processori con precedenza esplicita per garantire l'ordine
+* corretto. */
+ 
+// PROCESSORE 1: Itera su una lista e popola variabili di contesto (come
+// th:each) public class SecureIterationProcessor extends
+// AbstractAttributeTagProcessor
+{ public SecureIterationProcessor(String prefix) 
+{ super(TemplateMode.HTML, prefix, null, false, "secure-each", true, 200, 
+// Bassa priorità numerica = alta precedenza: eseguito subito dopo th:replace
+// true); }
+ @Override protected void doProcess(ITemplateContext context,
+IProcessableElementTag tag, AttributeName attributeName, String attributeValue,
+IElementTagStructureHandler structureHandler)
+{ 
+// Eseguo PRIMA: popolo le variabili di iterazione 
+// Formato: "item : $
+{items}
+" String[] parts = attributeValue.split("\\s*:\\s*"); String varName =
+parts[0].trim();
+// Accedo alla variabile usando il parser di espressioni Thymeleaf
+// IEngineConfiguration config = context.getConfiguration();
+// IStandardExpressionParser parser =
+// StandardExpressions.getExpressionParser(config); IStandardExpression
+// expression = parser.parseExpression(context, parts[1].trim()); List&lt;?&gt; items
+// = (List&lt;?&gt;) expression.execute(context);
+// Uso iterateElement per replicare il tag per ogni elemento strutturalmente 
+// (implementazione semplificata: in produzione uso IModel per clonare il tag)
+// structureHandler.setLocalVariable(varName, items.isEmpty() ? null :
+// items.get(0)); }
+ }
+ 
+// PROCESSORE 2: Verifica il ruolo (come app:role-check) -&gt; precedenza 300,
+// eseguito dopo l'iterazione public class RoleGuardProcessor extends
+// AbstractAttributeTagProcessor
+{ public RoleGuardProcessor(String prefix) 
+{ super(TemplateMode.HTML, prefix, null, false, "role-guard", true, 300, 
+// Eseguito DOPO secure-each: le variabili di iterazione sono già disponibili
+// true); }
+ @Override protected void doProcess(ITemplateContext context,
+IProcessableElementTag tag, AttributeName attributeName, String attributeValue,
+IElementTagStructureHandler structureHandler)
+{ 
+// A questo punto le variabili dell'iterazione sono già nel contesto Object item
+// = context.getVariable("item");
+// Posso accedere alla variabile popolata da secure-each String requiredRole =
+// attributeValue; Authentication auth =
+// SecurityContextHolder.getContext().getAuthentication(); if (!hasRole(auth,
+// requiredRole))
+{ structureHandler.removeElement(); }
+ else 
+{ structureHandler.removeAttribute(attributeName); }
+ }
+ }
+ 
+// PROCESSORE 3: Formatta il testo -&gt; precedenza 1400, eseguito per ultimo
+// public class FormattedTextProcessor extends AbstractAttributeTagProcessor
+{ public FormattedTextProcessor(String prefix) 
+{ super(TemplateMode.HTML, prefix, null, false, "fmt-text", true, 1400, 
+// Eseguito per ULTIMO: DOM stabile, variabili disponibili, sicurezza verificata
+// true); }
+ @Override protected void doProcess(ITemplateContext context,
+IProcessableElementTag tag, AttributeName attributeName, String attributeValue,
+IElementTagStructureHandler structureHandler)
+{ 
+// A questo punto il DOM è stabile e le variabili sono disponibili
+// IEngineConfiguration config = context.getConfiguration();
+// IStandardExpressionParser parser =
+// StandardExpressions.getExpressionParser(config); Object value =
+// parser.parseExpression(context, attributeValue).execute(context);
+// structureHandler.setBody(value != null ? value.toString() : "", false);
+// structureHandler.removeAttribute(attributeName); }
+ }
+ 
+* Uso nel template: i tre attributi coesistono sullo stesso tag in modo
+* deterministico. */
+ 
+// &lt;tr app:secure-each="item : $
+{orders}
+" app:role-guard="manager" app:fmt-text="$
+{item.total}
+"&gt;&lt;/tr&gt; 
+// Ordine di esecuzione garantito: secure-each(200) -&gt; role-guard(300) -&gt; fmt-
+// text(1400)
+</code></pre>
+
+        </article>
+
+    </main>
+
+    <!-- COLONNA DESTRA: sidebar post -->
+    <aside class="post-sidebar">
+
+        <!-- Box 1: tags argomento (stessa lista dei chip sopra, ma nella sidebar) -->
+        
+        <div class="sidebar-box tags-box">
+            <span class="box-label">Argomenti</span>
+            <div class="tag-cloud-sidebar">
+                
+                    <span class="sidebar-tag">thymeleaf</span>
+                
+                    <span class="sidebar-tag">custom dialects & processors</span>
+                
+            </div>
+        </div>
+        
+
+        <!-- Box 2: libro consigliato -->
+        <div class="sidebar-box books-box">
+            <span class="box-label">Letture Consigliate</span>
+            <div class="book-card">
+                <a href="https://www.amazon.it/Appunti-Programmazione-Pensieri-soluzioni-Applicazioni-ebook/dp/B0FMFRHKTF/"
+                   target="_blank"
+                   rel="noopener noreferrer"
+                   aria-label="Acquista Appunti di Programmazione su Amazon">
+                    <img src="https://m.media-amazon.com/images/I/61Ck5eMzGYL._SY466_.jpg"
+                         alt="Copertina: Appunti di Programmazione"
+                         width="80">
+                    <p>Appunti di Programmazione: Pensieri e soluzioni per Applicazioni WEB</p>
+                </a>
+            </div>
+        </div>
+
+    </aside>
+
+</div>
+
+    <footer class="main-footer">
+        DevLog — Appunti di Programmazione &nbsp;·&nbsp; cosimociraci@gmail.com
+    </footer>
+
+    <script>
+        /*
+         * toggleTheme: legge il tema corrente dall'attributo HTML,
+         * calcola l'opposto e lo salva. Il CSS reagisce via [data-theme].
+         * Non uso classi sul body per mantenere tutto centralizzato
+         * sull'elemento radice.
+         */
+        function toggleTheme() {
+            var html = document.documentElement;
+            var current = html.getAttribute('data-theme');
+            var next = current === 'dark' ? 'light' : 'dark';
+            html.setAttribute('data-theme', next);
+            localStorage.setItem('theme', next);
+        }
+    </script>
+
+</body>
+</html>

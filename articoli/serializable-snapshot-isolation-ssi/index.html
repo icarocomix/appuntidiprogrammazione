@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="it" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Serializable Snapshot Isolation (SSI) — DevLog</title>
+    <meta name="description" content="Il livello di isolamento SERIALIZABLE in PostgreSQL non si limita a bloccare le righe, ma monitora le dipendenze tra le transazioni per prevenire anomalie di 'vizio di scrittura' (write skew). Mentre REPEATABLE READ garantisce che i dati letti non ca
+">
+    <link rel="stylesheet" href="/appuntidiprogrammazione/assets/css/style.css">
+
+    <script>
+        /*
+         * Applico il tema PRIMA del rendering per evitare il flash di contenuto
+         * (FOUC). Lo script è inline e bloccante di proposito: deve girare
+         * prima che il browser disegni qualsiasi elemento.
+         */
+        (function() {
+            var saved = localStorage.getItem('theme') || 'dark';
+            document.documentElement.setAttribute('data-theme', saved);
+        })();
+    </script>
+</head>
+<body>
+
+    <header class="main-header">
+        <div class="logo" onclick="window.location.href='/appuntidiprogrammazione/'">
+            APPUNTI DI <span>PROGRAMMAZIONE</span>
+        </div>
+
+        <!-- 
+            Il pulsante aggiorna l'attributo data-theme sull'<html> e
+            persiste la scelta nel localStorage per le sessioni future.
+        -->
+        <button onclick="toggleTheme()" class="theme-toggle" aria-label="Cambia tema">🌓</button>
+    </header>
+
+    <!--
+    Layout post: struttura a due colonne.
+    - Sinistra (post-content): breadcrumb → tags → link PDF → articolo MD
+    - Destra (post-sidebar): tags argomento + libro consigliato
+    
+    Ordine DOM: post-content prima, post-sidebar dopo.
+    Grid-template-areas in CSS li posiziona visivamente:
+    "content sidebar" su desktop, stacked su mobile.
+-->
+<div class="post-container">
+
+    <!-- COLONNA SINISTRA: contenuto principale -->
+    <main class="post-content">
+
+        <!-- Breadcrumb: navigazione verso la home -->
+        <nav class="post-breadcrumb" aria-label="Breadcrumb">
+            <a href="/appuntidiprogrammazione/">Appunti di Programmazione</a>
+            <span class="separator" aria-hidden="true">/</span>
+            <span>Serializable Snapshot Isolation (SSI)</span>
+        </nav>
+
+        <!-- Tags legati all'articolo -->
+        
+        <div class="post-tags-header" aria-label="Argomenti">
+            
+                <span class="post-tag-chip">db</span>
+            
+                <span class="post-tag-chip">concorrenza e locking approfond</span>
+            
+        </div>
+        
+
+        <!-- Link al/ai PDF allegati all'articolo -->
+        
+        <div class="pdf-link-wrapper">
+            <a class="pdf-link"
+               href="/appuntidiprogrammazione/assets/pdf/serializable-snapshot-isolation-ssi.pdf"
+               target="_blank"
+               rel="noopener noreferrer"
+               aria-label="Scarica il PDF: Serializable Snapshot Isolation (SSI)">
+                Scarica PDF
+            </a>
+        </div>
+        
+
+        <!-- Corpo dell'articolo renderizzato da Kramdown -->
+        <article class="post-article-body">
+            <h2 id="esigenza-reale">Esigenza Reale</h2>
+<p>Gestire un sistema di prenotazione medica dove un medico non può avere più di 10 appuntamenti al giorno, evitando che due inserimenti simultanei superino il limite.</p>
+
+<h2 id="analisi-tecnica">Analisi Tecnica</h2>
+<p>Problema: Il controllo del conteggio (COUNT) in una transazione non vede gli inserimenti “in volo” di altre transazioni concorrenti. Perché: Uso il livello SERIALIZABLE. Ho scelto questa strada perché il database rileva automaticamente il conflitto logico tra la lettura del conteggio e l’inserimento, senza che io debba usare lock pesanti su intere tabelle.</p>
+
+<h2 id="esempio-implementativo">Esempio Implementativo</h2>
+
+<div class="language-sql highlighter-rouge"><div class="highlight"><pre class="highlight"><code><table class="rouge-table"><tbody><tr><td class="rouge-gutter gl"><pre class="lineno">1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+</pre></td><td class="rouge-code"><pre><span class="o">*</span> <span class="n">Imposto</span> <span class="n">il</span> <span class="n">livello</span> <span class="n">di</span> <span class="n">isolamento</span> <span class="n">pi</span><span class="err">ù</span> <span class="n">alto</span><span class="p">.</span> <span class="n">Se</span> <span class="n">un</span><span class="s1">'altra transazione inserisce
+* un appuntamento per lo stesso medico mentre io sto contando, Postgres fallirà
+* il mio COMMIT con SQLSTATE 40001 "could not serialize access". */
+ BEGIN ISOLATION LEVEL SERIALIZABLE; 
+* Leggo il conteggio corrente degli appuntamenti del medico. Questa lettura crea
+* implicitamente un predicate lock sulla condizione WHERE, non solo sulle righe
+* esistenti. */
+ SELECT count(*) INTO v_count FROM appuntamenti WHERE medico_id = 1 AND data =
+'</span><span class="mi">2026</span><span class="o">-</span><span class="mi">05</span><span class="o">-</span><span class="mi">10</span><span class="s1">';
+* Se la soglia non è raggiunta, procedo con l'</span><span class="n">inserimento</span><span class="p">.</span> <span class="n">La</span> <span class="n">combinazione</span>
+<span class="o">*</span> <span class="n">lettura</span><span class="o">+</span><span class="n">scrittura</span> <span class="n">nella</span> <span class="n">stessa</span> <span class="n">transazione</span> <span class="k">SERIALIZABLE</span> <span class="err">è</span> <span class="n">ci</span><span class="err">ò</span> <span class="n">che</span> <span class="n">Postgres</span>
+<span class="o">*</span> <span class="n">monitora</span> <span class="n">per</span> <span class="n">rilevare</span> <span class="n">il</span> <span class="n">conflitto</span><span class="p">.</span> <span class="o">*/</span>
+ <span class="n">IF</span> <span class="n">v_count</span> <span class="o">&lt;</span> <span class="mi">10</span> <span class="k">THEN</span> <span class="k">INSERT</span> <span class="k">INTO</span> <span class="n">appuntamenti</span> <span class="p">(</span><span class="n">medico_id</span><span class="p">,</span> <span class="n">paziente_id</span><span class="p">,</span> <span class="k">data</span><span class="p">)</span>
+<span class="k">VALUES</span> <span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">42</span><span class="p">,</span> <span class="s1">'2026-05-10'</span><span class="p">);</span> <span class="k">END</span> <span class="n">IF</span><span class="p">;</span> <span class="k">COMMIT</span><span class="p">;</span>
+<span class="o">*</span> <span class="n">A</span> <span class="n">livello</span> <span class="n">applicativo</span> <span class="p">(</span><span class="n">Java</span><span class="o">/</span><span class="n">JDBC</span><span class="p">)</span> <span class="n">devo</span> <span class="n">gestire</span> <span class="n">il</span> <span class="n">retry</span> <span class="n">sulla</span> <span class="n">serialization</span>
+<span class="o">*</span> <span class="n">failure</span><span class="p">:</span> <span class="n">try</span>
+<span class="p">{</span> <span class="n">eseguiPrenotazione</span><span class="p">();</span> <span class="p">}</span>
+ <span class="n">catch</span> <span class="p">(</span><span class="n">PSQLException</span> <span class="n">e</span><span class="p">)</span> 
+<span class="p">{</span> <span class="n">if</span> <span class="p">(</span><span class="nv">"40001"</span><span class="p">.</span><span class="k">equals</span><span class="p">(</span><span class="n">e</span><span class="p">.</span><span class="n">getSQLState</span><span class="p">()))</span> 
+<span class="p">{</span> <span class="n">Thread</span><span class="p">.</span><span class="n">sleep</span><span class="p">(</span><span class="mi">50</span> <span class="o">+</span> <span class="n">random</span><span class="p">.</span><span class="n">nextInt</span><span class="p">(</span><span class="mi">100</span><span class="p">));</span> <span class="n">eseguiPrenotazione</span><span class="p">();</span> 
+<span class="o">//</span> <span class="n">Riprovo</span> <span class="n">con</span> <span class="n">backoff</span> <span class="p">}</span>
+ <span class="p">}</span>
+ <span class="o">*/</span>
+</pre></td></tr></tbody></table></code></pre></div></div>
+
+        </article>
+
+    </main>
+
+    <!-- COLONNA DESTRA: sidebar post -->
+    <aside class="post-sidebar">
+
+        <!-- Box 1: tags argomento (stessa lista dei chip sopra, ma nella sidebar) -->
+        
+        <div class="sidebar-box tags-box">
+            <span class="box-label">Argomenti</span>
+            <div class="tag-cloud-sidebar">
+                
+                    <span class="sidebar-tag">db</span>
+                
+                    <span class="sidebar-tag">concorrenza e locking approfond</span>
+                
+            </div>
+        </div>
+        
+
+        <!-- Box 2: libro consigliato -->
+        <div class="sidebar-box books-box">
+            <span class="box-label">Letture Consigliate</span>
+            <div class="book-card">
+                <a href="https://www.amazon.it/Appunti-Programmazione-Pensieri-soluzioni-Applicazioni-ebook/dp/B0FMFRHKTF/"
+                   target="_blank"
+                   rel="noopener noreferrer"
+                   aria-label="Acquista Appunti di Programmazione su Amazon">
+                    <img src="https://m.media-amazon.com/images/I/61Ck5eMzGYL._SY466_.jpg"
+                         alt="Copertina: Appunti di Programmazione"
+                         width="80">
+                    <p>Appunti di Programmazione: Pensieri e soluzioni per Applicazioni WEB</p>
+                </a>
+            </div>
+        </div>
+
+    </aside>
+
+</div>
+
+    <footer class="main-footer">
+        DevLog — Appunti di Programmazione &nbsp;·&nbsp; cosimociraci@gmail.com
+    </footer>
+
+    <script>
+        /*
+         * toggleTheme: legge il tema corrente dall'attributo HTML,
+         * calcola l'opposto e lo salva. Il CSS reagisce via [data-theme].
+         * Non uso classi sul body per mantenere tutto centralizzato
+         * sull'elemento radice.
+         */
+        function toggleTheme() {
+            var html = document.documentElement;
+            var current = html.getAttribute('data-theme');
+            var next = current === 'dark' ? 'light' : 'dark';
+            html.setAttribute('data-theme', next);
+            localStorage.setItem('theme', next);
+        }
+    </script>
+
+</body>
+</html>

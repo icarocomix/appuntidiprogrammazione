@@ -1,0 +1,356 @@
+<!DOCTYPE html>
+<html lang="it" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Eliminare i Memory Leak da Listener — DevLog</title>
+    <meta name="description" content="I listener e i callback registrati in oggetti Singleton o statici sono una causa comune di memory leak. Se un oggetto 'Short-Lived' si registra presso un oggetto 'Long-Lived' e non si deregistra, non verrà mai rimosso dal GC. L'uso di WeakReference p
+">
+    <link rel="stylesheet" href="/appuntidiprogrammazione/assets/css/style.css">
+
+    <script>
+        /*
+         * Applico il tema PRIMA del rendering per evitare il flash di contenuto
+         * (FOUC). Lo script è inline e bloccante di proposito: deve girare
+         * prima che il browser disegni qualsiasi elemento.
+         */
+        (function() {
+            var saved = localStorage.getItem('theme') || 'dark';
+            document.documentElement.setAttribute('data-theme', saved);
+        })();
+    </script>
+</head>
+<body>
+
+    <header class="main-header">
+        <div class="logo" onclick="window.location.href='/appuntidiprogrammazione/'">
+            APPUNTI DI <span>PROGRAMMAZIONE</span>
+        </div>
+
+        <!-- 
+            Il pulsante aggiorna l'attributo data-theme sull'<html> e
+            persiste la scelta nel localStorage per le sessioni future.
+        -->
+        <button onclick="toggleTheme()" class="theme-toggle" aria-label="Cambia tema">🌓</button>
+    </header>
+
+    <!--
+    Layout post: struttura a due colonne.
+    - Sinistra (post-content): breadcrumb → tags → link PDF → articolo MD
+    - Destra (post-sidebar): tags argomento + libro consigliato
+    
+    Ordine DOM: post-content prima, post-sidebar dopo.
+    Grid-template-areas in CSS li posiziona visivamente:
+    "content sidebar" su desktop, stacked su mobile.
+-->
+<div class="post-container">
+
+    <!-- COLONNA SINISTRA: contenuto principale -->
+    <main class="post-content">
+
+        <!-- Breadcrumb: navigazione verso la home -->
+        <nav class="post-breadcrumb" aria-label="Breadcrumb">
+            <a href="/appuntidiprogrammazione/">Appunti di Programmazione</a>
+            <span class="separator" aria-hidden="true">/</span>
+            <span>Eliminare i Memory Leak da Listener</span>
+        </nav>
+
+        <!-- Tags legati all'articolo -->
+        
+        <div class="post-tags-header" aria-label="Argomenti">
+            
+                <span class="post-tag-chip">java</span>
+            
+                <span class="post-tag-chip">memory & performance</span>
+            
+        </div>
+        
+
+        <!-- Link al/ai PDF allegati all'articolo -->
+        
+        <div class="pdf-link-wrapper">
+            <a class="pdf-link"
+               href="/appuntidiprogrammazione/assets/pdf/eliminare-i-memory-leak-da-listener.pdf"
+               target="_blank"
+               rel="noopener noreferrer"
+               aria-label="Scarica il PDF: Eliminare i Memory Leak da Listener">
+                Scarica PDF
+            </a>
+        </div>
+        
+
+        <!-- Corpo dell'articolo renderizzato da Kramdown -->
+        <article class="post-article-body">
+            <h2 id="esigenza-reale">Esigenza Reale</h2>
+<p>Evitare che le sessioni utente rimangano in memoria per sempre a causa di notifiche o eventi non rimossi.</p>
+
+<h2 id="analisi-tecnica">Analisi Tecnica</h2>
+<p>Problema: Accumulo progressivo di oggetti “morti” nell’heap che non possono essere rimossi perché ancora referenziati da un dispatcher globale. Perché: Uso riferimenti deboli (WeakReference). Ho scelto di permettere al GC di fare il suo lavoro anche se ho dimenticato una deregistrazione manuale, garantendo la pulizia automatica dei listener obsoleti.</p>
+
+<h2 id="esempio-implementativo">Esempio Implementativo</h2>
+
+<div class="language-java highlighter-rouge"><div class="highlight"><pre class="highlight"><code><table class="rouge-table"><tbody><tr><td class="rouge-gutter gl"><pre class="lineno">1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+</pre></td><td class="rouge-code"><pre><span class="o">*</span> <span class="nc">Il</span> <span class="nl">problema:</span> <span class="n">un</span> <span class="nc">EventBus</span> <span class="n">singleton</span> <span class="n">mantiene</span> <span class="n">riferimenti</span> <span class="n">forti</span> <span class="n">ai</span> <span class="n">listener</span><span class="o">.</span> <span class="nc">Se</span>
+<span class="o">*</span> <span class="n">un</span> <span class="n">oggetto</span> <span class="nc">Session</span> <span class="n">si</span> <span class="n">registra</span> <span class="n">ma</span> <span class="n">non</span> <span class="n">si</span> <span class="nf">deregistra</span> <span class="o">(</span><span class="n">es</span><span class="o">.</span> <span class="n">per</span> <span class="n">un</span><span class="err">'</span><span class="n">eccezione</span> <span class="n">o</span> <span class="n">un</span>
+<span class="o">*</span> <span class="n">bug</span><span class="o">),</span> <span class="n">rimane</span> <span class="n">in</span> <span class="n">memoria</span> <span class="n">per</span> <span class="n">sempre</span><span class="o">.</span> <span class="o">*/</span>
+ <span class="nd">@Component</span> <span class="kd">public</span> <span class="kd">class</span> <span class="nc">EventBus</span> 
+<span class="o">{</span> 
+<span class="c1">// SBAGLIATO: riferimento forte impedisce al GC di raccogliere i listener</span>
+<span class="c1">// private final List&lt;EventListener&gt; strongListeners = new</span>
+<span class="c1">// CopyOnWriteArrayList&lt;&gt;(); public void register(EventListener listener)</span>
+<span class="o">{</span> <span class="n">strongListeners</span><span class="o">.</span><span class="na">add</span><span class="o">(</span><span class="n">listener</span><span class="o">);</span> 
+<span class="c1">// Leak! Se il chiamante non chiama unregister(), l'oggetto non viene mai</span>
+<span class="c1">// raccolto }</span>
+ <span class="o">}</span>
+ 
+<span class="o">*</span> <span class="no">SOLUZIONE</span> <span class="mi">1</span><span class="o">:</span> <span class="nc">WeakReference</span> <span class="err">—</span> <span class="n">il</span> <span class="n">listener</span> <span class="n">viene</span> <span class="n">raccolto</span> <span class="n">dal</span> <span class="no">GC</span> <span class="n">quando</span> <span class="n">non</span> <span class="n">è</span>
+<span class="o">*</span> <span class="n">più</span> <span class="n">referenziato</span> <span class="n">altrove</span><span class="o">.</span> <span class="o">*/</span>
+ <span class="nd">@Component</span> <span class="kd">public</span> <span class="kd">class</span> <span class="nc">WeakEventBus</span> 
+<span class="o">{</span> <span class="kd">private</span> <span class="kd">final</span> <span class="nc">List</span><span class="o">&lt;</span><span class="nc">WeakReference</span><span class="o">&lt;</span><span class="nc">EventListener</span><span class="o">&gt;&gt;</span> <span class="n">weakListeners</span> <span class="o">=</span> <span class="k">new</span>
+<span class="nc">CopyOnWriteArrayList</span><span class="o">&lt;&gt;();</span> <span class="kd">public</span> <span class="kt">void</span> <span class="nf">register</span><span class="o">(</span><span class="nc">EventListener</span> <span class="n">listener</span><span class="o">)</span>
+<span class="o">{</span> <span class="n">weakListeners</span><span class="o">.</span><span class="na">add</span><span class="o">(</span><span class="k">new</span> <span class="nc">WeakReference</span><span class="o">&lt;&gt;(</span><span class="n">listener</span><span class="o">));</span> <span class="o">}</span>
+ <span class="kd">public</span> <span class="kt">void</span> <span class="nf">publish</span><span class="o">(</span><span class="nc">Event</span> <span class="n">event</span><span class="o">)</span> 
+<span class="o">{</span> 
+<span class="c1">// Itero rimuovendo automaticamente i riferimenti scaduti (listener già raccolti</span>
+<span class="c1">// dal GC) weakListeners.removeIf(ref -&gt;</span>
+<span class="o">{</span> <span class="nc">EventListener</span> <span class="n">listener</span> <span class="o">=</span> <span class="n">ref</span><span class="o">.</span><span class="na">get</span><span class="o">();</span> <span class="k">if</span> <span class="o">(</span><span class="n">listener</span> <span class="o">==</span> <span class="kc">null</span><span class="o">)</span> 
+<span class="o">{</span> <span class="k">return</span> <span class="kc">true</span><span class="o">;</span> 
+<span class="c1">// Rimuovo il riferimento morto }</span>
+ <span class="n">listener</span><span class="o">.</span><span class="na">onEvent</span><span class="o">(</span><span class="n">event</span><span class="o">);</span> <span class="k">return</span> <span class="kc">false</span><span class="o">;</span> <span class="o">}</span>
+<span class="o">);</span> <span class="o">}</span>
+ <span class="o">}</span>
+ 
+<span class="o">*</span> <span class="no">SOLUZIONE</span> <span class="mi">2</span><span class="o">:</span> <span class="nc">WeakHashMap</span> <span class="err">—</span> <span class="n">le</span> <span class="n">entry</span> <span class="n">vengono</span> <span class="n">rimosse</span> <span class="n">automaticamente</span> <span class="n">quando</span> <span class="n">la</span>
+<span class="o">*</span> <span class="n">chiave</span> <span class="n">non</span> <span class="n">è</span> <span class="n">più</span> <span class="n">referenziata</span><span class="o">.</span> <span class="nc">Ideale</span> <span class="n">per</span> <span class="n">mappare</span> <span class="n">oggetti</span> <span class="n">a</span> <span class="n">listener</span> <span class="n">senza</span>
+<span class="o">*</span> <span class="n">doversi</span> <span class="n">preoccupare</span> <span class="n">della</span> <span class="n">deregistrazione</span><span class="o">.</span> <span class="o">*/</span>
+ <span class="nd">@Component</span> <span class="kd">public</span> <span class="kd">class</span> <span class="nc">SessionEventDispatcher</span> 
+<span class="o">{</span> 
+<span class="c1">// La chiave (UserSession) è tenuta con WeakReference: quando la sessione scade,</span>
+<span class="c1">// l'entry viene rimossa automaticamente al prossimo GC cycle private final</span>
+<span class="c1">// Map&lt;UserSession, SessionListener&gt; listeners = Collections.synchronizedMap(new</span>
+<span class="c1">// WeakHashMap&lt;&gt;()); public void registerSession(UserSession session,</span>
+<span class="c1">// SessionListener listener)</span>
+<span class="o">{</span> <span class="n">listeners</span><span class="o">.</span><span class="na">put</span><span class="o">(</span><span class="n">session</span><span class="o">,</span> <span class="n">listener</span><span class="o">);</span> 
+<span class="c1">// Nessuna deregistrazione manuale necessaria }</span>
+ <span class="kd">public</span> <span class="kt">void</span> <span class="nf">notifyAll</span><span class="o">(</span><span class="nc">SessionEvent</span> <span class="n">event</span><span class="o">)</span> 
+<span class="o">{</span> 
+<span class="c1">// Le sessioni scadute sono già state rimosse automaticamente dal GC</span>
+<span class="c1">// listeners.forEach((session, listener) -&gt;</span>
+<span class="o">{</span> <span class="k">try</span> 
+<span class="o">{</span> <span class="n">listener</span><span class="o">.</span><span class="na">onSessionEvent</span><span class="o">(</span><span class="n">event</span><span class="o">);</span> <span class="o">}</span>
+ <span class="k">catch</span> <span class="o">(</span><span class="nc">Exception</span> <span class="n">e</span><span class="o">)</span> 
+<span class="o">{</span> <span class="n">log</span><span class="o">.</span><span class="na">error</span><span class="o">(</span><span class="s">"Errore nel listener per sessione 
+{}
+"</span><span class="o">,</span> <span class="n">session</span><span class="o">.</span><span class="na">getId</span><span class="o">(),</span> <span class="n">e</span><span class="o">);</span> <span class="o">}</span>
+ <span class="o">}</span>
+<span class="o">);</span> <span class="o">}</span>
+ <span class="o">}</span>
+ 
+<span class="o">*</span> <span class="no">SOLUZIONE</span> <span class="mi">3</span><span class="o">:</span> <span class="n">pattern</span> <span class="nc">Closeable</span> <span class="n">con</span> <span class="n">deregistrazione</span> <span class="n">automatica</span> <span class="err">—</span> <span class="n">la</span> <span class="n">soluzione</span>
+<span class="o">*</span> <span class="n">più</span> <span class="n">esplicita</span> <span class="n">e</span> <span class="n">sicura</span><span class="o">.</span> <span class="o">*/</span>
+ <span class="nd">@Component</span> <span class="kd">public</span> <span class="kd">class</span> <span class="nc">StrongEventBus</span> 
+<span class="o">{</span> <span class="kd">private</span> <span class="kd">final</span> <span class="nc">List</span><span class="o">&lt;</span><span class="nc">EventListener</span><span class="o">&gt;</span> <span class="n">listeners</span> <span class="o">=</span> <span class="k">new</span> <span class="nc">CopyOnWriteArrayList</span><span class="o">&lt;&gt;();</span> 
+<span class="o">*</span> <span class="nc">Restituisco</span> <span class="n">un</span><span class="err">'</span><span class="n">istanza</span> <span class="nc">Closeable</span> <span class="n">che</span> <span class="n">deregistra</span> <span class="n">automaticamente</span> <span class="n">il</span> <span class="n">listener</span>
+<span class="o">*</span> <span class="n">quando</span> <span class="n">viene</span> <span class="n">chiusa</span><span class="o">.</span> <span class="nc">Usabile</span> <span class="n">in</span> <span class="n">un</span> <span class="k">try</span><span class="o">-</span><span class="n">with</span><span class="o">-</span><span class="n">resources</span> <span class="n">per</span> <span class="n">garantire</span> <span class="n">la</span>
+<span class="o">*</span> <span class="n">deregistrazione</span> <span class="n">anche</span> <span class="n">in</span> <span class="n">caso</span> <span class="n">di</span> <span class="n">eccezione</span><span class="o">.</span> <span class="o">*/</span>
+ <span class="kd">public</span> <span class="nc">Closeable</span> <span class="nf">register</span><span class="o">(</span><span class="nc">EventListener</span> <span class="n">listener</span><span class="o">)</span> 
+<span class="o">{</span> <span class="n">listeners</span><span class="o">.</span><span class="na">add</span><span class="o">(</span><span class="n">listener</span><span class="o">);</span> <span class="k">return</span> <span class="o">()</span> <span class="o">-&gt;</span> <span class="n">listeners</span><span class="o">.</span><span class="na">remove</span><span class="o">(</span><span class="n">listener</span><span class="o">);</span> 
+<span class="c1">// Lambda che rimuove il listener }</span>
+ <span class="o">}</span>
+ 
+<span class="cm">/* Nel chiamante, uso try-with-resources per garantire la deregistrazione: */</span>
+ <span class="nd">@Service</span> <span class="kd">public</span> <span class="kd">class</span> <span class="nc">OrderProcessingService</span> 
+<span class="o">{</span> <span class="nd">@Autowired</span> <span class="kd">private</span> <span class="nc">StrongEventBus</span> <span class="n">eventBus</span><span class="o">;</span> <span class="kd">public</span> <span class="kt">void</span> <span class="nf">processOrder</span><span class="o">(</span><span class="nc">Order</span>
+<span class="n">order</span><span class="o">)</span>
+<span class="o">{</span> <span class="k">try</span> <span class="o">(</span><span class="nc">Closeable</span> <span class="n">registration</span> <span class="o">=</span> <span class="n">eventBus</span><span class="o">.</span><span class="na">register</span><span class="o">(</span><span class="n">event</span> <span class="o">-&gt;</span>
+<span class="n">handleOrderEvent</span><span class="o">(</span><span class="n">order</span><span class="o">,</span> <span class="n">event</span><span class="o">)))</span>
+<span class="o">{</span> 
+<span class="c1">// Il listener è attivo solo per la durata di questo blocco</span>
+<span class="c1">// doProcessOrder(order); }</span>
+ 
+<span class="c1">// Al termine del try, il listener viene automaticamente deregistrato }</span>
+ <span class="o">}</span>
+ 
+<span class="cm">/* Rilevo i leak di listener in produzione tramite heap dump e Eclipse MAT: */</span>
+ 
+<span class="c1">// jcmd &lt;PID&gt; GC.heap_dump filename=heap.hprof </span>
+<span class="c1">// In MAT: Leak Suspects &gt; cerco classi con molte istanze che non dovrebbero</span>
+<span class="c1">// esistere</span>
+<span class="c1">// Oppure: OQL query: SELECT * FROM java.util.EventListener WHERE ... </span>
+<span class="o">*</span> <span class="nc">In</span> <span class="nc">Spring</span> <span class="nc">Boot</span><span class="o">,</span> <span class="n">verifico</span> <span class="n">i</span> <span class="n">leak</span> <span class="n">di</span> <span class="n">listener</span> <span class="n">con</span> <span class="n">un</span> <span class="n">test</span> <span class="n">che</span> <span class="n">forza</span> <span class="n">il</span> <span class="no">GC</span> <span class="n">e</span>
+<span class="o">*</span> <span class="n">controlla</span> <span class="n">che</span> <span class="n">le</span> <span class="n">istanze</span> <span class="n">siano</span> <span class="n">state</span> <span class="nl">raccolte:</span> <span class="o">*/</span>
+ <span class="nd">@Test</span> <span class="kd">public</span> <span class="kt">void</span> <span class="nf">verifyNoListenerLeak</span><span class="o">()</span> <span class="kd">throws</span> <span class="nc">Exception</span> 
+<span class="o">{</span> <span class="nc">WeakEventBus</span> <span class="n">bus</span> <span class="o">=</span> <span class="k">new</span> <span class="nc">WeakEventBus</span><span class="o">();</span> 
+<span class="c1">// Creo il listener in uno scope separato per permettere al GC di raccoglierlo </span>
+<span class="o">{</span> <span class="nc">EventListener</span> <span class="n">shortLivedListener</span> <span class="o">=</span> <span class="n">event</span> <span class="o">-&gt;</span> 
+<span class="o">{}</span>
+<span class="o">;</span> <span class="n">bus</span><span class="o">.</span><span class="na">register</span><span class="o">(</span><span class="n">shortLivedListener</span><span class="o">);</span> <span class="n">assertEquals</span><span class="o">(</span><span class="mi">1</span><span class="o">,</span> <span class="n">bus</span><span class="o">.</span><span class="na">getListenerCount</span><span class="o">());</span> <span class="o">}</span>
+ 
+<span class="c1">// Forzo il GC e verifico che il listener sia stato rimosso System.gc();</span>
+<span class="c1">// Thread.sleep(100);</span>
+<span class="c1">// Do tempo al GC di completare assertEquals(0, bus.getListenerCount(), "Leak</span>
+<span class="c1">// rilevato: il listener non è stato rimosso dopo il GC"); }</span>
+</pre></td></tr></tbody></table></code></pre></div></div>
+
+        </article>
+
+    </main>
+
+    <!-- COLONNA DESTRA: sidebar post -->
+    <aside class="post-sidebar">
+
+        <!-- Box 1: tags argomento (stessa lista dei chip sopra, ma nella sidebar) -->
+        
+        <div class="sidebar-box tags-box">
+            <span class="box-label">Argomenti</span>
+            <div class="tag-cloud-sidebar">
+                
+                    <span class="sidebar-tag">java</span>
+                
+                    <span class="sidebar-tag">memory & performance</span>
+                
+            </div>
+        </div>
+        
+
+        <!-- Box 2: libro consigliato -->
+        <div class="sidebar-box books-box">
+            <span class="box-label">Letture Consigliate</span>
+            <div class="book-card">
+                <a href="https://www.amazon.it/Appunti-Programmazione-Pensieri-soluzioni-Applicazioni-ebook/dp/B0FMFRHKTF/"
+                   target="_blank"
+                   rel="noopener noreferrer"
+                   aria-label="Acquista Appunti di Programmazione su Amazon">
+                    <img src="https://m.media-amazon.com/images/I/61Ck5eMzGYL._SY466_.jpg"
+                         alt="Copertina: Appunti di Programmazione"
+                         width="80">
+                    <p>Appunti di Programmazione: Pensieri e soluzioni per Applicazioni WEB</p>
+                </a>
+            </div>
+        </div>
+
+    </aside>
+
+</div>
+
+    <footer class="main-footer">
+        DevLog — Appunti di Programmazione &nbsp;·&nbsp; cosimociraci@gmail.com
+    </footer>
+
+    <script>
+        /*
+         * toggleTheme: legge il tema corrente dall'attributo HTML,
+         * calcola l'opposto e lo salva. Il CSS reagisce via [data-theme].
+         * Non uso classi sul body per mantenere tutto centralizzato
+         * sull'elemento radice.
+         */
+        function toggleTheme() {
+            var html = document.documentElement;
+            var current = html.getAttribute('data-theme');
+            var next = current === 'dark' ? 'light' : 'dark';
+            html.setAttribute('data-theme', next);
+            localStorage.setItem('theme', next);
+        }
+    </script>
+
+</body>
+</html>

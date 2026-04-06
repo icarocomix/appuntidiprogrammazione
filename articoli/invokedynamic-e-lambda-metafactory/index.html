@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="it" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Invokedynamic e Lambda Metafactory — DevLog</title>
+    <meta name="description" content="Le Lambda in Java non sono semplici classi anonime, ma usano l'istruzione invokedynamic. La LambdaMetafactory permette di generare 'al volo' un'implementazione di un'interfaccia funzionale collegandola a un metodo esistente. Questo evita la creazione
+">
+    <link rel="stylesheet" href="/appuntidiprogrammazione/assets/css/style.css">
+
+    <script>
+        /*
+         * Applico il tema PRIMA del rendering per evitare il flash di contenuto
+         * (FOUC). Lo script è inline e bloccante di proposito: deve girare
+         * prima che il browser disegni qualsiasi elemento.
+         */
+        (function() {
+            var saved = localStorage.getItem('theme') || 'dark';
+            document.documentElement.setAttribute('data-theme', saved);
+        })();
+    </script>
+</head>
+<body>
+
+    <header class="main-header">
+        <div class="logo" onclick="window.location.href='/appuntidiprogrammazione/'">
+            APPUNTI DI <span>PROGRAMMAZIONE</span>
+        </div>
+
+        <!-- 
+            Il pulsante aggiorna l'attributo data-theme sull'<html> e
+            persiste la scelta nel localStorage per le sessioni future.
+        -->
+        <button onclick="toggleTheme()" class="theme-toggle" aria-label="Cambia tema">🌓</button>
+    </header>
+
+    <!--
+    Layout post: struttura a due colonne.
+    - Sinistra (post-content): breadcrumb → tags → link PDF → articolo MD
+    - Destra (post-sidebar): tags argomento + libro consigliato
+    
+    Ordine DOM: post-content prima, post-sidebar dopo.
+    Grid-template-areas in CSS li posiziona visivamente:
+    "content sidebar" su desktop, stacked su mobile.
+-->
+<div class="post-container">
+
+    <!-- COLONNA SINISTRA: contenuto principale -->
+    <main class="post-content">
+
+        <!-- Breadcrumb: navigazione verso la home -->
+        <nav class="post-breadcrumb" aria-label="Breadcrumb">
+            <a href="/appuntidiprogrammazione/">Appunti di Programmazione</a>
+            <span class="separator" aria-hidden="true">/</span>
+            <span>Invokedynamic e Lambda Metafactory</span>
+        </nav>
+
+        <!-- Tags legati all'articolo -->
+        
+        <div class="post-tags-header" aria-label="Argomenti">
+            
+                <span class="post-tag-chip">java</span>
+            
+                <span class="post-tag-chip">advanced reflection & metaprogr</span>
+            
+        </div>
+        
+
+        <!-- Link al/ai PDF allegati all'articolo -->
+        
+        <div class="pdf-link-wrapper">
+            <a class="pdf-link"
+               href="/appuntidiprogrammazione/assets/pdf/invokedynamic-e-lambda-metafactory.pdf"
+               target="_blank"
+               rel="noopener noreferrer"
+               aria-label="Scarica il PDF: Invokedynamic e Lambda Metafactory">
+                Scarica PDF
+            </a>
+        </div>
+        
+
+        <!-- Corpo dell'articolo renderizzato da Kramdown -->
+        <article class="post-article-body">
+            <h2 id="esigenza-reale">Esigenza Reale</h2>
+<p>Trasformare stringhe di configurazione o espressioni dinamiche in chiamate a funzioni Java reali e veloci.</p>
+
+<h2 id="analisi-tecnica">Analisi Tecnica</h2>
+<p>Problema: L’uso eccessivo di classi anonime per le callback appesantisce il caricamento delle classi e il consumo di memoria. Perché: Sfrutto LambdaMetafactory. Ho scelto questa tecnica per generare invocatori dinamici che la JVM tratta come normali lambda, garantendo il massimo livello di inlining possibile.</p>
+
+<h2 id="esempio-implementativo">Esempio Implementativo</h2>
+
+<div class="language-java highlighter-rouge"><div class="highlight"><pre class="highlight"><code><table class="rouge-table"><tbody><tr><td class="rouge-gutter gl"><pre class="lineno">1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+</pre></td><td class="rouge-code"><pre><span class="o">*</span> <span class="nc">Trasformo</span> <span class="n">un</span> <span class="nc">MethodHandle</span> <span class="n">in</span> <span class="n">una</span> <span class="nc">Function</span><span class="o">&lt;</span><span class="nc">String</span><span class="o">,</span> <span class="nc">String</span><span class="o">&gt;</span> <span class="n">tramite</span>
+<span class="o">*</span> <span class="nc">LambdaMetafactory</span><span class="o">.</span> <span class="nc">Il</span> <span class="n">risultato</span> <span class="n">è</span> <span class="n">un</span><span class="err">'</span><span class="n">implementazione</span> <span class="n">dell</span><span class="err">'</span><span class="n">interfaccia</span>
+<span class="o">*</span> <span class="n">funzionale</span> <span class="n">generata</span> <span class="n">a</span> <span class="n">runtime</span> <span class="n">e</span> <span class="n">ottimizzata</span> <span class="n">dalla</span> <span class="no">JVM</span> <span class="n">come</span> <span class="n">una</span> <span class="n">lambda</span> <span class="n">normale</span><span class="o">.</span>
+<span class="o">*</span> <span class="o">*/</span>
+ <span class="kd">public</span> <span class="kd">class</span> <span class="nc">DynamicFunctionFactory</span> 
+<span class="o">{</span> <span class="kd">public</span> <span class="kd">static</span> <span class="nc">Function</span><span class="o">&lt;</span><span class="nc">String</span><span class="o">,</span> <span class="nc">String</span><span class="o">&gt;</span> <span class="nf">createFunction</span><span class="o">(</span><span class="nc">Class</span><span class="o">&lt;?&gt;</span> <span class="n">targetClass</span><span class="o">,</span>
+<span class="nc">String</span> <span class="n">methodName</span><span class="o">)</span> <span class="kd">throws</span> <span class="nc">Throwable</span>
+<span class="o">{</span> <span class="nc">MethodHandles</span><span class="o">.</span><span class="na">Lookup</span> <span class="n">lookup</span> <span class="o">=</span> <span class="nc">MethodHandles</span><span class="o">.</span><span class="na">lookup</span><span class="o">();</span> 
+<span class="c1">// Trovo il metodo target MethodHandle targetHandle = lookup.findVirtual(</span>
+<span class="c1">// targetClass, methodName, MethodType.methodType(String.class, String.class));</span>
+<span class="c1">// Genero un'implementazione di Function&lt;String,String&gt; che delega al metodo</span>
+<span class="c1">// target CallSite callSite = LambdaMetafactory.metafactory( lookup, "apply",</span>
+<span class="c1">// Il metodo dell'interfaccia funzionale da implementare</span>
+<span class="c1">// MethodType.methodType(Function.class, targetClass),</span>
+<span class="c1">// Tipo del factory MethodType.methodType(Object.class, Object.class), </span>
+<span class="c1">// Firma erased della SAM targetHandle, </span>
+<span class="c1">// Il metodo reale da invocare MethodType.methodType(String.class, String.class)</span>
+<span class="c1">// Firma specializzata ); </span>
+<span class="c1">// Ottengo il factory e lo invoco con l'istanza target</span>
+<span class="c1">// @SuppressWarnings("unchecked") Function&lt;String, String&gt; fn =</span>
+<span class="c1">// (Function&lt;String, String&gt;)</span>
+<span class="c1">// callSite.getTarget().invoke(targetClass.getDeclaredConstructor().newInstance());</span>
+<span class="c1">// return fn; }</span>
+ <span class="o">}</span>
+ 
+<span class="o">*</span> <span class="nc">Implemento</span> <span class="n">un</span> <span class="n">motore</span> <span class="n">di</span> <span class="n">regole</span> <span class="n">basato</span> <span class="n">su</span> <span class="nc">LambdaMetafactory</span> <span class="n">per</span> <span class="n">una</span> <span class="n">pipeline</span> <span class="n">di</span>
+<span class="o">*</span> <span class="nl">trasformazione:</span> <span class="o">*/</span>
+ <span class="nd">@Component</span> <span class="kd">public</span> <span class="kd">class</span> <span class="nc">RuleEngine</span> 
+<span class="o">{</span> 
+<span class="c1">// Mappa nome-regola -&gt; Function generata via LambdaMetafactory private final</span>
+<span class="c1">// Map&lt;String, Function&lt;String, String&gt;&gt; rules = new ConcurrentHashMap&lt;&gt;();</span>
+<span class="c1">// @PostConstruct public void loadRules() throws Throwable</span>
+<span class="o">{</span> 
+<span class="c1">// Carico le regole da configurazione e genero le Function dinamicamente for</span>
+<span class="c1">// (RuleConfig config : ruleConfigRepository.findAll())</span>
+<span class="o">{</span> <span class="nc">Function</span><span class="o">&lt;</span><span class="nc">String</span><span class="o">,</span> <span class="nc">String</span><span class="o">&gt;</span> <span class="n">fn</span> <span class="o">=</span> <span class="nc">DynamicFunctionFactory</span><span class="o">.</span><span class="na">createFunction</span><span class="o">(</span>
+<span class="nc">Class</span><span class="o">.</span><span class="na">forName</span><span class="o">(</span><span class="n">config</span><span class="o">.</span><span class="na">getClassName</span><span class="o">()),</span> <span class="n">config</span><span class="o">.</span><span class="na">getMethodName</span><span class="o">()</span> <span class="o">);</span>
+<span class="n">rules</span><span class="o">.</span><span class="na">put</span><span class="o">(</span><span class="n">config</span><span class="o">.</span><span class="na">getRuleName</span><span class="o">(),</span> <span class="n">fn</span><span class="o">);</span> <span class="n">log</span><span class="o">.</span><span class="na">info</span><span class="o">(</span><span class="s">"Regola '
+{}
+' caricata come lambda dinamica"</span><span class="o">,</span> <span class="n">config</span><span class="o">.</span><span class="na">getRuleName</span><span class="o">());</span> <span class="o">}</span>
+ <span class="o">}</span>
+ <span class="kd">public</span> <span class="nc">String</span> <span class="nf">applyRule</span><span class="o">(</span><span class="nc">String</span> <span class="n">ruleName</span><span class="o">,</span> <span class="nc">String</span> <span class="n">input</span><span class="o">)</span> 
+<span class="o">{</span> <span class="nc">Function</span><span class="o">&lt;</span><span class="nc">String</span><span class="o">,</span> <span class="nc">String</span><span class="o">&gt;</span> <span class="n">rule</span> <span class="o">=</span> <span class="n">rules</span><span class="o">.</span><span class="na">get</span><span class="o">(</span><span class="n">ruleName</span><span class="o">);</span> <span class="k">if</span> <span class="o">(</span><span class="n">rule</span> <span class="o">==</span> <span class="kc">null</span><span class="o">)</span> <span class="k">throw</span>
+<span class="k">new</span> <span class="nf">IllegalArgumentException</span><span class="o">(</span><span class="s">"Regola non trovata: "</span> <span class="o">+</span> <span class="n">ruleName</span><span class="o">);</span> <span class="k">return</span>
+<span class="n">rule</span><span class="o">.</span><span class="na">apply</span><span class="o">(</span><span class="n">input</span><span class="o">);</span>
+<span class="c1">// Il JIT ottimizza questa chiamata come una lambda normale }</span>
+ <span class="o">}</span>
+ 
+<span class="cm">/* Confronto con la reflection classica per quantificare il guadagno: */</span>
+ <span class="nd">@Benchmark</span> <span class="kd">public</span> <span class="nc">String</span> <span class="nf">withReflection</span><span class="o">(</span><span class="nc">BenchState</span> <span class="n">state</span><span class="o">)</span> <span class="kd">throws</span> <span class="nc">Exception</span> 
+<span class="o">{</span> <span class="k">return</span> <span class="o">(</span><span class="nc">String</span><span class="o">)</span> <span class="n">state</span><span class="o">.</span><span class="na">method</span><span class="o">.</span><span class="na">invoke</span><span class="o">(</span><span class="n">state</span><span class="o">.</span><span class="na">instance</span><span class="o">,</span> <span class="n">state</span><span class="o">.</span><span class="na">input</span><span class="o">);</span> 
+<span class="c1">// Overhead ad ogni chiamata }</span>
+ <span class="nd">@Benchmark</span> <span class="kd">public</span> <span class="nc">String</span> <span class="nf">withLambdaMetafactory</span><span class="o">(</span><span class="nc">BenchState</span> <span class="n">state</span><span class="o">)</span> 
+<span class="o">{</span> <span class="k">return</span> <span class="n">state</span><span class="o">.</span><span class="na">dynamicFunction</span><span class="o">.</span><span class="na">apply</span><span class="o">(</span><span class="n">state</span><span class="o">.</span><span class="na">input</span><span class="o">);</span> 
+<span class="c1">// Ottimizzato dal JIT come lambda normale }</span>
+ 
+<span class="c1">// LambdaMetafactory è tipicamente 5-20x più veloce della reflection su call</span>
+<span class="c1">// site caldi</span>
+<span class="o">*</span> <span class="nc">In</span> <span class="nc">Spring</span> <span class="nc">Boot</span><span class="o">,</span> <span class="n">uso</span> <span class="n">questo</span> <span class="n">pattern</span> <span class="n">per</span> <span class="n">un</span> <span class="n">sistema</span> <span class="n">di</span> <span class="n">validazione</span>
+<span class="o">*</span> <span class="nl">configurabile:</span> <span class="o">*/</span>
+ <span class="nd">@Service</span> <span class="kd">public</span> <span class="kd">class</span> <span class="nc">DynamicValidatorService</span> 
+<span class="o">{</span> <span class="kd">private</span> <span class="kd">final</span> <span class="nc">Map</span><span class="o">&lt;</span><span class="nc">String</span><span class="o">,</span> <span class="nc">Predicate</span><span class="o">&lt;</span><span class="nc">String</span><span class="o">&gt;&gt;</span> <span class="n">validators</span> <span class="o">=</span> <span class="k">new</span>
+<span class="nc">ConcurrentHashMap</span><span class="o">&lt;&gt;();</span> <span class="kd">public</span> <span class="kt">void</span> <span class="nf">registerValidator</span><span class="o">(</span><span class="nc">String</span> <span class="n">name</span><span class="o">,</span> <span class="nc">Class</span><span class="o">&lt;?&gt;</span> <span class="n">cls</span><span class="o">,</span>
+<span class="nc">String</span> <span class="n">methodName</span><span class="o">)</span> <span class="kd">throws</span> <span class="nc">Throwable</span>
+<span class="o">{</span> 
+<span class="c1">// Genero un Predicate&lt;String&gt; dinamico che delega al metodo del validatore</span>
+<span class="c1">// validators.put(name, createPredicate(cls, methodName)); }</span>
+ <span class="kd">public</span> <span class="kt">boolean</span> <span class="nf">validate</span><span class="o">(</span><span class="nc">String</span> <span class="n">validatorName</span><span class="o">,</span> <span class="nc">String</span> <span class="n">value</span><span class="o">)</span> 
+<span class="o">{</span> <span class="k">return</span> <span class="n">validators</span><span class="o">.</span><span class="na">getOrDefault</span><span class="o">(</span><span class="n">validatorName</span><span class="o">,</span> <span class="n">s</span> <span class="o">-&gt;</span> <span class="kc">true</span><span class="o">).</span><span class="na">test</span><span class="o">(</span><span class="n">value</span><span class="o">);</span> <span class="o">}</span>
+ <span class="o">}</span>
+</pre></td></tr></tbody></table></code></pre></div></div>
+
+        </article>
+
+    </main>
+
+    <!-- COLONNA DESTRA: sidebar post -->
+    <aside class="post-sidebar">
+
+        <!-- Box 1: tags argomento (stessa lista dei chip sopra, ma nella sidebar) -->
+        
+        <div class="sidebar-box tags-box">
+            <span class="box-label">Argomenti</span>
+            <div class="tag-cloud-sidebar">
+                
+                    <span class="sidebar-tag">java</span>
+                
+                    <span class="sidebar-tag">advanced reflection & metaprogr</span>
+                
+            </div>
+        </div>
+        
+
+        <!-- Box 2: libro consigliato -->
+        <div class="sidebar-box books-box">
+            <span class="box-label">Letture Consigliate</span>
+            <div class="book-card">
+                <a href="https://www.amazon.it/Appunti-Programmazione-Pensieri-soluzioni-Applicazioni-ebook/dp/B0FMFRHKTF/"
+                   target="_blank"
+                   rel="noopener noreferrer"
+                   aria-label="Acquista Appunti di Programmazione su Amazon">
+                    <img src="https://m.media-amazon.com/images/I/61Ck5eMzGYL._SY466_.jpg"
+                         alt="Copertina: Appunti di Programmazione"
+                         width="80">
+                    <p>Appunti di Programmazione: Pensieri e soluzioni per Applicazioni WEB</p>
+                </a>
+            </div>
+        </div>
+
+    </aside>
+
+</div>
+
+    <footer class="main-footer">
+        DevLog — Appunti di Programmazione &nbsp;·&nbsp; cosimociraci@gmail.com
+    </footer>
+
+    <script>
+        /*
+         * toggleTheme: legge il tema corrente dall'attributo HTML,
+         * calcola l'opposto e lo salva. Il CSS reagisce via [data-theme].
+         * Non uso classi sul body per mantenere tutto centralizzato
+         * sull'elemento radice.
+         */
+        function toggleTheme() {
+            var html = document.documentElement;
+            var current = html.getAttribute('data-theme');
+            var next = current === 'dark' ? 'light' : 'dark';
+            html.setAttribute('data-theme', next);
+            localStorage.setItem('theme', next);
+        }
+    </script>
+
+</body>
+</html>

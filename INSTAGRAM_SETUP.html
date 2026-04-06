@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="it" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Guida: Pubblicazione automatica caroselli Instagram — DevLog</title>
+    <meta name="description" content="Hub tecnico per appunti di programmazione, analisi di problemi reali  e soluzioni implementative in ambito Spring Boot, Java e Web Dev.">
+    <link rel="stylesheet" href="/appuntidiprogrammazione/assets/css/style.css">
+
+    <script>
+        /*
+         * Applico il tema PRIMA del rendering per evitare il flash di contenuto
+         * (FOUC). Lo script è inline e bloccante di proposito: deve girare
+         * prima che il browser disegni qualsiasi elemento.
+         */
+        (function() {
+            var saved = localStorage.getItem('theme') || 'dark';
+            document.documentElement.setAttribute('data-theme', saved);
+        })();
+    </script>
+</head>
+<body>
+
+    <header class="main-header">
+        <div class="logo" onclick="window.location.href='/appuntidiprogrammazione/'">
+            APPUNTI DI <span>PROGRAMMAZIONE</span>
+        </div>
+
+        <!-- 
+            Il pulsante aggiorna l'attributo data-theme sull'<html> e
+            persiste la scelta nel localStorage per le sessioni future.
+        -->
+        <button onclick="toggleTheme()" class="theme-toggle" aria-label="Cambia tema">🌓</button>
+    </header>
+
+    <h1 id="guida-pubblicazione-automatica-caroselli-instagram">Guida: Pubblicazione automatica caroselli Instagram</h1>
+
+<h2 id="struttura-dei-file">Struttura dei file</h2>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code><table class="rouge-table"><tbody><tr><td class="rouge-gutter gl"><pre class="lineno">1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+</pre></td><td class="rouge-code"><pre>repo/
+├── publish.py                          ← script di pubblicazione
+├── generazione_slide/
+│   └── calendario_instagram.csv        ← calendario post
+│   └── 2026-04-05-argon2/              ← esempio cartella carosello
+│       ├── 1.png
+│       ├── 2.png
+│       └── 3.png
+└── .github/
+    └── workflows/
+        └── instagram.yml               ← workflow automatico
+</pre></td></tr></tbody></table></code></pre></div></div>
+
+<hr />
+
+<h2 id="1-formato-del-csv">1. Formato del CSV</h2>
+
+<p>Il file <code class="language-plaintext highlighter-rouge">generazione_slide/calendario_instagram.csv</code> deve avere
+questa intestazione esatta (la prima riga):</p>
+
+<pre><code class="language-csv">data,folder,caption,tags
+</code></pre>
+
+<p>Esempio di righe valide:</p>
+
+<pre><code class="language-csv">data,folder,caption,tags
+2026-04-05,generazione_slide/2026-04-05-argon2,Argon2 è l'algoritmo giusto per hashare le password. Ecco perché MD5 e SHA256 non bastano contro le GPU moderne.,"#java #security #backend #springboot #programmazione"
+2026-04-07,generazione_slide/2026-04-07-jvm,Come funziona la JVM internamente? Thread, heap e garbage collector spiegati con codice reale.,"#java #jvm #backend #dev"
+</code></pre>
+
+<p><strong>Note importanti sul CSV:</strong></p>
+<ul>
+  <li>Il formato della colonna <code class="language-plaintext highlighter-rouge">data</code> deve essere <code class="language-plaintext highlighter-rouge">YYYY-MM-DD</code></li>
+  <li>La colonna <code class="language-plaintext highlighter-rouge">folder</code> contiene il path relativo alla root del repo</li>
+  <li>Se <code class="language-plaintext highlighter-rouge">caption</code> o <code class="language-plaintext highlighter-rouge">tags</code> contengono virgole, racchiudili tra <code class="language-plaintext highlighter-rouge">"virgolette doppie"</code></li>
+  <li>I tag vanno nella colonna <code class="language-plaintext highlighter-rouge">tags</code>, separati da spazi, con il <code class="language-plaintext highlighter-rouge">#</code></li>
+</ul>
+
+<hr />
+
+<h2 id="2-aggiungere-i-secrets-github">2. Aggiungere i secrets GitHub</h2>
+
+<p>I secrets sono credenziali cifrate che GitHub inietta come variabili
+d’ambiente durante i workflow, senza mai mostrarle nei log.</p>
+
+<h3 id="procedura-passo-per-passo">Procedura passo per passo</h3>
+
+<p><strong>1.</strong> Vai sul tuo repository su GitHub</p>
+
+<p><strong>2.</strong> Clicca su <strong>Settings</strong> (tab in alto a destra della repo)</p>
+
+<p><strong>3.</strong> Nel menu laterale sinistro, sotto <strong>Security</strong>, clicca su
+   <strong>Secrets and variables</strong> → <strong>Actions</strong></p>
+
+<p><strong>4.</strong> Clicca su <strong>New repository secret</strong> (pulsante verde in alto a destra)</p>
+
+<p><strong>5.</strong> Aggiungi il primo secret:</p>
+<ul>
+  <li><strong>Name:</strong> <code class="language-plaintext highlighter-rouge">IG_USERNAME</code></li>
+  <li><strong>Secret:</strong> il tuo username Instagram (senza la @)</li>
+  <li>Clicca <strong>Add secret</strong></li>
+</ul>
+
+<p><strong>6.</strong> Clicca di nuovo <strong>New repository secret</strong> e aggiungi:</p>
+<ul>
+  <li><strong>Name:</strong> <code class="language-plaintext highlighter-rouge">IG_PASSWORD</code></li>
+  <li><strong>Secret:</strong> la tua password Instagram</li>
+  <li>Clicca <strong>Add secret</strong></li>
+</ul>
+
+<p>Al termine vedrai entrambi i secrets nella lista. GitHub non mostra
+mai il valore dopo il salvataggio — se devi cambiare una password
+puoi sovrascrivere il secret con <strong>Update</strong>.</p>
+
+<hr />
+
+<h2 id="3-abilitare-il-workflow">3. Abilitare il workflow</h2>
+
+<p>Il file <code class="language-plaintext highlighter-rouge">.github/workflows/instagram.yml</code> viene rilevato
+automaticamente da GitHub Actions al primo push.</p>
+
+<p>Verifica che Actions sia abilitato per il tuo repo:
+<strong>Settings</strong> → <strong>Actions</strong> → <strong>General</strong> → seleziona
+<strong>Allow all actions and reusable workflows</strong> → <strong>Save</strong></p>
+
+<hr />
+
+<h2 id="4-test-prima-di-andare-live">4. Test prima di andare live</h2>
+
+<p>Prima di aspettare le 09:00 UTC, testa manualmente:</p>
+
+<p><strong>1.</strong> Vai su <strong>Actions</strong> nella tab del tuo repo</p>
+
+<p><strong>2.</strong> Nel menu laterale, clicca su <strong>Pubblica Carosello Instagram</strong></p>
+
+<p><strong>3.</strong> Clicca su <strong>Run workflow</strong> (pulsante grigio a destra)</p>
+
+<p><strong>4.</strong> Nelle opzioni che appaiono, imposta <strong>Dry run</strong> su <code class="language-plaintext highlighter-rouge">true</code></p>
+
+<p><strong>5.</strong> Clicca <strong>Run workflow</strong></p>
+
+<p>Il workflow girerà e nei log vedrai cosa avrebbe pubblicato,
+senza effettuare nessuna chiamata reale a Instagram.</p>
+
+<p>Quando sei soddisfatto del test, esegui di nuovo con <strong>Dry run = false</strong>
+per la pubblicazione reale.</p>
+
+<hr />
+
+<h2 id="5-risoluzione-problemi-comuni">5. Risoluzione problemi comuni</h2>
+
+<table>
+  <thead>
+    <tr>
+      <th>Problema</th>
+      <th>Causa probabile</th>
+      <th>Soluzione</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">Login fallito</code></td>
+      <td>Password errata o 2FA attivo</td>
+      <td>Disabilita 2FA sull’account IG o usa una password per app</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">Cartella non trovata</code></td>
+      <td>Path errato nel CSV</td>
+      <td>Verifica che il <code class="language-plaintext highlighter-rouge">folder</code> nel CSV corrisponda esattamente al path nel repo</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">Solo 1 immagine trovata</code></td>
+      <td>Manca il secondo file</td>
+      <td>Instagram richiede min 2 slide per un carosello</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">Nessun post pianificato</code></td>
+      <td>Data nel CSV non coincide</td>
+      <td>Controlla che il formato sia <code class="language-plaintext highlighter-rouge">YYYY-MM-DD</code> senza spazi</td>
+    </tr>
+    <tr>
+      <td>Workflow non parte</td>
+      <td>Actions disabilitato</td>
+      <td>Vedi sezione 3 sopra</td>
+    </tr>
+  </tbody>
+</table>
+
+<hr />
+
+<h2 id="6-account-con-autenticazione-a-due-fattori-2fa">6. Account con autenticazione a due fattori (2FA)</h2>
+
+<p>Se il tuo account Instagram ha il 2FA attivo, il login da script
+fallirà. Le opzioni sono:</p>
+
+<ul>
+  <li><strong>Opzione A (consigliata):</strong> Crea un account Instagram secondario
+dedicato alla pubblicazione automatica, senza 2FA.</li>
+  <li><strong>Opzione B:</strong> Disabilita temporaneamente il 2FA, esegui il login
+con lo script, e riattivalo. instagrapi salva la sessione in locale
+ma in un ambiente CI stateless come GitHub Actions la sessione
+non persiste tra un run e l’altro.</li>
+</ul>
+
+
+    <footer class="main-footer">
+        DevLog — Appunti di Programmazione &nbsp;·&nbsp; cosimociraci@gmail.com
+    </footer>
+
+    <script>
+        /*
+         * toggleTheme: legge il tema corrente dall'attributo HTML,
+         * calcola l'opposto e lo salva. Il CSS reagisce via [data-theme].
+         * Non uso classi sul body per mantenere tutto centralizzato
+         * sull'elemento radice.
+         */
+        function toggleTheme() {
+            var html = document.documentElement;
+            var current = html.getAttribute('data-theme');
+            var next = current === 'dark' ? 'light' : 'dark';
+            html.setAttribute('data-theme', next);
+            localStorage.setItem('theme', next);
+        }
+    </script>
+
+</body>
+</html>

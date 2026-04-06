@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="it" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CSRF Token Injection in AJAX — DevLog</title>
+    <meta name="description" content="I form standard di Thymeleaf gestiscono i token CSRF automaticamente, ma le chiamate AJAX/VanillaJS no. Le espressioni ${_csrf.parameterName} e ${_csrf.token} permettono di iniettare i valori nei tag meta. Questo permette agli script lato client di l
+">
+    <link rel="stylesheet" href="/appuntidiprogrammazione/assets/css/style.css">
+
+    <script>
+        /*
+         * Applico il tema PRIMA del rendering per evitare il flash di contenuto
+         * (FOUC). Lo script è inline e bloccante di proposito: deve girare
+         * prima che il browser disegni qualsiasi elemento.
+         */
+        (function() {
+            var saved = localStorage.getItem('theme') || 'dark';
+            document.documentElement.setAttribute('data-theme', saved);
+        })();
+    </script>
+</head>
+<body>
+
+    <header class="main-header">
+        <div class="logo" onclick="window.location.href='/appuntidiprogrammazione/'">
+            APPUNTI DI <span>PROGRAMMAZIONE</span>
+        </div>
+
+        <!-- 
+            Il pulsante aggiorna l'attributo data-theme sull'<html> e
+            persiste la scelta nel localStorage per le sessioni future.
+        -->
+        <button onclick="toggleTheme()" class="theme-toggle" aria-label="Cambia tema">🌓</button>
+    </header>
+
+    <!--
+    Layout post: struttura a due colonne.
+    - Sinistra (post-content): breadcrumb → tags → link PDF → articolo MD
+    - Destra (post-sidebar): tags argomento + libro consigliato
+    
+    Ordine DOM: post-content prima, post-sidebar dopo.
+    Grid-template-areas in CSS li posiziona visivamente:
+    "content sidebar" su desktop, stacked su mobile.
+-->
+<div class="post-container">
+
+    <!-- COLONNA SINISTRA: contenuto principale -->
+    <main class="post-content">
+
+        <!-- Breadcrumb: navigazione verso la home -->
+        <nav class="post-breadcrumb" aria-label="Breadcrumb">
+            <a href="/appuntidiprogrammazione/">Appunti di Programmazione</a>
+            <span class="separator" aria-hidden="true">/</span>
+            <span>CSRF Token Injection in AJAX</span>
+        </nav>
+
+        <!-- Tags legati all'articolo -->
+        
+        <div class="post-tags-header" aria-label="Argomenti">
+            
+                <span class="post-tag-chip">thymeleaf</span>
+            
+                <span class="post-tag-chip">security & spel expressions</span>
+            
+        </div>
+        
+
+        <!-- Link al/ai PDF allegati all'articolo -->
+        
+        <div class="pdf-link-wrapper">
+            <a class="pdf-link"
+               href="/appuntidiprogrammazione/assets/pdf/csrf-token-injection-in-ajax.pdf"
+               target="_blank"
+               rel="noopener noreferrer"
+               aria-label="Scarica il PDF: CSRF Token Injection in AJAX">
+                Scarica PDF
+            </a>
+        </div>
+        
+
+        <!-- Corpo dell'articolo renderizzato da Kramdown -->
+        <article class="post-article-body">
+            <h2 id="esigenza-reale">Esigenza Reale</h2>
+<p>Proteggere le chiamate asincrone effettuate via fetch() o XMLHttpRequest contro attacchi di falsificazione della richiesta.</p>
+
+<h2 id="analisi-tecnica">Analisi Tecnica</h2>
+<p>Problema: Le richieste asincrone falliscono con errore 403 perché non includono il segreto crittografico richiesto da Spring Security. Perché: Esposizione sicura del token. Ho scelto di usare i meta-tag per centralizzare il segreto CSRF, rendendolo accessibile in modo trasparente a tutti i moduli JavaScript della pagina.</p>
+
+<h2 id="esempio-implementativo">Esempio Implementativo</h2>
+
+<pre><code class="language-thymeleaf">&lt;!-- Inserisco i meta-tag CSRF nel layout base: disponibili in tutte le pagine.
+Thymeleaf inietta i valori correnti del token generato da Spring Security per
+questa sessione. --&gt; &lt;head&gt; &lt;meta name="_csrf" th:content="$
+{_csrf.token}
+"&gt; &lt;meta name="_csrf_header" th:content="$
+{_csrf.headerName}
+"&gt; &lt;!-- Oppure uso th:attr per sicurezza se il nome dell'attributo è dinamico:
+--&gt; &lt;meta th:attr="name=$
+{_csrf.parameterName}
+,content=$
+{_csrf.token}
+"&gt; &lt;/head&gt; 
+* Modulo JavaScript centralizzato (csrf.js): leggo i meta-tag una sola volta e
+* li rendo disponibili a tutti i moduli fetch della pagina. */
+ const CsrfUtils = (() =&gt; 
+{ 
+// Leggo i valori dal DOM una sola volta al caricamento della pagina const
+// tokenElement = document.querySelector('meta[name="_csrf"]'); const
+// headerElement = document.querySelector('meta[name="_csrf_header"]'); if
+// (!tokenElement || !headerElement)
+{ console.error('Meta-tag CSRF non trovati: le richieste POST falliranno con
+403.'); }
+ const token = tokenElement?.content; const headerName = headerElement?.content;
+* Wrapper fetch con CSRF automatico: sostituzione drop-in di window.fetch per
+* tutte le richieste mutanti. */
+ function secureFetch(url, options = 
+{}
+) 
+{ const method = (options.method || 'GET').toUpperCase(); 
+// GET e HEAD non necessitano di CSRF (idempotenti per design) if (['GET',
+// 'HEAD', 'OPTIONS'].includes(method))
+{ return fetch(url, options); }
+ 
+// Aggiungo il token CSRF a tutte le richieste mutanti const headers = new
+// Headers(options.headers ||
+{}
+); headers.set(headerName, token); return fetch(url, 
+{ ...options, headers }
+); }
+ 
+/* Funzione helper per form AJAX: serializza il FormData e aggiunge il CSRF. */
+ function submitForm(form) 
+{ const formData = new FormData(form); 
+// Spring Security accetta il token anche come parametro di form
+// formData.append(document.querySelector('meta[name="_csrf"]')?.getAttribute('name')
+// || '_csrf', token); return fetch(form.action,
+{ method: form.method || 'POST', body: formData 
+// NON imposto Content-Type: il browser lo fa automaticamente con il boundary
+// multipart }
+); }
+ return 
+{ token, headerName, secureFetch, submitForm }
+; }
+)(); 
+/* Esempio d'uso: */
+ async function deleteProduct(productId) 
+{ const response = await CsrfUtils.secureFetch(`/api/products/$
+{productId}
+`, 
+{ method: 'DELETE' }
+); if (response.ok) 
+{ document.getElementById(`product-$
+{productId}
+`).remove(); }
+ else if (response.status === 403) 
+{ console.error('CSRF token non valido o scaduto: ricarica la pagina.'); }
+ }
+ 
+/* Per HTMX, configuro il token CSRF globalmente: */
+ document.addEventListener('htmx:configRequest', (event) =&gt; 
+{ 
+// HTMX legge i meta-tag automaticamente se configurato correttamente
+// event.detail.headers[CsrfUtils.headerName] = CsrfUtils.token; }
+); 
+* Configurazione Spring Security per accettare il token sia come header che come
+* parametro: */
+ @Configuration public class SecurityConfig 
+{ @Bean public SecurityFilterChain filterChain(HttpSecurity http) throws
+Exception
+{ http .csrf(csrf -&gt; csrf
+.csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse())
+// Permette la lettura del token via JS per SPA .csrfTokenRequestHandler(new
+// CsrfTokenRequestAttributeHandler()) )
+// ... resto della configurazione return http.build(); }
+ }
+</code></pre>
+
+        </article>
+
+    </main>
+
+    <!-- COLONNA DESTRA: sidebar post -->
+    <aside class="post-sidebar">
+
+        <!-- Box 1: tags argomento (stessa lista dei chip sopra, ma nella sidebar) -->
+        
+        <div class="sidebar-box tags-box">
+            <span class="box-label">Argomenti</span>
+            <div class="tag-cloud-sidebar">
+                
+                    <span class="sidebar-tag">thymeleaf</span>
+                
+                    <span class="sidebar-tag">security & spel expressions</span>
+                
+            </div>
+        </div>
+        
+
+        <!-- Box 2: libro consigliato -->
+        <div class="sidebar-box books-box">
+            <span class="box-label">Letture Consigliate</span>
+            <div class="book-card">
+                <a href="https://www.amazon.it/Appunti-Programmazione-Pensieri-soluzioni-Applicazioni-ebook/dp/B0FMFRHKTF/"
+                   target="_blank"
+                   rel="noopener noreferrer"
+                   aria-label="Acquista Appunti di Programmazione su Amazon">
+                    <img src="https://m.media-amazon.com/images/I/61Ck5eMzGYL._SY466_.jpg"
+                         alt="Copertina: Appunti di Programmazione"
+                         width="80">
+                    <p>Appunti di Programmazione: Pensieri e soluzioni per Applicazioni WEB</p>
+                </a>
+            </div>
+        </div>
+
+    </aside>
+
+</div>
+
+    <footer class="main-footer">
+        DevLog — Appunti di Programmazione &nbsp;·&nbsp; cosimociraci@gmail.com
+    </footer>
+
+    <script>
+        /*
+         * toggleTheme: legge il tema corrente dall'attributo HTML,
+         * calcola l'opposto e lo salva. Il CSS reagisce via [data-theme].
+         * Non uso classi sul body per mantenere tutto centralizzato
+         * sull'elemento radice.
+         */
+        function toggleTheme() {
+            var html = document.documentElement;
+            var current = html.getAttribute('data-theme');
+            var next = current === 'dark' ? 'light' : 'dark';
+            html.setAttribute('data-theme', next);
+            localStorage.setItem('theme', next);
+        }
+    </script>
+
+</body>
+</html>

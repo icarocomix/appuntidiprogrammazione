@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="it" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Post-Redirect-Get (PRG) & Flash Attributes — DevLog</title>
+    <meta name="description" content="Il refresh della pagina dopo un invio form causa il re-invio dei dati (doppio ordine). Il pattern PRG usa RedirectAttributes.addFlashAttribute(): gli attributi vengono salvati temporaneamente nella sessione e rimossi automaticamente dopo il primo ren
+">
+    <link rel="stylesheet" href="/appuntidiprogrammazione/assets/css/style.css">
+
+    <script>
+        /*
+         * Applico il tema PRIMA del rendering per evitare il flash di contenuto
+         * (FOUC). Lo script è inline e bloccante di proposito: deve girare
+         * prima che il browser disegni qualsiasi elemento.
+         */
+        (function() {
+            var saved = localStorage.getItem('theme') || 'dark';
+            document.documentElement.setAttribute('data-theme', saved);
+        })();
+    </script>
+</head>
+<body>
+
+    <header class="main-header">
+        <div class="logo" onclick="window.location.href='/appuntidiprogrammazione/'">
+            APPUNTI DI <span>PROGRAMMAZIONE</span>
+        </div>
+
+        <!-- 
+            Il pulsante aggiorna l'attributo data-theme sull'<html> e
+            persiste la scelta nel localStorage per le sessioni future.
+        -->
+        <button onclick="toggleTheme()" class="theme-toggle" aria-label="Cambia tema">🌓</button>
+    </header>
+
+    <!--
+    Layout post: struttura a due colonne.
+    - Sinistra (post-content): breadcrumb → tags → link PDF → articolo MD
+    - Destra (post-sidebar): tags argomento + libro consigliato
+    
+    Ordine DOM: post-content prima, post-sidebar dopo.
+    Grid-template-areas in CSS li posiziona visivamente:
+    "content sidebar" su desktop, stacked su mobile.
+-->
+<div class="post-container">
+
+    <!-- COLONNA SINISTRA: contenuto principale -->
+    <main class="post-content">
+
+        <!-- Breadcrumb: navigazione verso la home -->
+        <nav class="post-breadcrumb" aria-label="Breadcrumb">
+            <a href="/appuntidiprogrammazione/">Appunti di Programmazione</a>
+            <span class="separator" aria-hidden="true">/</span>
+            <span>Post-Redirect-Get (PRG) & Flash Attributes</span>
+        </nav>
+
+        <!-- Tags legati all'articolo -->
+        
+        <div class="post-tags-header" aria-label="Argomenti">
+            
+                <span class="post-tag-chip">thymeleaf</span>
+            
+                <span class="post-tag-chip">spring integration & flow archi</span>
+            
+        </div>
+        
+
+        <!-- Link al/ai PDF allegati all'articolo -->
+        
+        <div class="pdf-link-wrapper">
+            <a class="pdf-link"
+               href="/appuntidiprogrammazione/assets/pdf/post-redirect-get-prg-flash-attributes.pdf"
+               target="_blank"
+               rel="noopener noreferrer"
+               aria-label="Scarica il PDF: Post-Redirect-Get (PRG) & Flash Attributes">
+                Scarica PDF
+            </a>
+        </div>
+        
+
+        <!-- Corpo dell'articolo renderizzato da Kramdown -->
+        <article class="post-article-body">
+            <h2 id="esigenza-reale">Esigenza Reale</h2>
+<p>Evitare la duplicazione di transazioni e gestire notifiche utente “one-shot” dopo operazioni di scrittura (POST).</p>
+
+<h2 id="analisi-tecnica">Analisi Tecnica</h2>
+<p>Problema: Perdita dei messaggi di feedback utente dopo un redirect o esecuzione multipla accidentale di azioni lato server. Perché: Implemento il pattern PRG con Flash Scope. Ho scelto questa strategia per separare nettamente le azioni di modifica dello stato dalle azioni di visualizzazione, migliorando l’esperienza utente e la coerenza dei dati.</p>
+
+<h2 id="esempio-implementativo">Esempio Implementativo</h2>
+
+<pre><code class="language-thymeleaf">/* Controller che implementa PRG con Flash Attributes strutturati. */
+ @Controller @RequestMapping("/orders") public class OrderController 
+{ @PostMapping public String createOrder( @ModelAttribute @Valid OrderFormDto
+form, BindingResult result, Model model, RedirectAttributes redirectAttrs)
+{ if (result.hasErrors()) 
+{ 
+// NON faccio redirect in caso di errori: devo mostrare i campi valorizzati
+// model.addAttribute("orderFormDto", form); return "orders/new";
+// Rendering diretto, no redirect }
+ try 
+{ Order created = orderService.create(form); 
+// Flash attribute strutturato: sopravvive a UN solo redirect, poi viene
+// eliminato
+// Uso un oggetto FlashMessage per supportare tipi diversi (success, warning,
+// error) redirectAttrs.addFlashAttribute("flashMessage", new FlashMessage(
+// FlashMessage.Type.SUCCESS, "Ordine #" + created.getId() + " creato con
+// successo!", "/orders/" + created.getId()
+// Link opzionale per azione successiva )); return "redirect:/orders/" +
+// created.getId(); }
+ catch (InsufficientStockException e) 
+{ redirectAttrs.addFlashAttribute("flashMessage", new
+FlashMessage(FlashMessage.Type.WARNING, "Stock insufficiente per: " +
+e.getProductName())); return "redirect:/orders/new"; }
+ catch (Exception e) 
+{ log.error("Errore creazione ordine", e);
+redirectAttrs.addFlashAttribute("flashMessage", new
+FlashMessage(FlashMessage.Type.ERROR, "Errore imprevisto. Riprova più tardi."));
+return "redirect:/orders/new"; }
+ }
+ @PostMapping("/
+{id}
+/delete") public String deleteOrder(@PathVariable Long id, RedirectAttributes
+redirectAttrs)
+{ orderService.delete(id); redirectAttrs.addFlashAttribute("flashMessage", new
+FlashMessage(FlashMessage.Type.SUCCESS, "Ordine #" + id + " eliminato."));
+// Redirect alla lista: il browser vede GET /orders, refresh sicuro return
+// "redirect:/orders"; }
+ }
+ 
+/* FlashMessage: oggetto tipizzato per messaggi con varianti visive. */
+ public record FlashMessage(Type type, String text, String actionUrl) 
+{ public FlashMessage(Type type, String text) 
+{ this(type, text, null); }
+ public String getCssClass() 
+{ return switch (type) 
+{ case SUCCESS -&gt; "alert-success"; case WARNING -&gt; "alert-warning"; case ERROR
+-&gt; "alert-danger"; case INFO -&gt; "alert-info"; }
+; }
+ public enum Type 
+{ SUCCESS, WARNING, ERROR, INFO }
+ }
+ &lt;!-- Frammento riutilizzabile per i flash message: incluso nel layout base.
+Thymeleaf lo trova automaticamente nel model dopo il redirect perché Spring lo
+copia dalla sessione flash. --&gt; &lt;!-- fragments/flash-message.html --&gt; &lt;div
+th:fragment="flash-alert" th:if="$
+{flashMessage != null}
+" th:class="'alert ' + $
+{flashMessage.cssClass}
+ + ' alert-dismissible fade show'" role="alert"&gt; &lt;span th:text="$
+{flashMessage.text}
+"&gt;Messaggio&lt;/span&gt; &lt;!-- Link opzionale all'azione successiva --&gt; &lt;a th:if="$
+{flashMessage.actionUrl != null}
+" th:href="$
+{flashMessage.actionUrl}
+" class="alert-link ms-2"&gt;Visualizza&lt;/a&gt; &lt;button type="button" class="btn-close"
+data-bs-dismiss="alert" aria-label="Chiudi"&gt;&lt;/button&gt; &lt;/div&gt; &lt;!-- Nel layout
+base: il frammento è presente in tutte le pagine. --&gt; &lt;!-- &lt;th:block
+th:replace="~
+{fragments/flash-message :: flash-alert}
+"&gt;&lt;/th:block&gt; --&gt;
+</code></pre>
+
+        </article>
+
+    </main>
+
+    <!-- COLONNA DESTRA: sidebar post -->
+    <aside class="post-sidebar">
+
+        <!-- Box 1: tags argomento (stessa lista dei chip sopra, ma nella sidebar) -->
+        
+        <div class="sidebar-box tags-box">
+            <span class="box-label">Argomenti</span>
+            <div class="tag-cloud-sidebar">
+                
+                    <span class="sidebar-tag">thymeleaf</span>
+                
+                    <span class="sidebar-tag">spring integration & flow archi</span>
+                
+            </div>
+        </div>
+        
+
+        <!-- Box 2: libro consigliato -->
+        <div class="sidebar-box books-box">
+            <span class="box-label">Letture Consigliate</span>
+            <div class="book-card">
+                <a href="https://www.amazon.it/Appunti-Programmazione-Pensieri-soluzioni-Applicazioni-ebook/dp/B0FMFRHKTF/"
+                   target="_blank"
+                   rel="noopener noreferrer"
+                   aria-label="Acquista Appunti di Programmazione su Amazon">
+                    <img src="https://m.media-amazon.com/images/I/61Ck5eMzGYL._SY466_.jpg"
+                         alt="Copertina: Appunti di Programmazione"
+                         width="80">
+                    <p>Appunti di Programmazione: Pensieri e soluzioni per Applicazioni WEB</p>
+                </a>
+            </div>
+        </div>
+
+    </aside>
+
+</div>
+
+    <footer class="main-footer">
+        DevLog — Appunti di Programmazione &nbsp;·&nbsp; cosimociraci@gmail.com
+    </footer>
+
+    <script>
+        /*
+         * toggleTheme: legge il tema corrente dall'attributo HTML,
+         * calcola l'opposto e lo salva. Il CSS reagisce via [data-theme].
+         * Non uso classi sul body per mantenere tutto centralizzato
+         * sull'elemento radice.
+         */
+        function toggleTheme() {
+            var html = document.documentElement;
+            var current = html.getAttribute('data-theme');
+            var next = current === 'dark' ? 'light' : 'dark';
+            html.setAttribute('data-theme', next);
+            localStorage.setItem('theme', next);
+        }
+    </script>
+
+</body>
+</html>

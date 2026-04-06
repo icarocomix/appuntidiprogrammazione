@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="it" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TOAST Storage Strategies — DevLog</title>
+    <meta name="description" content="Quando una colonna supera i 2KB (es. testi lunghi o JSONB), Postgres usa il sistema TOAST (The Oversized-Attribute Storage Technique) per spostarla in una tabella separata 'fuori riga'. Esistono diverse strategie: EXTENDED (compressione + fuori riga)
+">
+    <link rel="stylesheet" href="/appuntidiprogrammazione/assets/css/style.css">
+
+    <script>
+        /*
+         * Applico il tema PRIMA del rendering per evitare il flash di contenuto
+         * (FOUC). Lo script è inline e bloccante di proposito: deve girare
+         * prima che il browser disegni qualsiasi elemento.
+         */
+        (function() {
+            var saved = localStorage.getItem('theme') || 'dark';
+            document.documentElement.setAttribute('data-theme', saved);
+        })();
+    </script>
+</head>
+<body>
+
+    <header class="main-header">
+        <div class="logo" onclick="window.location.href='/appuntidiprogrammazione/'">
+            APPUNTI DI <span>PROGRAMMAZIONE</span>
+        </div>
+
+        <!-- 
+            Il pulsante aggiorna l'attributo data-theme sull'<html> e
+            persiste la scelta nel localStorage per le sessioni future.
+        -->
+        <button onclick="toggleTheme()" class="theme-toggle" aria-label="Cambia tema">🌓</button>
+    </header>
+
+    <!--
+    Layout post: struttura a due colonne.
+    - Sinistra (post-content): breadcrumb → tags → link PDF → articolo MD
+    - Destra (post-sidebar): tags argomento + libro consigliato
+    
+    Ordine DOM: post-content prima, post-sidebar dopo.
+    Grid-template-areas in CSS li posiziona visivamente:
+    "content sidebar" su desktop, stacked su mobile.
+-->
+<div class="post-container">
+
+    <!-- COLONNA SINISTRA: contenuto principale -->
+    <main class="post-content">
+
+        <!-- Breadcrumb: navigazione verso la home -->
+        <nav class="post-breadcrumb" aria-label="Breadcrumb">
+            <a href="/appuntidiprogrammazione/">Appunti di Programmazione</a>
+            <span class="separator" aria-hidden="true">/</span>
+            <span>TOAST Storage Strategies</span>
+        </nav>
+
+        <!-- Tags legati all'articolo -->
+        
+        <div class="post-tags-header" aria-label="Argomenti">
+            
+                <span class="post-tag-chip">db</span>
+            
+                <span class="post-tag-chip">vacuum & storage</span>
+            
+        </div>
+        
+
+        <!-- Link al/ai PDF allegati all'articolo -->
+        
+        <div class="pdf-link-wrapper">
+            <a class="pdf-link"
+               href="/appuntidiprogrammazione/assets/pdf/toast-storage-strategies.pdf"
+               target="_blank"
+               rel="noopener noreferrer"
+               aria-label="Scarica il PDF: TOAST Storage Strategies">
+                Scarica PDF
+            </a>
+        </div>
+        
+
+        <!-- Corpo dell'articolo renderizzato da Kramdown -->
+        <article class="post-article-body">
+            <h2 id="esigenza-reale">Esigenza Reale</h2>
+<p>Migliorare la velocità di accesso a documenti JSONB di medie dimensioni che vengono letti in quasi tutte le query della dashboard.</p>
+
+<h2 id="analisi-tecnica">Analisi Tecnica</h2>
+<p>Problema: Latenza extra introdotta dal recupero dei dati dai chunk della tabella TOAST esterna. Perché: Cambio la storage strategy in MAIN. Ho scelto questa tecnica per mantenere i dati vicini alla riga principale, riducendo il numero di letture I/O necessarie per ricostruire l’oggetto.</p>
+
+<h2 id="esempio-implementativo">Esempio Implementativo</h2>
+
+<div class="language-sql highlighter-rouge"><div class="highlight"><pre class="highlight"><code><table class="rouge-table"><tbody><tr><td class="rouge-gutter gl"><pre class="lineno">1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+</pre></td><td class="rouge-code"><pre><span class="cm">/* Verifico la strategia TOAST attuale di tutte le colonne della tabella */</span>
+ <span class="k">SELECT</span> <span class="n">attname</span><span class="p">,</span> <span class="n">attstorage</span> <span class="k">FROM</span> <span class="n">pg_attribute</span> <span class="k">WHERE</span> <span class="n">attrelid</span> <span class="o">=</span>
+<span class="s1">'documents'</span><span class="p">::</span><span class="n">regclass</span> <span class="k">AND</span> <span class="n">attnum</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">;</span>
+<span class="cm">/* 'x' = EXTENDED (default), 'p' = PLAIN, 'm' = MAIN, 'e' = EXTERNAL */</span>
+ 
+<span class="cm">/* Cambio la strategia in MAIN per la colonna metadata */</span>
+ <span class="k">ALTER</span> <span class="k">TABLE</span> <span class="n">documents</span> <span class="k">ALTER</span> <span class="k">COLUMN</span> <span class="n">metadata</span> <span class="k">SET</span> <span class="k">STORAGE</span> <span class="n">MAIN</span><span class="p">;</span> 
+<span class="o">*</span> <span class="n">La</span> <span class="n">modifica</span> <span class="n">non</span> <span class="n">riscrive</span> <span class="n">le</span> <span class="n">righe</span> <span class="n">esistenti</span><span class="p">:</span> <span class="n">diventa</span> <span class="n">effettiva</span> <span class="n">solo</span> <span class="n">per</span> <span class="n">i</span>
+<span class="o">*</span> <span class="n">nuovi</span> <span class="k">insert</span><span class="o">/</span><span class="k">update</span> <span class="o">*/</span>
+ 
+<span class="cm">/* Forzo la riscrittura delle righe esistenti per applicare subito il cambio */</span>
+ <span class="k">UPDATE</span> <span class="n">documents</span> <span class="k">SET</span> <span class="n">metadata</span> <span class="o">=</span> <span class="n">metadata</span> <span class="k">WHERE</span> <span class="n">id</span> <span class="k">IN</span> <span class="p">(</span><span class="k">SELECT</span> <span class="n">id</span> <span class="k">FROM</span> <span class="n">documents</span>
+<span class="k">LIMIT</span> <span class="mi">10000</span><span class="p">);</span>
+<span class="o">*</span> <span class="n">Verifico</span> <span class="n">la</span> <span class="n">dimensione</span> <span class="n">della</span> <span class="n">tabella</span> <span class="k">TOAST</span> <span class="n">prima</span> <span class="n">e</span> <span class="n">dopo</span> <span class="n">per</span> <span class="n">misurare</span> <span class="n">l</span><span class="s1">'impatto
+* */
+ SELECT pg_size_pretty(pg_total_relation_size('</span><span class="n">pg_toast</span><span class="p">.</span><span class="n">pg_toast_</span><span class="s1">' ||
+relfilenode::text)) AS toast_size FROM pg_class WHERE relname = '</span><span class="n">documents</span><span class="s1">';
+</span></pre></td></tr></tbody></table></code></pre></div></div>
+
+        </article>
+
+    </main>
+
+    <!-- COLONNA DESTRA: sidebar post -->
+    <aside class="post-sidebar">
+
+        <!-- Box 1: tags argomento (stessa lista dei chip sopra, ma nella sidebar) -->
+        
+        <div class="sidebar-box tags-box">
+            <span class="box-label">Argomenti</span>
+            <div class="tag-cloud-sidebar">
+                
+                    <span class="sidebar-tag">db</span>
+                
+                    <span class="sidebar-tag">vacuum & storage</span>
+                
+            </div>
+        </div>
+        
+
+        <!-- Box 2: libro consigliato -->
+        <div class="sidebar-box books-box">
+            <span class="box-label">Letture Consigliate</span>
+            <div class="book-card">
+                <a href="https://www.amazon.it/Appunti-Programmazione-Pensieri-soluzioni-Applicazioni-ebook/dp/B0FMFRHKTF/"
+                   target="_blank"
+                   rel="noopener noreferrer"
+                   aria-label="Acquista Appunti di Programmazione su Amazon">
+                    <img src="https://m.media-amazon.com/images/I/61Ck5eMzGYL._SY466_.jpg"
+                         alt="Copertina: Appunti di Programmazione"
+                         width="80">
+                    <p>Appunti di Programmazione: Pensieri e soluzioni per Applicazioni WEB</p>
+                </a>
+            </div>
+        </div>
+
+    </aside>
+
+</div>
+
+    <footer class="main-footer">
+        DevLog — Appunti di Programmazione &nbsp;·&nbsp; cosimociraci@gmail.com
+    </footer>
+
+    <script>
+        /*
+         * toggleTheme: legge il tema corrente dall'attributo HTML,
+         * calcola l'opposto e lo salva. Il CSS reagisce via [data-theme].
+         * Non uso classi sul body per mantenere tutto centralizzato
+         * sull'elemento radice.
+         */
+        function toggleTheme() {
+            var html = document.documentElement;
+            var current = html.getAttribute('data-theme');
+            var next = current === 'dark' ? 'light' : 'dark';
+            html.setAttribute('data-theme', next);
+            localStorage.setItem('theme', next);
+        }
+    </script>
+
+</body>
+</html>

@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="it" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reactive SSE (Server-Sent Events) Streaming — DevLog</title>
+    <meta name="description" content="Aggiornare parti della pagina in tempo reale senza WebSocket complessi è possibile con SpringWebFluxThymeleafView. Usando WebFlux, si può restituire un Flux<Data> al template: Thymeleaf renderizza i frammenti man mano che i dati arrivano dallo stream
+">
+    <link rel="stylesheet" href="/appuntidiprogrammazione/assets/css/style.css">
+
+    <script>
+        /*
+         * Applico il tema PRIMA del rendering per evitare il flash di contenuto
+         * (FOUC). Lo script è inline e bloccante di proposito: deve girare
+         * prima che il browser disegni qualsiasi elemento.
+         */
+        (function() {
+            var saved = localStorage.getItem('theme') || 'dark';
+            document.documentElement.setAttribute('data-theme', saved);
+        })();
+    </script>
+</head>
+<body>
+
+    <header class="main-header">
+        <div class="logo" onclick="window.location.href='/appuntidiprogrammazione/'">
+            APPUNTI DI <span>PROGRAMMAZIONE</span>
+        </div>
+
+        <!-- 
+            Il pulsante aggiorna l'attributo data-theme sull'<html> e
+            persiste la scelta nel localStorage per le sessioni future.
+        -->
+        <button onclick="toggleTheme()" class="theme-toggle" aria-label="Cambia tema">🌓</button>
+    </header>
+
+    <!--
+    Layout post: struttura a due colonne.
+    - Sinistra (post-content): breadcrumb → tags → link PDF → articolo MD
+    - Destra (post-sidebar): tags argomento + libro consigliato
+    
+    Ordine DOM: post-content prima, post-sidebar dopo.
+    Grid-template-areas in CSS li posiziona visivamente:
+    "content sidebar" su desktop, stacked su mobile.
+-->
+<div class="post-container">
+
+    <!-- COLONNA SINISTRA: contenuto principale -->
+    <main class="post-content">
+
+        <!-- Breadcrumb: navigazione verso la home -->
+        <nav class="post-breadcrumb" aria-label="Breadcrumb">
+            <a href="/appuntidiprogrammazione/">Appunti di Programmazione</a>
+            <span class="separator" aria-hidden="true">/</span>
+            <span>Reactive SSE (Server-Sent Events) Streaming</span>
+        </nav>
+
+        <!-- Tags legati all'articolo -->
+        
+        <div class="post-tags-header" aria-label="Argomenti">
+            
+                <span class="post-tag-chip">thymeleaf</span>
+            
+                <span class="post-tag-chip">spring integration & flow archi</span>
+            
+        </div>
+        
+
+        <!-- Link al/ai PDF allegati all'articolo -->
+        
+        <div class="pdf-link-wrapper">
+            <a class="pdf-link"
+               href="/appuntidiprogrammazione/assets/pdf/reactive-sse-server-sent-events-streaming.pdf"
+               target="_blank"
+               rel="noopener noreferrer"
+               aria-label="Scarica il PDF: Reactive SSE (Server-Sent Events) Streaming">
+                Scarica PDF
+            </a>
+        </div>
+        
+
+        <!-- Corpo dell'articolo renderizzato da Kramdown -->
+        <article class="post-article-body">
+            <h2 id="esigenza-reale">Esigenza Reale</h2>
+<p>Creare una dashboard che si aggiorna automaticamente man mano che arrivano nuovi dati dal database o da un message broker.</p>
+
+<h2 id="analisi-tecnica">Analisi Tecnica</h2>
+<p>Problema: Necessità di aggiornamenti real-time che solitamente richiederebbero polling pesante o l’overhead di un server WebSocket. Perché: Uso il Data-Driven Streaming. Ho scelto SSE con Thymeleaf Reactive per inviare chunk di HTML pronti per il DOM non appena il backend produce un nuovo evento, riducendo la latenza percepita.</p>
+
+<h2 id="esempio-implementativo">Esempio Implementativo</h2>
+
+<pre><code class="language-thymeleaf">* Controller WebFlux che espone due endpoint: 1) La pagina HTML iniziale con il
+* container vuoto 2) Lo stream SSE che invia frammenti HTML al client */
+ @Controller @RequestMapping("/monitoring") public class MonitoringController 
+{ @Autowired private MetricsService metricsService; @Autowired private
+TemplateEngine templateEngine;
+* Endpoint per la pagina iniziale: renderizza il layout con il container vuoto.
+* */
+ @GetMapping public String dashboardPage(Model model) 
+{ 
+// Dati iniziali sincroni: gli aggiornamenti arrivano via SSE
+// model.addAttribute("title", "Monitoring Dashboard"); return
+// "monitoring/dashboard"; }
+ 
+* Endpoint SSE: restituisce frammenti HTML renderizzati lato server. Il client
+* (HTMX o EventSource) riceve HTML pronto da inserire nel DOM. */
+ @GetMapping(value = "/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
+public Flux&lt;ServerSentEvent&lt;String&gt;&gt; streamMetrics()
+{ return metricsService.getMetricsStream() 
+// Flux&lt;MetricEvent&gt; da Kafka/Redis/DB .map(metric -&gt; 
+{ 
+// Renderizzo il frammento Thymeleaf per ogni evento Context ctx = new
+// Context(); ctx.setVariable("metric", metric); ctx.setVariable("timestamp",
+// LocalDateTime.now()); String html = templateEngine.process(
+// "monitoring/fragments/metric-row",
+// Frammento specifico ctx ); return ServerSentEvent.&lt;String&gt;builder()
+// .id(metric.getId().toString()) .event("metric-update")
+// Tipo evento: il client filtra per tipo .data(html) 
+// HTML pre-renderizzato .build(); }
+) .onErrorResume(e -&gt; 
+{ log.error("Errore nello stream metriche", e); return
+Flux.just(ServerSentEvent.&lt;String&gt;builder() .event("error") .data("&lt;div
+class='alert alert-danger'&gt;Connessione persa&lt;/div&gt;") .build()); }
+); }
+ 
+* Per stream con backpressure: limito la frequenza di emissione per non
+* sovraccaricare il client. */
+ @GetMapping(value = "/logs", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
+public Flux&lt;ServerSentEvent&lt;String&gt;&gt; streamLogs()
+{ return logService.getLogStream() .sample(Duration.ofMillis(500)) 
+// Massimo 2 aggiornamenti al secondo .window(10) 
+// Raggruppo in batch da 10 log .flatMap(batch -&gt; batch.collectList()) .map(logs
+// -&gt;
+{ Context ctx = new Context(); ctx.setVariable("logs", logs); String html =
+templateEngine.process("monitoring/fragments/log-batch", ctx); return
+ServerSentEvent.&lt;String&gt;builder() .event("log-batch") .data(html) .build(); }
+); }
+ }
+ &lt;!-- Template monitoring/dashboard.html: container che riceve gli aggiornamenti
+SSE via HTMX. --&gt; &lt;!DOCTYPE html&gt; &lt;html xmlns:th="http:
+//www.thymeleaf.org"&gt; &lt;head&gt; &lt;title th:text="$
+{title}
+"&gt;Dashboard&lt;/title&gt; &lt;!-- HTMX gestisce la connessione SSE e l'inserimento degli
+HTML fragments --&gt; &lt;script src="https:
+//unpkg.com/htmx.org@1.9.10"&gt;&lt;/script&gt; &lt;script src="https:
+// unpkg.com/htmx.org/dist/ext/sse.js"&gt;&lt;/script&gt; &lt;/head&gt; &lt;body&gt; &lt;h1&gt;Monitoring
+// in Tempo Reale&lt;/h1&gt; &lt;!-- Container metriche: HTMX apre la connessione SSE e
+// inserisce gli update --&gt; &lt;div hx-ext="sse" sse-connect="/monitoring/stream"
+// sse-swap="metric-update" &lt;!-- Reagisce all'evento "metric-update" --&gt; hx-
+// swap="afterbegin" &lt;!-- Aggiunge nuove righe in cima --&gt; id="metrics-
+// container"&gt; &lt;p class="text-muted"&gt;In attesa di dati...&lt;/p&gt; &lt;/div&gt; &lt;!--
+// Container log: stream separato con evento diverso --&gt; &lt;div hx-ext="sse" sse-
+// connect="/monitoring/logs" sse-swap="log-batch" hx-swap="beforeend" hx-
+// target="#log-list"&gt; &lt;ul id="log-list"&gt;&lt;/ul&gt; &lt;/div&gt; &lt;/body&gt; &lt;/html&gt; &lt;!--
+// Frammento monitoring/fragments/metric-row.html: renderizzato lato server per
+// ogni evento. --&gt; &lt;!-- &lt;div th:fragment="metric-row" class="metric-card"&gt; --&gt;
+// &lt;!--   &lt;span th:text="$
+{metric.name}
+"&gt;CPU Usage&lt;/span&gt; --&gt; &lt;!--   &lt;span th:class="'badge ' + ($
+{metric.value &gt; 80}
+ ? 'bg-danger' : 'bg-success')" --&gt; &lt;!--         th:text="$
+{metric.value + '%'}
+"&gt;0%&lt;/span&gt; --&gt; &lt;!--   &lt;small th:text="$
+{#temporals.format(timestamp, 'HH:mm:ss')}
+"&gt;00:00:00&lt;/small&gt; --&gt; &lt;!-- &lt;/div&gt; --&gt;
+</code></pre>
+
+        </article>
+
+    </main>
+
+    <!-- COLONNA DESTRA: sidebar post -->
+    <aside class="post-sidebar">
+
+        <!-- Box 1: tags argomento (stessa lista dei chip sopra, ma nella sidebar) -->
+        
+        <div class="sidebar-box tags-box">
+            <span class="box-label">Argomenti</span>
+            <div class="tag-cloud-sidebar">
+                
+                    <span class="sidebar-tag">thymeleaf</span>
+                
+                    <span class="sidebar-tag">spring integration & flow archi</span>
+                
+            </div>
+        </div>
+        
+
+        <!-- Box 2: libro consigliato -->
+        <div class="sidebar-box books-box">
+            <span class="box-label">Letture Consigliate</span>
+            <div class="book-card">
+                <a href="https://www.amazon.it/Appunti-Programmazione-Pensieri-soluzioni-Applicazioni-ebook/dp/B0FMFRHKTF/"
+                   target="_blank"
+                   rel="noopener noreferrer"
+                   aria-label="Acquista Appunti di Programmazione su Amazon">
+                    <img src="https://m.media-amazon.com/images/I/61Ck5eMzGYL._SY466_.jpg"
+                         alt="Copertina: Appunti di Programmazione"
+                         width="80">
+                    <p>Appunti di Programmazione: Pensieri e soluzioni per Applicazioni WEB</p>
+                </a>
+            </div>
+        </div>
+
+    </aside>
+
+</div>
+
+    <footer class="main-footer">
+        DevLog — Appunti di Programmazione &nbsp;·&nbsp; cosimociraci@gmail.com
+    </footer>
+
+    <script>
+        /*
+         * toggleTheme: legge il tema corrente dall'attributo HTML,
+         * calcola l'opposto e lo salva. Il CSS reagisce via [data-theme].
+         * Non uso classi sul body per mantenere tutto centralizzato
+         * sull'elemento radice.
+         */
+        function toggleTheme() {
+            var html = document.documentElement;
+            var current = html.getAttribute('data-theme');
+            var next = current === 'dark' ? 'light' : 'dark';
+            html.setAttribute('data-theme', next);
+            localStorage.setItem('theme', next);
+        }
+    </script>
+
+</body>
+</html>

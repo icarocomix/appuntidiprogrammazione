@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="it" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ByteBuddy e il Runtime Proxying — DevLog</title>
+    <meta name="description" content="I proxy dinamici di Java (JDK Proxy) funzionano solo per le interfacce. ByteBuddy permette di sottoclassare classi concrete a runtime per iniettare logica (es. @Transactional). ByteBuddy genera direttamente bytecode invece di usare la reflection per 
+">
+    <link rel="stylesheet" href="/appuntidiprogrammazione/assets/css/style.css">
+
+    <script>
+        /*
+         * Applico il tema PRIMA del rendering per evitare il flash di contenuto
+         * (FOUC). Lo script è inline e bloccante di proposito: deve girare
+         * prima che il browser disegni qualsiasi elemento.
+         */
+        (function() {
+            var saved = localStorage.getItem('theme') || 'dark';
+            document.documentElement.setAttribute('data-theme', saved);
+        })();
+    </script>
+</head>
+<body>
+
+    <header class="main-header">
+        <div class="logo" onclick="window.location.href='/appuntidiprogrammazione/'">
+            APPUNTI DI <span>PROGRAMMAZIONE</span>
+        </div>
+
+        <!-- 
+            Il pulsante aggiorna l'attributo data-theme sull'<html> e
+            persiste la scelta nel localStorage per le sessioni future.
+        -->
+        <button onclick="toggleTheme()" class="theme-toggle" aria-label="Cambia tema">🌓</button>
+    </header>
+
+    <!--
+    Layout post: struttura a due colonne.
+    - Sinistra (post-content): breadcrumb → tags → link PDF → articolo MD
+    - Destra (post-sidebar): tags argomento + libro consigliato
+    
+    Ordine DOM: post-content prima, post-sidebar dopo.
+    Grid-template-areas in CSS li posiziona visivamente:
+    "content sidebar" su desktop, stacked su mobile.
+-->
+<div class="post-container">
+
+    <!-- COLONNA SINISTRA: contenuto principale -->
+    <main class="post-content">
+
+        <!-- Breadcrumb: navigazione verso la home -->
+        <nav class="post-breadcrumb" aria-label="Breadcrumb">
+            <a href="/appuntidiprogrammazione/">Appunti di Programmazione</a>
+            <span class="separator" aria-hidden="true">/</span>
+            <span>ByteBuddy e il Runtime Proxying</span>
+        </nav>
+
+        <!-- Tags legati all'articolo -->
+        
+        <div class="post-tags-header" aria-label="Argomenti">
+            
+                <span class="post-tag-chip">java</span>
+            
+                <span class="post-tag-chip">advanced reflection & metaprogr</span>
+            
+        </div>
+        
+
+        <!-- Link al/ai PDF allegati all'articolo -->
+        
+        <div class="pdf-link-wrapper">
+            <a class="pdf-link"
+               href="/appuntidiprogrammazione/assets/pdf/bytebuddy-e-il-runtime-proxying.pdf"
+               target="_blank"
+               rel="noopener noreferrer"
+               aria-label="Scarica il PDF: ByteBuddy e il Runtime Proxying">
+                Scarica PDF
+            </a>
+        </div>
+        
+
+        <!-- Corpo dell'articolo renderizzato da Kramdown -->
+        <article class="post-article-body">
+            <h2 id="esigenza-reale">Esigenza Reale</h2>
+<p>Creare un sistema di logging automatico che intercetta i metodi di classi service che non implementano interfacce.</p>
+
+<h2 id="analisi-tecnica">Analisi Tecnica</h2>
+<p>Problema: Impossibilità di applicare proxy a classi legacy o final senza modificare il codice sorgente. Perché: Uso ByteBuddy per la generazione di bytecode. Ho scelto questo approccio perché mi permette di manipolare il comportamento delle classi “al volo” con un impatto minimo sulle prestazioni di esecuzione.</p>
+
+<h2 id="esempio-implementativo">Esempio Implementativo</h2>
+
+<div class="language-java highlighter-rouge"><div class="highlight"><pre class="highlight"><code><table class="rouge-table"><tbody><tr><td class="rouge-gutter gl"><pre class="lineno">1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+</pre></td><td class="rouge-code"><pre><span class="o">*</span> <span class="nc">Genero</span> <span class="n">dinamicamente</span> <span class="n">una</span> <span class="n">sottoclasse</span> <span class="n">di</span> <span class="nc">OriginalService</span> <span class="n">che</span> <span class="n">intercetta</span> <span class="n">tutti</span> <span class="n">i</span>
+<span class="o">*</span> <span class="n">metodi</span> <span class="n">pubblici</span> <span class="n">per</span> <span class="n">aggiungere</span> <span class="n">logging</span> <span class="n">automatico</span><span class="o">.</span> <span class="nc">ByteBuddy</span> <span class="n">genera</span> <span class="n">bytecode</span>
+<span class="o">*</span> <span class="nl">reale:</span> <span class="n">nessuna</span> <span class="n">reflection</span> <span class="n">a</span> <span class="n">runtime</span><span class="o">.</span> <span class="o">*/</span>
+ <span class="nd">@Configuration</span> <span class="kd">public</span> <span class="kd">class</span> <span class="nc">ByteBuddyProxyConfig</span> 
+<span class="o">{</span> <span class="nd">@Bean</span> <span class="kd">public</span> <span class="nc">OriginalService</span> <span class="nf">loggedService</span><span class="o">()</span> <span class="kd">throws</span> <span class="nc">Exception</span> 
+<span class="o">{</span> <span class="nc">Class</span><span class="o">&lt;?</span> <span class="kd">extends</span> <span class="nc">OriginalService</span><span class="o">&gt;</span> <span class="n">proxyClass</span> <span class="o">=</span> <span class="k">new</span> <span class="nc">ByteBuddy</span><span class="o">()</span>
+<span class="o">.</span><span class="na">subclass</span><span class="o">(</span><span class="nc">OriginalService</span><span class="o">.</span><span class="na">class</span><span class="o">)</span> <span class="o">.</span><span class="na">method</span><span class="o">(</span><span class="nc">ElementMatchers</span><span class="o">.</span><span class="na">isPublic</span><span class="o">()</span>
+<span class="o">.</span><span class="na">and</span><span class="o">(</span><span class="nc">ElementMatchers</span><span class="o">.</span><span class="na">not</span><span class="o">(</span><span class="nc">ElementMatchers</span><span class="o">.</span><span class="na">isStatic</span><span class="o">())))</span>
+<span class="o">.</span><span class="na">intercept</span><span class="o">(</span><span class="nc">MethodDelegation</span><span class="o">.</span><span class="na">to</span><span class="o">(</span><span class="nc">LoggingInterceptor</span><span class="o">.</span><span class="na">class</span><span class="o">))</span> <span class="o">.</span><span class="na">make</span><span class="o">()</span>
+<span class="o">.</span><span class="na">load</span><span class="o">(</span><span class="nc">OriginalService</span><span class="o">.</span><span class="na">class</span><span class="o">.</span><span class="na">getClassLoader</span><span class="o">(),</span>
+<span class="nc">ClassLoadingStrategy</span><span class="o">.</span><span class="na">Default</span><span class="o">.</span><span class="na">WRAPPER</span><span class="o">)</span> <span class="o">.</span><span class="na">getLoaded</span><span class="o">();</span> <span class="k">return</span>
+<span class="n">proxyClass</span><span class="o">.</span><span class="na">getDeclaredConstructor</span><span class="o">().</span><span class="na">newInstance</span><span class="o">();</span> <span class="o">}</span>
+ <span class="o">}</span>
+ 
+<span class="cm">/* Implemento l'interceptor che gestisce la logica trasversale: */</span>
+ <span class="kd">public</span> <span class="kd">class</span> <span class="nc">LoggingInterceptor</span> 
+<span class="o">{</span> <span class="nd">@RuntimeType</span> <span class="kd">public</span> <span class="kd">static</span> <span class="nc">Object</span> <span class="nf">intercept</span><span class="o">(</span> <span class="nd">@Origin</span> <span class="nc">Method</span> <span class="n">method</span><span class="o">,</span> 
+<span class="c1">// Il metodo originale chiamato @AllArguments Object[] args, </span>
+<span class="c1">// Gli argomenti della chiamata @SuperCall Callable&lt;?&gt; superCall </span>
+<span class="c1">// La chiamata al metodo originale ) throws Exception </span>
+<span class="o">{</span> <span class="kt">long</span> <span class="n">start</span> <span class="o">=</span> <span class="nc">System</span><span class="o">.</span><span class="na">nanoTime</span><span class="o">();</span> <span class="nc">String</span> <span class="n">methodName</span> <span class="o">=</span>
+<span class="n">method</span><span class="o">.</span><span class="na">getDeclaringClass</span><span class="o">().</span><span class="na">getSimpleName</span><span class="o">()</span> <span class="o">+</span> <span class="s">"."</span> <span class="o">+</span> <span class="n">method</span><span class="o">.</span><span class="na">getName</span><span class="o">();</span>
+<span class="n">log</span><span class="o">.</span><span class="na">info</span><span class="o">(</span><span class="s">"Avvio
+{}
+: args=
+{}
+"</span><span class="o">,</span> <span class="n">methodName</span><span class="o">,</span> <span class="nc">Arrays</span><span class="o">.</span><span class="na">toString</span><span class="o">(</span><span class="n">args</span><span class="o">));</span> <span class="k">try</span> 
+<span class="o">{</span> <span class="nc">Object</span> <span class="n">result</span> <span class="o">=</span> <span class="n">superCall</span><span class="o">.</span><span class="na">call</span><span class="o">();</span> 
+<span class="c1">// Chiamo il metodo originale long elapsedMs = (System.nanoTime() - start) /</span>
+<span class="c1">// 1_000_000; log.info("Completato</span>
+<span class="o">{}</span>
+ <span class="n">in</span> 
+<span class="o">{}</span>
+<span class="n">ms</span><span class="s">", methodName, elapsedMs); return result; }
+ catch (Exception e) 
+{ log.error("</span><span class="nc">Errore</span> <span class="n">in</span> 
+<span class="o">{}</span>
+<span class="o">:</span> 
+<span class="o">{}</span>
+<span class="s">", methodName, e.getMessage()); throw e; }
+ }
+ }
+ 
+* Per classi final, ByteBuddy non può sottoclassare: uso l'approccio con Java
+* Agent per riscrivere il bytecode al caricamento: */
+ public class ByteBuddyAgent 
+{ public static void premain(String args, Instrumentation instrumentation) 
+{ new AgentBuilder.Default()
+.type(ElementMatchers.nameStartsWith("</span><span class="n">com</span><span class="o">.</span><span class="na">myapp</span><span class="o">.</span><span class="na">service</span><span class="s">")) .transform((builder,
+typeDescription, classLoader, module, protectionDomain) -&gt; builder
+.method(ElementMatchers.isPublic())
+.intercept(MethodDelegation.to(LoggingInterceptor.class)) )
+.installOn(instrumentation); }
+ }
+ 
+/* In Spring Boot, confronto ByteBuddy con CGLIB per la creazione dei proxy: */
+ @Test public void compareByteBuddyVsCglib() throws Exception 
+{ long start = System.nanoTime(); for (int i = 0; i &lt; 1000; i++) 
+{ new ByteBuddy().subclass(OriginalService.class) .method(ElementMatchers.any())
+.intercept(MethodDelegation.to(LoggingInterceptor.class))
+.make().load(getClass().getClassLoader()).getLoaded().newInstance(); }
+ long byteBuddyTime = System.nanoTime() - start; 
+// ByteBuddy è tipicamente 30-50% più veloce di CGLIB nella generazione dei
+// proxy log.info("</span><span class="nc">ByteBuddy</span> <span class="n">proxy</span> <span class="nl">generation:</span>
+<span class="o">{}</span>
+<span class="n">ms</span><span class="err">"</span><span class="o">,</span> <span class="n">byteBuddyTime</span> <span class="o">/</span> <span class="mi">1_000_000</span><span class="o">);</span> <span class="o">}</span>
+</pre></td></tr></tbody></table></code></pre></div></div>
+
+        </article>
+
+    </main>
+
+    <!-- COLONNA DESTRA: sidebar post -->
+    <aside class="post-sidebar">
+
+        <!-- Box 1: tags argomento (stessa lista dei chip sopra, ma nella sidebar) -->
+        
+        <div class="sidebar-box tags-box">
+            <span class="box-label">Argomenti</span>
+            <div class="tag-cloud-sidebar">
+                
+                    <span class="sidebar-tag">java</span>
+                
+                    <span class="sidebar-tag">advanced reflection & metaprogr</span>
+                
+            </div>
+        </div>
+        
+
+        <!-- Box 2: libro consigliato -->
+        <div class="sidebar-box books-box">
+            <span class="box-label">Letture Consigliate</span>
+            <div class="book-card">
+                <a href="https://www.amazon.it/Appunti-Programmazione-Pensieri-soluzioni-Applicazioni-ebook/dp/B0FMFRHKTF/"
+                   target="_blank"
+                   rel="noopener noreferrer"
+                   aria-label="Acquista Appunti di Programmazione su Amazon">
+                    <img src="https://m.media-amazon.com/images/I/61Ck5eMzGYL._SY466_.jpg"
+                         alt="Copertina: Appunti di Programmazione"
+                         width="80">
+                    <p>Appunti di Programmazione: Pensieri e soluzioni per Applicazioni WEB</p>
+                </a>
+            </div>
+        </div>
+
+    </aside>
+
+</div>
+
+    <footer class="main-footer">
+        DevLog — Appunti di Programmazione &nbsp;·&nbsp; cosimociraci@gmail.com
+    </footer>
+
+    <script>
+        /*
+         * toggleTheme: legge il tema corrente dall'attributo HTML,
+         * calcola l'opposto e lo salva. Il CSS reagisce via [data-theme].
+         * Non uso classi sul body per mantenere tutto centralizzato
+         * sull'elemento radice.
+         */
+        function toggleTheme() {
+            var html = document.documentElement;
+            var current = html.getAttribute('data-theme');
+            var next = current === 'dark' ? 'light' : 'dark';
+            html.setAttribute('data-theme', next);
+            localStorage.setItem('theme', next);
+        }
+    </script>
+
+</body>
+</html>

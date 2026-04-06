@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="it" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Deadlock Timeout e Analisi Log — DevLog</title>
+    <meta name="description" content="Il parametro deadlock_timeout (default 1s) definisce quanto tempo Postgres aspetta prima di lanciare il controllo del grafo dei lock. Abbassare troppo questo valore aumenta il carico sulla CPU, mentre alzarlo rende il sistema pigro nel risolvere i co
+">
+    <link rel="stylesheet" href="/appuntidiprogrammazione/assets/css/style.css">
+
+    <script>
+        /*
+         * Applico il tema PRIMA del rendering per evitare il flash di contenuto
+         * (FOUC). Lo script è inline e bloccante di proposito: deve girare
+         * prima che il browser disegni qualsiasi elemento.
+         */
+        (function() {
+            var saved = localStorage.getItem('theme') || 'dark';
+            document.documentElement.setAttribute('data-theme', saved);
+        })();
+    </script>
+</head>
+<body>
+
+    <header class="main-header">
+        <div class="logo" onclick="window.location.href='/appuntidiprogrammazione/'">
+            APPUNTI DI <span>PROGRAMMAZIONE</span>
+        </div>
+
+        <!-- 
+            Il pulsante aggiorna l'attributo data-theme sull'<html> e
+            persiste la scelta nel localStorage per le sessioni future.
+        -->
+        <button onclick="toggleTheme()" class="theme-toggle" aria-label="Cambia tema">🌓</button>
+    </header>
+
+    <!--
+    Layout post: struttura a due colonne.
+    - Sinistra (post-content): breadcrumb → tags → link PDF → articolo MD
+    - Destra (post-sidebar): tags argomento + libro consigliato
+    
+    Ordine DOM: post-content prima, post-sidebar dopo.
+    Grid-template-areas in CSS li posiziona visivamente:
+    "content sidebar" su desktop, stacked su mobile.
+-->
+<div class="post-container">
+
+    <!-- COLONNA SINISTRA: contenuto principale -->
+    <main class="post-content">
+
+        <!-- Breadcrumb: navigazione verso la home -->
+        <nav class="post-breadcrumb" aria-label="Breadcrumb">
+            <a href="/appuntidiprogrammazione/">Appunti di Programmazione</a>
+            <span class="separator" aria-hidden="true">/</span>
+            <span>Deadlock Timeout e Analisi Log</span>
+        </nav>
+
+        <!-- Tags legati all'articolo -->
+        
+        <div class="post-tags-header" aria-label="Argomenti">
+            
+                <span class="post-tag-chip">db</span>
+            
+                <span class="post-tag-chip">concorrenza e locking approfond</span>
+            
+        </div>
+        
+
+        <!-- Link al/ai PDF allegati all'articolo -->
+        
+        <div class="pdf-link-wrapper">
+            <a class="pdf-link"
+               href="/appuntidiprogrammazione/assets/pdf/deadlock-timeout-e-analisi-log.pdf"
+               target="_blank"
+               rel="noopener noreferrer"
+               aria-label="Scarica il PDF: Deadlock Timeout e Analisi Log">
+                Scarica PDF
+            </a>
+        </div>
+        
+
+        <!-- Corpo dell'articolo renderizzato da Kramdown -->
+        <article class="post-article-body">
+            <h2 id="esigenza-reale">Esigenza Reale</h2>
+<p>Regolare il tempo di reazione del DB ai blocchi circolari in un sistema con transazioni molto brevi e frequenti.</p>
+
+<h2 id="analisi-tecnica">Analisi Tecnica</h2>
+<p>Problema: Un deadlock non rilevato rapidamente tiene occupate risorse preziose, ma un controllo troppo frequente rallenta il sistema. Perché: Mantengo il valore di default ma attivo il logging esteso dei lock. Ho scelto questa configurazione per avere visibilità totale senza penalizzare le performance.</p>
+
+<h2 id="esempio-implementativo">Esempio Implementativo</h2>
+
+<div class="language-sql highlighter-rouge"><div class="highlight"><pre class="highlight"><code><table class="rouge-table"><tbody><tr><td class="rouge-gutter gl"><pre class="lineno">1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+</pre></td><td class="rouge-code"><pre><span class="o">*</span> <span class="n">Nella</span> <span class="n">sessione</span> <span class="n">di</span> <span class="n">debug</span><span class="p">,</span> <span class="n">posso</span> <span class="n">abbassare</span> <span class="n">temporaneamente</span> <span class="n">il</span> <span class="n">timeout</span> <span class="n">per</span>
+<span class="o">*</span> <span class="n">forzare</span> <span class="n">una</span> <span class="n">rilevazione</span> <span class="n">pi</span><span class="err">ù</span> <span class="n">rapida</span> <span class="n">e</span> <span class="n">osservare</span> <span class="n">il</span> <span class="n">comportamento</span><span class="p">.</span> <span class="o">*/</span>
+ <span class="k">SET</span> <span class="n">deadlock_timeout</span> <span class="o">=</span> <span class="s1">'500ms'</span><span class="p">;</span> 
+<span class="o">*</span> <span class="n">Abilito</span> <span class="n">il</span> <span class="n">logging</span> <span class="n">dei</span> <span class="k">lock</span> <span class="n">lenti</span> <span class="n">nel</span> <span class="n">file</span> <span class="n">postgresql</span><span class="p">.</span><span class="n">conf</span> <span class="n">per</span> <span class="n">intercettare</span> <span class="n">le</span>
+<span class="o">*</span> <span class="n">attese</span> <span class="n">sospette</span> <span class="n">prima</span> <span class="n">che</span> <span class="n">degenerino</span> <span class="k">in</span> <span class="n">deadlock</span><span class="p">.</span> <span class="n">log_lock_waits</span> <span class="o">=</span> <span class="k">on</span>
+<span class="o">*</span> <span class="n">deadlock_timeout</span> <span class="o">=</span> <span class="s1">'1s'</span> <span class="c1">-- soglia oltre la quale viene loggata l'attesa */</span>
+ 
+<span class="o">*</span> <span class="n">Simulo</span> <span class="n">un</span> <span class="n">deadlock</span> <span class="n">per</span> <span class="n">analizzarne</span> <span class="n">l</span><span class="s1">'output nei log: -- Sessione A: BEGIN;
+* UPDATE accounts SET balance = balance - 100 WHERE id = 1; -- poi aggiorna id=2
+* -- Sessione B (concorrente): BEGIN; UPDATE accounts SET balance = balance +
+* 100 WHERE id = 2; -- poi aggiorna id=1 Nel log troverò: ERROR: deadlock
+* detected DETAIL: Process 1234 waits for ShareLock on transaction 5678; blocked
+* by process 9012. Process 9012 waits for ShareLock on transaction 5678; blocked
+* by process 1234. HINT: See server log for query details. */
+ 
+* La causa radice applicativa più comune è l'</span><span class="n">ordine</span> <span class="n">di</span> <span class="n">aggiornamento</span>
+<span class="o">*</span> <span class="n">inconsistente</span><span class="p">.</span> <span class="n">La</span> <span class="n">soluzione</span> <span class="n">strutturale</span> <span class="err">è</span> <span class="n">sempre</span> <span class="n">aggiornare</span> <span class="n">le</span> <span class="n">righe</span> <span class="n">nello</span>
+<span class="o">*</span> <span class="n">stesso</span> <span class="n">ordine</span><span class="p">,</span> <span class="n">es</span><span class="p">.</span> <span class="n">sempre</span> <span class="n">per</span> <span class="n">id</span> <span class="n">crescente</span><span class="p">:</span> <span class="k">UPDATE</span> <span class="n">accounts</span> <span class="k">SET</span> <span class="n">balance</span> <span class="o">=</span>
+<span class="o">*</span> <span class="n">balance</span> <span class="o">+</span> <span class="n">delta</span> <span class="k">WHERE</span> <span class="n">id</span> <span class="o">=</span> <span class="k">ANY</span><span class="p">(</span><span class="n">ARRAY</span><span class="p">[</span><span class="mi">1</span><span class="p">,</span><span class="mi">2</span><span class="p">]</span> <span class="k">ORDER</span> <span class="k">BY</span> <span class="mi">1</span><span class="p">);</span>  <span class="o">*/</span>
+</pre></td></tr></tbody></table></code></pre></div></div>
+
+        </article>
+
+    </main>
+
+    <!-- COLONNA DESTRA: sidebar post -->
+    <aside class="post-sidebar">
+
+        <!-- Box 1: tags argomento (stessa lista dei chip sopra, ma nella sidebar) -->
+        
+        <div class="sidebar-box tags-box">
+            <span class="box-label">Argomenti</span>
+            <div class="tag-cloud-sidebar">
+                
+                    <span class="sidebar-tag">db</span>
+                
+                    <span class="sidebar-tag">concorrenza e locking approfond</span>
+                
+            </div>
+        </div>
+        
+
+        <!-- Box 2: libro consigliato -->
+        <div class="sidebar-box books-box">
+            <span class="box-label">Letture Consigliate</span>
+            <div class="book-card">
+                <a href="https://www.amazon.it/Appunti-Programmazione-Pensieri-soluzioni-Applicazioni-ebook/dp/B0FMFRHKTF/"
+                   target="_blank"
+                   rel="noopener noreferrer"
+                   aria-label="Acquista Appunti di Programmazione su Amazon">
+                    <img src="https://m.media-amazon.com/images/I/61Ck5eMzGYL._SY466_.jpg"
+                         alt="Copertina: Appunti di Programmazione"
+                         width="80">
+                    <p>Appunti di Programmazione: Pensieri e soluzioni per Applicazioni WEB</p>
+                </a>
+            </div>
+        </div>
+
+    </aside>
+
+</div>
+
+    <footer class="main-footer">
+        DevLog — Appunti di Programmazione &nbsp;·&nbsp; cosimociraci@gmail.com
+    </footer>
+
+    <script>
+        /*
+         * toggleTheme: legge il tema corrente dall'attributo HTML,
+         * calcola l'opposto e lo salva. Il CSS reagisce via [data-theme].
+         * Non uso classi sul body per mantenere tutto centralizzato
+         * sull'elemento radice.
+         */
+        function toggleTheme() {
+            var html = document.documentElement;
+            var current = html.getAttribute('data-theme');
+            var next = current === 'dark' ? 'light' : 'dark';
+            html.setAttribute('data-theme', next);
+            localStorage.setItem('theme', next);
+        }
+    </script>
+
+</body>
+</html>

@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="it" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Escaping Avanzato: th:text vs th:utext — DevLog</title>
+    <meta name="description" content="L'uso di th:utext (unescaped) per renderizzare contenuti HTML salvati nel DB è la causa principale di XSS. Prima di passare una stringa HTML alla view, questa deve essere processata nel Service layer con un parser come OWASP Java HTML Sanitizer per r
+">
+    <link rel="stylesheet" href="/appuntidiprogrammazione/assets/css/style.css">
+
+    <script>
+        /*
+         * Applico il tema PRIMA del rendering per evitare il flash di contenuto
+         * (FOUC). Lo script è inline e bloccante di proposito: deve girare
+         * prima che il browser disegni qualsiasi elemento.
+         */
+        (function() {
+            var saved = localStorage.getItem('theme') || 'dark';
+            document.documentElement.setAttribute('data-theme', saved);
+        })();
+    </script>
+</head>
+<body>
+
+    <header class="main-header">
+        <div class="logo" onclick="window.location.href='/appuntidiprogrammazione/'">
+            APPUNTI DI <span>PROGRAMMAZIONE</span>
+        </div>
+
+        <!-- 
+            Il pulsante aggiorna l'attributo data-theme sull'<html> e
+            persiste la scelta nel localStorage per le sessioni future.
+        -->
+        <button onclick="toggleTheme()" class="theme-toggle" aria-label="Cambia tema">🌓</button>
+    </header>
+
+    <!--
+    Layout post: struttura a due colonne.
+    - Sinistra (post-content): breadcrumb → tags → link PDF → articolo MD
+    - Destra (post-sidebar): tags argomento + libro consigliato
+    
+    Ordine DOM: post-content prima, post-sidebar dopo.
+    Grid-template-areas in CSS li posiziona visivamente:
+    "content sidebar" su desktop, stacked su mobile.
+-->
+<div class="post-container">
+
+    <!-- COLONNA SINISTRA: contenuto principale -->
+    <main class="post-content">
+
+        <!-- Breadcrumb: navigazione verso la home -->
+        <nav class="post-breadcrumb" aria-label="Breadcrumb">
+            <a href="/appuntidiprogrammazione/">Appunti di Programmazione</a>
+            <span class="separator" aria-hidden="true">/</span>
+            <span>Escaping Avanzato: th:text vs th:utext</span>
+        </nav>
+
+        <!-- Tags legati all'articolo -->
+        
+        <div class="post-tags-header" aria-label="Argomenti">
+            
+                <span class="post-tag-chip">thymeleaf</span>
+            
+                <span class="post-tag-chip">security & spel expressions</span>
+            
+        </div>
+        
+
+        <!-- Link al/ai PDF allegati all'articolo -->
+        
+        <div class="pdf-link-wrapper">
+            <a class="pdf-link"
+               href="/appuntidiprogrammazione/assets/pdf/escaping-avanzato-thtext-vs-thutext.pdf"
+               target="_blank"
+               rel="noopener noreferrer"
+               aria-label="Scarica il PDF: Escaping Avanzato: th:text vs th:utext">
+                Scarica PDF
+            </a>
+        </div>
+        
+
+        <!-- Corpo dell'articolo renderizzato da Kramdown -->
+        <article class="post-article-body">
+            <h2 id="esigenza-reale">Esigenza Reale</h2>
+<p>Visualizzare correttamente descrizioni formattate (RTF) inserite dagli utenti senza esporsi a iniezioni di script.</p>
+
+<h2 id="analisi-tecnica">Analisi Tecnica</h2>
+<p>Problema: Iniezione di JavaScript malevolo che viene eseguito nel browser di altri utenti quando visualizzano contenuti non filtrati. Perché: Sanitizzazione “White-list”. Ho scelto di pulire il markup a livello di backend prima di inviarlo al modello, garantendo che solo i tag HTML sicuri (b, i, p) arrivino al motore di rendering.</p>
+
+<h2 id="esempio-implementativo">Esempio Implementativo</h2>
+
+<pre><code class="language-thymeleaf">/* Aggiungo OWASP Java HTML Sanitizer al pom.xml: */
+ 
+// &lt;dependency&gt; 
+//   &lt;groupId&gt;com.googlecode.owasp-java-html-sanitizer&lt;/groupId&gt; 
+//   &lt;artifactId&gt;owasp-java-html-sanitizer&lt;/artifactId&gt; 
+//   &lt;version&gt;20220608.1&lt;/version&gt; 
+// &lt;/dependency&gt; 
+/* Definisco le policy di sanitizzazione per diversi contesti di utilizzo. */
+ @Configuration public class HtmlSanitizerConfig 
+{ 
+/* Policy per commenti e descrizioni utente: solo formattazione base. */
+ @Bean("basicHtmlPolicy") public PolicyFactory basicHtmlPolicy() 
+{ return new HtmlPolicyBuilder() .allowElements("b", "i", "em", "strong", "u",
+"s", "br", "p")
+// Nessun tag strutturale, nessun link, nessuna immagine .toFactory(); }
+ 
+/* Policy per articoli del CMS: formattazione ricca ma senza JS. */
+ @Bean("richHtmlPolicy") public PolicyFactory richHtmlPolicy() 
+{ return new HtmlPolicyBuilder() .allowElements("b", "i", "em", "strong", "u",
+"s", "br", "p", "h2", "h3", "h4", "ul", "ol", "li", "blockquote", "code", "pre")
+.allowElements("a") .onElements("a")
+.allowAttributes("href").matching(Pattern.compile("https?:
+//.*")) 
+// Solo URL assoluti HTTPS
+// .allowAttributes("target").matching(Pattern.compile("_blank")).onElements("a")
+// .requireRelNofollowOnLinks()
+// Aggiunge rel="nofollow" automaticamente .allowElements("img")
+// .onElements("img") .allowAttributes("src").matching(Pattern.compile("https:
+//.*")) 
+// Solo immagini HTTPS .allowAttributes("alt", "width",
+// "height").onElements("img") .toFactory(); }
+ }
+ 
+* Service che applica la sanitizzazione prima che il dato raggiunga il modello.
+* */
+ @Service public class ContentSanitizationService 
+{ @Autowired @Qualifier("basicHtmlPolicy") private PolicyFactory
+basicHtmlPolicy; @Autowired @Qualifier("richHtmlPolicy") private PolicyFactory
+richHtmlPolicy;
+/* Sanitizzazione di base per commenti e bio utente. */
+ public String sanitizeBasic(String userInput) 
+{ if (userInput == null) return ""; return basicHtmlPolicy.sanitize(userInput);
+}
+ 
+/* Sanitizzazione ricca per articoli del CMS. */
+ public String sanitizeRich(String cmsContent) 
+{ if (cmsContent == null) return ""; return richHtmlPolicy.sanitize(cmsContent);
+}
+ 
+/* Sanitizzazione per output JSON (prevenzione XSS in API REST): */
+ public String sanitizeForJson(String input) 
+{ if (input == null) return null; 
+// Escape caratteri pericolosi in contesti JSON return input.replace("&lt;",
+// "\\u003C").replace("&gt;", "\\u003E").replace("&amp;", "\\u0026"); }
+ }
+ 
+/* Controller che usa la sanitizzazione prima di passare i dati al modello: */
+ @Controller public class ArticleController 
+{ @Autowired private ContentSanitizationService sanitizer; @Autowired private
+ArticleRepository articleRepository; @GetMapping("/articles/
+{id}
+") public String showArticle(@PathVariable Long id, Model model) 
+{ Article article = articleRepository.findById(id).orElseThrow(); 
+// Sanitizzo nel controller: il modello contiene solo HTML sicuro
+// model.addAttribute("title", article.getTitle());
+// th:text: escaped automaticamente model.addAttribute("safeBody",
+// sanitizer.sanitizeRich(article.getBody()));
+// th:utext: sicuro perché già sanitizzato model.addAttribute("safeExcerpt",
+// sanitizer.sanitizeBasic(article.getExcerpt())); return "articles/show"; }
+ }
+ &lt;!-- Template: th:utext è sicuro perché i dati sono già stati sanitizzati nel
+Service. --&gt; &lt;!-- th:text per contenuto plain text: Thymeleaf fa l'escaping
+automaticamente --&gt; &lt;h1 th:text="$
+{title}
+"&gt;Titolo Articolo&lt;/h1&gt; &lt;!-- th:utext SOLO per contenuto pre-sanitizzato: il
+commento documenta la scelta --&gt; &lt;!-- safeBody è stato passato attraverso
+richHtmlPolicy: nessun tag script possibile --&gt; &lt;div th:utext="$
+{safeBody}
+"&gt;Corpo dell'articolo...&lt;/div&gt; &lt;!-- th:utext per excerpt pre-sanitizzato con
+basicHtmlPolicy --&gt; &lt;p th:utext="$
+{safeExcerpt}
+"&gt;Anteprima...&lt;/p&gt;
+</code></pre>
+
+        </article>
+
+    </main>
+
+    <!-- COLONNA DESTRA: sidebar post -->
+    <aside class="post-sidebar">
+
+        <!-- Box 1: tags argomento (stessa lista dei chip sopra, ma nella sidebar) -->
+        
+        <div class="sidebar-box tags-box">
+            <span class="box-label">Argomenti</span>
+            <div class="tag-cloud-sidebar">
+                
+                    <span class="sidebar-tag">thymeleaf</span>
+                
+                    <span class="sidebar-tag">security & spel expressions</span>
+                
+            </div>
+        </div>
+        
+
+        <!-- Box 2: libro consigliato -->
+        <div class="sidebar-box books-box">
+            <span class="box-label">Letture Consigliate</span>
+            <div class="book-card">
+                <a href="https://www.amazon.it/Appunti-Programmazione-Pensieri-soluzioni-Applicazioni-ebook/dp/B0FMFRHKTF/"
+                   target="_blank"
+                   rel="noopener noreferrer"
+                   aria-label="Acquista Appunti di Programmazione su Amazon">
+                    <img src="https://m.media-amazon.com/images/I/61Ck5eMzGYL._SY466_.jpg"
+                         alt="Copertina: Appunti di Programmazione"
+                         width="80">
+                    <p>Appunti di Programmazione: Pensieri e soluzioni per Applicazioni WEB</p>
+                </a>
+            </div>
+        </div>
+
+    </aside>
+
+</div>
+
+    <footer class="main-footer">
+        DevLog — Appunti di Programmazione &nbsp;·&nbsp; cosimociraci@gmail.com
+    </footer>
+
+    <script>
+        /*
+         * toggleTheme: legge il tema corrente dall'attributo HTML,
+         * calcola l'opposto e lo salva. Il CSS reagisce via [data-theme].
+         * Non uso classi sul body per mantenere tutto centralizzato
+         * sull'elemento radice.
+         */
+        function toggleTheme() {
+            var html = document.documentElement;
+            var current = html.getAttribute('data-theme');
+            var next = current === 'dark' ? 'light' : 'dark';
+            html.setAttribute('data-theme', next);
+            localStorage.setItem('theme', next);
+        }
+    </script>
+
+</body>
+</html>
