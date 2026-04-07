@@ -3,7 +3,7 @@ layout: post
 title: "Parallel Query Tuning"
 date: 2026-11-23 12:00:00
 sintesi: >
-  PostgreSQL può usare più core della CPU per eseguire una singola query tramite i nodi 'Gather' e 'Parallel Scan'. Tuttavia, il parallelismo non è sempre un vantaggio: creare e coordinare i worker ha un costo. Se la tabella è piccola o se max_parallel
+  PostgreSQL può usare più core della CPU per eseguire una singola query tramite i nodi "Gather" e "Parallel Scan". Tuttavia, il parallelismo non è sempre un vantaggio: creare e coordinare i worker ha un costo. Se la tabella è piccola o se max_parallel
 tech: "db"
 tags: ["db", "query opt. & planner"]
 pdf_file: "parallel-query-tuning.pdf"
