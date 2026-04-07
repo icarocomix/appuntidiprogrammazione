@@ -17,7 +17,7 @@ Problema: Un utente malintenzionato potrebbe inserire un'espressione nel databas
 
 ## Esempio Implementativo
 
-```thymeleaf
+```java
 /* Implemento un TypeLocator restrittivo che blocca l'accesso alle classi
     pericolose. Il TypeLocator è il componente SpEL responsabile di risolvere
     T(java.lang.Runtime): sostituendolo con uno personalizzato, posso bloccare
