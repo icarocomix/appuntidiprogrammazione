@@ -129,73 +129,47 @@
 38
 39
 40
-41
-42
-43
-44
-45
-46
-47
-48
-49
-50
-51
-52
-53
-</pre></td><td class="rouge-code"><pre><span class="o">*</span> <span class="n">Stimo</span> <span class="n">il</span> <span class="n">bloat</span> <span class="n">degli</span> <span class="n">indici</span> <span class="n">confrontando</span> <span class="n">la</span> <span class="n">dimensione</span> <span class="n">attuale</span> <span class="n">con</span> <span class="n">il</span> <span class="n">numero</span>
-<span class="o">*</span> <span class="n">di</span> <span class="n">tuple</span> <span class="n">reali</span><span class="p">.</span> <span class="n">Un</span> <span class="n">indice</span> <span class="n">sano</span> <span class="n">ha</span> <span class="n">una</span> <span class="n">densit</span><span class="err">à</span> <span class="n">foglia</span> <span class="n">superiore</span> <span class="n">al</span> <span class="mi">70</span><span class="o">%</span><span class="p">:</span> <span class="n">sotto</span>
-<span class="o">*</span> <span class="n">il</span> <span class="mi">50</span><span class="o">%</span> <span class="n">il</span> <span class="n">bloat</span> <span class="err">è</span> <span class="n">significativo</span><span class="p">.</span> <span class="o">*/</span>
- <span class="k">SELECT</span> <span class="n">indexrelname</span><span class="p">,</span> <span class="n">pg_size_pretty</span><span class="p">(</span><span class="n">pg_relation_size</span><span class="p">(</span><span class="n">indexrelid</span><span class="p">))</span> <span class="k">AS</span>
-<span class="n">index_size</span><span class="p">,</span> <span class="n">idx_scan</span><span class="p">,</span> <span class="n">idx_tup_read</span><span class="p">,</span> <span class="n">idx_tup_fetch</span> <span class="k">FROM</span> <span class="n">pg_stat_user_indexes</span>
-<span class="k">WHERE</span> <span class="n">relname</span> <span class="o">=</span> <span class="s1">'messages'</span> <span class="k">ORDER</span> <span class="k">BY</span> <span class="n">pg_relation_size</span><span class="p">(</span><span class="n">indexrelid</span><span class="p">)</span> <span class="k">DESC</span><span class="p">;</span>
-<span class="o">*</span> <span class="n">Per</span> <span class="n">una</span> <span class="n">stima</span> <span class="n">pi</span><span class="err">ù</span> <span class="n">precisa</span> <span class="n">del</span> <span class="n">bloat</span> <span class="n">uso</span> <span class="n">pgstatindex</span><span class="p">,</span> <span class="n">disponibile</span>
-<span class="o">*</span> <span class="n">nell</span><span class="s1">'estensione pgstattuple: */
- CREATE EXTENSION IF NOT EXISTS pgstattuple; SELECT * FROM
-pgstatindex('</span><span class="n">idx_messages_user_id</span><span class="s1">');
-* Leggo i campi chiave: avg_leaf_density &lt; 50% -&gt; bloat critico, intervenire
-* subito leaf_fragmentation alto -&gt; le pagine foglia sono fuori ordine fisico
-* leaf_pages -&gt; numero totale di pagine foglia dell'</span><span class="n">indice</span> <span class="o">*/</span>
- 
-<span class="o">*</span> <span class="n">Ricostruisco</span> <span class="n">l</span><span class="s1">'indice in background senza bloccare INSERT/UPDATE/DELETE.
-* CONCURRENTLY crea un nuovo indice in parallelo e sostituisce il vecchio
-* atomicamente. */
- REINDEX INDEX CONCURRENTLY idx_messages_user_id; 
-* Verifico la riduzione di dimensione dopo il reindex confrontando prima e dopo:
-* */
- SELECT pg_size_pretty(pg_relation_size('</span><span class="n">idx_messages_user_id</span><span class="s1">')) AS new_size; 
-* Per ricostruire tutti gli indici di una tabella in un colpo solo senza
-* downtime: */
- REINDEX TABLE CONCURRENTLY messages; 
-* Identifico sistematicamente tutti gli indici del database con bloat critico
-* per prioritizzare gli interventi: */
- SELECT schemaname, tablename, indexname,
-pg_size_pretty(pg_relation_size(indexrelid)) AS current_size, idx_scan FROM
-pg_stat_user_indexes WHERE pg_relation_size(indexrelid) &gt; 100 * 1024 * 1024 --
-Solo indici &gt; 100MB AND idx_scan &lt; 100 -- Poco usati: candidati anche alla
-rimozione ORDER BY pg_relation_size(indexrelid) DESC;
-* Automatizzo il reindex mensile tramite pg_cron per gli indici delle tabelle ad
-* alta rotazione: */
- CREATE EXTENSION IF NOT EXISTS pg_cron; SELECT cron.schedule('</span><span class="k">reindex</span><span class="o">-</span><span class="n">messages</span><span class="o">-</span>
-<span class="n">monthly</span><span class="s1">', '</span><span class="mi">0</span> <span class="mi">3</span> <span class="mi">1</span> <span class="o">*</span> <span class="o">*</span><span class="s1">', '</span><span class="k">REINDEX</span> <span class="k">TABLE</span> <span class="n">CONCURRENTLY</span> <span class="n">messages</span><span class="s1">');
-/* Verifico i job schedulati: */
- SELECT jobid, schedule, command, active FROM cron.job WHERE command LIKE
-'</span><span class="o">%</span><span class="k">REINDEX</span><span class="o">%</span><span class="s1">';
-* In Spring Boot, per ambienti senza pg_cron, schedulo il reindex tramite un job
-* Spring che lo esegue durante la finestra di manutenzione notturna:
-* @Scheduled(cron = "0 0 3 1 * *")
-// Ogni primo del mese alle 03:00 public void reindexCriticalTables() 
-{ List&lt;String&gt; indexes = List.of( "idx_messages_user_id",
-"idx_messages_created_at", "idx_messages_conversation_id" ); for (String idx :
-indexes)
-{ log.info("Avvio REINDEX CONCURRENTLY su 
-{}
-", idx); jdbcTemplate.execute("REINDEX INDEX CONCURRENTLY " + idx);
-log.info("REINDEX completato su
-{}
-", idx); }
- }
- */
-</span></pre></td></tr></tbody></table></code></pre></div></div>
+</pre></td><td class="rouge-code"><pre>    <span class="cm">/* Stimo il bloat degli indici confrontando la dimensione attuale con il
+        numero di tuple reali. Un indice sano ha una densità foglia superiore al
+        70%: sotto il 50% il bloat è significativo. */</span> <span class="k">SELECT</span> <span class="n">indexrelname</span><span class="p">,</span>
+        <span class="n">pg_size_pretty</span><span class="p">(</span><span class="n">pg_relation_size</span><span class="p">(</span><span class="n">indexrelid</span><span class="p">))</span> <span class="k">AS</span> <span class="n">index_size</span><span class="p">,</span> <span class="n">idx_scan</span><span class="p">,</span>
+        <span class="n">idx_tup_read</span><span class="p">,</span> <span class="n">idx_tup_fetch</span> <span class="k">FROM</span> <span class="n">pg_stat_user_indexes</span> <span class="k">WHERE</span> <span class="n">relname</span> <span class="o">=</span>
+        <span class="s1">'messages'</span> <span class="k">ORDER</span> <span class="k">BY</span> <span class="n">pg_relation_size</span><span class="p">(</span><span class="n">indexrelid</span><span class="p">)</span> <span class="k">DESC</span><span class="p">;</span> <span class="cm">/* Per una stima
+        più precisa del bloat uso pgstatindex, disponibile nell'estensione
+        pgstattuple: */</span> <span class="k">CREATE</span> <span class="n">EXTENSION</span> <span class="n">IF</span> <span class="k">NOT</span> <span class="k">EXISTS</span> <span class="n">pgstattuple</span><span class="p">;</span> <span class="k">SELECT</span> <span class="o">*</span>
+        <span class="k">FROM</span> <span class="n">pgstatindex</span><span class="p">(</span><span class="s1">'idx_messages_user_id'</span><span class="p">);</span> <span class="cm">/* Leggo i campi chiave:
+        avg_leaf_density &lt; 50% -&gt; bloat critico, intervenire subito
+        leaf_fragmentation alto -&gt; le pagine foglia sono fuori ordine fisico
+        leaf_pages -&gt; numero totale di pagine foglia dell'indice */</span> <span class="cm">/*
+        Ricostruisco l'indice in background senza bloccare INSERT/UPDATE/DELETE.
+        CONCURRENTLY crea un nuovo indice in parallelo e sostituisce il vecchio
+        atomicamente. */</span> <span class="k">REINDEX</span> <span class="k">INDEX</span> <span class="n">CONCURRENTLY</span> <span class="n">idx_messages_user_id</span><span class="p">;</span> <span class="cm">/*
+        Verifico la riduzione di dimensione dopo il reindex confrontando prima e
+        dopo: */</span> <span class="k">SELECT</span> <span class="n">pg_size_pretty</span><span class="p">(</span><span class="n">pg_relation_size</span><span class="p">(</span><span class="s1">'idx_messages_user_id'</span><span class="p">))</span>
+        <span class="k">AS</span> <span class="n">new_size</span><span class="p">;</span> <span class="cm">/* Per ricostruire tutti gli indici di una tabella in un
+        colpo solo senza downtime: */</span> <span class="k">REINDEX</span> <span class="k">TABLE</span> <span class="n">CONCURRENTLY</span> <span class="n">messages</span><span class="p">;</span> <span class="cm">/*
+        Identifico sistematicamente tutti gli indici del database con bloat
+        critico per prioritizzare gli interventi: */</span> <span class="k">SELECT</span> <span class="n">schemaname</span><span class="p">,</span>
+        <span class="n">tablename</span><span class="p">,</span> <span class="n">indexname</span><span class="p">,</span> <span class="n">pg_size_pretty</span><span class="p">(</span><span class="n">pg_relation_size</span><span class="p">(</span><span class="n">indexrelid</span><span class="p">))</span> <span class="k">AS</span>
+        <span class="n">current_size</span><span class="p">,</span> <span class="n">idx_scan</span> <span class="k">FROM</span> <span class="n">pg_stat_user_indexes</span> <span class="k">WHERE</span>
+        <span class="n">pg_relation_size</span><span class="p">(</span><span class="n">indexrelid</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">100</span> <span class="o">*</span> <span class="mi">1024</span> <span class="o">*</span> <span class="mi">1024</span> <span class="c1">-- Solo indici &gt; 100MB</span>
+        <span class="k">AND</span> <span class="n">idx_scan</span> <span class="o">&lt;</span> <span class="mi">100</span> <span class="c1">-- Poco usati: candidati anche alla rimozione ORDER</span>
+        <span class="k">BY</span> <span class="n">pg_relation_size</span><span class="p">(</span><span class="n">indexrelid</span><span class="p">)</span> <span class="k">DESC</span><span class="p">;</span> <span class="cm">/* Automatizzo il reindex mensile
+        tramite pg_cron per gli indici delle tabelle ad alta rotazione: */</span>
+        <span class="k">CREATE</span> <span class="n">EXTENSION</span> <span class="n">IF</span> <span class="k">NOT</span> <span class="k">EXISTS</span> <span class="n">pg_cron</span><span class="p">;</span> <span class="k">SELECT</span>
+        <span class="n">cron</span><span class="p">.</span><span class="n">schedule</span><span class="p">(</span><span class="s1">'reindex-messages-monthly'</span><span class="p">,</span> <span class="s1">'0 3 1 * *'</span><span class="p">,</span> <span class="s1">'REINDEX TABLE
+        CONCURRENTLY messages'</span><span class="p">);</span> <span class="cm">/* Verifico i job schedulati: */</span> <span class="k">SELECT</span> <span class="n">jobid</span><span class="p">,</span>
+        <span class="n">schedule</span><span class="p">,</span> <span class="n">command</span><span class="p">,</span> <span class="n">active</span> <span class="k">FROM</span> <span class="n">cron</span><span class="p">.</span><span class="n">job</span> <span class="k">WHERE</span> <span class="n">command</span> <span class="k">LIKE</span> <span class="s1">'%REINDEX%'</span><span class="p">;</span>
+        <span class="cm">/* In Spring Boot, per ambienti senza pg_cron, schedulo il reindex
+        tramite un job Spring che lo esegue durante la finestra di manutenzione
+        notturna: @Scheduled(cron = "0 0 3 1 * *") // Ogni primo del mese alle
+        03:00 public void reindexCriticalTables() { List&lt;String&gt; indexes =
+        List.of( "idx_messages_user_id", "idx_messages_created_at",
+        "idx_messages_conversation_id" ); for (String idx : indexes) {
+        log.info("Avvio REINDEX CONCURRENTLY su {}", idx);
+        jdbcTemplate.execute("REINDEX INDEX CONCURRENTLY " + idx);
+        log.info("REINDEX completato su {}", idx); } } */</span>
+</pre></td></tr></tbody></table></code></pre></div></div>
 
         </article>
 

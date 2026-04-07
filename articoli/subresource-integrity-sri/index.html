@@ -183,101 +183,155 @@
 92
 93
 94
-</pre></td><td class="rouge-code"><pre><span class="o">*</span> <span class="nx">ATTRIBUTO</span> <span class="nx">SRI</span><span class="p">:</span> <span class="nx">il</span> <span class="nx">browser</span> <span class="nx">calcola</span> <span class="nx">SHA</span><span class="o">-</span><span class="mi">384</span> <span class="nx">del</span> <span class="nx">file</span> <span class="nx">scaricato</span> <span class="nx">e</span> <span class="nx">lo</span> <span class="nx">confronta</span>
-<span class="o">*</span> <span class="nx">con</span> <span class="nx">il</span> <span class="nx">valore</span> <span class="nx">dichiarato</span><span class="p">.</span> <span class="nx">Se</span> <span class="nx">non</span> <span class="nx">corrisponde</span><span class="p">,</span> <span class="nx">lo</span> <span class="nx">script</span> <span class="nx">viene</span> <span class="nx">bloccato</span> <span class="nx">e</span> <span class="nx">la</span>
-<span class="o">*</span> <span class="nx">pagina</span> <span class="nx">riceve</span> <span class="nx">un</span> <span class="nx">errore</span> <span class="nx">di</span> <span class="nx">rete</span><span class="p">.</span> <span class="o">*</span><span class="sr">/</span><span class="err">
-</span> <span class="c">&lt;!--</span> <span class="nx">jQuery</span> <span class="nx">da</span> <span class="nx">CDN</span> <span class="nx">con</span> <span class="nx">SRI</span><span class="p">:</span> <span class="o">--&gt;</span> <span class="o">&lt;</span><span class="nx">script</span> <span class="nx">src</span><span class="o">=</span><span class="dl">"</span><span class="s2">https:
-// code.jquery.com/jquery-3.7.1.min.js</span><span class="dl">"</span>
-<span class="c1">// integrity="sha384-1H217gwSVyLSIfaLxHbE7dRb3v4mYCKbpQvzx0cegeju1MVsGrX5xXxAvs/HgeFs"</span>
-<span class="c1">// crossorigin="anonymous"&gt;&lt;/script&gt; &lt;!-- Bootstrap CSS con SRI: --&gt; &lt;link</span>
-<span class="c1">// rel="stylesheet" href="https:</span>
-<span class="c1">// cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css"</span>
-<span class="c1">// integrity="sha384-9ndCyUaIbzAi2FUVXJi0CjmCapSmO7SnpJef0486qhLnuZ2cdeRhO02iuK6FUUVM"</span>
-<span class="c1">// crossorigin="anonymous"&gt;</span>
-<span class="o">*</span> <span class="nx">Genero</span> <span class="nx">l</span><span class="dl">'</span><span class="s1">hash SRI in Node.js durante il processo di build per automatizzare
-* l</span><span class="dl">'</span><span class="nx">aggiornamento</span><span class="p">:</span> <span class="o">*</span><span class="sr">/</span><span class="err">
-</span> <span class="kd">const</span> <span class="nx">crypto</span> <span class="o">=</span> <span class="nx">require</span><span class="p">(</span><span class="dl">'</span><span class="s1">crypto</span><span class="dl">'</span><span class="p">);</span> <span class="kd">const</span> <span class="nx">https</span> <span class="o">=</span> <span class="nx">require</span><span class="p">(</span><span class="dl">'</span><span class="s1">https</span><span class="dl">'</span><span class="p">);</span> <span class="k">async</span>
-<span class="kd">function</span> <span class="nx">generateSriHash</span><span class="p">(</span><span class="nx">url</span><span class="p">)</span>
-<span class="p">{</span> <span class="k">return</span> <span class="k">new</span> <span class="nb">Promise</span><span class="p">((</span><span class="nx">resolve</span><span class="p">,</span> <span class="nx">reject</span><span class="p">)</span> <span class="o">=&gt;</span> 
-<span class="p">{</span> <span class="nx">https</span><span class="p">.</span><span class="kd">get</span><span class="p">(</span><span class="nx">url</span><span class="p">,</span> <span class="p">(</span><span class="nx">response</span><span class="p">)</span> <span class="o">=&gt;</span> 
-<span class="p">{</span> <span class="kd">const</span> <span class="nx">hash</span> <span class="o">=</span> <span class="nx">crypto</span><span class="p">.</span><span class="nx">createHash</span><span class="p">(</span><span class="dl">'</span><span class="s1">sha384</span><span class="dl">'</span><span class="p">);</span> <span class="nx">response</span><span class="p">.</span><span class="nx">on</span><span class="p">(</span><span class="dl">'</span><span class="s1">data</span><span class="dl">'</span><span class="p">,</span> <span class="nx">chunk</span> <span class="o">=&gt;</span>
-<span class="nx">hash</span><span class="p">.</span><span class="nx">update</span><span class="p">(</span><span class="nx">chunk</span><span class="p">));</span> <span class="nx">response</span><span class="p">.</span><span class="nx">on</span><span class="p">(</span><span class="dl">'</span><span class="s1">end</span><span class="dl">'</span><span class="p">,</span> <span class="p">()</span> <span class="o">=&gt;</span>
-<span class="p">{</span> <span class="kd">const</span> <span class="nx">digest</span> <span class="o">=</span> <span class="nx">hash</span><span class="p">.</span><span class="nx">digest</span><span class="p">(</span><span class="dl">'</span><span class="s1">base64</span><span class="dl">'</span><span class="p">);</span> <span class="nx">resolve</span><span class="p">(</span><span class="s2">`sha384-$
-{digest}
-`</span><span class="p">);</span> <span class="p">}</span>
-<span class="p">);</span> <span class="nx">response</span><span class="p">.</span><span class="nx">on</span><span class="p">(</span><span class="dl">'</span><span class="s1">error</span><span class="dl">'</span><span class="p">,</span> <span class="nx">reject</span><span class="p">);</span> <span class="p">}</span>
-<span class="p">);</span> <span class="p">}</span>
-<span class="p">);</span> <span class="p">}</span>
- 
-<span class="c1">// Uso nello script di build: async function updateSriHashes() </span>
-<span class="p">{</span> <span class="kd">const</span> <span class="nx">assets</span> <span class="o">=</span> <span class="p">[</span> 
-<span class="p">{</span> <span class="na">url</span><span class="p">:</span> <span class="dl">'</span><span class="s1">https:
-//code.jquery.com/jquery-3.7.1.min.js</span><span class="dl">'</span><span class="p">,</span> <span class="na">name</span><span class="p">:</span> <span class="dl">'</span><span class="s1">jQuery</span><span class="dl">'</span> <span class="p">}</span>
-<span class="p">,</span> 
-<span class="p">{</span> <span class="na">url</span><span class="p">:</span> <span class="dl">'</span><span class="s1">https:
-// cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js</span><span class="dl">'</span><span class="p">,</span> <span class="na">name</span><span class="p">:</span>
-<span class="c1">// 'Bootstrap' }</span>
- <span class="p">];</span> <span class="k">for</span> <span class="p">(</span><span class="kd">const</span> <span class="nx">asset</span> <span class="k">of</span> <span class="nx">assets</span><span class="p">)</span> 
-<span class="p">{</span> <span class="kd">const</span> <span class="nx">hash</span> <span class="o">=</span> <span class="k">await</span> <span class="nx">generateSriHash</span><span class="p">(</span><span class="nx">asset</span><span class="p">.</span><span class="nx">url</span><span class="p">);</span> <span class="nx">console</span><span class="p">.</span><span class="nx">log</span><span class="p">(</span><span class="s2">`$
-{asset.name}
-: integrity="$
-{hash}
-"`</span><span class="p">);</span> <span class="p">}</span>
- <span class="p">}</span>
- 
-<span class="o">*</span> <span class="nx">Verifico</span> <span class="nx">l</span><span class="dl">'</span><span class="s1">hash SRI di un file locale per confrontarlo con quello della CDN
-* (audit): */
- const fs = require(</span><span class="dl">'</span><span class="nx">fs</span><span class="dl">'</span><span class="s1">); function verifySriHash(filePath, expectedHash) 
-{ const content = fs.readFileSync(filePath); const [algorithm, expectedDigest] =
-expectedHash.split(</span><span class="dl">'</span><span class="o">-</span><span class="dl">'</span><span class="s1">); const actualDigest =
-crypto.createHash(algorithm).update(content).digest(</span><span class="dl">'</span><span class="nx">base64</span><span class="dl">'</span><span class="s1">); const isValid =
-crypto.timingSafeEqual( Buffer.from(actualDigest, </span><span class="dl">'</span><span class="nx">base64</span><span class="dl">'</span><span class="s1">),
-Buffer.from(expectedDigest, </span><span class="dl">'</span><span class="nx">base64</span><span class="dl">'</span><span class="s1">) ); if (!isValid)
-{ console.error(`ALERT: Hash SRI non corrisponde per $
-{filePath}
-`); console.error(`Atteso: $
-{expectedHash}
-`); console.error(`Trovato: $
-{algorithm}
--$
-{actualDigest}
-`); process.exit(1); 
-// Blocco la build }
- return true; }
- 
-* Politica di sicurezza completa: uso SRI in combinazione con CSP per richiedere
-* SRI su tutti gli script esterni: */
- 
-// Nel CSP header aggiungo la direttiva require-sri-for: res.setHeader(</span><span class="dl">'</span><span class="nx">Content</span><span class="o">-</span>
-<span class="c1">// Security-Policy', [</span>
-<span class="c1">// ... altre direttive ... `require-sri-for script style`, </span>
-<span class="c1">// Blocca qualsiasi script/CSS esterno senza attributo integrity `script-src</span>
-<span class="c1">// 'self' 'nonce-$</span>
-<span class="p">{</span><span class="nx">nonce</span><span class="p">}</span>
-<span class="dl">'</span><span class="s1"> https:
-//code.jquery.com https:
-//cdn.jsdelivr.net` ].join(</span><span class="dl">'</span><span class="p">;</span> <span class="dl">'</span><span class="s1">)); 
-* Per i tag generati dinamicamente lato server (Spring Boot / Thymeleaf),
-* configuro un helper che genera automaticamente il tag script con SRI: */
- 
-// @Component 
-// public class SriHelper 
-{ 
-// private final Map&lt;String, String&gt; sriHashes; 
-// 
-// Carico gli hash da un file generato durante la build 
-// 
-// public String scriptTag(String url) 
-{ 
-// String hash = sriHashes.get(url); 
-// if (hash == null) throw new IllegalArgumentException("Nessun hash SRI per: "
-// + url);
-// return String.format("&lt;script src=</span><span class="se">\</span><span class="s1">"%s</span><span class="se">\</span><span class="s1">" integrity=</span><span class="se">\</span><span class="s1">"%s</span><span class="se">\</span><span class="s1">"
-// crossorigin=</span><span class="se">\</span><span class="s1">"anonymous</span><span class="se">\</span><span class="s1">"&gt;&lt;/script&gt;", url, hash);
-// }
- 
-// }
-</span></pre></td></tr></tbody></table></code></pre></div></div>
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+106
+107
+108
+109
+110
+111
+112
+113
+114
+115
+116
+117
+118
+119
+120
+121
+</pre></td><td class="rouge-code"><pre><span class="cm">/* ATTRIBUTO SRI: il browser calcola SHA-384 del file scaricato e lo confronta
+    con il valore dichiarato. Se non corrisponde, lo script viene bloccato e la
+    pagina riceve un errore di rete. */</span>
+<span class="c">&lt;!--</span> <span class="nx">jQuery</span> <span class="nx">da</span> <span class="nx">CDN</span> <span class="nx">con</span> <span class="nx">SRI</span><span class="p">:</span> <span class="o">--&gt;</span> <span class="o">&lt;</span><span class="nx">script</span> <span class="nx">src</span><span class="o">=</span><span class="dl">"</span><span class="s2">https:
+//code.jquery.com/jquery-3.7.1.min.js</span><span class="dl">"</span> <span class="nx">integrity</span><span class="o">=</span><span class="dl">"</span><span class="s2">sha384-1H217gwSVyLSIfaLxHbE7dR
+    b3v4mYCKbpQvzx0cegeju1MVsGrX5xXxAvs/HgeFs</span><span class="dl">"</span> <span class="nx">crossorigin</span><span class="o">=</span><span class="dl">"</span><span class="s2">anonymous</span><span class="dl">"</span><span class="o">&gt;&lt;</span><span class="sr">/script</span><span class="err">&gt;
+</span>    <span class="c">&lt;!--</span> <span class="nx">Bootstrap</span> <span class="nx">CSS</span> <span class="nx">con</span> <span class="nx">SRI</span><span class="p">:</span> <span class="o">--&gt;</span> <span class="o">&lt;</span><span class="nx">link</span> <span class="nx">rel</span><span class="o">=</span><span class="dl">"</span><span class="s2">stylesheet</span><span class="dl">"</span> <span class="nx">href</span><span class="o">=</span><span class="dl">"</span><span class="s2">https://cdn.jsd
+    elivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css</span><span class="dl">"</span> <span class="nx">integrity</span><span class="o">=</span><span class="dl">"</span><span class="s2">sha384-
+    9ndCyUaIbzAi2FUVXJi0CjmCapSmO7SnpJef0486qhLnuZ2cdeRhO02iuK6FUUVM</span><span class="dl">"</span>
+    <span class="nx">crossorigin</span><span class="o">=</span><span class="dl">"</span><span class="s2">anonymous</span><span class="dl">"</span><span class="o">&gt;</span> <span class="cm">/* Genero l'hash SRI in Node.js durante il processo
+    di build per automatizzare l'aggiornamento: */</span> <span class="kd">const</span> <span class="nx">crypto</span> <span class="o">=</span>
+    <span class="nx">require</span><span class="p">(</span><span class="dl">'</span><span class="s1">crypto</span><span class="dl">'</span><span class="p">)</span>
+<span class="p">;</span>
+<span class="kd">const</span> <span class="nx">https</span> <span class="o">=</span> <span class="nx">require</span><span class="p">(</span><span class="dl">'</span><span class="s1">https</span><span class="dl">'</span><span class="p">);</span>
+<span class="k">async</span> <span class="kd">function</span> <span class="nx">generateSriHash</span><span class="p">(</span><span class="nx">url</span><span class="p">)</span> <span class="p">{</span>
+    <span class="k">return</span> <span class="k">new</span> <span class="nb">Promise</span><span class="p">((</span><span class="nx">resolve</span><span class="p">,</span> <span class="nx">reject</span><span class="p">)</span> <span class="o">=&gt;</span> <span class="p">{</span>
+        <span class="nx">https</span><span class="p">.</span><span class="kd">get</span><span class="p">(</span><span class="nx">url</span><span class="p">,</span> <span class="p">(</span><span class="nx">response</span><span class="p">)</span> <span class="o">=&gt;</span> <span class="p">{</span>
+            <span class="kd">const</span> <span class="nx">hash</span> <span class="o">=</span> <span class="nx">crypto</span><span class="p">.</span><span class="nx">createHash</span><span class="p">(</span><span class="dl">'</span><span class="s1">sha384</span><span class="dl">'</span><span class="p">);</span>
+            <span class="nx">response</span><span class="p">.</span><span class="nx">on</span><span class="p">(</span><span class="dl">'</span><span class="s1">data</span><span class="dl">'</span><span class="p">,</span> <span class="nx">chunk</span> <span class="o">=&gt;</span> <span class="nx">hash</span><span class="p">.</span><span class="nx">update</span><span class="p">(</span><span class="nx">chunk</span><span class="p">));</span>
+            <span class="nx">response</span><span class="p">.</span><span class="nx">on</span><span class="p">(</span><span class="dl">'</span><span class="s1">end</span><span class="dl">'</span><span class="p">,</span> <span class="p">()</span> <span class="o">=&gt;</span> <span class="p">{</span>
+                <span class="kd">const</span> <span class="nx">digest</span> <span class="o">=</span> <span class="nx">hash</span><span class="p">.</span><span class="nx">digest</span><span class="p">(</span><span class="dl">'</span><span class="s1">base64</span><span class="dl">'</span><span class="p">);</span>
+                <span class="nx">resolve</span><span class="p">(</span><span class="s2">`sha384-</span><span class="p">${</span>
+                    <span class="nx">digest</span>
+                <span class="p">}</span><span class="s2">
+                `</span><span class="p">);</span>
+            <span class="p">}</span>
+            <span class="p">);</span>
+            <span class="nx">response</span><span class="p">.</span><span class="nx">on</span><span class="p">(</span><span class="dl">'</span><span class="s1">error</span><span class="dl">'</span><span class="p">,</span> <span class="nx">reject</span><span class="p">);</span>
+        <span class="p">}</span>
+        <span class="p">);</span>
+    <span class="p">}</span>
+    <span class="p">);</span>
+<span class="p">}</span>
+<span class="c1">// Uso nello script di build: async function updateSriHashes()</span>
+<span class="p">{</span>
+    <span class="kd">const</span> <span class="nx">assets</span> <span class="o">=</span> <span class="p">[</span> <span class="p">{</span>
+        <span class="na">url</span><span class="p">:</span> <span class="dl">'</span><span class="s1">https:
+        //code.jquery.com/jquery-3.7.1.min.js</span><span class="dl">'</span><span class="p">,</span> <span class="na">name</span><span class="p">:</span> <span class="dl">'</span><span class="s1">jQuery</span><span class="dl">'</span>
+    <span class="p">}</span>
+    <span class="p">,</span> <span class="p">{</span>
+        <span class="na">url</span><span class="p">:</span> <span class="dl">'</span><span class="s1">https:
+        //cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js</span><span class="dl">'</span><span class="p">,</span>
+            <span class="na">name</span><span class="p">:</span> <span class="dl">'</span><span class="s1">Bootstrap</span><span class="dl">'</span>
+    <span class="p">}</span>
+    <span class="p">];</span>
+    <span class="k">for</span> <span class="p">(</span><span class="kd">const</span> <span class="nx">asset</span> <span class="k">of</span> <span class="nx">assets</span><span class="p">)</span> <span class="p">{</span>
+        <span class="kd">const</span> <span class="nx">hash</span> <span class="o">=</span> <span class="k">await</span> <span class="nx">generateSriHash</span><span class="p">(</span><span class="nx">asset</span><span class="p">.</span><span class="nx">url</span><span class="p">);</span>
+        <span class="nx">console</span><span class="p">.</span><span class="nx">log</span><span class="p">(</span><span class="s2">`</span><span class="p">${</span>
+            <span class="nx">asset</span><span class="p">.</span><span class="nx">name</span>
+        <span class="p">}</span><span class="s2">
+        : integrity="</span><span class="p">${</span>
+            <span class="nx">hash</span>
+        <span class="p">}</span><span class="s2">
+        "`</span><span class="p">);</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+<span class="cm">/* Verifico l'hash SRI di un file locale per confrontarlo con quello della CDN
+    (audit): */</span>
+<span class="kd">const</span> <span class="nx">fs</span> <span class="o">=</span> <span class="nx">require</span><span class="p">(</span><span class="dl">'</span><span class="s1">fs</span><span class="dl">'</span><span class="p">);</span>
+<span class="kd">function</span> <span class="nx">verifySriHash</span><span class="p">(</span><span class="nx">filePath</span><span class="p">,</span> <span class="nx">expectedHash</span><span class="p">)</span> <span class="p">{</span>
+    <span class="kd">const</span> <span class="nx">content</span> <span class="o">=</span> <span class="nx">fs</span><span class="p">.</span><span class="nx">readFileSync</span><span class="p">(</span><span class="nx">filePath</span><span class="p">);</span>
+    <span class="kd">const</span> <span class="p">[</span><span class="nx">algorithm</span><span class="p">,</span> <span class="nx">expectedDigest</span><span class="p">]</span> <span class="o">=</span> <span class="nx">expectedHash</span><span class="p">.</span><span class="nx">split</span><span class="p">(</span><span class="dl">'</span><span class="s1">-</span><span class="dl">'</span><span class="p">);</span>
+    <span class="kd">const</span> <span class="nx">actualDigest</span> <span class="o">=</span>
+        <span class="nx">crypto</span><span class="p">.</span><span class="nx">createHash</span><span class="p">(</span><span class="nx">algorithm</span><span class="p">).</span><span class="nx">update</span><span class="p">(</span><span class="nx">content</span><span class="p">).</span><span class="nx">digest</span><span class="p">(</span><span class="dl">'</span><span class="s1">base64</span><span class="dl">'</span><span class="p">);</span>
+    <span class="kd">const</span> <span class="nx">isValid</span> <span class="o">=</span> <span class="nx">crypto</span><span class="p">.</span><span class="nx">timingSafeEqual</span><span class="p">(</span> <span class="nx">Buffer</span><span class="p">.</span><span class="k">from</span><span class="p">(</span><span class="nx">actualDigest</span><span class="p">,</span> <span class="dl">'</span><span class="s1">base64</span><span class="dl">'</span><span class="p">),</span>
+        <span class="nx">Buffer</span><span class="p">.</span><span class="k">from</span><span class="p">(</span><span class="nx">expectedDigest</span><span class="p">,</span> <span class="dl">'</span><span class="s1">base64</span><span class="dl">'</span><span class="p">)</span> <span class="p">);</span>
+    <span class="k">if</span> <span class="p">(</span><span class="o">!</span><span class="nx">isValid</span><span class="p">)</span> <span class="p">{</span>
+        <span class="nx">console</span><span class="p">.</span><span class="nx">error</span><span class="p">(</span><span class="s2">`ALERT: Hash SRI non corrisponde per </span><span class="p">${</span>
+            <span class="nx">filePath</span>
+        <span class="p">}</span><span class="s2">
+        `</span><span class="p">);</span>
+        <span class="nx">console</span><span class="p">.</span><span class="nx">error</span><span class="p">(</span><span class="s2">`Atteso: </span><span class="p">${</span>
+            <span class="nx">expectedHash</span>
+        <span class="p">}</span><span class="s2">
+        `</span><span class="p">);</span>
+        <span class="nx">console</span><span class="p">.</span><span class="nx">error</span><span class="p">(</span><span class="s2">`Trovato: </span><span class="p">${</span>
+            <span class="nx">algorithm</span>
+        <span class="p">}</span><span class="s2">
+        -</span><span class="p">${</span>
+            <span class="nx">actualDigest</span>
+        <span class="p">}</span><span class="s2">
+        `</span><span class="p">);</span>
+        <span class="nx">process</span><span class="p">.</span><span class="nx">exit</span><span class="p">(</span><span class="mi">1</span><span class="p">);</span>
+        <span class="c1">// Blocco la build</span>
+    <span class="p">}</span>
+    <span class="k">return</span> <span class="kc">true</span><span class="p">;</span>
+<span class="p">}</span>
+<span class="cm">/* Politica di sicurezza completa: uso SRI in combinazione con CSP per
+    richiedere SRI su tutti gli script esterni: */</span>
+<span class="c1">// Nel CSP header aggiungo la direttiva require-sri-for:</span>
+    <span class="nx">res</span><span class="p">.</span><span class="nx">setHeader</span><span class="p">(</span><span class="dl">'</span><span class="s1">Content-Security-Policy</span><span class="dl">'</span><span class="p">,</span> <span class="p">[</span> <span class="c1">// ... altre direttive ...</span>
+    <span class="s2">`require-sri-for script style`</span><span class="p">,</span> <span class="c1">// Blocca qualsiasi script/CSS esterno senza</span>
+    <span class="nx">attributo</span> <span class="nx">integrity</span> <span class="s2">`script-src 'self' 'nonce-$
+{
+    nonce
+}
+' https:
+//code.jquery.com https://cdn.jsdelivr.net`</span> <span class="p">].</span><span class="nx">join</span><span class="p">(</span><span class="dl">'</span><span class="s1">
+;
+</span><span class="dl">'</span><span class="p">));</span>
+<span class="cm">/* Per i tag generati dinamicamente lato server (Spring Boot / Thymeleaf),
+    configuro un helper che genera automaticamente il tag script con SRI: */</span>
+<span class="c1">// @Component // public class SriHelper</span>
+<span class="p">{</span>
+    <span class="c1">// private final Map&lt;String, String&gt; sriHashes</span>
+    <span class="p">;</span>
+    <span class="c1">// // Carico gli hash da un file generato durante la build // // public</span>
+        <span class="nb">String</span> <span class="nx">scriptTag</span><span class="p">(</span><span class="nb">String</span> <span class="nx">url</span><span class="p">)</span>
+    <span class="p">{</span>
+        <span class="c1">// String hash = sriHashes.get(url)</span>
+        <span class="p">;</span>
+        <span class="c1">// if (hash == null) throw new IllegalArgumentException("Nessun hash SRI</span>
+            <span class="nl">per</span><span class="p">:</span> <span class="dl">"</span><span class="s2"> + url)
+        ;
+        //
+        return String.format(</span><span class="dl">"</span><span class="o">&lt;</span><span class="nx">script</span> <span class="nx">src</span><span class="o">=</span><span class="err">\</span><span class="dl">"</span><span class="s2">%s</span><span class="se">\"</span><span class="s2"> integrity=</span><span class="se">\"</span><span class="s2">%s</span><span class="se">\"</span><span class="s2">
+            crossorigin=</span><span class="se">\"</span><span class="s2">anonymous</span><span class="se">\"</span><span class="s2">&gt;&lt;/script&gt;</span><span class="dl">"</span><span class="p">,</span> <span class="nx">url</span><span class="p">,</span> <span class="nx">hash</span><span class="p">);</span>
+        <span class="c1">//</span>
+    <span class="p">}</span>
+    <span class="c1">//</span>
+<span class="p">}</span>
+</pre></td></tr></tbody></table></code></pre></div></div>
 
         </article>
 

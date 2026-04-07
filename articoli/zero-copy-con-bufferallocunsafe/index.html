@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Zero-Copy con Buffer.allocUnsafe — DevLog</title>
-    <meta name="description" content="Buffer.alloc inizializza la memoria a zero, operazione costosa per buffer enormi. Buffer.allocUnsafe alloca un blocco di memoria 'sporca' che potrebbe contenere dati sensibili di precedenti operazioni. È estremamente veloce perché bypassa l'inizializ
+    <meta name="description" content="Buffer.alloc inizializza la memoria a zero, operazione costosa per buffer enormi. Buffer.allocUnsafe alloca un blocco di memoria "sporca" che potrebbe contenere dati sensibili di precedenti operazioni. È estremamente veloce perché bypassa l'inizializ
 ">
     <link rel="stylesheet" href="/appuntidiprogrammazione/assets/css/style.css">
 
@@ -181,98 +181,166 @@
 90
 91
 92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+106
+107
+108
+109
+110
+111
+112
+113
+114
+115
+116
+117
+118
+119
+120
+121
+122
+123
+124
+125
+126
 </pre></td><td class="rouge-code"><pre><span class="cm">/* Confronto il costo delle diverse strategie di allocazione buffer. */</span>
- <span class="kd">const</span> <span class="nx">BUFFER_SIZE</span> <span class="o">=</span> <span class="mi">10</span> <span class="o">*</span> <span class="mi">1024</span> <span class="o">*</span> <span class="mi">1024</span><span class="p">;</span> 
-<span class="c1">// 10MB const </span>
-<span class="p">{</span> <span class="nx">performance</span> <span class="p">}</span>
- <span class="o">=</span> <span class="nx">require</span><span class="p">(</span><span class="dl">'</span><span class="s1">perf_hooks</span><span class="dl">'</span><span class="p">);</span> 
+<span class="kd">const</span> <span class="nx">BUFFER_SIZE</span> <span class="o">=</span> <span class="mi">10</span> <span class="o">*</span> <span class="mi">1024</span> <span class="o">*</span> <span class="mi">1024</span><span class="p">;</span>
+<span class="c1">// 10MB const</span>
+<span class="p">{</span>
+    <span class="nx">performance</span>
+<span class="p">}</span>
+<span class="o">=</span> <span class="nx">require</span><span class="p">(</span><span class="dl">'</span><span class="s1">perf_hooks</span><span class="dl">'</span><span class="p">);</span>
 <span class="c1">// Buffer.alloc: azzera tutta la memoria -&gt; sicuro ma lento let t0 =</span>
-<span class="c1">// performance.now(); const safeBuffer = Buffer.alloc(BUFFER_SIZE);</span>
-<span class="c1">// console.log(`Buffer.alloc: $</span>
-<span class="p">{(</span><span class="nx">performance</span><span class="p">.</span><span class="nx">now</span><span class="p">()</span> <span class="o">-</span> <span class="nx">t0</span><span class="p">).</span><span class="nx">toFixed</span><span class="p">(</span><span class="mi">2</span><span class="p">)}</span>
-<span class="nx">ms</span><span class="s2">`); 
-// Buffer.allocUnsafe: nessuna inizializzazione -&gt; veloce ma "sporco" t0 =
-// performance.now(); const unsafeBuffer = Buffer.allocUnsafe(BUFFER_SIZE);
-// console.log(`</span><span class="nx">Buffer</span><span class="p">.</span><span class="nx">allocUnsafe</span><span class="p">:</span> <span class="nx">$</span>
-<span class="p">{(</span><span class="nx">performance</span><span class="p">.</span><span class="nx">now</span><span class="p">()</span> <span class="o">-</span> <span class="nx">t0</span><span class="p">).</span><span class="nx">toFixed</span><span class="p">(</span><span class="mi">2</span><span class="p">)}</span>
-<span class="nx">ms</span><span class="s2">`); 
-// Risultato tipico: allocUnsafe è 5-20x più veloce su buffer grandi 
-* Implemento un parser di pacchetti di rete binari con allocUnsafe. La regola
-* d'oro: devo sovrascrivere TUTTI i byte prima di leggere o inviare il buffer.
-* */
- class BinaryPacketParser 
-{ constructor() 
-{ 
-// Pre-alloco un pool di buffer riusabili per evitare allocazioni continue
-// this._pool = []; this._poolSize = 20; for (let i = 0; i &lt; this._poolSize;
-// i++)
-{ this._pool.push(Buffer.allocUnsafe(64 * 1024)); 
-// 64KB ciascuno }
- }
- acquireBuffer() 
-{ return this._pool.pop() ?? Buffer.allocUnsafe(64 * 1024); 
-// Fallback se pool esaurito }
- releaseBuffer(buf) 
-{ if (this._pool.length &lt; this._poolSize) 
-{ this._pool.push(buf); 
-// Restituisco al pool: zero nuove allocazioni }
- }
- 
-* Costruisco un pacchetto di risposta binario. Sovrascivo ogni byte: nessun dato
-* "sporco" trapela. */
- buildResponsePacket(requestId, statusCode, payload) 
-{ const payloadLength = payload.length; const HEADER_SIZE = 12; 
-// 4 (magic) + 4 (requestId) + 2 (statusCode) + 2 (payloadLength) const
-// totalSize = HEADER_SIZE + payloadLength; const buffer = this.acquireBuffer();
-// Potrebbe contenere dati vecchi: devo sovrascrivere tutto 
-// Header: ogni campo viene scritto esplicitamente
-// buffer.writeUInt32BE(0xDEADBEEF, 0);
-// Magic number: 4 byte buffer.writeUInt32BE(requestId, 4); 
-// Request ID: 4 byte buffer.writeUInt16BE(statusCode, 8); 
-// Status code: 2 byte buffer.writeUInt16BE(payloadLength, 10); 
-// Payload length: 2 byte 
-// Payload: copio i dati nel buffer (sovrascrittura completa)
-// payload.copy(buffer, HEADER_SIZE, 0, payloadLength);
-// Ritorno solo la slice usata: non il buffer intero (potrebbe avere dati vecchi
-// oltre totalSize) return buffer.slice(0, totalSize); }
- 
-/* Parser del pacchetto ricevuto: leggo i campi dal buffer binario. */
- parsePacket(rawBuffer) 
-{ if (rawBuffer.length &lt; 12) throw new Error('Pacchetto troppo corto'); const
-magic = rawBuffer.readUInt32BE(0); if (magic !== 0xDEADBEEF) throw new
-Error('Magic number non valido: ' + magic.toString(16)); return
-{ requestId: rawBuffer.readUInt32BE(4), statusCode: rawBuffer.readUInt16BE(8),
-payloadLength: rawBuffer.readUInt16BE(10), payload: rawBuffer.slice(12, 12 +
-rawBuffer.readUInt16BE(10)) }
-; }
- }
- 
-* Uso Buffer.concat() con preallocazione per assemblare più chunk senza copie
-* intermedie. */
- function assemblePackets(chunks) 
-{ 
-// Calcolo la dimensione totale in anticipo: Buffer.concat può pre-allocare
-// const totalLength = chunks.reduce((sum, chunk) =&gt; sum + chunk.length, 0);
-// Buffer.concat con totalLength evita una scansione aggiuntiva per calcolare la
-// dimensione return Buffer.concat(chunks, totalLength); }
- 
-* Sicurezza: scrivo zero nei buffer che contengono dati sensibili prima di
-* rilasciarli. */
- function secureRelease(buffer) 
-{ buffer.fill(0); 
-// Sovrascrive tutti i byte con zero: nessun dato sensibile in memoria residua
-// parser.releaseBuffer(buffer); }
- 
+    <span class="nx">performance</span><span class="p">.</span><span class="nx">now</span><span class="p">()</span>
+<span class="p">;</span>
+<span class="kd">const</span> <span class="nx">safeBuffer</span> <span class="o">=</span> <span class="nx">Buffer</span><span class="p">.</span><span class="nx">alloc</span><span class="p">(</span><span class="nx">BUFFER_SIZE</span><span class="p">);</span>
+<span class="nx">console</span><span class="p">.</span><span class="nx">log</span><span class="p">(</span><span class="s2">`Buffer.alloc: </span><span class="p">${</span>
+    <span class="p">(</span><span class="nx">performance</span><span class="p">.</span><span class="nx">now</span><span class="p">()</span> <span class="o">-</span> <span class="nx">t0</span><span class="p">).</span><span class="nx">toFixed</span><span class="p">(</span><span class="mi">2</span><span class="p">)</span>
+<span class="p">}</span><span class="s2">
+ms`</span><span class="p">);</span>
+<span class="c1">// Buffer.allocUnsafe: nessuna inizializzazione -&gt; veloce ma "sporco" t0 =</span>
+    <span class="nx">performance</span><span class="p">.</span><span class="nx">now</span><span class="p">()</span>
+<span class="p">;</span>
+<span class="kd">const</span> <span class="nx">unsafeBuffer</span> <span class="o">=</span> <span class="nx">Buffer</span><span class="p">.</span><span class="nx">allocUnsafe</span><span class="p">(</span><span class="nx">BUFFER_SIZE</span><span class="p">);</span>
+<span class="nx">console</span><span class="p">.</span><span class="nx">log</span><span class="p">(</span><span class="s2">`Buffer.allocUnsafe: </span><span class="p">${</span>
+    <span class="p">(</span><span class="nx">performance</span><span class="p">.</span><span class="nx">now</span><span class="p">()</span> <span class="o">-</span> <span class="nx">t0</span><span class="p">).</span><span class="nx">toFixed</span><span class="p">(</span><span class="mi">2</span><span class="p">)</span>
+<span class="p">}</span><span class="s2">
+ms`</span><span class="p">);</span>
+<span class="c1">// Risultato tipico: allocUnsafe è 5-20x più veloce su buffer grandi /*</span>
+    <span class="nx">Implemento</span> <span class="nx">un</span> <span class="nx">parser</span> <span class="nx">di</span> <span class="nx">pacchetti</span> <span class="nx">di</span> <span class="nx">rete</span> <span class="nx">binari</span> <span class="nx">con</span> <span class="nx">allocUnsafe</span><span class="p">.</span> <span class="nx">La</span> <span class="nx">regola</span>
+    <span class="nx">d</span><span class="dl">'</span><span class="s1">oro: devo sovrascrivere TUTTI i byte prima di leggere o inviare il buffer.
+    */ class BinaryPacketParser
+{
+    constructor() {
+        // Pre-alloco un pool di buffer riusabili per evitare allocazioni
+            continue this._pool = []
+        ;
+        this._poolSize = 20;
+        for (let i = 0;
+        i &lt; this._poolSize;
+        i++) {
+            this._pool.push(Buffer.allocUnsafe(64 * 1024));
+            // 64KB ciascuno
+        }
+    }
+    acquireBuffer() {
+        return this._pool.pop() ?? Buffer.allocUnsafe(64 * 1024);
+        // Fallback se pool esaurito
+    }
+    releaseBuffer(buf) {
+        if (this._pool.length &lt; this._poolSize) {
+            this._pool.push(buf);
+            // Restituisco al pool: zero nuove allocazioni
+        }
+    }
+    /* Costruisco un pacchetto di risposta binario. Sovrascivo ogni byte: nessun
+        dato "sporco" trapela. */
+    buildResponsePacket(requestId, statusCode, payload) {
+        const payloadLength = payload.length;
+        const HEADER_SIZE = 12;
+        // 4 (magic) + 4 (requestId) + 2 (statusCode) + 2 (payloadLength) const
+            totalSize = HEADER_SIZE + payloadLength
+        ;
+        const buffer = this.acquireBuffer();
+        // Potrebbe contenere dati vecchi: devo sovrascrivere tutto // Header:
+            ogni campo viene scritto esplicitamente
+            buffer.writeUInt32BE(0xDEADBEEF, 0)
+        ;
+        // Magic number: 4 byte buffer.writeUInt32BE(requestId, 4)
+        ;
+        // Request ID: 4 byte buffer.writeUInt16BE(statusCode, 8)
+        ;
+        // Status code: 2 byte buffer.writeUInt16BE(payloadLength, 10)
+        ;
+        // Payload length: 2 byte // Payload: copio i dati nel buffer
+            (sovrascrittura completa) payload.copy(buffer, HEADER_SIZE, 0,
+            payloadLength)
+        ;
+        // Ritorno solo la slice usata: non il buffer intero (potrebbe avere
+            dati vecchi oltre totalSize)
+        return buffer.slice(0, totalSize);
+    }
+    /* Parser del pacchetto ricevuto: leggo i campi dal buffer binario. */
+    parsePacket(rawBuffer) {
+        if (rawBuffer.length &lt; 12) throw new Error(</span><span class="dl">'</span><span class="nx">Pacchetto</span> <span class="nx">troppo</span> <span class="nx">corto</span><span class="dl">'</span><span class="s1">);
+        const magic = rawBuffer.readUInt32BE(0);
+        if (magic !== 0xDEADBEEF) throw new Error(</span><span class="dl">'</span><span class="nx">Magic</span> <span class="nx">number</span> <span class="nx">non</span> <span class="nx">valido</span><span class="p">:</span> <span class="dl">'</span><span class="s1"> +
+            magic.toString(16));
+        return {
+            requestId: rawBuffer.readUInt32BE(4), statusCode:
+                rawBuffer.readUInt16BE(8), payloadLength:
+                rawBuffer.readUInt16BE(10), payload: rawBuffer.slice(12, 12 +
+                rawBuffer.readUInt16BE(10))
+        }
+        ;
+    }
+}
+/* Uso Buffer.concat() con preallocazione per assemblare più chunk senza copie
+    intermedie. */
+function assemblePackets(chunks) {
+    // Calcolo la dimensione totale in anticipo: Buffer.concat può pre-allocare
+        const totalLength = chunks.reduce((sum, chunk) =&gt; sum + chunk.length, 0)
+    ;
+    // Buffer.concat con totalLength evita una scansione aggiuntiva per
+        calcolare la dimensione
+    return Buffer.concat(chunks, totalLength);
+}
+/* Sicurezza: scrivo zero nei buffer che contengono dati sensibili prima di
+    rilasciarli. */
+function secureRelease(buffer) {
+    buffer.fill(0);
+    // Sovrascrive tutti i byte con zero: nessun dato sensibile in memoria
+        residua parser.releaseBuffer(buffer)
+    ;
+}
 /* In un server TCP Node.js ad alto throughput: */
- const net = require('net'); const parser = new BinaryPacketParser(); const
-server = net.createServer((socket) =&gt;
-{ socket.on('data', (rawData) =&gt; 
-{ const packet = parser.parsePacket(rawData); const response =
-parser.buildResponsePacket(packet.requestId, 200, Buffer.from('OK'));
-socket.write(response); parser.releaseBuffer(response);
-// Restituzione al pool: zero allocazioni nella hot path }
-); }
-); server.listen(9000);
+const net = require(</span><span class="dl">'</span><span class="nx">net</span><span class="dl">'</span><span class="s1">);
+const parser = new BinaryPacketParser();
+const server = net.createServer((socket) =&gt; {
+    socket.on(</span><span class="dl">'</span><span class="nx">data</span><span class="dl">'</span><span class="s1">, (rawData) =&gt; {
+        const packet = parser.parsePacket(rawData);
+        const response = parser.buildResponsePacket(packet.requestId, 200,
+            Buffer.from(</span><span class="dl">'</span><span class="nx">OK</span><span class="dl">'</span><span class="s1">));
+        socket.write(response);
+        parser.releaseBuffer(response);
+        // Restituzione al pool: zero allocazioni nella hot path
+    }
+    );
+}
+);
+server.listen(9000);
 </span></pre></td></tr></tbody></table></code></pre></div></div>
 
         </article>

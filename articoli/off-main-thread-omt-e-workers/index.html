@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Off-Main-Thread (OMT) e Workers — DevLog</title>
-    <meta name="description" content="JS è single-threaded, ma il parsing di grandi JSON o il calcolo pesante bloccano l'Event Loop, causando 'jank' (scatti) nella UI. Worker Threads (Node) e Web Workers (Browser) permettono di spostare il lavoro CPU-bound su thread isolati. L'uso di Tra
+    <meta name="description" content="JS è single-threaded, ma il parsing di grandi JSON o il calcolo pesante bloccano l'Event Loop, causando "jank" (scatti) nella UI. Worker Threads (Node) e Web Workers (Browser) permettono di spostare il lavoro CPU-bound su thread isolati. L'uso di Tra
 ">
     <link rel="stylesheet" href="/appuntidiprogrammazione/assets/css/style.css">
 
@@ -196,113 +196,229 @@
 105
 106
 107
-</pre></td><td class="rouge-code"><pre><span class="o">*</span> <span class="nx">MAIN</span> <span class="nx">THREAD</span> <span class="p">(</span><span class="nx">main</span><span class="p">.</span><span class="nx">js</span><span class="p">):</span> <span class="nx">delego</span> <span class="nx">il</span> <span class="nx">parsing</span> <span class="nx">CSV</span> <span class="nx">al</span> <span class="nx">Worker</span> <span class="nx">con</span> <span class="nx">trasferimento</span> <span class="nx">zero</span><span class="o">-</span>
-<span class="o">*</span> <span class="nx">copy</span> <span class="nx">del</span> <span class="nx">buffer</span><span class="p">.</span> <span class="o">*</span><span class="sr">/</span><span class="err">
-</span> <span class="k">import</span> 
-<span class="p">{</span> <span class="nx">Worker</span> <span class="p">}</span>
- <span class="k">from</span> <span class="dl">'</span><span class="s1">worker_threads</span><span class="dl">'</span><span class="p">;</span> <span class="k">import</span> 
-<span class="p">{</span> <span class="nx">readFile</span> <span class="p">}</span>
- <span class="k">from</span> <span class="dl">'</span><span class="s1">fs/promises</span><span class="dl">'</span><span class="p">;</span> <span class="k">async</span> <span class="kd">function</span> <span class="nx">parseLargeCsv</span><span class="p">(</span><span class="nx">filePath</span><span class="p">)</span> 
-<span class="p">{</span> 
-<span class="c1">// Leggo il file come Buffer (ArrayBuffer sotto il cofano) const fileBuffer =</span>
-<span class="c1">// await readFile(filePath);</span>
-<span class="c1">// Creo il Worker e gli trasferisco l'ownership del buffer: ZERO copia in</span>
-<span class="c1">// memoria return new Promise((resolve, reject) =&gt;</span>
-<span class="p">{</span> <span class="kd">const</span> <span class="nx">worker</span> <span class="o">=</span> <span class="k">new</span> <span class="nx">Worker</span><span class="p">(</span><span class="dl">'</span><span class="s1">./csv-parser.worker.js</span><span class="dl">'</span><span class="p">,</span> 
-<span class="p">{</span> <span class="na">workerData</span><span class="p">:</span> 
-<span class="p">{</span> <span class="na">buffer</span><span class="p">:</span> <span class="nx">fileBuffer</span><span class="p">.</span><span class="nx">buffer</span> <span class="p">}</span>
- 
-<span class="c1">// Passo l'ArrayBuffer }</span>
-<span class="p">);</span> 
-<span class="c1">// Trasferisco l'ownership: fileBuffer non è più accessibile nel main thread</span>
-<span class="c1">// worker.postMessage(</span>
-<span class="p">{</span> <span class="na">buffer</span><span class="p">:</span> <span class="nx">fileBuffer</span><span class="p">.</span><span class="nx">buffer</span><span class="p">,</span> <span class="nx">filePath</span> <span class="p">}</span>
-<span class="p">,</span> <span class="p">[</span><span class="nx">fileBuffer</span><span class="p">.</span><span class="nx">buffer</span><span class="p">]</span> 
-<span class="c1">// Lista dei Transferable: trasferiti, non copiati ); worker.on('message',</span>
-<span class="c1">// (result) =&gt;</span>
-<span class="p">{</span> <span class="nx">resolve</span><span class="p">(</span><span class="nx">result</span><span class="p">);</span> <span class="nx">worker</span><span class="p">.</span><span class="nx">terminate</span><span class="p">();</span> <span class="p">}</span>
-<span class="p">);</span> <span class="nx">worker</span><span class="p">.</span><span class="nx">on</span><span class="p">(</span><span class="dl">'</span><span class="s1">error</span><span class="dl">'</span><span class="p">,</span> <span class="nx">reject</span><span class="p">);</span> <span class="p">}</span>
-<span class="p">);</span> <span class="p">}</span>
- 
-<span class="o">*</span> <span class="nx">WORKER</span> <span class="nx">THREAD</span> <span class="p">(</span><span class="nx">csv</span><span class="o">-</span><span class="nx">parser</span><span class="p">.</span><span class="nx">worker</span><span class="p">.</span><span class="nx">js</span><span class="p">):</span> <span class="nx">esegue</span> <span class="nx">il</span> <span class="nx">parsing</span> <span class="nx">CPU</span><span class="o">-</span><span class="nx">bound</span> <span class="k">in</span>
-<span class="o">*</span> <span class="nx">isolamento</span><span class="p">.</span> <span class="o">*</span><span class="sr">/</span><span class="err">
-</span> <span class="k">import</span> 
-<span class="p">{</span> <span class="nx">parentPort</span><span class="p">,</span> <span class="nx">workerData</span> <span class="p">}</span>
- <span class="k">from</span> <span class="dl">'</span><span class="s1">worker_threads</span><span class="dl">'</span><span class="p">;</span> 
+108
+109
+110
+111
+112
+113
+114
+115
+116
+117
+118
+119
+120
+121
+122
+123
+124
+125
+126
+127
+128
+129
+130
+131
+132
+133
+134
+135
+136
+137
+138
+139
+140
+141
+142
+143
+144
+145
+146
+147
+148
+149
+150
+151
+152
+153
+154
+155
+156
+157
+158
+159
+160
+161
+162
+163
+164
+165
+</pre></td><td class="rouge-code"><pre><span class="cm">/* MAIN THREAD (main.js): delego il parsing CSV al Worker con trasferimento
+    zero-copy del buffer. */</span>
+<span class="k">import</span> <span class="p">{</span>
+    <span class="nx">Worker</span>
+<span class="p">}</span>
+<span class="k">from</span> <span class="dl">'</span><span class="s1">worker_threads</span><span class="dl">'</span><span class="p">;</span>
+<span class="k">import</span> <span class="p">{</span>
+    <span class="nx">readFile</span>
+<span class="p">}</span>
+<span class="k">from</span> <span class="dl">'</span><span class="s1">fs/promises</span><span class="dl">'</span><span class="p">;</span>
+<span class="k">async</span> <span class="kd">function</span> <span class="nx">parseLargeCsv</span><span class="p">(</span><span class="nx">filePath</span><span class="p">)</span> <span class="p">{</span>
+    <span class="c1">// Leggo il file come Buffer (ArrayBuffer sotto il cofano) const fileBuffer</span>
+        <span class="o">=</span> <span class="k">await</span> <span class="nx">readFile</span><span class="p">(</span><span class="nx">filePath</span><span class="p">)</span>
+    <span class="p">;</span>
+    <span class="c1">// Creo il Worker e gli trasferisco l'ownership del buffer: ZERO copia in</span>
+        <span class="nx">memoria</span>
+    <span class="k">return</span> <span class="k">new</span> <span class="nb">Promise</span><span class="p">((</span><span class="nx">resolve</span><span class="p">,</span> <span class="nx">reject</span><span class="p">)</span> <span class="o">=&gt;</span> <span class="p">{</span>
+        <span class="kd">const</span> <span class="nx">worker</span> <span class="o">=</span> <span class="k">new</span> <span class="nx">Worker</span><span class="p">(</span><span class="dl">'</span><span class="s1">./csv-parser.worker.js</span><span class="dl">'</span><span class="p">,</span> <span class="p">{</span>
+            <span class="na">workerData</span><span class="p">:</span> <span class="p">{</span>
+                <span class="na">buffer</span><span class="p">:</span> <span class="nx">fileBuffer</span><span class="p">.</span><span class="nx">buffer</span>
+            <span class="p">}</span>
+            <span class="c1">// Passo l'ArrayBuffer</span>
+        <span class="p">}</span>
+        <span class="p">);</span>
+        <span class="c1">// Trasferisco l'ownership: fileBuffer non è più accessibile nel main</span>
+            <span class="nx">thread</span> <span class="nx">worker</span><span class="p">.</span><span class="nx">postMessage</span><span class="p">(</span>
+        <span class="p">{</span>
+            <span class="na">buffer</span><span class="p">:</span> <span class="nx">fileBuffer</span><span class="p">.</span><span class="nx">buffer</span><span class="p">,</span> <span class="nx">filePath</span>
+        <span class="p">}</span>
+        <span class="p">,</span> <span class="p">[</span><span class="nx">fileBuffer</span><span class="p">.</span><span class="nx">buffer</span><span class="p">]</span>
+        <span class="c1">// Lista dei Transferable: trasferiti, non copiati )</span>
+        <span class="p">;</span>
+        <span class="nx">worker</span><span class="p">.</span><span class="nx">on</span><span class="p">(</span><span class="dl">'</span><span class="s1">message</span><span class="dl">'</span><span class="p">,</span> <span class="p">(</span><span class="nx">result</span><span class="p">)</span> <span class="o">=&gt;</span> <span class="p">{</span>
+            <span class="nx">resolve</span><span class="p">(</span><span class="nx">result</span><span class="p">);</span>
+            <span class="nx">worker</span><span class="p">.</span><span class="nx">terminate</span><span class="p">();</span>
+        <span class="p">}</span>
+        <span class="p">);</span>
+        <span class="nx">worker</span><span class="p">.</span><span class="nx">on</span><span class="p">(</span><span class="dl">'</span><span class="s1">error</span><span class="dl">'</span><span class="p">,</span> <span class="nx">reject</span><span class="p">);</span>
+    <span class="p">}</span>
+    <span class="p">);</span>
+<span class="p">}</span>
+<span class="cm">/* WORKER THREAD (csv-parser.worker.js): esegue il parsing CPU-bound in
+    isolamento. */</span>
+<span class="k">import</span> <span class="p">{</span>
+    <span class="nx">parentPort</span><span class="p">,</span> <span class="nx">workerData</span>
+<span class="p">}</span>
+<span class="k">from</span> <span class="dl">'</span><span class="s1">worker_threads</span><span class="dl">'</span><span class="p">;</span>
 <span class="c1">// Ricevo il buffer trasferito: ho l'ownership completa, zero contesa con il</span>
-<span class="c1">// main thread const buffer = Buffer.from(workerData.buffer); const csvText =</span>
-<span class="c1">// buffer.toString('utf-8'); function parseCsv(text)</span>
-<span class="p">{</span> <span class="kd">const</span> <span class="nx">lines</span> <span class="o">=</span> <span class="nx">text</span><span class="p">.</span><span class="nx">split</span><span class="p">(</span><span class="dl">'</span><span class="s1">
-</span><span class="dl">'</span><span class="p">);</span> <span class="kd">const</span> <span class="nx">headers</span> <span class="o">=</span> <span class="nx">lines</span><span class="p">[</span><span class="mi">0</span><span class="p">].</span><span class="nx">split</span><span class="p">(</span><span class="dl">'</span><span class="s1">,</span><span class="dl">'</span><span class="p">);</span> <span class="kd">const</span> <span class="nx">rows</span> <span class="o">=</span> <span class="p">[];</span> 
-<span class="c1">// Parsing CPU-bound: non blocca più l'Event Loop del main thread for (let i =</span>
-<span class="c1">// 1; i &lt; lines.length; i++)</span>
-<span class="p">{</span> <span class="k">if</span> <span class="p">(</span><span class="nx">lines</span><span class="p">[</span><span class="nx">i</span><span class="p">].</span><span class="nx">trim</span><span class="p">()</span> <span class="o">===</span> <span class="dl">''</span><span class="p">)</span> <span class="k">continue</span><span class="p">;</span> <span class="kd">const</span> <span class="nx">values</span> <span class="o">=</span> <span class="nx">lines</span><span class="p">[</span><span class="nx">i</span><span class="p">].</span><span class="nx">split</span><span class="p">(</span><span class="dl">'</span><span class="s1">,</span><span class="dl">'</span><span class="p">);</span>
-<span class="kd">const</span> <span class="nx">row</span> <span class="o">=</span>
-<span class="p">{}</span>
-<span class="p">;</span> <span class="nx">headers</span><span class="p">.</span><span class="nx">forEach</span><span class="p">((</span><span class="nx">header</span><span class="p">,</span> <span class="nx">idx</span><span class="p">)</span> <span class="o">=&gt;</span> 
-<span class="p">{</span> <span class="nx">row</span><span class="p">[</span><span class="nx">header</span><span class="p">.</span><span class="nx">trim</span><span class="p">()]</span> <span class="o">=</span> <span class="nx">values</span><span class="p">[</span><span class="nx">idx</span><span class="p">]?.</span><span class="nx">trim</span><span class="p">();</span> <span class="p">}</span>
-<span class="p">);</span> <span class="nx">rows</span><span class="p">.</span><span class="nx">push</span><span class="p">(</span><span class="nx">row</span><span class="p">);</span> 
-<span class="c1">// Invio aggiornamenti di progresso ogni 10000 righe senza aspettare la fine if</span>
-<span class="c1">// (i % 10_000 === 0)</span>
-<span class="p">{</span> <span class="nx">parentPort</span><span class="p">.</span><span class="nx">postMessage</span><span class="p">(</span>
-<span class="p">{</span> <span class="na">type</span><span class="p">:</span> <span class="dl">'</span><span class="s1">progress</span><span class="dl">'</span><span class="p">,</span> <span class="na">processed</span><span class="p">:</span> <span class="nx">i</span><span class="p">,</span> <span class="na">total</span><span class="p">:</span> <span class="nx">lines</span><span class="p">.</span><span class="nx">length</span> <span class="p">}</span>
-<span class="p">);</span> <span class="p">}</span>
- <span class="p">}</span>
- <span class="k">return</span> <span class="nx">rows</span><span class="p">;</span> <span class="p">}</span>
- <span class="kd">const</span> <span class="nx">result</span> <span class="o">=</span> <span class="nx">parseCsv</span><span class="p">(</span><span class="nx">csvText</span><span class="p">);</span> 
+    <span class="nx">main</span> <span class="nx">thread</span> <span class="kd">const</span> <span class="nx">buffer</span> <span class="o">=</span> <span class="nx">Buffer</span><span class="p">.</span><span class="k">from</span><span class="p">(</span><span class="nx">workerData</span><span class="p">.</span><span class="nx">buffer</span><span class="p">)</span>
+<span class="p">;</span>
+<span class="kd">const</span> <span class="nx">csvText</span> <span class="o">=</span> <span class="nx">buffer</span><span class="p">.</span><span class="nx">toString</span><span class="p">(</span><span class="dl">'</span><span class="s1">utf-8</span><span class="dl">'</span><span class="p">);</span>
+<span class="kd">function</span> <span class="nx">parseCsv</span><span class="p">(</span><span class="nx">text</span><span class="p">)</span> <span class="p">{</span>
+    <span class="kd">const</span> <span class="nx">lines</span> <span class="o">=</span> <span class="nx">text</span><span class="p">.</span><span class="nx">split</span><span class="p">(</span><span class="dl">'</span><span class="s1"> </span><span class="dl">'</span><span class="p">);</span>
+    <span class="kd">const</span> <span class="nx">headers</span> <span class="o">=</span> <span class="nx">lines</span><span class="p">[</span><span class="mi">0</span><span class="p">].</span><span class="nx">split</span><span class="p">(</span><span class="dl">'</span><span class="s1">,</span><span class="dl">'</span><span class="p">);</span>
+    <span class="kd">const</span> <span class="nx">rows</span> <span class="o">=</span> <span class="p">[];</span>
+    <span class="c1">// Parsing CPU-bound: non blocca più l'Event Loop del main thread for (let i</span>
+        <span class="o">=</span> <span class="mi">1</span>
+    <span class="p">;</span>
+    <span class="nx">i</span> <span class="o">&lt;</span> <span class="nx">lines</span><span class="p">.</span><span class="nx">length</span><span class="p">;</span>
+    <span class="nx">i</span><span class="o">++</span><span class="p">)</span> <span class="p">{</span>
+        <span class="k">if</span> <span class="p">(</span><span class="nx">lines</span><span class="p">[</span><span class="nx">i</span><span class="p">].</span><span class="nx">trim</span><span class="p">()</span> <span class="o">===</span> <span class="dl">''</span><span class="p">)</span> <span class="k">continue</span><span class="p">;</span>
+        <span class="kd">const</span> <span class="nx">values</span> <span class="o">=</span> <span class="nx">lines</span><span class="p">[</span><span class="nx">i</span><span class="p">].</span><span class="nx">split</span><span class="p">(</span><span class="dl">'</span><span class="s1">,</span><span class="dl">'</span><span class="p">);</span>
+        <span class="kd">const</span> <span class="nx">row</span> <span class="o">=</span> <span class="p">{</span>
+        <span class="p">}</span>
+        <span class="p">;</span>
+        <span class="nx">headers</span><span class="p">.</span><span class="nx">forEach</span><span class="p">((</span><span class="nx">header</span><span class="p">,</span> <span class="nx">idx</span><span class="p">)</span> <span class="o">=&gt;</span> <span class="p">{</span>
+            <span class="nx">row</span><span class="p">[</span><span class="nx">header</span><span class="p">.</span><span class="nx">trim</span><span class="p">()]</span> <span class="o">=</span> <span class="nx">values</span><span class="p">[</span><span class="nx">idx</span><span class="p">]?.</span><span class="nx">trim</span><span class="p">();</span>
+        <span class="p">}</span>
+        <span class="p">);</span>
+        <span class="nx">rows</span><span class="p">.</span><span class="nx">push</span><span class="p">(</span><span class="nx">row</span><span class="p">);</span>
+        <span class="c1">// Invio aggiornamenti di progresso ogni 10000 righe senza aspettare la</span>
+            <span class="nx">fine</span> <span class="k">if</span> <span class="p">(</span><span class="nx">i</span> <span class="o">%</span> <span class="mi">10</span><span class="nx">_000</span> <span class="o">===</span> <span class="mi">0</span><span class="p">)</span>
+        <span class="p">{</span>
+            <span class="nx">parentPort</span><span class="p">.</span><span class="nx">postMessage</span><span class="p">({</span>
+                <span class="na">type</span><span class="p">:</span> <span class="dl">'</span><span class="s1">progress</span><span class="dl">'</span><span class="p">,</span> <span class="na">processed</span><span class="p">:</span> <span class="nx">i</span><span class="p">,</span> <span class="na">total</span><span class="p">:</span> <span class="nx">lines</span><span class="p">.</span><span class="nx">length</span>
+            <span class="p">}</span>
+            <span class="p">);</span>
+        <span class="p">}</span>
+    <span class="p">}</span>
+    <span class="k">return</span> <span class="nx">rows</span><span class="p">;</span>
+<span class="p">}</span>
+<span class="kd">const</span> <span class="nx">result</span> <span class="o">=</span> <span class="nx">parseCsv</span><span class="p">(</span><span class="nx">csvText</span><span class="p">);</span>
 <span class="c1">// Ritrasferisco i dati risultanti come ArrayBuffer per evitare la copia const</span>
-<span class="c1">// resultJson = JSON.stringify(result); const resultBuffer =</span>
-<span class="c1">// Buffer.from(resultJson).buffer; parentPort.postMessage(</span>
-<span class="p">{</span> <span class="na">type</span><span class="p">:</span> <span class="dl">'</span><span class="s1">result</span><span class="dl">'</span><span class="p">,</span> <span class="na">buffer</span><span class="p">:</span> <span class="nx">resultBuffer</span> <span class="p">}</span>
-<span class="p">,</span> <span class="p">[</span><span class="nx">resultBuffer</span><span class="p">]</span> 
-<span class="c1">// Zero-copy transfer del risultato ); </span>
+    <span class="nx">resultJson</span> <span class="o">=</span> <span class="nx">JSON</span><span class="p">.</span><span class="nx">stringify</span><span class="p">(</span><span class="nx">result</span><span class="p">)</span>
+<span class="p">;</span>
+<span class="kd">const</span> <span class="nx">resultBuffer</span> <span class="o">=</span> <span class="nx">Buffer</span><span class="p">.</span><span class="k">from</span><span class="p">(</span><span class="nx">resultJson</span><span class="p">).</span><span class="nx">buffer</span><span class="p">;</span>
+<span class="nx">parentPort</span><span class="p">.</span><span class="nx">postMessage</span><span class="p">(</span> <span class="p">{</span>
+    <span class="na">type</span><span class="p">:</span> <span class="dl">'</span><span class="s1">result</span><span class="dl">'</span><span class="p">,</span> <span class="na">buffer</span><span class="p">:</span> <span class="nx">resultBuffer</span>
+<span class="p">}</span>
+<span class="p">,</span> <span class="p">[</span><span class="nx">resultBuffer</span><span class="p">]</span>
+<span class="c1">// Zero-copy transfer del risultato )</span>
+<span class="p">;</span>
 <span class="cm">/* Per browser, uso Web Workers con la stessa logica di trasferimento: */</span>
- 
-<span class="c1">// main.js (browser) function parseCsvInWorker(file) </span>
-<span class="p">{</span> <span class="k">return</span> <span class="k">new</span> <span class="nb">Promise</span><span class="p">((</span><span class="nx">resolve</span><span class="p">,</span> <span class="nx">reject</span><span class="p">)</span> <span class="o">=&gt;</span> 
-<span class="p">{</span> <span class="kd">const</span> <span class="nx">worker</span> <span class="o">=</span> <span class="k">new</span> <span class="nx">Worker</span><span class="p">(</span><span class="dl">'</span><span class="s1">/workers/csv-parser.js</span><span class="dl">'</span><span class="p">);</span>
-<span class="nx">file</span><span class="p">.</span><span class="nx">arrayBuffer</span><span class="p">().</span><span class="nx">then</span><span class="p">(</span><span class="nx">buffer</span> <span class="o">=&gt;</span>
-<span class="p">{</span> <span class="nx">worker</span><span class="p">.</span><span class="nx">postMessage</span><span class="p">(</span>
-<span class="p">{</span> <span class="nx">buffer</span> <span class="p">}</span>
-<span class="p">,</span> <span class="p">[</span><span class="nx">buffer</span><span class="p">]);</span> 
-<span class="c1">// Transferable: zero copy }</span>
-<span class="p">);</span> <span class="nx">worker</span><span class="p">.</span><span class="nx">onmessage</span> <span class="o">=</span> <span class="p">(</span><span class="nx">e</span><span class="p">)</span> <span class="o">=&gt;</span> 
-<span class="p">{</span> <span class="k">if</span> <span class="p">(</span><span class="nx">e</span><span class="p">.</span><span class="nx">data</span><span class="p">.</span><span class="nx">type</span> <span class="o">===</span> <span class="dl">'</span><span class="s1">progress</span><span class="dl">'</span><span class="p">)</span> 
-<span class="p">{</span> <span class="nx">updateProgressBar</span><span class="p">(</span><span class="nx">e</span><span class="p">.</span><span class="nx">data</span><span class="p">.</span><span class="nx">processed</span> <span class="o">/</span> <span class="nx">e</span><span class="p">.</span><span class="nx">data</span><span class="p">.</span><span class="nx">total</span> <span class="o">*</span> <span class="mi">100</span><span class="p">);</span> <span class="p">}</span>
- <span class="k">else</span> <span class="k">if</span> <span class="p">(</span><span class="nx">e</span><span class="p">.</span><span class="nx">data</span><span class="p">.</span><span class="nx">type</span> <span class="o">===</span> <span class="dl">'</span><span class="s1">result</span><span class="dl">'</span><span class="p">)</span> 
-<span class="p">{</span> <span class="kd">const</span> <span class="nx">result</span> <span class="o">=</span> <span class="nx">JSON</span><span class="p">.</span><span class="nx">parse</span><span class="p">(</span><span class="nx">Buffer</span><span class="p">.</span><span class="k">from</span><span class="p">(</span><span class="nx">e</span><span class="p">.</span><span class="nx">data</span><span class="p">.</span><span class="nx">buffer</span><span class="p">).</span><span class="nx">toString</span><span class="p">());</span>
-<span class="nx">resolve</span><span class="p">(</span><span class="nx">result</span><span class="p">);</span> <span class="nx">worker</span><span class="p">.</span><span class="nx">terminate</span><span class="p">();</span> <span class="p">}</span>
- <span class="p">}</span>
-<span class="p">;</span> <span class="nx">worker</span><span class="p">.</span><span class="nx">onerror</span> <span class="o">=</span> <span class="nx">reject</span><span class="p">;</span> <span class="p">}</span>
-<span class="p">);</span> <span class="p">}</span>
- 
-<span class="o">*</span> <span class="nx">Per</span> <span class="nx">task</span> <span class="nx">CPU</span><span class="o">-</span><span class="nx">bound</span> <span class="nx">ripetitivi</span><span class="p">,</span> <span class="nx">uso</span> <span class="nx">un</span> <span class="nx">Worker</span> <span class="nx">Pool</span> <span class="nx">per</span> <span class="nx">evitare</span> <span class="nx">il</span> <span class="nx">costo</span> <span class="nx">di</span>
-<span class="o">*</span> <span class="nx">creazione</span> <span class="nx">del</span> <span class="nx">Worker</span><span class="p">:</span> <span class="o">*</span><span class="sr">/</span><span class="err">
-</span> <span class="kd">class</span> <span class="nx">WorkerPool</span> 
-<span class="p">{</span> <span class="kd">constructor</span><span class="p">(</span><span class="nx">workerScript</span><span class="p">,</span> <span class="nx">poolSize</span> <span class="o">=</span> <span class="nb">navigator</span><span class="p">.</span><span class="nx">hardwareConcurrency</span><span class="p">)</span> 
-<span class="p">{</span> <span class="k">this</span><span class="p">.</span><span class="nx">workers</span> <span class="o">=</span> <span class="nb">Array</span><span class="p">.</span><span class="k">from</span><span class="p">(</span>
-<span class="p">{</span> <span class="na">length</span><span class="p">:</span> <span class="nx">poolSize</span> <span class="p">}</span>
-<span class="p">,</span> <span class="p">()</span> <span class="o">=&gt;</span> <span class="k">new</span> <span class="nx">Worker</span><span class="p">(</span><span class="nx">workerScript</span><span class="p">));</span> <span class="k">this</span><span class="p">.</span><span class="nx">queue</span> <span class="o">=</span> <span class="p">[];</span> <span class="k">this</span><span class="p">.</span><span class="nx">idle</span> <span class="o">=</span>
-<span class="p">[...</span><span class="k">this</span><span class="p">.</span><span class="nx">workers</span><span class="p">];</span> <span class="k">this</span><span class="p">.</span><span class="nx">workers</span><span class="p">.</span><span class="nx">forEach</span><span class="p">(</span><span class="nx">w</span> <span class="o">=&gt;</span>
-<span class="p">{</span> <span class="nx">w</span><span class="p">.</span><span class="nx">onmessage</span> <span class="o">=</span> <span class="p">(</span><span class="nx">e</span><span class="p">)</span> <span class="o">=&gt;</span> 
-<span class="p">{</span> <span class="kd">const</span> <span class="nx">resolve</span> <span class="o">=</span> <span class="nx">w</span><span class="p">.</span><span class="nx">_currentResolve</span><span class="p">;</span> <span class="nx">w</span><span class="p">.</span><span class="nx">_currentResolve</span> <span class="o">=</span> <span class="kc">null</span><span class="p">;</span>
-<span class="k">this</span><span class="p">.</span><span class="nx">idle</span><span class="p">.</span><span class="nx">push</span><span class="p">(</span><span class="nx">w</span><span class="p">);</span> <span class="k">this</span><span class="p">.</span><span class="nx">_processQueue</span><span class="p">();</span> <span class="nx">resolve</span><span class="p">(</span><span class="nx">e</span><span class="p">.</span><span class="nx">data</span><span class="p">);</span> <span class="p">}</span>
-<span class="p">;</span> <span class="p">}</span>
-<span class="p">);</span> <span class="p">}</span>
- <span class="nx">submit</span><span class="p">(</span><span class="nx">data</span><span class="p">,</span> <span class="nx">transferables</span> <span class="o">=</span> <span class="p">[])</span> 
-<span class="p">{</span> <span class="k">return</span> <span class="k">new</span> <span class="nb">Promise</span><span class="p">((</span><span class="nx">resolve</span><span class="p">)</span> <span class="o">=&gt;</span> 
-<span class="p">{</span> <span class="k">this</span><span class="p">.</span><span class="nx">queue</span><span class="p">.</span><span class="nx">push</span><span class="p">(</span>
-<span class="p">{</span> <span class="nx">data</span><span class="p">,</span> <span class="nx">transferables</span><span class="p">,</span> <span class="nx">resolve</span> <span class="p">}</span>
-<span class="p">);</span> <span class="k">this</span><span class="p">.</span><span class="nx">_processQueue</span><span class="p">();</span> <span class="p">}</span>
-<span class="p">);</span> <span class="p">}</span>
- <span class="nx">_processQueue</span><span class="p">()</span> 
-<span class="p">{</span> <span class="k">if</span> <span class="p">(</span><span class="k">this</span><span class="p">.</span><span class="nx">queue</span><span class="p">.</span><span class="nx">length</span> <span class="o">&gt;</span> <span class="mi">0</span> <span class="o">&amp;&amp;</span> <span class="k">this</span><span class="p">.</span><span class="nx">idle</span><span class="p">.</span><span class="nx">length</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">)</span> 
-<span class="p">{</span> <span class="kd">const</span> <span class="nx">worker</span> <span class="o">=</span> <span class="k">this</span><span class="p">.</span><span class="nx">idle</span><span class="p">.</span><span class="nx">pop</span><span class="p">();</span> <span class="kd">const</span> 
-<span class="p">{</span> <span class="nx">data</span><span class="p">,</span> <span class="nx">transferables</span><span class="p">,</span> <span class="nx">resolve</span> <span class="p">}</span>
- <span class="o">=</span> <span class="k">this</span><span class="p">.</span><span class="nx">queue</span><span class="p">.</span><span class="nx">shift</span><span class="p">();</span> <span class="nx">worker</span><span class="p">.</span><span class="nx">_currentResolve</span> <span class="o">=</span> <span class="nx">resolve</span><span class="p">;</span>
-<span class="nx">worker</span><span class="p">.</span><span class="nx">postMessage</span><span class="p">(</span><span class="nx">data</span><span class="p">,</span> <span class="nx">transferables</span><span class="p">);</span> <span class="p">}</span>
- <span class="p">}</span>
- <span class="p">}</span>
+<span class="c1">// main.js (browser) function parseCsvInWorker(file)</span>
+<span class="p">{</span>
+    <span class="k">return</span> <span class="k">new</span> <span class="nb">Promise</span><span class="p">((</span><span class="nx">resolve</span><span class="p">,</span> <span class="nx">reject</span><span class="p">)</span> <span class="o">=&gt;</span> <span class="p">{</span>
+        <span class="kd">const</span> <span class="nx">worker</span> <span class="o">=</span> <span class="k">new</span> <span class="nx">Worker</span><span class="p">(</span><span class="dl">'</span><span class="s1">/workers/csv-parser.js</span><span class="dl">'</span><span class="p">);</span>
+        <span class="nx">file</span><span class="p">.</span><span class="nx">arrayBuffer</span><span class="p">().</span><span class="nx">then</span><span class="p">(</span><span class="nx">buffer</span> <span class="o">=&gt;</span> <span class="p">{</span>
+            <span class="nx">worker</span><span class="p">.</span><span class="nx">postMessage</span><span class="p">({</span>
+                <span class="nx">buffer</span>
+            <span class="p">}</span>
+            <span class="p">,</span> <span class="p">[</span><span class="nx">buffer</span><span class="p">]);</span>
+            <span class="c1">// Transferable: zero copy</span>
+        <span class="p">}</span>
+        <span class="p">);</span>
+        <span class="nx">worker</span><span class="p">.</span><span class="nx">onmessage</span> <span class="o">=</span> <span class="p">(</span><span class="nx">e</span><span class="p">)</span> <span class="o">=&gt;</span> <span class="p">{</span>
+            <span class="k">if</span> <span class="p">(</span><span class="nx">e</span><span class="p">.</span><span class="nx">data</span><span class="p">.</span><span class="nx">type</span> <span class="o">===</span> <span class="dl">'</span><span class="s1">progress</span><span class="dl">'</span><span class="p">)</span> <span class="p">{</span>
+                <span class="nx">updateProgressBar</span><span class="p">(</span><span class="nx">e</span><span class="p">.</span><span class="nx">data</span><span class="p">.</span><span class="nx">processed</span> <span class="o">/</span> <span class="nx">e</span><span class="p">.</span><span class="nx">data</span><span class="p">.</span><span class="nx">total</span> <span class="o">*</span> <span class="mi">100</span><span class="p">);</span>
+            <span class="p">}</span>
+            <span class="k">else</span> <span class="k">if</span> <span class="p">(</span><span class="nx">e</span><span class="p">.</span><span class="nx">data</span><span class="p">.</span><span class="nx">type</span> <span class="o">===</span> <span class="dl">'</span><span class="s1">result</span><span class="dl">'</span><span class="p">)</span> <span class="p">{</span>
+                <span class="kd">const</span> <span class="nx">result</span> <span class="o">=</span>
+                    <span class="nx">JSON</span><span class="p">.</span><span class="nx">parse</span><span class="p">(</span><span class="nx">Buffer</span><span class="p">.</span><span class="k">from</span><span class="p">(</span><span class="nx">e</span><span class="p">.</span><span class="nx">data</span><span class="p">.</span><span class="nx">buffer</span><span class="p">).</span><span class="nx">toString</span><span class="p">());</span>
+                <span class="nx">resolve</span><span class="p">(</span><span class="nx">result</span><span class="p">);</span>
+                <span class="nx">worker</span><span class="p">.</span><span class="nx">terminate</span><span class="p">();</span>
+            <span class="p">}</span>
+        <span class="p">}</span>
+        <span class="p">;</span>
+        <span class="nx">worker</span><span class="p">.</span><span class="nx">onerror</span> <span class="o">=</span> <span class="nx">reject</span><span class="p">;</span>
+    <span class="p">}</span>
+    <span class="p">);</span>
+<span class="p">}</span>
+<span class="cm">/* Per task CPU-bound ripetitivi, uso un Worker Pool per evitare il costo di
+    creazione del Worker: */</span>
+<span class="kd">class</span> <span class="nx">WorkerPool</span> <span class="p">{</span>
+    <span class="kd">constructor</span><span class="p">(</span><span class="nx">workerScript</span><span class="p">,</span> <span class="nx">poolSize</span> <span class="o">=</span> <span class="nb">navigator</span><span class="p">.</span><span class="nx">hardwareConcurrency</span><span class="p">)</span> <span class="p">{</span>
+        <span class="k">this</span><span class="p">.</span><span class="nx">workers</span> <span class="o">=</span> <span class="nb">Array</span><span class="p">.</span><span class="k">from</span><span class="p">({</span>
+            <span class="na">length</span><span class="p">:</span> <span class="nx">poolSize</span>
+        <span class="p">}</span>
+        <span class="p">,</span> <span class="p">()</span> <span class="o">=&gt;</span> <span class="k">new</span> <span class="nx">Worker</span><span class="p">(</span><span class="nx">workerScript</span><span class="p">));</span>
+        <span class="k">this</span><span class="p">.</span><span class="nx">queue</span> <span class="o">=</span> <span class="p">[];</span>
+        <span class="k">this</span><span class="p">.</span><span class="nx">idle</span> <span class="o">=</span> <span class="p">[...</span><span class="k">this</span><span class="p">.</span><span class="nx">workers</span><span class="p">];</span>
+        <span class="k">this</span><span class="p">.</span><span class="nx">workers</span><span class="p">.</span><span class="nx">forEach</span><span class="p">(</span><span class="nx">w</span> <span class="o">=&gt;</span> <span class="p">{</span>
+            <span class="nx">w</span><span class="p">.</span><span class="nx">onmessage</span> <span class="o">=</span> <span class="p">(</span><span class="nx">e</span><span class="p">)</span> <span class="o">=&gt;</span> <span class="p">{</span>
+                <span class="kd">const</span> <span class="nx">resolve</span> <span class="o">=</span> <span class="nx">w</span><span class="p">.</span><span class="nx">_currentResolve</span><span class="p">;</span>
+                <span class="nx">w</span><span class="p">.</span><span class="nx">_currentResolve</span> <span class="o">=</span> <span class="kc">null</span><span class="p">;</span>
+                <span class="k">this</span><span class="p">.</span><span class="nx">idle</span><span class="p">.</span><span class="nx">push</span><span class="p">(</span><span class="nx">w</span><span class="p">);</span>
+                <span class="k">this</span><span class="p">.</span><span class="nx">_processQueue</span><span class="p">();</span>
+                <span class="nx">resolve</span><span class="p">(</span><span class="nx">e</span><span class="p">.</span><span class="nx">data</span><span class="p">);</span>
+            <span class="p">}</span>
+            <span class="p">;</span>
+        <span class="p">}</span>
+        <span class="p">);</span>
+    <span class="p">}</span>
+    <span class="nx">submit</span><span class="p">(</span><span class="nx">data</span><span class="p">,</span> <span class="nx">transferables</span> <span class="o">=</span> <span class="p">[])</span> <span class="p">{</span>
+        <span class="k">return</span> <span class="k">new</span> <span class="nb">Promise</span><span class="p">((</span><span class="nx">resolve</span><span class="p">)</span> <span class="o">=&gt;</span> <span class="p">{</span>
+            <span class="k">this</span><span class="p">.</span><span class="nx">queue</span><span class="p">.</span><span class="nx">push</span><span class="p">({</span>
+                <span class="nx">data</span><span class="p">,</span> <span class="nx">transferables</span><span class="p">,</span> <span class="nx">resolve</span>
+            <span class="p">}</span>
+            <span class="p">);</span>
+            <span class="k">this</span><span class="p">.</span><span class="nx">_processQueue</span><span class="p">();</span>
+        <span class="p">}</span>
+        <span class="p">);</span>
+    <span class="p">}</span>
+    <span class="nx">_processQueue</span><span class="p">()</span> <span class="p">{</span>
+        <span class="k">if</span> <span class="p">(</span><span class="k">this</span><span class="p">.</span><span class="nx">queue</span><span class="p">.</span><span class="nx">length</span> <span class="o">&gt;</span> <span class="mi">0</span> <span class="o">&amp;&amp;</span> <span class="k">this</span><span class="p">.</span><span class="nx">idle</span><span class="p">.</span><span class="nx">length</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">)</span> <span class="p">{</span>
+            <span class="kd">const</span> <span class="nx">worker</span> <span class="o">=</span> <span class="k">this</span><span class="p">.</span><span class="nx">idle</span><span class="p">.</span><span class="nx">pop</span><span class="p">();</span>
+            <span class="kd">const</span> <span class="p">{</span>
+                <span class="nx">data</span><span class="p">,</span> <span class="nx">transferables</span><span class="p">,</span> <span class="nx">resolve</span>
+            <span class="p">}</span>
+            <span class="o">=</span> <span class="k">this</span><span class="p">.</span><span class="nx">queue</span><span class="p">.</span><span class="nx">shift</span><span class="p">();</span>
+            <span class="nx">worker</span><span class="p">.</span><span class="nx">_currentResolve</span> <span class="o">=</span> <span class="nx">resolve</span><span class="p">;</span>
+            <span class="nx">worker</span><span class="p">.</span><span class="nx">postMessage</span><span class="p">(</span><span class="nx">data</span><span class="p">,</span> <span class="nx">transferables</span><span class="p">);</span>
+        <span class="p">}</span>
+    <span class="p">}</span>
+<span class="p">}</span>
 </pre></td></tr></tbody></table></code></pre></div></div>
 
         </article>

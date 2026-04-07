@@ -100,27 +100,17 @@
 9
 10
 11
-12
-13
-14
-15
-16
-</pre></td><td class="rouge-code"><pre><span class="cm">/* Analizzo lo spazio libero medio nelle pagine della tabella */</span>
- <span class="k">SELECT</span> <span class="o">*</span> <span class="k">FROM</span> <span class="n">pg_freespace</span><span class="p">(</span><span class="s1">'my_table'</span><span class="p">)</span> <span class="k">ORDER</span> <span class="k">BY</span> <span class="n">avail</span> <span class="k">DESC</span> <span class="k">LIMIT</span> <span class="mi">20</span><span class="p">;</span> 
-<span class="o">*</span> <span class="n">Se</span> <span class="n">le</span> <span class="n">pagine</span> <span class="n">mostrano</span> <span class="n">avail</span> <span class="o">=</span> <span class="mi">0</span> <span class="n">nonostante</span> <span class="n">recenti</span> <span class="k">DELETE</span><span class="p">,</span> <span class="n">la</span> <span class="n">FSM</span> <span class="n">non</span> <span class="err">è</span>
-<span class="o">*</span> <span class="n">aggiornata</span> <span class="o">*/</span>
- 
-<span class="cm">/* Forzo un vacuum per aggiornare la FSM immediatamente */</span>
- <span class="k">VACUUM</span> <span class="n">my_table</span><span class="p">;</span> 
-<span class="o">*</span> <span class="n">Aumento</span> <span class="n">la</span> <span class="n">memoria</span> <span class="n">dedicata</span> <span class="n">alla</span> <span class="n">manutenzione</span> <span class="n">per</span> <span class="n">gestire</span> <span class="n">FSM</span> <span class="n">di</span> <span class="n">tabelle</span>
-<span class="o">*</span> <span class="n">grandi</span> <span class="o">*/</span>
- <span class="k">ALTER</span> <span class="k">SYSTEM</span> <span class="k">SET</span> <span class="n">maintenance_work_mem</span> <span class="o">=</span> <span class="s1">'512MB'</span><span class="p">;</span> <span class="k">SELECT</span> <span class="n">pg_reload_conf</span><span class="p">();</span> 
-<span class="o">*</span> <span class="n">Verifico</span> <span class="n">che</span> <span class="n">i</span> <span class="n">nuovi</span> <span class="k">INSERT</span> <span class="n">riutilizzino</span> <span class="n">le</span> <span class="n">pagine</span> <span class="n">libere</span> <span class="n">invece</span> <span class="n">di</span> <span class="n">allocarne</span>
-<span class="o">*</span> <span class="n">di</span> <span class="n">nuove</span> <span class="o">*/</span>
- <span class="k">SELECT</span> <span class="n">relpages</span><span class="p">,</span> <span class="n">pg_size_pretty</span><span class="p">(</span><span class="n">pg_relation_size</span><span class="p">(</span><span class="s1">'my_table'</span><span class="p">))</span> <span class="k">AS</span> <span class="n">table_size</span>
-<span class="k">FROM</span> <span class="n">pg_class</span> <span class="k">WHERE</span> <span class="n">relname</span> <span class="o">=</span> <span class="s1">'my_table'</span><span class="p">;</span>
-<span class="o">*</span> <span class="n">Confronto</span> <span class="n">relpages</span> <span class="n">prima</span> <span class="n">e</span> <span class="n">dopo</span> <span class="n">un</span> <span class="n">ciclo</span> <span class="k">delete</span><span class="o">+</span><span class="k">insert</span><span class="o">+</span><span class="k">vacuum</span><span class="p">:</span> <span class="n">deve</span> <span class="n">restare</span>
-<span class="o">*</span> <span class="n">stabile</span> <span class="o">*/</span>
+</pre></td><td class="rouge-code"><pre>    <span class="cm">/* Analizzo lo spazio libero medio nelle pagine della tabella */</span> <span class="k">SELECT</span> <span class="o">*</span>
+        <span class="k">FROM</span> <span class="n">pg_freespace</span><span class="p">(</span><span class="s1">'my_table'</span><span class="p">)</span> <span class="k">ORDER</span> <span class="k">BY</span> <span class="n">avail</span> <span class="k">DESC</span> <span class="k">LIMIT</span> <span class="mi">20</span><span class="p">;</span> <span class="cm">/* Se le
+        pagine mostrano avail = 0 nonostante recenti DELETE, la FSM non è
+        aggiornata */</span> <span class="cm">/* Forzo un vacuum per aggiornare la FSM immediatamente */</span>
+        <span class="k">VACUUM</span> <span class="n">my_table</span><span class="p">;</span> <span class="cm">/* Aumento la memoria dedicata alla manutenzione per
+        gestire FSM di tabelle grandi */</span> <span class="k">ALTER</span> <span class="k">SYSTEM</span> <span class="k">SET</span> <span class="n">maintenance_work_mem</span> <span class="o">=</span>
+        <span class="s1">'512MB'</span><span class="p">;</span> <span class="k">SELECT</span> <span class="n">pg_reload_conf</span><span class="p">();</span> <span class="cm">/* Verifico che i nuovi INSERT
+        riutilizzino le pagine libere invece di allocarne di nuove */</span> <span class="k">SELECT</span>
+        <span class="n">relpages</span><span class="p">,</span> <span class="n">pg_size_pretty</span><span class="p">(</span><span class="n">pg_relation_size</span><span class="p">(</span><span class="s1">'my_table'</span><span class="p">))</span> <span class="k">AS</span> <span class="n">table_size</span>
+        <span class="k">FROM</span> <span class="n">pg_class</span> <span class="k">WHERE</span> <span class="n">relname</span> <span class="o">=</span> <span class="s1">'my_table'</span><span class="p">;</span> <span class="cm">/* Confronto relpages prima e
+        dopo un ciclo delete+insert+vacuum: deve restare stabile */</span>
 </pre></td></tr></tbody></table></code></pre></div></div>
 
         </article>

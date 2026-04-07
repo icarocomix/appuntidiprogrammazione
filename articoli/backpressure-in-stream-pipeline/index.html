@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Backpressure in Stream Pipeline — DevLog</title>
-    <meta name="description" content="Leggere dati più velocemente di quanto si riesca a scriverli causa il riempimento del buffer (RAM). Il segnale di 'backpressure' indica al readable di fermarsi finché il writable non ha svuotato il suo buffer. L'uso di stream.pipeline() invece di .pi
+    <meta name="description" content="Leggere dati più velocemente di quanto si riesca a scriverli causa il riempimento del buffer (RAM). Il segnale di "backpressure" indica al readable di fermarsi finché il writable non ha svuotato il suo buffer. L'uso di stream.pipeline() invece di .pi
 ">
     <link rel="stylesheet" href="/appuntidiprogrammazione/assets/css/style.css">
 
@@ -197,115 +197,215 @@
 106
 107
 108
+109
+110
+111
+112
+113
+114
+115
+116
+117
+118
+119
+120
+121
+122
+123
+124
+125
+126
+127
+128
+129
+130
+131
+132
+133
+134
+135
+136
+137
+138
+139
+140
+141
+142
+143
+144
+145
+146
+147
+148
+149
+150
+151
+152
+153
+154
+155
+156
+157
+158
 </pre></td><td class="rouge-code"><pre><span class="cm">/* Dimostro il problema della backpressure non gestita con .pipe() manuale. */</span>
- 
 <span class="c1">// SBAGLIATO: nessuna gestione della backpressure const readable =</span>
-<span class="c1">// fs.createReadStream('huge-file.zip'); const writable =</span>
-<span class="c1">// fs.createWriteStream('output.zip'); readable.on('data', chunk =&gt;</span>
-<span class="p">{</span> <span class="kd">const</span> <span class="nx">canContinue</span> <span class="o">=</span> <span class="nx">writable</span><span class="p">.</span><span class="nx">write</span><span class="p">(</span><span class="nx">chunk</span><span class="p">);</span> 
-<span class="c1">// Se false, il buffer di writable è pieno if (!canContinue) </span>
-<span class="p">{</span> <span class="nx">readable</span><span class="p">.</span><span class="nx">pause</span><span class="p">();</span> 
-<span class="c1">// Devo mettere in pausa manualmente writable.once('drain', () =&gt;</span>
-<span class="c1">// readable.resume());</span>
-<span class="c1">// Riprendo quando il buffer si svuota }</span>
- <span class="p">}</span>
-<span class="p">);</span> 
-<span class="c1">// Questo è esattamente quello che pipeline() fa automaticamente </span>
-<span class="o">*</span> <span class="nx">CORRETTO</span><span class="p">:</span> <span class="nx">uso</span> <span class="nx">pipeline</span><span class="p">()</span> <span class="nx">con</span> <span class="k">async</span><span class="sr">/await per gestione automatica dell</span><span class="err">a
-</span><span class="o">*</span> <span class="nx">backpressure</span> <span class="nx">ed</span> <span class="nx">errori</span><span class="p">.</span> <span class="o">*</span><span class="sr">/</span><span class="err">
-</span> <span class="kd">const</span> 
-<span class="p">{</span> <span class="nx">pipeline</span> <span class="p">}</span>
- <span class="o">=</span> <span class="nx">require</span><span class="p">(</span><span class="dl">'</span><span class="s1">stream/promises</span><span class="dl">'</span><span class="p">);</span> <span class="kd">const</span> <span class="nx">fs</span> <span class="o">=</span> <span class="nx">require</span><span class="p">(</span><span class="dl">'</span><span class="s1">fs</span><span class="dl">'</span><span class="p">);</span> <span class="kd">const</span> <span class="nx">zlib</span> <span class="o">=</span>
-<span class="nx">require</span><span class="p">(</span><span class="dl">'</span><span class="s1">zlib</span><span class="dl">'</span><span class="p">);</span> <span class="k">async</span> <span class="kd">function</span> <span class="nx">transferLargeFile</span><span class="p">(</span><span class="nx">inputPath</span><span class="p">,</span> <span class="nx">outputPath</span><span class="p">)</span>
-<span class="p">{</span> <span class="nx">console</span><span class="p">.</span><span class="nx">log</span><span class="p">(</span><span class="s2">`Trasferimento di $
-{inputPath}
- -&gt; $
-{outputPath}
-`</span><span class="p">);</span> <span class="kd">const</span> <span class="nx">start</span> <span class="o">=</span> <span class="nb">Date</span><span class="p">.</span><span class="nx">now</span><span class="p">();</span> <span class="k">try</span> 
-<span class="p">{</span> <span class="k">await</span> <span class="nx">pipeline</span><span class="p">(</span> <span class="nx">fs</span><span class="p">.</span><span class="nx">createReadStream</span><span class="p">(</span><span class="nx">inputPath</span><span class="p">,</span> 
-<span class="p">{</span> <span class="na">highWaterMark</span><span class="p">:</span> <span class="mi">64</span> <span class="o">*</span> <span class="mi">1024</span> <span class="p">}</span>
-<span class="p">),</span> 
-<span class="c1">// 64KB chunk size zlib.createGzip(</span>
-<span class="p">{</span> <span class="na">level</span><span class="p">:</span> <span class="mi">6</span> <span class="p">}</span>
-<span class="p">),</span> 
-<span class="c1">// Comprimo in-stream: zero file intermedi fs.createWriteStream(outputPath) </span>
-<span class="c1">// pipeline gestisce pause/resume automaticamente ); const elapsed =</span>
-<span class="c1">// ((Date.now() - start) / 1000).toFixed(2); console.log(`Completato in $</span>
-<span class="p">{</span><span class="nx">elapsed</span><span class="p">}</span>
-<span class="nx">s</span><span class="s2">`); }
- catch (err) 
-{ console.error('Pipeline fallita:', err.message); 
-// pipeline chiude automaticamente tutti gli stream in caso di errore: zero fd
-// leak throw err; }
- }
- 
-* Implemento uno stream Transform personalizzato per manipolare i dati in
-* pipeline: */
- const 
-{ Transform }
- = require('stream'); class CsvToJsonTransform extends Transform 
-{ constructor() 
-{ super(
-{ readableObjectMode: true, 
-// Output: oggetti JS writableObjectMode: false 
-// Input: Buffer/string }
-); this._headers = null; this._buffer = ''; }
- _transform(chunk, encoding, callback) 
-{ this._buffer += chunk.toString(); const lines = this._buffer.split('
-'); this._buffer = lines.pop(); 
-// Tengo l'ultima riga incompleta per il prossimo chunk for (const line of
-// lines)
-{ if (!line.trim()) continue; if (!this._headers) 
-{ this._headers = line.split(',').map(h =&gt; h.trim()); }
- else 
-{ const values = line.split(','); const obj = 
-{}
-; this._headers.forEach((header, i) =&gt; 
-{ obj[header] = values[i]?.trim(); }
-); this.push(obj); 
-// push() rispetta la backpressure automaticamente }
- }
- callback(); 
-// Segnalo che ho finito di processare questo chunk }
- _flush(callback) 
-{ 
-// Processo l'eventuale ultima riga senza newline finale if (this._buffer.trim()
-// &amp;&amp; this._headers)
-{ const values = this._buffer.split(','); const obj = 
-{}
-; this._headers.forEach((header, i) =&gt; 
-{ obj[header] = values[i]?.trim(); }
-); this.push(obj); }
- callback(); }
- }
- 
-* Pipeline completa: leggo CSV da 10GB, trasformo in JSON, salvo senza caricare
-* nulla in RAM. */
- async function processMassiveCsv(inputPath, outputPath) 
-{ const jsonStream = fs.createWriteStream(outputPath); jsonStream.write('[
-'); let isFirst = true; const objectWriter = new Transform(
-{ objectMode: true, transform(obj, _, cb) 
-{ const prefix = isFirst ? '' : ',
-'; isFirst = false; cb(null, prefix + JSON.stringify(obj)); }
- }
-); await pipeline( fs.createReadStream(inputPath), new CsvToJsonTransform(),
-objectWriter, jsonStream ); fs.appendFileSync(outputPath, '
-]'); }
- 
-* In Express, uso pipeline per servire file grandi senza caricarli in memoria:
-* */
- app.get('/download/:filename', async (req, res) =&gt; 
-{ const filePath = path.join(UPLOADS_DIR, req.params.filename); const stat =
-fs.statSync(filePath); res.setHeader('Content-Length', stat.size);
-res.setHeader('Content-Type', 'application/octet-stream'); try
-{ await pipeline(fs.createReadStream(filePath), res); }
- catch (err) 
-{ if (err.code !== 'ERR_STREAM_PREMATURE_CLOSE') 
-{ console.error('Errore download:', err); }
- }
- }
-);
-</span></pre></td></tr></tbody></table></code></pre></div></div>
+    <span class="nx">fs</span><span class="p">.</span><span class="nx">createReadStream</span><span class="p">(</span><span class="dl">'</span><span class="s1">huge-file.zip</span><span class="dl">'</span><span class="p">)</span>
+<span class="p">;</span>
+<span class="kd">const</span> <span class="nx">writable</span> <span class="o">=</span> <span class="nx">fs</span><span class="p">.</span><span class="nx">createWriteStream</span><span class="p">(</span><span class="dl">'</span><span class="s1">output.zip</span><span class="dl">'</span><span class="p">);</span>
+<span class="nx">readable</span><span class="p">.</span><span class="nx">on</span><span class="p">(</span><span class="dl">'</span><span class="s1">data</span><span class="dl">'</span><span class="p">,</span> <span class="nx">chunk</span> <span class="o">=&gt;</span> <span class="p">{</span>
+    <span class="kd">const</span> <span class="nx">canContinue</span> <span class="o">=</span> <span class="nx">writable</span><span class="p">.</span><span class="nx">write</span><span class="p">(</span><span class="nx">chunk</span><span class="p">);</span>
+    <span class="c1">// Se false, il buffer di writable è pieno if (!canContinue)</span>
+    <span class="p">{</span>
+        <span class="nx">readable</span><span class="p">.</span><span class="nx">pause</span><span class="p">();</span>
+        <span class="c1">// Devo mettere in pausa manualmente writable.once('drain', () =&gt;</span>
+            <span class="nx">readable</span><span class="p">.</span><span class="nx">resume</span><span class="p">())</span>
+        <span class="p">;</span>
+        <span class="c1">// Riprendo quando il buffer si svuota</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+<span class="p">);</span>
+<span class="c1">// Questo è esattamente quello che pipeline() fa automaticamente /* CORRETTO:</span>
+    <span class="nx">uso</span> <span class="nx">pipeline</span><span class="p">()</span> <span class="nx">con</span> <span class="k">async</span><span class="sr">/await per gestione automatica della backpressure e</span><span class="err">d
+</span>    <span class="nx">errori</span><span class="p">.</span> <span class="o">*</span><span class="sr">/ cons</span><span class="err">t
+</span><span class="p">{</span>
+    <span class="nx">pipeline</span>
+<span class="p">}</span>
+<span class="o">=</span> <span class="nx">require</span><span class="p">(</span><span class="dl">'</span><span class="s1">stream/promises</span><span class="dl">'</span><span class="p">);</span>
+<span class="kd">const</span> <span class="nx">fs</span> <span class="o">=</span> <span class="nx">require</span><span class="p">(</span><span class="dl">'</span><span class="s1">fs</span><span class="dl">'</span><span class="p">);</span>
+<span class="kd">const</span> <span class="nx">zlib</span> <span class="o">=</span> <span class="nx">require</span><span class="p">(</span><span class="dl">'</span><span class="s1">zlib</span><span class="dl">'</span><span class="p">);</span>
+<span class="k">async</span> <span class="kd">function</span> <span class="nx">transferLargeFile</span><span class="p">(</span><span class="nx">inputPath</span><span class="p">,</span> <span class="nx">outputPath</span><span class="p">)</span> <span class="p">{</span>
+    <span class="nx">console</span><span class="p">.</span><span class="nx">log</span><span class="p">(</span><span class="s2">`Trasferimento di </span><span class="p">${</span>
+        <span class="nx">inputPath</span>
+    <span class="p">}</span><span class="s2">
+    -&gt; </span><span class="p">${</span>
+        <span class="nx">outputPath</span>
+    <span class="p">}</span><span class="s2">
+    `</span><span class="p">);</span>
+    <span class="kd">const</span> <span class="nx">start</span> <span class="o">=</span> <span class="nb">Date</span><span class="p">.</span><span class="nx">now</span><span class="p">();</span>
+    <span class="k">try</span> <span class="p">{</span>
+        <span class="k">await</span> <span class="nx">pipeline</span><span class="p">(</span> <span class="nx">fs</span><span class="p">.</span><span class="nx">createReadStream</span><span class="p">(</span><span class="nx">inputPath</span><span class="p">,</span> <span class="p">{</span>
+            <span class="na">highWaterMark</span><span class="p">:</span> <span class="mi">64</span> <span class="o">*</span> <span class="mi">1024</span>
+        <span class="p">}</span>
+        <span class="p">),</span>
+        <span class="c1">// 64KB chunk size zlib.createGzip(</span>
+        <span class="p">{</span>
+            <span class="na">level</span><span class="p">:</span> <span class="mi">6</span>
+        <span class="p">}</span>
+        <span class="p">),</span>
+        <span class="c1">// Comprimo in-stream: zero file intermedi</span>
+            <span class="nx">fs</span><span class="p">.</span><span class="nx">createWriteStream</span><span class="p">(</span><span class="nx">outputPath</span><span class="p">)</span> <span class="c1">// pipeline gestisce pause/resume</span>
+            <span class="nx">automaticamente</span> <span class="p">)</span>
+        <span class="p">;</span>
+        <span class="kd">const</span> <span class="nx">elapsed</span> <span class="o">=</span> <span class="p">((</span><span class="nb">Date</span><span class="p">.</span><span class="nx">now</span><span class="p">()</span> <span class="o">-</span> <span class="nx">start</span><span class="p">)</span> <span class="o">/</span> <span class="mi">1000</span><span class="p">).</span><span class="nx">toFixed</span><span class="p">(</span><span class="mi">2</span><span class="p">);</span>
+        <span class="nx">console</span><span class="p">.</span><span class="nx">log</span><span class="p">(</span><span class="s2">`Completato in </span><span class="p">${</span>
+            <span class="nx">elapsed</span>
+        <span class="p">}</span><span class="s2">
+        s`</span><span class="p">);</span>
+    <span class="p">}</span>
+    <span class="k">catch</span> <span class="p">(</span><span class="nx">err</span><span class="p">)</span> <span class="p">{</span>
+        <span class="nx">console</span><span class="p">.</span><span class="nx">error</span><span class="p">(</span><span class="dl">'</span><span class="s1">Pipeline fallita:</span><span class="dl">'</span><span class="p">,</span> <span class="nx">err</span><span class="p">.</span><span class="nx">message</span><span class="p">);</span>
+        <span class="c1">// pipeline chiude automaticamente tutti gli stream in caso di errore:</span>
+            <span class="nx">zero</span> <span class="nx">fd</span> <span class="nx">leak</span> <span class="k">throw</span> <span class="nx">err</span>
+        <span class="p">;</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+<span class="cm">/* Implemento uno stream Transform personalizzato per manipolare i dati in
+    pipeline: */</span>
+<span class="kd">const</span> <span class="p">{</span>
+    <span class="nx">Transform</span>
+<span class="p">}</span>
+<span class="o">=</span> <span class="nx">require</span><span class="p">(</span><span class="dl">'</span><span class="s1">stream</span><span class="dl">'</span><span class="p">);</span>
+<span class="kd">class</span> <span class="nx">CsvToJsonTransform</span> <span class="kd">extends</span> <span class="nx">Transform</span> <span class="p">{</span>
+    <span class="kd">constructor</span><span class="p">()</span> <span class="p">{</span>
+        <span class="k">super</span><span class="p">({</span>
+            <span class="na">readableObjectMode</span><span class="p">:</span> <span class="kc">true</span><span class="p">,</span>
+            <span class="c1">// Output: oggetti JS writableObjectMode: false // Input:</span>
+                <span class="nx">Buffer</span><span class="o">/</span><span class="nx">string</span>
+        <span class="p">}</span>
+        <span class="p">);</span>
+        <span class="k">this</span><span class="p">.</span><span class="nx">_headers</span> <span class="o">=</span> <span class="kc">null</span><span class="p">;</span>
+        <span class="k">this</span><span class="p">.</span><span class="nx">_buffer</span> <span class="o">=</span> <span class="dl">''</span><span class="p">;</span>
+    <span class="p">}</span>
+    <span class="nx">_transform</span><span class="p">(</span><span class="nx">chunk</span><span class="p">,</span> <span class="nx">encoding</span><span class="p">,</span> <span class="nx">callback</span><span class="p">)</span> <span class="p">{</span>
+        <span class="k">this</span><span class="p">.</span><span class="nx">_buffer</span> <span class="o">+=</span> <span class="nx">chunk</span><span class="p">.</span><span class="nx">toString</span><span class="p">();</span>
+        <span class="kd">const</span> <span class="nx">lines</span> <span class="o">=</span> <span class="k">this</span><span class="p">.</span><span class="nx">_buffer</span><span class="p">.</span><span class="nx">split</span><span class="p">(</span><span class="dl">'</span><span class="s1"> </span><span class="dl">'</span><span class="p">);</span>
+        <span class="k">this</span><span class="p">.</span><span class="nx">_buffer</span> <span class="o">=</span> <span class="nx">lines</span><span class="p">.</span><span class="nx">pop</span><span class="p">();</span>
+        <span class="c1">// Tengo l'ultima riga incompleta per il prossimo chunk for (const line</span>
+            <span class="k">of</span> <span class="nx">lines</span><span class="p">)</span>
+        <span class="p">{</span>
+            <span class="k">if</span> <span class="p">(</span><span class="o">!</span><span class="nx">line</span><span class="p">.</span><span class="nx">trim</span><span class="p">())</span> <span class="k">continue</span><span class="p">;</span>
+            <span class="k">if</span> <span class="p">(</span><span class="o">!</span><span class="k">this</span><span class="p">.</span><span class="nx">_headers</span><span class="p">)</span> <span class="p">{</span>
+                <span class="k">this</span><span class="p">.</span><span class="nx">_headers</span> <span class="o">=</span> <span class="nx">line</span><span class="p">.</span><span class="nx">split</span><span class="p">(</span><span class="dl">'</span><span class="s1">,</span><span class="dl">'</span><span class="p">).</span><span class="nx">map</span><span class="p">(</span><span class="nx">h</span> <span class="o">=&gt;</span> <span class="nx">h</span><span class="p">.</span><span class="nx">trim</span><span class="p">());</span>
+            <span class="p">}</span>
+            <span class="k">else</span> <span class="p">{</span>
+                <span class="kd">const</span> <span class="nx">values</span> <span class="o">=</span> <span class="nx">line</span><span class="p">.</span><span class="nx">split</span><span class="p">(</span><span class="dl">'</span><span class="s1">,</span><span class="dl">'</span><span class="p">);</span>
+                <span class="kd">const</span> <span class="nx">obj</span> <span class="o">=</span> <span class="p">{</span>
+                <span class="p">}</span>
+                <span class="p">;</span>
+                <span class="k">this</span><span class="p">.</span><span class="nx">_headers</span><span class="p">.</span><span class="nx">forEach</span><span class="p">((</span><span class="nx">header</span><span class="p">,</span> <span class="nx">i</span><span class="p">)</span> <span class="o">=&gt;</span> <span class="p">{</span>
+                    <span class="nx">obj</span><span class="p">[</span><span class="nx">header</span><span class="p">]</span> <span class="o">=</span> <span class="nx">values</span><span class="p">[</span><span class="nx">i</span><span class="p">]?.</span><span class="nx">trim</span><span class="p">();</span>
+                <span class="p">}</span>
+                <span class="p">);</span>
+                <span class="k">this</span><span class="p">.</span><span class="nx">push</span><span class="p">(</span><span class="nx">obj</span><span class="p">);</span>
+                <span class="c1">// push() rispetta la backpressure automaticamente</span>
+            <span class="p">}</span>
+        <span class="p">}</span>
+        <span class="nx">callback</span><span class="p">();</span>
+        <span class="c1">// Segnalo che ho finito di processare questo chunk</span>
+    <span class="p">}</span>
+    <span class="nx">_flush</span><span class="p">(</span><span class="nx">callback</span><span class="p">)</span> <span class="p">{</span>
+        <span class="c1">// Processo l'eventuale ultima riga senza newline finale if</span>
+            <span class="p">(</span><span class="k">this</span><span class="p">.</span><span class="nx">_buffer</span><span class="p">.</span><span class="nx">trim</span><span class="p">()</span> <span class="o">&amp;&amp;</span> <span class="k">this</span><span class="p">.</span><span class="nx">_headers</span><span class="p">)</span>
+        <span class="p">{</span>
+            <span class="kd">const</span> <span class="nx">values</span> <span class="o">=</span> <span class="k">this</span><span class="p">.</span><span class="nx">_buffer</span><span class="p">.</span><span class="nx">split</span><span class="p">(</span><span class="dl">'</span><span class="s1">,</span><span class="dl">'</span><span class="p">);</span>
+            <span class="kd">const</span> <span class="nx">obj</span> <span class="o">=</span> <span class="p">{</span>
+            <span class="p">}</span>
+            <span class="p">;</span>
+            <span class="k">this</span><span class="p">.</span><span class="nx">_headers</span><span class="p">.</span><span class="nx">forEach</span><span class="p">((</span><span class="nx">header</span><span class="p">,</span> <span class="nx">i</span><span class="p">)</span> <span class="o">=&gt;</span> <span class="p">{</span>
+                <span class="nx">obj</span><span class="p">[</span><span class="nx">header</span><span class="p">]</span> <span class="o">=</span> <span class="nx">values</span><span class="p">[</span><span class="nx">i</span><span class="p">]?.</span><span class="nx">trim</span><span class="p">();</span>
+            <span class="p">}</span>
+            <span class="p">);</span>
+            <span class="k">this</span><span class="p">.</span><span class="nx">push</span><span class="p">(</span><span class="nx">obj</span><span class="p">);</span>
+        <span class="p">}</span>
+        <span class="nx">callback</span><span class="p">();</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+<span class="cm">/* Pipeline completa: leggo CSV da 10GB, trasformo in JSON, salvo senza caricare
+    nulla in RAM. */</span>
+<span class="k">async</span> <span class="kd">function</span> <span class="nx">processMassiveCsv</span><span class="p">(</span><span class="nx">inputPath</span><span class="p">,</span> <span class="nx">outputPath</span><span class="p">)</span> <span class="p">{</span>
+    <span class="kd">const</span> <span class="nx">jsonStream</span> <span class="o">=</span> <span class="nx">fs</span><span class="p">.</span><span class="nx">createWriteStream</span><span class="p">(</span><span class="nx">outputPath</span><span class="p">);</span>
+    <span class="nx">jsonStream</span><span class="p">.</span><span class="nx">write</span><span class="p">(</span><span class="dl">'</span><span class="s1">[ </span><span class="dl">'</span><span class="p">);</span>
+    <span class="kd">let</span> <span class="nx">isFirst</span> <span class="o">=</span> <span class="kc">true</span><span class="p">;</span>
+    <span class="kd">const</span> <span class="nx">objectWriter</span> <span class="o">=</span> <span class="k">new</span> <span class="nx">Transform</span><span class="p">({</span>
+        <span class="na">objectMode</span><span class="p">:</span> <span class="kc">true</span><span class="p">,</span> <span class="nx">transform</span><span class="p">(</span><span class="nx">obj</span><span class="p">,</span> <span class="nx">_</span><span class="p">,</span> <span class="nx">cb</span><span class="p">)</span> <span class="p">{</span>
+            <span class="kd">const</span> <span class="nx">prefix</span> <span class="o">=</span> <span class="nx">isFirst</span> <span class="p">?</span> <span class="dl">''</span> <span class="p">:</span> <span class="dl">'</span><span class="s1">, </span><span class="dl">'</span><span class="p">;</span>
+            <span class="nx">isFirst</span> <span class="o">=</span> <span class="kc">false</span><span class="p">;</span>
+            <span class="nx">cb</span><span class="p">(</span><span class="kc">null</span><span class="p">,</span> <span class="nx">prefix</span> <span class="o">+</span> <span class="nx">JSON</span><span class="p">.</span><span class="nx">stringify</span><span class="p">(</span><span class="nx">obj</span><span class="p">));</span>
+        <span class="p">}</span>
+    <span class="p">}</span>
+    <span class="p">);</span>
+    <span class="k">await</span> <span class="nx">pipeline</span><span class="p">(</span> <span class="nx">fs</span><span class="p">.</span><span class="nx">createReadStream</span><span class="p">(</span><span class="nx">inputPath</span><span class="p">),</span> <span class="k">new</span> <span class="nx">CsvToJsonTransform</span><span class="p">(),</span>
+        <span class="nx">objectWriter</span><span class="p">,</span> <span class="nx">jsonStream</span> <span class="p">);</span>
+    <span class="nx">fs</span><span class="p">.</span><span class="nx">appendFileSync</span><span class="p">(</span><span class="nx">outputPath</span><span class="p">,</span> <span class="dl">'</span><span class="s1"> ]</span><span class="dl">'</span><span class="p">);</span>
+<span class="p">}</span>
+<span class="cm">/* In Express, uso pipeline per servire file grandi senza caricarli in memoria:
+    */</span>
+<span class="nx">app</span><span class="p">.</span><span class="kd">get</span><span class="p">(</span><span class="dl">'</span><span class="s1">/download/:filename</span><span class="dl">'</span><span class="p">,</span> <span class="k">async</span> <span class="p">(</span><span class="nx">req</span><span class="p">,</span> <span class="nx">res</span><span class="p">)</span> <span class="o">=&gt;</span> <span class="p">{</span>
+    <span class="kd">const</span> <span class="nx">filePath</span> <span class="o">=</span> <span class="nx">path</span><span class="p">.</span><span class="nx">join</span><span class="p">(</span><span class="nx">UPLOADS_DIR</span><span class="p">,</span> <span class="nx">req</span><span class="p">.</span><span class="nx">params</span><span class="p">.</span><span class="nx">filename</span><span class="p">);</span>
+    <span class="kd">const</span> <span class="nx">stat</span> <span class="o">=</span> <span class="nx">fs</span><span class="p">.</span><span class="nx">statSync</span><span class="p">(</span><span class="nx">filePath</span><span class="p">);</span>
+    <span class="nx">res</span><span class="p">.</span><span class="nx">setHeader</span><span class="p">(</span><span class="dl">'</span><span class="s1">Content-Length</span><span class="dl">'</span><span class="p">,</span> <span class="nx">stat</span><span class="p">.</span><span class="nx">size</span><span class="p">);</span>
+    <span class="nx">res</span><span class="p">.</span><span class="nx">setHeader</span><span class="p">(</span><span class="dl">'</span><span class="s1">Content-Type</span><span class="dl">'</span><span class="p">,</span> <span class="dl">'</span><span class="s1">application/octet-stream</span><span class="dl">'</span><span class="p">);</span>
+    <span class="k">try</span> <span class="p">{</span>
+        <span class="k">await</span> <span class="nx">pipeline</span><span class="p">(</span><span class="nx">fs</span><span class="p">.</span><span class="nx">createReadStream</span><span class="p">(</span><span class="nx">filePath</span><span class="p">),</span> <span class="nx">res</span><span class="p">);</span>
+    <span class="p">}</span>
+    <span class="k">catch</span> <span class="p">(</span><span class="nx">err</span><span class="p">)</span> <span class="p">{</span>
+        <span class="k">if</span> <span class="p">(</span><span class="nx">err</span><span class="p">.</span><span class="nx">code</span> <span class="o">!==</span> <span class="dl">'</span><span class="s1">ERR_STREAM_PREMATURE_CLOSE</span><span class="dl">'</span><span class="p">)</span> <span class="p">{</span>
+            <span class="nx">console</span><span class="p">.</span><span class="nx">error</span><span class="p">(</span><span class="dl">'</span><span class="s1">Errore download:</span><span class="dl">'</span><span class="p">,</span> <span class="nx">err</span><span class="p">);</span>
+        <span class="p">}</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+<span class="p">);</span>
+</pre></td></tr></tbody></table></code></pre></div></div>
 
         </article>
 

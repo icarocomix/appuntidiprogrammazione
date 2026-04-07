@@ -149,67 +149,103 @@
 58
 59
 60
-</pre></td><td class="rouge-code"><pre><span class="o">*</span> <span class="nx">UV_THREADPOOL_SIZE</span> <span class="nx">deve</span> <span class="nx">essere</span> <span class="nx">impostato</span> <span class="nx">PRIMA</span> <span class="nx">che</span> <span class="nx">il</span> <span class="nx">runtime</span> <span class="nx">Node</span><span class="p">.</span><span class="nx">js</span> <span class="nx">venga</span>
-<span class="o">*</span> <span class="nx">inizializzato</span><span class="p">.</span> <span class="nx">Il</span> <span class="nx">modo</span> <span class="nx">più</span> <span class="nx">sicuro</span> <span class="nx">è</span> <span class="nx">impostarlo</span> <span class="nx">come</span> <span class="nx">variabile</span> <span class="nx">d</span><span class="dl">'</span><span class="s1">ambiente prima
-* del lancio del processo, non tramite process.env durante l</span><span class="dl">'</span><span class="nx">esecuzione</span><span class="p">.</span> <span class="o">*</span><span class="sr">/</span><span class="err">
-</span> 
-<span class="c1">// Lancio del processo: UV_THREADPOOL_SIZE=16 node server.js </span>
-<span class="o">*</span> <span class="nx">Per</span> <span class="nx">impostarlo</span> <span class="nx">programmaticamente</span><span class="p">,</span> <span class="nx">deve</span> <span class="nx">essere</span> <span class="nx">la</span> <span class="nx">primissima</span> <span class="nx">cosa</span> <span class="nx">nel</span> <span class="nx">file</span>
-<span class="o">*</span> <span class="nx">entry</span> <span class="nx">point</span><span class="p">:</span> <span class="o">*</span><span class="sr">/</span><span class="err">
-</span> <span class="nx">process</span><span class="p">.</span><span class="nx">env</span><span class="p">.</span><span class="nx">UV_THREADPOOL_SIZE</span> <span class="o">=</span> <span class="nb">String</span><span class="p">(</span><span class="nx">require</span><span class="p">(</span><span class="dl">'</span><span class="s1">os</span><span class="dl">'</span><span class="p">).</span><span class="nx">cpus</span><span class="p">().</span><span class="nx">length</span><span class="p">);</span> <span class="kd">const</span>
-<span class="nx">crypto</span> <span class="o">=</span> <span class="nx">require</span><span class="p">(</span><span class="dl">'</span><span class="s1">crypto</span><span class="dl">'</span><span class="p">);</span>
-<span class="c1">// Importo DOPO aver impostato la variabile </span>
-<span class="o">*</span> <span class="nx">Dimostro</span> <span class="nx">il</span> <span class="nx">bottleneck</span> <span class="nx">con</span> <span class="nx">il</span> <span class="k">default</span> <span class="nx">di</span> <span class="mi">4</span> <span class="nx">thread</span><span class="p">:</span> <span class="mi">8</span> <span class="nx">hashing</span> <span class="nx">bcrypt</span>
-<span class="o">*</span> <span class="nx">simultanei</span><span class="p">.</span> <span class="nx">Con</span> <span class="nx">pool</span><span class="o">=</span><span class="mi">4</span><span class="p">,</span> <span class="nx">i</span> <span class="nx">secondi</span> <span class="mi">4</span> <span class="nx">aspettano</span> <span class="nx">che</span> <span class="nx">i</span> <span class="nx">primi</span> <span class="mi">4</span> <span class="nx">finiscano</span><span class="p">.</span> <span class="o">*</span><span class="sr">/</span><span class="err">
-</span> <span class="kd">function</span> <span class="nx">measureParallelHashing</span><span class="p">(</span><span class="nx">threadPoolSize</span><span class="p">)</span> 
-<span class="p">{</span> <span class="nx">process</span><span class="p">.</span><span class="nx">env</span><span class="p">.</span><span class="nx">UV_THREADPOOL_SIZE</span> <span class="o">=</span> <span class="nb">String</span><span class="p">(</span><span class="nx">threadPoolSize</span><span class="p">);</span> <span class="kd">const</span> <span class="nx">bcrypt</span> <span class="o">=</span>
-<span class="nx">require</span><span class="p">(</span><span class="dl">'</span><span class="s1">bcrypt</span><span class="dl">'</span><span class="p">);</span> <span class="kd">const</span> <span class="nx">start</span> <span class="o">=</span> <span class="nb">Date</span><span class="p">.</span><span class="nx">now</span><span class="p">();</span> <span class="kd">let</span> <span class="nx">completed</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span> <span class="kd">const</span> <span class="nx">TOTAL</span> <span class="o">=</span> <span class="mi">8</span><span class="p">;</span>
-<span class="k">return</span> <span class="k">new</span> <span class="nb">Promise</span><span class="p">(</span><span class="nx">resolve</span> <span class="o">=&gt;</span>
-<span class="p">{</span> <span class="k">for</span> <span class="p">(</span><span class="kd">let</span> <span class="nx">i</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span> <span class="nx">i</span> <span class="o">&lt;</span> <span class="nx">TOTAL</span><span class="p">;</span> <span class="nx">i</span><span class="o">++</span><span class="p">)</span> 
-<span class="p">{</span> <span class="nx">bcrypt</span><span class="p">.</span><span class="nx">hash</span><span class="p">(</span><span class="dl">'</span><span class="s1">password123</span><span class="dl">'</span><span class="p">,</span> <span class="mi">12</span><span class="p">,</span> <span class="p">(</span><span class="nx">err</span><span class="p">,</span> <span class="nx">hash</span><span class="p">)</span> <span class="o">=&gt;</span> 
-<span class="p">{</span> <span class="nx">completed</span><span class="o">++</span><span class="p">;</span> <span class="k">if</span> <span class="p">(</span><span class="nx">completed</span> <span class="o">===</span> <span class="nx">TOTAL</span><span class="p">)</span> 
-<span class="p">{</span> <span class="nx">resolve</span><span class="p">(</span><span class="nb">Date</span><span class="p">.</span><span class="nx">now</span><span class="p">()</span> <span class="o">-</span> <span class="nx">start</span><span class="p">);</span> <span class="p">}</span>
- <span class="p">}</span>
-<span class="p">);</span> <span class="p">}</span>
- <span class="p">}</span>
-<span class="p">);</span> <span class="p">}</span>
- 
-<span class="o">*</span> <span class="nx">Con</span> <span class="nx">pool</span><span class="o">=</span><span class="mi">4</span><span class="p">:</span> <span class="o">~</span><span class="mi">2</span><span class="nx">x</span> <span class="nx">più</span> <span class="nx">lento</span> <span class="nx">perché</span> <span class="nx">i</span> <span class="nx">secondi</span> <span class="mi">4</span> <span class="nx">hash</span> <span class="nx">aspettano</span> <span class="k">in</span> <span class="nx">coda</span><span class="p">.</span> <span class="nx">Con</span>
-<span class="o">*</span> <span class="nx">pool</span><span class="o">=</span><span class="mi">8</span><span class="p">:</span> <span class="nx">tutti</span> <span class="nx">e</span> <span class="mi">8</span> <span class="k">in</span> <span class="nx">parallelo</span><span class="p">,</span> <span class="nx">tempo</span> <span class="nx">dimezzato</span><span class="p">.</span> <span class="o">*</span><span class="sr">/</span><span class="err">
-</span> 
-<span class="o">*</span> <span class="nx">Identifico</span> <span class="nx">quali</span> <span class="nx">operazioni</span> <span class="nx">usano</span> <span class="nx">la</span> <span class="nx">thread</span> <span class="nx">pool</span> <span class="nx">di</span> <span class="nx">Libuv</span> <span class="nx">per</span> <span class="nx">dimensionarla</span>
-<span class="o">*</span> <span class="nx">correttamente</span><span class="p">:</span> <span class="o">*</span><span class="sr">/</span><span class="err">
-</span> 
-<span class="c1">// fs.readFile, fs.writeFile, fs.stat -&gt; thread pool </span>
-<span class="c1">// crypto.pbkdf2, crypto.randomBytes, crypto.scrypt -&gt; thread pool </span>
-<span class="c1">// bcrypt, argon2 (librerie native) -&gt; thread pool </span>
-<span class="c1">// DNS lookup (dns.lookup, non dns.resolve) -&gt; thread pool </span>
-<span class="c1">// http.get, net.connect -&gt; NON usano la thread pool (gestiti da epoll/kqueue) </span>
-<span class="cm">/* Monitoraggio della saturazione del thread pool in produzione: */</span>
- <span class="kd">const</span> 
-<span class="p">{</span> <span class="nx">monitorEventLoopDelay</span> <span class="p">}</span>
- <span class="o">=</span> <span class="nx">require</span><span class="p">(</span><span class="dl">'</span><span class="s1">perf_hooks</span><span class="dl">'</span><span class="p">);</span> <span class="kd">const</span> <span class="nx">histogram</span> <span class="o">=</span> <span class="nx">monitorEventLoopDelay</span><span class="p">(</span>
-<span class="p">{</span> <span class="na">resolution</span><span class="p">:</span> <span class="mi">20</span> <span class="p">}</span>
-<span class="p">);</span> <span class="nx">histogram</span><span class="p">.</span><span class="nx">enable</span><span class="p">();</span> <span class="nx">setInterval</span><span class="p">(()</span> <span class="o">=&gt;</span> 
-<span class="p">{</span> <span class="kd">const</span> <span class="nx">p99DelayMs</span> <span class="o">=</span> <span class="nx">histogram</span><span class="p">.</span><span class="nx">percentile</span><span class="p">(</span><span class="mi">99</span><span class="p">)</span> <span class="o">/</span> <span class="mi">1</span><span class="nx">e6</span><span class="p">;</span> <span class="k">if</span> <span class="p">(</span><span class="nx">p99DelayMs</span> <span class="o">&gt;</span> <span class="mi">100</span><span class="p">)</span> 
-<span class="p">{</span> <span class="nx">console</span><span class="p">.</span><span class="nx">warn</span><span class="p">(</span><span class="s2">`Event Loop P99 delay: $
-{p99DelayMs.toFixed(2)}
-ms - possibile saturazione thread pool`</span><span class="p">);</span> <span class="p">}</span>
- <span class="nx">histogram</span><span class="p">.</span><span class="nx">reset</span><span class="p">();</span> <span class="p">}</span>
-<span class="p">,</span> <span class="mi">5000</span><span class="p">);</span> 
-<span class="o">*</span> <span class="nx">In</span> <span class="nx">un</span> <span class="nx">server</span> <span class="nx">Express</span> <span class="nx">con</span> <span class="nx">bcrypt</span> <span class="nx">per</span> <span class="nx">l</span><span class="dl">'</span><span class="s1">autenticazione, dimensiono il pool in
-* base al carico atteso: */
- 
-// Regola empirica: UV_THREADPOOL_SIZE = min(128, cpuCount * 4) 
-// Per un server con 8 core e 50 login/s concorrenti: UV_THREADPOOL_SIZE=32
-// const optimalPoolSize = Math.min(128, require(</span><span class="dl">'</span><span class="nx">os</span><span class="dl">'</span><span class="s1">).cpus().length * 4);
-// process.env.UV_THREADPOOL_SIZE = String(optimalPoolSize); console.log(`Thread
-// pool configurato a $
-{optimalPoolSize}
- thread per $
-{require(</span><span class="dl">'</span><span class="nx">os</span><span class="dl">'</span><span class="s1">).cpus().length}
- core`);
-</span></pre></td></tr></tbody></table></code></pre></div></div>
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+</pre></td><td class="rouge-code"><pre><span class="cm">/* UV_THREADPOOL_SIZE deve essere impostato PRIMA che il runtime Node.js venga
+    inizializzato. Il modo più sicuro è impostarlo come variabile d'ambiente
+    prima del lancio del processo, non tramite process.env durante l'esecuzione.
+    */</span>
+<span class="c1">// Lancio del processo: UV_THREADPOOL_SIZE=16 node server.js /* Per impostarlo</span>
+    <span class="nx">programmaticamente</span><span class="p">,</span> <span class="nx">deve</span> <span class="nx">essere</span> <span class="nx">la</span> <span class="nx">primissima</span> <span class="nx">cosa</span> <span class="nx">nel</span> <span class="nx">file</span> <span class="nx">entry</span> <span class="nx">point</span><span class="p">:</span> <span class="o">*</span><span class="sr">/</span><span class="err">
+</span>    <span class="nx">process</span><span class="p">.</span><span class="nx">env</span><span class="p">.</span><span class="nx">UV_THREADPOOL_SIZE</span> <span class="o">=</span> <span class="nb">String</span><span class="p">(</span><span class="nx">require</span><span class="p">(</span><span class="dl">'</span><span class="s1">os</span><span class="dl">'</span><span class="p">).</span><span class="nx">cpus</span><span class="p">().</span><span class="nx">length</span><span class="p">)</span>
+<span class="p">;</span>
+<span class="kd">const</span> <span class="nx">crypto</span> <span class="o">=</span> <span class="nx">require</span><span class="p">(</span><span class="dl">'</span><span class="s1">crypto</span><span class="dl">'</span><span class="p">);</span>
+<span class="c1">// Importo DOPO aver impostato la variabile /* Dimostro il bottleneck con il</span>
+    <span class="k">default</span> <span class="nx">di</span> <span class="mi">4</span> <span class="nx">thread</span><span class="p">:</span> <span class="mi">8</span> <span class="nx">hashing</span> <span class="nx">bcrypt</span> <span class="nx">simultanei</span><span class="p">.</span> <span class="nx">Con</span> <span class="nx">pool</span><span class="o">=</span><span class="mi">4</span><span class="p">,</span> <span class="nx">i</span> <span class="nx">secondi</span> <span class="mi">4</span>
+    <span class="nx">aspettano</span> <span class="nx">che</span> <span class="nx">i</span> <span class="nx">primi</span> <span class="mi">4</span> <span class="nx">finiscano</span><span class="p">.</span> <span class="o">*</span><span class="sr">/ functio</span><span class="err">n
+</span>    <span class="nx">measureParallelHashing</span><span class="p">(</span><span class="nx">threadPoolSize</span><span class="p">)</span>
+<span class="p">{</span>
+    <span class="nx">process</span><span class="p">.</span><span class="nx">env</span><span class="p">.</span><span class="nx">UV_THREADPOOL_SIZE</span> <span class="o">=</span> <span class="nb">String</span><span class="p">(</span><span class="nx">threadPoolSize</span><span class="p">);</span>
+    <span class="kd">const</span> <span class="nx">bcrypt</span> <span class="o">=</span> <span class="nx">require</span><span class="p">(</span><span class="dl">'</span><span class="s1">bcrypt</span><span class="dl">'</span><span class="p">);</span>
+    <span class="kd">const</span> <span class="nx">start</span> <span class="o">=</span> <span class="nb">Date</span><span class="p">.</span><span class="nx">now</span><span class="p">();</span>
+    <span class="kd">let</span> <span class="nx">completed</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
+    <span class="kd">const</span> <span class="nx">TOTAL</span> <span class="o">=</span> <span class="mi">8</span><span class="p">;</span>
+    <span class="k">return</span> <span class="k">new</span> <span class="nb">Promise</span><span class="p">(</span><span class="nx">resolve</span> <span class="o">=&gt;</span> <span class="p">{</span>
+        <span class="k">for</span> <span class="p">(</span><span class="kd">let</span> <span class="nx">i</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
+        <span class="nx">i</span> <span class="o">&lt;</span> <span class="nx">TOTAL</span><span class="p">;</span>
+        <span class="nx">i</span><span class="o">++</span><span class="p">)</span> <span class="p">{</span>
+            <span class="nx">bcrypt</span><span class="p">.</span><span class="nx">hash</span><span class="p">(</span><span class="dl">'</span><span class="s1">password123</span><span class="dl">'</span><span class="p">,</span> <span class="mi">12</span><span class="p">,</span> <span class="p">(</span><span class="nx">err</span><span class="p">,</span> <span class="nx">hash</span><span class="p">)</span> <span class="o">=&gt;</span> <span class="p">{</span>
+                <span class="nx">completed</span><span class="o">++</span><span class="p">;</span>
+                <span class="k">if</span> <span class="p">(</span><span class="nx">completed</span> <span class="o">===</span> <span class="nx">TOTAL</span><span class="p">)</span> <span class="p">{</span>
+                    <span class="nx">resolve</span><span class="p">(</span><span class="nb">Date</span><span class="p">.</span><span class="nx">now</span><span class="p">()</span> <span class="o">-</span> <span class="nx">start</span><span class="p">);</span>
+                <span class="p">}</span>
+            <span class="p">}</span>
+            <span class="p">);</span>
+        <span class="p">}</span>
+    <span class="p">}</span>
+    <span class="p">);</span>
+<span class="p">}</span>
+<span class="cm">/* Con pool=4: ~2x più lento perché i secondi 4 hash aspettano in coda. Con
+    pool=8: tutti e 8 in parallelo, tempo dimezzato. */</span>
+<span class="cm">/* Identifico quali operazioni usano la thread pool di Libuv per dimensionarla
+    correttamente: */</span>
+<span class="c1">// fs.readFile, fs.writeFile, fs.stat -&gt; thread pool // crypto.pbkdf2,</span>
+    <span class="nx">crypto</span><span class="p">.</span><span class="nx">randomBytes</span><span class="p">,</span> <span class="nx">crypto</span><span class="p">.</span><span class="nx">scrypt</span> <span class="o">-&gt;</span> <span class="nx">thread</span> <span class="nx">pool</span> <span class="c1">// bcrypt, argon2 (librerie</span>
+    <span class="nx">native</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nx">thread</span> <span class="nx">pool</span> <span class="c1">// DNS lookup (dns.lookup, non dns.resolve) -&gt; thread</span>
+    <span class="nx">pool</span> <span class="c1">// http.get, net.connect -&gt; NON usano la thread pool (gestiti da</span>
+    <span class="nx">epoll</span><span class="o">/</span><span class="nx">kqueue</span><span class="p">)</span> <span class="cm">/* Monitoraggio della saturazione del thread pool in
+    produzione: */</span> <span class="kd">const</span>
+<span class="p">{</span>
+    <span class="nx">monitorEventLoopDelay</span>
+<span class="p">}</span>
+<span class="o">=</span> <span class="nx">require</span><span class="p">(</span><span class="dl">'</span><span class="s1">perf_hooks</span><span class="dl">'</span><span class="p">);</span>
+<span class="kd">const</span> <span class="nx">histogram</span> <span class="o">=</span> <span class="nx">monitorEventLoopDelay</span><span class="p">({</span>
+    <span class="na">resolution</span><span class="p">:</span> <span class="mi">20</span>
+<span class="p">}</span>
+<span class="p">);</span>
+<span class="nx">histogram</span><span class="p">.</span><span class="nx">enable</span><span class="p">();</span>
+<span class="nx">setInterval</span><span class="p">(()</span> <span class="o">=&gt;</span> <span class="p">{</span>
+    <span class="kd">const</span> <span class="nx">p99DelayMs</span> <span class="o">=</span> <span class="nx">histogram</span><span class="p">.</span><span class="nx">percentile</span><span class="p">(</span><span class="mi">99</span><span class="p">)</span> <span class="o">/</span> <span class="mi">1</span><span class="nx">e6</span><span class="p">;</span>
+    <span class="k">if</span> <span class="p">(</span><span class="nx">p99DelayMs</span> <span class="o">&gt;</span> <span class="mi">100</span><span class="p">)</span> <span class="p">{</span>
+        <span class="nx">console</span><span class="p">.</span><span class="nx">warn</span><span class="p">(</span><span class="s2">`Event Loop P99 delay: </span><span class="p">${</span>
+            <span class="nx">p99DelayMs</span><span class="p">.</span><span class="nx">toFixed</span><span class="p">(</span><span class="mi">2</span><span class="p">)</span>
+        <span class="p">}</span><span class="s2">
+        ms - possibile saturazione thread pool`</span><span class="p">);</span>
+    <span class="p">}</span>
+    <span class="nx">histogram</span><span class="p">.</span><span class="nx">reset</span><span class="p">();</span>
+<span class="p">}</span>
+<span class="p">,</span> <span class="mi">5000</span><span class="p">);</span>
+<span class="cm">/* In un server Express con bcrypt per l'autenticazione, dimensiono il pool in
+    base al carico atteso: */</span>
+<span class="c1">// Regola empirica: UV_THREADPOOL_SIZE = min(128, cpuCount * 4) // Per un server</span>
+    <span class="nx">con</span> <span class="mi">8</span> <span class="nx">core</span> <span class="nx">e</span> <span class="mi">50</span> <span class="nx">login</span><span class="o">/</span><span class="nx">s</span> <span class="nx">concorrenti</span><span class="p">:</span> <span class="nx">UV_THREADPOOL_SIZE</span><span class="o">=</span><span class="mi">32</span> <span class="kd">const</span>
+    <span class="nx">optimalPoolSize</span> <span class="o">=</span> <span class="nb">Math</span><span class="p">.</span><span class="nx">min</span><span class="p">(</span><span class="mi">128</span><span class="p">,</span> <span class="nx">require</span><span class="p">(</span><span class="dl">'</span><span class="s1">os</span><span class="dl">'</span><span class="p">).</span><span class="nx">cpus</span><span class="p">().</span><span class="nx">length</span> <span class="o">*</span> <span class="mi">4</span><span class="p">)</span>
+<span class="p">;</span>
+<span class="nx">process</span><span class="p">.</span><span class="nx">env</span><span class="p">.</span><span class="nx">UV_THREADPOOL_SIZE</span> <span class="o">=</span> <span class="nb">String</span><span class="p">(</span><span class="nx">optimalPoolSize</span><span class="p">);</span>
+<span class="nx">console</span><span class="p">.</span><span class="nx">log</span><span class="p">(</span><span class="s2">`Thread pool configurato a </span><span class="p">${</span>
+    <span class="nx">optimalPoolSize</span>
+<span class="p">}</span><span class="s2">
+thread per </span><span class="p">${</span>
+    <span class="nx">require</span><span class="p">(</span><span class="dl">'</span><span class="s1">os</span><span class="dl">'</span><span class="p">).</span><span class="nx">cpus</span><span class="p">().</span><span class="nx">length</span>
+<span class="p">}</span><span class="s2">
+core`</span><span class="p">);</span>
+</pre></td></tr></tbody></table></code></pre></div></div>
 
         </article>
 

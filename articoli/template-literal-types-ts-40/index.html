@@ -198,116 +198,238 @@
 107
 108
 109
-</pre></td><td class="rouge-code"><pre><span class="o">*</span> <span class="nx">Template</span> <span class="nx">Literal</span> <span class="nx">Types</span><span class="p">:</span> <span class="nx">combino</span> <span class="nx">tipi</span> <span class="nx">stringa</span> <span class="nx">letterali</span> <span class="nx">per</span> <span class="nx">generare</span> <span class="nx">nuovi</span>
-<span class="o">*</span> <span class="nx">tipi</span><span class="p">.</span> <span class="o">*</span><span class="sr">/</span><span class="err">
-</span> <span class="nx">type</span> <span class="nx">Entity</span> <span class="o">=</span> <span class="dl">'</span><span class="s1">user</span><span class="dl">'</span> <span class="o">|</span> <span class="dl">'</span><span class="s1">order</span><span class="dl">'</span> <span class="o">|</span> <span class="dl">'</span><span class="s1">product</span><span class="dl">'</span> <span class="o">|</span> <span class="dl">'</span><span class="s1">invoice</span><span class="dl">'</span><span class="p">;</span> <span class="nx">type</span> <span class="nx">Action</span> <span class="o">=</span> <span class="dl">'</span><span class="s1">created</span><span class="dl">'</span>
-<span class="o">|</span> <span class="dl">'</span><span class="s1">updated</span><span class="dl">'</span> <span class="o">|</span> <span class="dl">'</span><span class="s1">deleted</span><span class="dl">'</span> <span class="o">|</span> <span class="dl">'</span><span class="s1">archived</span><span class="dl">'</span><span class="p">;</span>
+110
+111
+112
+113
+114
+115
+116
+117
+118
+119
+120
+121
+122
+123
+124
+125
+126
+127
+128
+129
+130
+131
+132
+133
+134
+135
+136
+137
+138
+139
+140
+141
+142
+143
+144
+145
+146
+147
+148
+149
+150
+151
+152
+153
+154
+155
+156
+157
+158
+159
+160
+161
+162
+163
+164
+165
+166
+167
+168
+169
+170
+</pre></td><td class="rouge-code"><pre><span class="cm">/* Template Literal Types: combino tipi stringa letterali per generare nuovi
+    tipi. */</span>
+<span class="nx">type</span> <span class="nx">Entity</span> <span class="o">=</span> <span class="dl">'</span><span class="s1">user</span><span class="dl">'</span> <span class="o">|</span> <span class="dl">'</span><span class="s1">order</span><span class="dl">'</span> <span class="o">|</span> <span class="dl">'</span><span class="s1">product</span><span class="dl">'</span> <span class="o">|</span> <span class="dl">'</span><span class="s1">invoice</span><span class="dl">'</span><span class="p">;</span>
+<span class="nx">type</span> <span class="nx">Action</span> <span class="o">=</span> <span class="dl">'</span><span class="s1">created</span><span class="dl">'</span> <span class="o">|</span> <span class="dl">'</span><span class="s1">updated</span><span class="dl">'</span> <span class="o">|</span> <span class="dl">'</span><span class="s1">deleted</span><span class="dl">'</span> <span class="o">|</span> <span class="dl">'</span><span class="s1">archived</span><span class="dl">'</span><span class="p">;</span>
 <span class="c1">// Genero automaticamente tutte le combinazioni: "user_created" | "user_updated"</span>
-<span class="c1">// | ... (16 tipi) type DomainEvent = `$</span>
-<span class="p">{</span><span class="nx">Entity</span><span class="p">}</span>
-<span class="nx">_$</span>
-<span class="p">{</span><span class="nx">Action</span><span class="p">}</span>
-<span class="s2">`; 
-// TypeScript genera l'intero prodotto cartesiano delle stringhe 
-// Utilizzo: solo stringhe valide sono accettate const validEvent: DomainEvent =
-// 'user_created';
-// OK const invalidEvent: DomainEvent = 'user_destroyed'; 
-// Errore TS: not assignable to type 'DomainEvent' 
-/* Creo un Event Emitter fortemente tipizzato con Template Literal Types. */
- 
-// Mappa evento -&gt; tipo del payload type EventPayloadMap = 
-{ user_created: 
-{ id: number; name: string; email: string }
-; user_updated: 
-{ id: number; changes: Partial&lt;
-{ name: string; email: string }
-&gt; }
-; user_deleted: 
-{ id: number; deletedAt: Date }
-; order_created: 
-{ orderId: string; userId: number; total: number }
-; order_updated: 
-{ orderId: string; status: 'pending' | 'shipped' | 'delivered' }
-; order_deleted: 
-{ orderId: string; reason: string }
-; }
-; class TypedEventEmitter 
-{ private handlers = new Map&lt;string, Set&lt;Function&gt;&gt;(); 
-// Il tipo del handler è inferito dal nome dell'evento: zero cast on(event: E,
-// handler: (payload: EventPayloadMap[E]) =&gt; void): () =&gt; void
-{ if (!this.handlers.has(event)) 
-{ this.handlers.set(event, new Set()); }
- this.handlers.get(event)!.add(handler); 
-// Ritorno la funzione di unsubscribe return () =&gt;
-// this.handlers.get(event)?.delete(handler); }
- emit(event: E, payload: EventPayloadMap[E]): void 
-{ this.handlers.get(event)?.forEach(handler =&gt; handler(payload)); }
- }
- const emitter = new TypedEventEmitter(); 
-// TypeScript inferisce automaticamente il tipo del payload dall'evento
-// emitter.on('user_created', (payload) =&gt;
-{ 
-// payload: 
-{ id: number; name: string; email: string }
- console.log(`</span><span class="nx">Nuovo</span> <span class="nx">utente</span><span class="p">:</span> <span class="nx">$</span>
-<span class="p">{</span><span class="nx">payload</span><span class="p">.</span><span class="nx">name</span><span class="p">}</span>
- <span class="p">(</span><span class="nx">$</span>
-<span class="p">{</span><span class="nx">payload</span><span class="p">.</span><span class="nx">email</span><span class="p">}</span>
-<span class="p">)</span><span class="s2">`); }
-); emitter.emit('user_created', 
-{ id: 1, name: 'Alice', email: 'alice@example.com' }
-); 
-// OK emitter.emit('user_created', 
-{ id: 1, name: 'Alice' }
-); 
-// Errore TS: manca 'email' 
-/* Template Literal Types per routing type-safe: */
- type HttpMethod = 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH'; type ApiRoute =
-`</span><span class="o">/</span><span class="nx">api</span><span class="o">/</span><span class="nx">$</span>
-<span class="p">{</span><span class="nx">string</span><span class="p">}</span>
-<span class="s2">`; type RouteKey = `</span><span class="nx">$</span>
-<span class="p">{</span><span class="nx">HttpMethod</span><span class="p">}</span>
- <span class="nx">$</span>
-<span class="p">{</span><span class="nx">ApiRoute</span><span class="p">}</span>
-<span class="s2">`; 
-// Registro i route handler con tipo validato a compile time const routes = new
-// Map&lt;RouteKey, Function&gt;(); function registerRoute(key: RouteKey, handler:
-// Function)
-{ routes.set(key, handler); }
- registerRoute('GET /api/users', () =&gt; 
-{}
-); 
-// OK registerRoute('POST /api/orders', () =&gt; 
-{}
-); 
-// OK registerRoute('INVALID /api/users', () =&gt; 
-{}
-); 
-// Errore TS: 'INVALID' non è un HttpMethod 
-/* Template Literal Types per CSS properties type-safe: */
- type Side = 'top' | 'right' | 'bottom' | 'left'; type SpacingProperty = `</span><span class="nx">$</span>
-<span class="p">{</span><span class="dl">'</span><span class="s1">margin</span><span class="dl">'</span> <span class="o">|</span> <span class="dl">'</span><span class="s1">padding</span><span class="dl">'</span><span class="p">}</span>
-<span class="o">-</span><span class="nx">$</span>
-<span class="p">{</span><span class="nx">Side</span><span class="p">}</span>
-<span class="s2">`; 
-// "margin-top" | "margin-right" | ... | "padding-left" (8 tipi) type CSSValue =
-// `</span><span class="nx">$</span>
-<span class="p">{</span><span class="nx">number</span><span class="p">}</span>
-<span class="nx">$</span>
-<span class="p">{</span><span class="dl">'</span><span class="s1">px</span><span class="dl">'</span> <span class="o">|</span> <span class="dl">'</span><span class="s1">rem</span><span class="dl">'</span> <span class="o">|</span> <span class="dl">'</span><span class="s1">em</span><span class="dl">'</span> <span class="o">|</span> <span class="dl">'</span><span class="s1">%</span><span class="dl">'</span><span class="p">}</span>
-<span class="s2">`; type StyleObject = Partial&lt;Record&lt;SpacingProperty, CSSValue&gt;&gt;; function
-applyStyles(element: HTMLElement, styles: StyleObject): void
-{ (Object.entries(styles) as [SpacingProperty, CSSValue][]).forEach(([prop,
-value]) =&gt;
-{ element.style.setProperty(prop, value); }
-); }
- applyStyles(document.body, 
-{ 'margin-top': '16px', 
-// OK 'padding-left': '1rem', 
-// OK 'margin-center': '8px', 
-// Errore TS: 'margin-center' non è una SpacingProperty }
-);
-</span></pre></td></tr></tbody></table></code></pre></div></div>
+    <span class="o">|</span> <span class="p">...</span> <span class="p">(</span><span class="mi">16</span> <span class="nx">tipi</span><span class="p">)</span> <span class="nx">type</span> <span class="nx">DomainEvent</span> <span class="o">=</span> <span class="s2">`$
+{
+    Entity
+}
+_</span><span class="p">${</span>
+    <span class="nx">Action</span>
+<span class="p">}</span><span class="s2">
+`</span><span class="p">;</span>
+<span class="c1">// TypeScript genera l'intero prodotto cartesiano delle stringhe // Utilizzo:</span>
+    <span class="nx">solo</span> <span class="nx">stringhe</span> <span class="nx">valide</span> <span class="nx">sono</span> <span class="nx">accettate</span> <span class="kd">const</span> <span class="nx">validEvent</span><span class="p">:</span> <span class="nx">DomainEvent</span> <span class="o">=</span>
+    <span class="dl">'</span><span class="s1">user_created</span><span class="dl">'</span>
+<span class="p">;</span>
+<span class="c1">// OK const invalidEvent: DomainEvent = 'user_destroyed'</span>
+<span class="p">;</span>
+<span class="c1">// Errore TS: not assignable to type 'DomainEvent' /* Creo un Event Emitter</span>
+    <span class="nx">fortemente</span> <span class="nx">tipizzato</span> <span class="nx">con</span> <span class="nx">Template</span> <span class="nx">Literal</span> <span class="nx">Types</span><span class="p">.</span> <span class="o">*</span><span class="sr">/ /</span><span class="o">/</span> <span class="nx">Mappa</span> <span class="nx">evento</span> <span class="o">-&gt;</span> <span class="nx">tipo</span>
+    <span class="nx">del</span> <span class="nx">payload</span> <span class="nx">type</span> <span class="nx">EventPayloadMap</span> <span class="o">=</span>
+<span class="p">{</span>
+    <span class="na">user_created</span><span class="p">:</span> <span class="p">{</span>
+        <span class="na">id</span><span class="p">:</span> <span class="nx">number</span><span class="p">;</span>
+        <span class="nl">name</span><span class="p">:</span> <span class="nx">string</span><span class="p">;</span>
+        <span class="nl">email</span><span class="p">:</span> <span class="nx">string</span>
+    <span class="p">}</span>
+    <span class="p">;</span>
+    <span class="nl">user_updated</span><span class="p">:</span> <span class="p">{</span>
+        <span class="na">id</span><span class="p">:</span> <span class="nx">number</span><span class="p">;</span>
+        <span class="nl">changes</span><span class="p">:</span> <span class="nx">Partial</span><span class="o">&lt;</span><span class="p">{</span>
+            <span class="na">name</span><span class="p">:</span> <span class="nx">string</span><span class="p">;</span>
+            <span class="nl">email</span><span class="p">:</span> <span class="nx">string</span>
+        <span class="p">}</span>
+        <span class="o">&gt;</span>
+    <span class="p">}</span>
+    <span class="p">;</span>
+    <span class="nl">user_deleted</span><span class="p">:</span> <span class="p">{</span>
+        <span class="na">id</span><span class="p">:</span> <span class="nx">number</span><span class="p">;</span>
+        <span class="nl">deletedAt</span><span class="p">:</span> <span class="nb">Date</span>
+    <span class="p">}</span>
+    <span class="p">;</span>
+    <span class="nl">order_created</span><span class="p">:</span> <span class="p">{</span>
+        <span class="na">orderId</span><span class="p">:</span> <span class="nx">string</span><span class="p">;</span>
+        <span class="nl">userId</span><span class="p">:</span> <span class="nx">number</span><span class="p">;</span>
+        <span class="nl">total</span><span class="p">:</span> <span class="nx">number</span>
+    <span class="p">}</span>
+    <span class="p">;</span>
+    <span class="nl">order_updated</span><span class="p">:</span> <span class="p">{</span>
+        <span class="na">orderId</span><span class="p">:</span> <span class="nx">string</span><span class="p">;</span>
+        <span class="nl">status</span><span class="p">:</span> <span class="dl">'</span><span class="s1">pending</span><span class="dl">'</span> <span class="o">|</span> <span class="dl">'</span><span class="s1">shipped</span><span class="dl">'</span> <span class="o">|</span> <span class="dl">'</span><span class="s1">delivered</span><span class="dl">'</span>
+    <span class="p">}</span>
+    <span class="p">;</span>
+    <span class="nl">order_deleted</span><span class="p">:</span> <span class="p">{</span>
+        <span class="na">orderId</span><span class="p">:</span> <span class="nx">string</span><span class="p">;</span>
+        <span class="nl">reason</span><span class="p">:</span> <span class="nx">string</span>
+    <span class="p">}</span>
+    <span class="p">;</span>
+<span class="p">}</span>
+<span class="p">;</span>
+<span class="kd">class</span> <span class="nx">TypedEventEmitter</span> <span class="p">{</span>
+    <span class="kr">private</span> <span class="nx">handlers</span> <span class="o">=</span> <span class="k">new</span> <span class="nb">Map</span><span class="o">&lt;</span><span class="nx">string</span><span class="p">,</span> <span class="nb">Set</span><span class="o">&lt;</span><span class="nb">Function</span><span class="o">&gt;&gt;</span><span class="p">();</span>
+    <span class="c1">// Il tipo del handler è inferito dal nome dell'evento: zero cast on(event:</span>
+        <span class="nx">E</span><span class="p">,</span> <span class="nx">handler</span><span class="p">:</span> <span class="p">(</span><span class="nx">payload</span><span class="p">:</span> <span class="nx">EventPayloadMap</span><span class="p">[</span><span class="nx">E</span><span class="p">])</span> <span class="o">=&gt;</span> <span class="k">void</span><span class="p">):</span> <span class="p">()</span> <span class="o">=&gt;</span> <span class="k">void</span>
+    <span class="p">{</span>
+        <span class="k">if</span> <span class="p">(</span><span class="o">!</span><span class="k">this</span><span class="p">.</span><span class="nx">handlers</span><span class="p">.</span><span class="nx">has</span><span class="p">(</span><span class="nx">event</span><span class="p">))</span> <span class="p">{</span>
+            <span class="k">this</span><span class="p">.</span><span class="nx">handlers</span><span class="p">.</span><span class="kd">set</span><span class="p">(</span><span class="nx">event</span><span class="p">,</span> <span class="k">new</span> <span class="nb">Set</span><span class="p">());</span>
+        <span class="p">}</span>
+        <span class="k">this</span><span class="p">.</span><span class="nx">handlers</span><span class="p">.</span><span class="kd">get</span><span class="p">(</span><span class="nx">event</span><span class="p">)</span><span class="o">!</span><span class="p">.</span><span class="nx">add</span><span class="p">(</span><span class="nx">handler</span><span class="p">);</span>
+        <span class="c1">// Ritorno la funzione di unsubscribe</span>
+        <span class="k">return</span> <span class="p">()</span> <span class="o">=&gt;</span> <span class="k">this</span><span class="p">.</span><span class="nx">handlers</span><span class="p">.</span><span class="kd">get</span><span class="p">(</span><span class="nx">event</span><span class="p">)?.</span><span class="k">delete</span><span class="p">(</span><span class="nx">handler</span><span class="p">);</span>
+    <span class="p">}</span>
+    <span class="nx">emit</span><span class="p">(</span><span class="nx">event</span><span class="p">:</span> <span class="nx">E</span><span class="p">,</span> <span class="nx">payload</span><span class="p">:</span> <span class="nx">EventPayloadMap</span><span class="p">[</span><span class="nx">E</span><span class="p">]):</span> <span class="k">void</span> <span class="p">{</span>
+        <span class="k">this</span><span class="p">.</span><span class="nx">handlers</span><span class="p">.</span><span class="kd">get</span><span class="p">(</span><span class="nx">event</span><span class="p">)?.</span><span class="nx">forEach</span><span class="p">(</span><span class="nx">handler</span> <span class="o">=&gt;</span> <span class="nx">handler</span><span class="p">(</span><span class="nx">payload</span><span class="p">));</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+<span class="kd">const</span> <span class="nx">emitter</span> <span class="o">=</span> <span class="k">new</span> <span class="nx">TypedEventEmitter</span><span class="p">();</span>
+<span class="c1">// TypeScript inferisce automaticamente il tipo del payload dall'evento</span>
+    <span class="nx">emitter</span><span class="p">.</span><span class="nx">on</span><span class="p">(</span><span class="dl">'</span><span class="s1">user_created</span><span class="dl">'</span><span class="p">,</span> <span class="p">(</span><span class="nx">payload</span><span class="p">)</span> <span class="o">=&gt;</span>
+<span class="p">{</span>
+    <span class="c1">// payload:</span>
+    <span class="p">{</span>
+        <span class="na">id</span><span class="p">:</span> <span class="nx">number</span><span class="p">;</span>
+        <span class="nl">name</span><span class="p">:</span> <span class="nx">string</span><span class="p">;</span>
+        <span class="nl">email</span><span class="p">:</span> <span class="nx">string</span>
+    <span class="p">}</span>
+    <span class="nx">console</span><span class="p">.</span><span class="nx">log</span><span class="p">(</span><span class="s2">`Nuovo utente: </span><span class="p">${</span>
+        <span class="nx">payload</span><span class="p">.</span><span class="nx">name</span>
+    <span class="p">}</span><span class="s2">
+    (</span><span class="p">${</span>
+        <span class="nx">payload</span><span class="p">.</span><span class="nx">email</span>
+    <span class="p">}</span><span class="s2">
+    )`</span><span class="p">);</span>
+<span class="p">}</span>
+<span class="p">);</span>
+<span class="nx">emitter</span><span class="p">.</span><span class="nx">emit</span><span class="p">(</span><span class="dl">'</span><span class="s1">user_created</span><span class="dl">'</span><span class="p">,</span> <span class="p">{</span>
+    <span class="na">id</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span> <span class="na">name</span><span class="p">:</span> <span class="dl">'</span><span class="s1">Alice</span><span class="dl">'</span><span class="p">,</span> <span class="na">email</span><span class="p">:</span> <span class="dl">'</span><span class="s1">alice
+    @example.com</span><span class="dl">'</span>
+<span class="p">}</span>
+<span class="p">);</span>
+<span class="c1">// OK emitter.emit('user_created',</span>
+<span class="p">{</span>
+    <span class="na">id</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span> <span class="na">name</span><span class="p">:</span> <span class="dl">'</span><span class="s1">Alice</span><span class="dl">'</span>
+<span class="p">}</span>
+<span class="p">);</span>
+<span class="c1">// Errore TS: manca 'email' /* Template Literal Types per routing type-safe: */</span>
+    <span class="nx">type</span> <span class="nx">HttpMethod</span> <span class="o">=</span> <span class="dl">'</span><span class="s1">GET</span><span class="dl">'</span> <span class="o">|</span> <span class="dl">'</span><span class="s1">POST</span><span class="dl">'</span> <span class="o">|</span> <span class="dl">'</span><span class="s1">PUT</span><span class="dl">'</span> <span class="o">|</span> <span class="dl">'</span><span class="s1">DELETE</span><span class="dl">'</span> <span class="o">|</span> <span class="dl">'</span><span class="s1">PATCH</span><span class="dl">'</span>
+<span class="p">;</span>
+<span class="nx">type</span> <span class="nx">ApiRoute</span> <span class="o">=</span> <span class="s2">`/api/</span><span class="p">${</span>
+    <span class="nx">string</span>
+<span class="p">}</span><span class="s2">
+`</span><span class="p">;</span>
+<span class="nx">type</span> <span class="nx">RouteKey</span> <span class="o">=</span> <span class="s2">`</span><span class="p">${</span>
+    <span class="nx">HttpMethod</span>
+<span class="p">}</span><span class="s2">
+</span><span class="p">${</span>
+    <span class="nx">ApiRoute</span>
+<span class="p">}</span><span class="s2">
+`</span><span class="p">;</span>
+<span class="c1">// Registro i route handler con tipo validato a compile time const routes = new</span>
+    <span class="nb">Map</span><span class="o">&lt;</span><span class="nx">RouteKey</span><span class="p">,</span> <span class="nb">Function</span><span class="o">&gt;</span><span class="p">()</span>
+<span class="p">;</span>
+<span class="kd">function</span> <span class="nx">registerRoute</span><span class="p">(</span><span class="nx">key</span><span class="p">:</span> <span class="nx">RouteKey</span><span class="p">,</span> <span class="nx">handler</span><span class="p">:</span> <span class="nb">Function</span><span class="p">)</span> <span class="p">{</span>
+    <span class="nx">routes</span><span class="p">.</span><span class="kd">set</span><span class="p">(</span><span class="nx">key</span><span class="p">,</span> <span class="nx">handler</span><span class="p">);</span>
+<span class="p">}</span>
+<span class="nx">registerRoute</span><span class="p">(</span><span class="dl">'</span><span class="s1">GET /api/users</span><span class="dl">'</span><span class="p">,</span> <span class="p">()</span> <span class="o">=&gt;</span> <span class="p">{</span>
+<span class="p">}</span>
+<span class="p">);</span>
+<span class="c1">// OK registerRoute('POST /api/orders', () =&gt;</span>
+<span class="p">{</span>
+<span class="p">}</span>
+<span class="p">);</span>
+<span class="c1">// OK registerRoute('INVALID /api/users', () =&gt;</span>
+<span class="p">{</span>
+<span class="p">}</span>
+<span class="p">);</span>
+<span class="c1">// Errore TS: 'INVALID' non è un HttpMethod /* Template Literal Types per CSS</span>
+    <span class="nx">properties</span> <span class="nx">type</span><span class="o">-</span><span class="nx">safe</span><span class="p">:</span> <span class="o">*</span><span class="sr">/ type Side = 'top' | 'right' | 'bottom' | 'left</span><span class="err">'
+</span><span class="p">;</span>
+<span class="nx">type</span> <span class="nx">SpacingProperty</span> <span class="o">=</span> <span class="s2">`</span><span class="p">${</span>
+    <span class="dl">'</span><span class="s1">margin</span><span class="dl">'</span> <span class="o">|</span> <span class="dl">'</span><span class="s1">padding</span><span class="dl">'</span>
+<span class="p">}</span><span class="s2">
+-</span><span class="p">${</span>
+    <span class="nx">Side</span>
+<span class="p">}</span><span class="s2">
+`</span><span class="p">;</span>
+<span class="c1">// "margin-top" | "margin-right" | ... | "padding-left" (8 tipi) type CSSValue =</span>
+    <span class="s2">`$
+{
+    number
+}
+</span><span class="p">${</span>
+    <span class="dl">'</span><span class="s1">px</span><span class="dl">'</span> <span class="o">|</span> <span class="dl">'</span><span class="s1">rem</span><span class="dl">'</span> <span class="o">|</span> <span class="dl">'</span><span class="s1">em</span><span class="dl">'</span> <span class="o">|</span> <span class="dl">'</span><span class="s1">%</span><span class="dl">'</span>
+<span class="p">}</span><span class="s2">
+`</span><span class="p">;</span>
+<span class="nx">type</span> <span class="nx">StyleObject</span> <span class="o">=</span> <span class="nx">Partial</span><span class="o">&lt;</span><span class="nx">Record</span><span class="o">&lt;</span><span class="nx">SpacingProperty</span><span class="p">,</span> <span class="nx">CSSValue</span><span class="o">&gt;&gt;</span><span class="p">;</span>
+<span class="kd">function</span> <span class="nx">applyStyles</span><span class="p">(</span><span class="nx">element</span><span class="p">:</span> <span class="nx">HTMLElement</span><span class="p">,</span> <span class="nx">styles</span><span class="p">:</span> <span class="nx">StyleObject</span><span class="p">):</span> <span class="k">void</span> <span class="p">{</span>
+    <span class="p">(</span><span class="nb">Object</span><span class="p">.</span><span class="nx">entries</span><span class="p">(</span><span class="nx">styles</span><span class="p">)</span> <span class="k">as</span> <span class="p">[</span><span class="nx">SpacingProperty</span><span class="p">,</span> <span class="nx">CSSValue</span><span class="p">][]).</span><span class="nx">forEach</span><span class="p">(([</span><span class="nx">prop</span><span class="p">,</span>
+        <span class="nx">value</span><span class="p">])</span> <span class="o">=&gt;</span> <span class="p">{</span>
+        <span class="nx">element</span><span class="p">.</span><span class="nx">style</span><span class="p">.</span><span class="nx">setProperty</span><span class="p">(</span><span class="nx">prop</span><span class="p">,</span> <span class="nx">value</span><span class="p">);</span>
+    <span class="p">}</span>
+    <span class="p">);</span>
+<span class="p">}</span>
+<span class="nx">applyStyles</span><span class="p">(</span><span class="nb">document</span><span class="p">.</span><span class="nx">body</span><span class="p">,</span> <span class="p">{</span>
+    <span class="dl">'</span><span class="s1">margin-top</span><span class="dl">'</span><span class="p">:</span> <span class="dl">'</span><span class="s1">16px</span><span class="dl">'</span><span class="p">,</span>
+    <span class="c1">// OK 'padding-left': '1rem', // OK 'margin-center': '8px', // Errore TS:</span>
+        <span class="dl">'</span><span class="s1">margin-center</span><span class="dl">'</span> <span class="nx">non</span> <span class="nx">è</span> <span class="nx">una</span> <span class="nx">SpacingProperty</span>
+<span class="p">}</span>
+<span class="p">);</span>
+</pre></td></tr></tbody></table></code></pre></div></div>
 
         </article>
 

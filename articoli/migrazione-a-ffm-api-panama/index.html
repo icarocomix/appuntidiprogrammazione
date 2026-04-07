@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Migrazione a FFM API (Panama) — DevLog</title>
-    <meta name="description" content="JNI richiede la scrittura di codice C 'glue' (stub) e ha un alto costo di transizione (context switch). La Foreign Function & Memory API (Java 21/22) permette di chiamare funzioni C direttamente da Java usando Linker e SymbolLookup. Questo elimina la
+    <meta name="description" content="JNI richiede la scrittura di codice C "glue" (stub) e ha un alto costo di transizione (context switch). La Foreign Function & Memory API (Java 21/22) permette di chiamare funzioni C direttamente da Java usando Linker e SymbolLookup. Questo elimina la
 ">
     <link rel="stylesheet" href="/appuntidiprogrammazione/assets/css/style.css">
 
@@ -146,62 +146,86 @@
 55
 56
 57
-</pre></td><td class="rouge-code"><pre><span class="o">*</span> <span class="nc">Ottengo</span> <span class="n">il</span> <span class="nc">Linker</span> <span class="n">nativo</span> <span class="n">e</span> <span class="n">cerco</span> <span class="n">le</span> <span class="n">funzioni</span> <span class="n">della</span> <span class="n">libreria</span> <span class="n">di</span> <span class="n">compressione</span>
-<span class="o">*</span> <span class="no">LZ4</span> <span class="n">caricata</span> <span class="n">dinamicamente</span><span class="o">.</span> <span class="nc">Panama</span> <span class="n">elimina</span> <span class="n">la</span> <span class="n">necessità</span> <span class="n">di</span> <span class="n">scrivere</span> <span class="n">codice</span> <span class="no">C</span>
-<span class="o">*</span> <span class="n">stub</span> <span class="n">per</span> <span class="n">ogni</span> <span class="n">funzione</span> <span class="n">che</span> <span class="n">voglio</span> <span class="n">chiamare</span><span class="o">.</span> <span class="o">*/</span>
- <span class="nc">Linker</span> <span class="n">linker</span> <span class="o">=</span> <span class="nc">Linker</span><span class="o">.</span><span class="na">nativeLinker</span><span class="o">();</span> 
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+</pre></td><td class="rouge-code"><pre><span class="cm">/* Ottengo il Linker nativo e cerco le funzioni della libreria di compressione
+    LZ4 caricata dinamicamente. Panama elimina la necessità di scrivere codice C
+    stub per ogni funzione che voglio chiamare. */</span>
+<span class="nc">Linker</span> <span class="n">linker</span> <span class="o">=</span> <span class="nc">Linker</span><span class="o">.</span><span class="na">nativeLinker</span><span class="o">();</span>
 <span class="c1">// Carico la libreria nativa: Panama cerca automaticamente la .so/.dll nel</span>
-<span class="c1">// library path SymbolLookup lz4Lib = SymbolLookup.libraryLookup("liblz4.so.1",</span>
-<span class="c1">// Arena.global());</span>
-<span class="o">*</span> <span class="nc">Mappo</span> <span class="n">la</span> <span class="n">funzione</span> <span class="nl">C:</span> <span class="kt">int</span> <span class="nf">LZ4_compress_default</span><span class="o">(</span><span class="kd">const</span> <span class="kt">char</span><span class="o">*</span> <span class="n">src</span><span class="o">,</span> <span class="kt">char</span><span class="o">*</span> <span class="n">dst</span><span class="o">,</span> <span class="kt">int</span>
-<span class="o">*</span> <span class="n">srcSize</span><span class="o">,</span> <span class="kt">int</span> <span class="n">dstCapacity</span><span class="o">)</span> <span class="o">*/</span>
- <span class="nc">MethodHandle</span> <span class="n">lz4Compress</span> <span class="o">=</span> <span class="n">linker</span><span class="o">.</span><span class="na">downcallHandle</span><span class="o">(</span>
-<span class="n">lz4Lib</span><span class="o">.</span><span class="na">find</span><span class="o">(</span><span class="s">"LZ4_compress_default"</span><span class="o">).</span><span class="na">orElseThrow</span><span class="o">(()</span> <span class="o">-&gt;</span> <span class="k">new</span> <span class="nc">RuntimeException</span><span class="o">(</span><span class="s">"LZ4
-non trovata"</span><span class="o">)),</span> <span class="nc">FunctionDescriptor</span><span class="o">.</span><span class="na">of</span><span class="o">(</span> <span class="nc">ValueLayout</span><span class="o">.</span><span class="na">JAVA_INT</span><span class="o">,</span>
-<span class="c1">// Valore di ritorno: int (dimensione compressa) ValueLayout.ADDRESS, </span>
-<span class="c1">// src: puntatore al buffer sorgente ValueLayout.ADDRESS, </span>
-<span class="c1">// dst: puntatore al buffer destinazione ValueLayout.JAVA_INT, </span>
-<span class="c1">// srcSize: dimensione sorgente ValueLayout.JAVA_INT </span>
-<span class="c1">// dstCapacity: capacità massima destinazione ) ); </span>
-<span class="o">*</span> <span class="nc">Uso</span> <span class="n">un</span><span class="err">'</span><span class="nc">Arena</span> <span class="n">confined</span> <span class="n">per</span> <span class="n">gestire</span> <span class="n">la</span> <span class="n">memoria</span> <span class="n">dei</span> <span class="n">buffer</span> <span class="n">in</span> <span class="n">modo</span>
-<span class="o">*</span> <span class="nl">deterministico:</span> <span class="n">alla</span> <span class="n">chiusura</span> <span class="n">del</span> <span class="k">try</span><span class="o">-</span><span class="n">with</span><span class="o">-</span><span class="n">resources</span><span class="o">,</span> <span class="n">tutta</span> <span class="n">la</span> <span class="n">memoria</span> <span class="n">viene</span>
-<span class="o">*</span> <span class="n">rilasciata</span> <span class="n">istantaneamente</span> <span class="n">senza</span> <span class="n">aspettare</span> <span class="n">il</span> <span class="no">GC</span><span class="o">.</span> <span class="o">*/</span>
- <span class="nd">@Service</span> <span class="kd">public</span> <span class="kd">class</span> <span class="nc">Lz4CompressionService</span> 
-<span class="o">{</span> <span class="kd">private</span> <span class="kd">final</span> <span class="nc">MethodHandle</span> <span class="n">lz4CompressHandle</span><span class="o">;</span> <span class="kd">private</span> <span class="kd">final</span> <span class="nc">MethodHandle</span>
-<span class="n">lz4DecompressHandle</span><span class="o">;</span> <span class="nd">@PostConstruct</span> <span class="kd">public</span> <span class="kt">void</span> <span class="nf">init</span><span class="o">()</span> <span class="kd">throws</span> <span class="nc">Exception</span>
-<span class="o">{</span> <span class="nc">Linker</span> <span class="n">linker</span> <span class="o">=</span> <span class="nc">Linker</span><span class="o">.</span><span class="na">nativeLinker</span><span class="o">();</span> <span class="nc">SymbolLookup</span> <span class="n">lib</span> <span class="o">=</span>
-<span class="nc">SymbolLookup</span><span class="o">.</span><span class="na">libraryLookup</span><span class="o">(</span><span class="s">"liblz4.so.1"</span><span class="o">,</span> <span class="nc">Arena</span><span class="o">.</span><span class="na">global</span><span class="o">());</span>
-<span class="c1">// Risolvo i MethodHandle una sola volta allo startup: zero costo a runtime</span>
-<span class="c1">// lz4CompressHandle = linker.downcallHandle(</span>
-<span class="c1">// lib.find("LZ4_compress_default").orElseThrow(),</span>
-<span class="c1">// FunctionDescriptor.of(JAVA_INT, ADDRESS, ADDRESS, JAVA_INT, JAVA_INT));</span>
-<span class="c1">// lz4DecompressHandle = linker.downcallHandle(</span>
-<span class="c1">// lib.find("LZ4_decompress_safe").orElseThrow(),</span>
-<span class="c1">// FunctionDescriptor.of(JAVA_INT, ADDRESS, ADDRESS, JAVA_INT, JAVA_INT)); }</span>
- <span class="kd">public</span> <span class="kt">byte</span><span class="o">[]</span> <span class="nf">compress</span><span class="o">(</span><span class="kt">byte</span><span class="o">[]</span> <span class="n">input</span><span class="o">)</span> <span class="kd">throws</span> <span class="nc">Throwable</span> 
-<span class="o">{</span> <span class="k">try</span> <span class="o">(</span><span class="nc">Arena</span> <span class="n">arena</span> <span class="o">=</span> <span class="nc">Arena</span><span class="o">.</span><span class="na">ofConfined</span><span class="o">())</span> 
-<span class="o">{</span> <span class="nc">MemorySegment</span> <span class="n">src</span> <span class="o">=</span> <span class="n">arena</span><span class="o">.</span><span class="na">allocateFrom</span><span class="o">(</span><span class="nc">ValueLayout</span><span class="o">.</span><span class="na">JAVA_BYTE</span><span class="o">,</span> <span class="n">input</span><span class="o">);</span> <span class="kt">int</span>
-<span class="n">maxDstSize</span> <span class="o">=</span> <span class="n">input</span><span class="o">.</span><span class="na">length</span> <span class="o">+</span> <span class="n">input</span><span class="o">.</span><span class="na">length</span> <span class="o">/</span> <span class="mi">255</span> <span class="o">+</span> <span class="mi">16</span><span class="o">;</span>
-<span class="c1">// Formula LZ4 MemorySegment dst = arena.allocate(maxDstSize); int</span>
-<span class="c1">// compressedSize = (int) lz4CompressHandle.invokeExact(src, dst, input.length,</span>
-<span class="c1">// maxDstSize); if (compressedSize &lt;= 0) throw new</span>
-<span class="c1">// RuntimeException("Compressione LZ4 fallita"); return dst.asSlice(0,</span>
-<span class="c1">// compressedSize).toArray(ValueLayout.JAVA_BYTE); }</span>
- <span class="o">}</span>
- <span class="o">}</span>
- 
+    <span class="n">library</span> <span class="n">path</span> <span class="nc">SymbolLookup</span> <span class="n">lz4Lib</span> <span class="o">=</span> <span class="nc">SymbolLookup</span><span class="o">.</span><span class="na">libraryLookup</span><span class="o">(</span><span class="s">"liblz4.so.1"</span><span class="o">,</span>
+    <span class="nc">Arena</span><span class="o">.</span><span class="na">global</span><span class="o">())</span>
+<span class="o">;</span>
+<span class="cm">/* Mappo la funzione C: int LZ4_compress_default(const char* src, char* dst, int
+    srcSize, int dstCapacity) */</span>
+<span class="nc">MethodHandle</span> <span class="n">lz4Compress</span> <span class="o">=</span> <span class="n">linker</span><span class="o">.</span><span class="na">downcallHandle</span><span class="o">(</span>
+    <span class="n">lz4Lib</span><span class="o">.</span><span class="na">find</span><span class="o">(</span><span class="s">"LZ4_compress_default"</span><span class="o">).</span><span class="na">orElseThrow</span><span class="o">(()</span> <span class="o">-&gt;</span> <span class="k">new</span>
+    <span class="nc">RuntimeException</span><span class="o">(</span><span class="s">"LZ4 non trovata"</span><span class="o">)),</span> <span class="nc">FunctionDescriptor</span><span class="o">.</span><span class="na">of</span><span class="o">(</span>
+    <span class="nc">ValueLayout</span><span class="o">.</span><span class="na">JAVA_INT</span><span class="o">,</span>
+<span class="c1">// Valore di ritorno: int (dimensione compressa) ValueLayout.ADDRESS, // src:</span>
+    <span class="n">puntatore</span> <span class="n">al</span> <span class="n">buffer</span> <span class="n">sorgente</span> <span class="nc">ValueLayout</span><span class="o">.</span><span class="na">ADDRESS</span><span class="o">,</span> <span class="c1">// dst: puntatore al</span>
+    <span class="n">buffer</span> <span class="n">destinazione</span> <span class="nc">ValueLayout</span><span class="o">.</span><span class="na">JAVA_INT</span><span class="o">,</span> <span class="c1">// srcSize: dimensione sorgente</span>
+    <span class="nc">ValueLayout</span><span class="o">.</span><span class="na">JAVA_INT</span> <span class="c1">// dstCapacity: capacità massima destinazione ) )</span>
+<span class="o">;</span>
+<span class="cm">/* Uso un'Arena confined per gestire la memoria dei buffer in modo
+    deterministico: alla chiusura del try-with-resources, tutta la memoria viene
+    rilasciata istantaneamente senza aspettare il GC. */</span>
+<span class="nd">@Service</span> <span class="kd">public</span> <span class="kd">class</span> <span class="nc">Lz4CompressionService</span> <span class="o">{</span>
+    <span class="kd">private</span> <span class="kd">final</span> <span class="nc">MethodHandle</span> <span class="n">lz4CompressHandle</span><span class="o">;</span>
+    <span class="kd">private</span> <span class="kd">final</span> <span class="nc">MethodHandle</span> <span class="n">lz4DecompressHandle</span><span class="o">;</span>
+    <span class="nd">@PostConstruct</span> <span class="kd">public</span> <span class="kt">void</span> <span class="nf">init</span><span class="o">()</span> <span class="kd">throws</span> <span class="nc">Exception</span> <span class="o">{</span>
+        <span class="nc">Linker</span> <span class="n">linker</span> <span class="o">=</span> <span class="nc">Linker</span><span class="o">.</span><span class="na">nativeLinker</span><span class="o">();</span>
+        <span class="nc">SymbolLookup</span> <span class="n">lib</span> <span class="o">=</span> <span class="nc">SymbolLookup</span><span class="o">.</span><span class="na">libraryLookup</span><span class="o">(</span><span class="s">"liblz4.so.1"</span><span class="o">,</span>
+            <span class="nc">Arena</span><span class="o">.</span><span class="na">global</span><span class="o">());</span>
+        <span class="c1">// Risolvo i MethodHandle una sola volta allo startup: zero costo a</span>
+            <span class="n">runtime</span> <span class="n">lz4CompressHandle</span> <span class="o">=</span> <span class="n">linker</span><span class="o">.</span><span class="na">downcallHandle</span><span class="o">(</span>
+            <span class="n">lib</span><span class="o">.</span><span class="na">find</span><span class="o">(</span><span class="s">"LZ4_compress_default"</span><span class="o">).</span><span class="na">orElseThrow</span><span class="o">(),</span>
+            <span class="nc">FunctionDescriptor</span><span class="o">.</span><span class="na">of</span><span class="o">(</span><span class="no">JAVA_INT</span><span class="o">,</span> <span class="no">ADDRESS</span><span class="o">,</span> <span class="no">ADDRESS</span><span class="o">,</span> <span class="no">JAVA_INT</span><span class="o">,</span>
+            <span class="no">JAVA_INT</span><span class="o">))</span>
+        <span class="o">;</span>
+        <span class="n">lz4DecompressHandle</span> <span class="o">=</span> <span class="n">linker</span><span class="o">.</span><span class="na">downcallHandle</span><span class="o">(</span>
+            <span class="n">lib</span><span class="o">.</span><span class="na">find</span><span class="o">(</span><span class="s">"LZ4_decompress_safe"</span><span class="o">).</span><span class="na">orElseThrow</span><span class="o">(),</span>
+            <span class="nc">FunctionDescriptor</span><span class="o">.</span><span class="na">of</span><span class="o">(</span><span class="no">JAVA_INT</span><span class="o">,</span> <span class="no">ADDRESS</span><span class="o">,</span> <span class="no">ADDRESS</span><span class="o">,</span> <span class="no">JAVA_INT</span><span class="o">,</span>
+            <span class="no">JAVA_INT</span><span class="o">));</span>
+    <span class="o">}</span>
+    <span class="kd">public</span> <span class="kt">byte</span><span class="o">[]</span> <span class="nf">compress</span><span class="o">(</span><span class="kt">byte</span><span class="o">[]</span> <span class="n">input</span><span class="o">)</span> <span class="kd">throws</span> <span class="nc">Throwable</span> <span class="o">{</span>
+        <span class="k">try</span> <span class="o">(</span><span class="nc">Arena</span> <span class="n">arena</span> <span class="o">=</span> <span class="nc">Arena</span><span class="o">.</span><span class="na">ofConfined</span><span class="o">())</span> <span class="o">{</span>
+            <span class="nc">MemorySegment</span> <span class="n">src</span> <span class="o">=</span> <span class="n">arena</span><span class="o">.</span><span class="na">allocateFrom</span><span class="o">(</span><span class="nc">ValueLayout</span><span class="o">.</span><span class="na">JAVA_BYTE</span><span class="o">,</span>
+                <span class="n">input</span><span class="o">);</span>
+            <span class="kt">int</span> <span class="n">maxDstSize</span> <span class="o">=</span> <span class="n">input</span><span class="o">.</span><span class="na">length</span> <span class="o">+</span> <span class="n">input</span><span class="o">.</span><span class="na">length</span> <span class="o">/</span> <span class="mi">255</span> <span class="o">+</span> <span class="mi">16</span><span class="o">;</span>
+            <span class="c1">// Formula LZ4 MemorySegment dst = arena.allocate(maxDstSize)</span>
+            <span class="o">;</span>
+            <span class="kt">int</span> <span class="n">compressedSize</span> <span class="o">=</span> <span class="o">(</span><span class="kt">int</span><span class="o">)</span> <span class="n">lz4CompressHandle</span><span class="o">.</span><span class="na">invokeExact</span><span class="o">(</span><span class="n">src</span><span class="o">,</span> <span class="n">dst</span><span class="o">,</span>
+                <span class="n">input</span><span class="o">.</span><span class="na">length</span><span class="o">,</span> <span class="n">maxDstSize</span><span class="o">);</span>
+            <span class="k">if</span> <span class="o">(</span><span class="n">compressedSize</span> <span class="o">&lt;=</span> <span class="mi">0</span><span class="o">)</span> <span class="k">throw</span> <span class="k">new</span> <span class="nc">RuntimeException</span><span class="o">(</span><span class="s">"Compressione
+                LZ4 fallita"</span><span class="o">);</span>
+            <span class="k">return</span> <span class="n">dst</span><span class="o">.</span><span class="na">asSlice</span><span class="o">(</span><span class="mi">0</span><span class="o">,</span>
+                <span class="n">compressedSize</span><span class="o">).</span><span class="na">toArray</span><span class="o">(</span><span class="nc">ValueLayout</span><span class="o">.</span><span class="na">JAVA_BYTE</span><span class="o">);</span>
+        <span class="o">}</span>
+    <span class="o">}</span>
+<span class="o">}</span>
 <span class="cm">/* Confronto l'overhead con JNI classico tramite JMH: */</span>
- <span class="nd">@Benchmark</span> <span class="kd">public</span> <span class="kt">byte</span><span class="o">[]</span> <span class="nf">withJni</span><span class="o">(</span><span class="nc">BenchState</span> <span class="n">state</span><span class="o">)</span> 
-<span class="o">{</span> <span class="k">return</span> <span class="nc">JniLz4Wrapper</span><span class="o">.</span><span class="na">compress</span><span class="o">(</span><span class="n">state</span><span class="o">.</span><span class="na">data</span><span class="o">);</span> 
-<span class="c1">// Context switch + JNI stub }</span>
- <span class="nd">@Benchmark</span> <span class="kd">public</span> <span class="kt">byte</span><span class="o">[]</span> <span class="nf">withPanama</span><span class="o">(</span><span class="nc">BenchState</span> <span class="n">state</span><span class="o">)</span> <span class="kd">throws</span> <span class="nc">Throwable</span> 
-<span class="o">{</span> <span class="k">return</span> <span class="n">compressionService</span><span class="o">.</span><span class="na">compress</span><span class="o">(</span><span class="n">state</span><span class="o">.</span><span class="na">data</span><span class="o">);</span> 
-<span class="c1">// Downcall diretto: 30-50% più veloce }</span>
- 
+<span class="nd">@Benchmark</span> <span class="kd">public</span> <span class="kt">byte</span><span class="o">[]</span> <span class="nf">withJni</span><span class="o">(</span><span class="nc">BenchState</span> <span class="n">state</span><span class="o">)</span> <span class="o">{</span>
+    <span class="k">return</span> <span class="nc">JniLz4Wrapper</span><span class="o">.</span><span class="na">compress</span><span class="o">(</span><span class="n">state</span><span class="o">.</span><span class="na">data</span><span class="o">);</span>
+    <span class="c1">// Context switch + JNI stub</span>
+<span class="o">}</span>
+<span class="nd">@Benchmark</span> <span class="kd">public</span> <span class="kt">byte</span><span class="o">[]</span> <span class="nf">withPanama</span><span class="o">(</span><span class="nc">BenchState</span> <span class="n">state</span><span class="o">)</span> <span class="kd">throws</span> <span class="nc">Throwable</span> <span class="o">{</span>
+    <span class="k">return</span> <span class="n">compressionService</span><span class="o">.</span><span class="na">compress</span><span class="o">(</span><span class="n">state</span><span class="o">.</span><span class="na">data</span><span class="o">);</span>
+    <span class="c1">// Downcall diretto: 30-50% più veloce</span>
+<span class="o">}</span>
 <span class="cm">/* Verifico che l'API Panama sia abilitata nel modulo: */</span>
- 
-<span class="c1">// Nel module-info.java: </span>
-<span class="c1">// requires jdk.incubator.foreign; </span>
+<span class="c1">// Nel module-info.java: // requires jdk.incubator.foreign</span>
+<span class="o">;</span>
 <span class="c1">// Solo per Java 19-: da Java 21 è stabile</span>
 </pre></td></tr></tbody></table></code></pre></div></div>
 

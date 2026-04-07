@@ -119,50 +119,36 @@
 28
 29
 30
-31
-32
-33
-34
-35
-36
-37
-</pre></td><td class="rouge-code"><pre><span class="o">*</span> <span class="n">Verifico</span> <span class="n">il</span> <span class="n">lag</span> <span class="n">della</span> <span class="n">replica</span> <span class="n">e</span> <span class="n">lo</span> <span class="n">stato</span> <span class="n">attuale</span> <span class="n">della</span> <span class="n">subscription</span> <span class="n">per</span>
-<span class="o">*</span> <span class="n">rilevare</span> <span class="n">se</span> <span class="n">si</span> <span class="err">è</span> <span class="n">bloccata</span><span class="p">.</span> <span class="o">*/</span>
- <span class="k">SELECT</span> <span class="n">subname</span><span class="p">,</span> <span class="n">received_lsn</span><span class="p">,</span> <span class="n">latest_end_lsn</span><span class="p">,</span> <span class="n">pg_wal_lsn_diff</span><span class="p">(</span><span class="n">latest_end_lsn</span><span class="p">,</span>
-<span class="n">received_lsn</span><span class="p">)</span> <span class="k">AS</span> <span class="n">lag_bytes</span> <span class="k">FROM</span> <span class="n">pg_stat_subscription</span><span class="p">;</span>
-<span class="o">*</span> <span class="n">Se</span> <span class="n">la</span> <span class="n">replica</span> <span class="err">è</span> <span class="n">bloccata</span><span class="p">,</span> <span class="n">trovo</span> <span class="n">l</span><span class="s1">'LSN della transazione problematica nei log
-* di PostgreSQL. Il messaggio tipico è: ERROR: duplicate key value violates
-* unique constraint "orders_pkey" DETAIL: Key (id)=(42) already exists. CONTEXT:
-* processing remote data for replication origin "pg_16390" */
- 
-/* Identifico l'</span><span class="n">LSN</span> <span class="n">da</span> <span class="n">saltare</span> <span class="n">dal</span> <span class="n">log</span> <span class="n">di</span> <span class="n">errore</span> <span class="n">e</span> <span class="n">lo</span> <span class="n">passo</span> <span class="n">al</span> <span class="n">comando</span> <span class="n">SKIP</span><span class="p">:</span> <span class="o">*/</span>
- <span class="k">ALTER</span> <span class="n">SUBSCRIPTION</span> <span class="n">my_sub</span> <span class="n">SKIP</span> <span class="p">(</span><span class="n">lsn</span> <span class="o">=</span> <span class="s1">'0/12345678'</span><span class="p">);</span> 
-<span class="o">*</span> <span class="n">Prevengo</span> <span class="n">i</span> <span class="n">conflitti</span> <span class="n">alla</span> <span class="n">radice</span> <span class="n">usando</span> <span class="n">sequenze</span> <span class="n">non</span> <span class="n">sovrapposte</span> <span class="n">tra</span> <span class="n">le</span>
-<span class="o">*</span> <span class="n">filiali</span><span class="p">.</span> <span class="n">Ogni</span> <span class="n">filiale</span> <span class="n">ha</span> <span class="n">un</span> <span class="k">range</span> <span class="n">di</span> <span class="n">ID</span> <span class="n">dedicato</span><span class="p">:</span> <span class="o">*/</span>
- <span class="c1">-- Filiale Roma: ALTER SEQUENCE orders_id_seq START WITH 1000000 INCREMENT BY</span>
-<span class="mi">10</span><span class="p">;</span> <span class="c1">-- Filiale Milano: ALTER SEQUENCE orders_id_seq START WITH 2000000 INCREMENT</span>
-<span class="k">BY</span> <span class="mi">10</span><span class="p">;</span>
-<span class="o">*</span> <span class="k">In</span> <span class="n">alternativa</span><span class="p">,</span> <span class="n">uso</span> <span class="n">UUID</span> <span class="n">come</span> <span class="n">chiave</span> <span class="n">primaria</span> <span class="n">per</span> <span class="n">eliminare</span> <span class="n">completamente</span> <span class="n">il</span>
-<span class="o">*</span> <span class="n">rischio</span> <span class="n">di</span> <span class="n">collisione</span> <span class="n">tra</span> <span class="n">nodi</span><span class="p">:</span> <span class="o">*/</span>
- <span class="k">ALTER</span> <span class="k">TABLE</span> <span class="n">orders</span> <span class="k">ADD</span> <span class="k">COLUMN</span> <span class="n">uuid_id</span> <span class="n">UUID</span> <span class="k">DEFAULT</span> <span class="n">gen_random_uuid</span><span class="p">();</span> 
-<span class="o">*</span> <span class="n">Imposto</span> <span class="n">la</span> <span class="n">replica</span> <span class="n">verso</span> <span class="n">il</span> <span class="k">data</span> <span class="n">warehouse</span> <span class="k">in</span> <span class="n">sola</span> <span class="n">lettura</span> <span class="n">per</span> <span class="n">bloccare</span>
-<span class="o">*</span> <span class="n">scritture</span> <span class="n">accidentali</span> <span class="n">che</span> <span class="n">causerebbero</span> <span class="n">conflitti</span><span class="p">:</span> <span class="o">*/</span>
- <span class="k">REVOKE</span> <span class="k">INSERT</span><span class="p">,</span> <span class="k">UPDATE</span><span class="p">,</span> <span class="k">DELETE</span> <span class="k">ON</span> <span class="k">ALL</span> <span class="n">TABLES</span> <span class="k">IN</span> <span class="k">SCHEMA</span> <span class="k">public</span> <span class="k">FROM</span> <span class="n">app_user</span><span class="p">;</span> 
-<span class="cm">/* Monitoro il numero di conflitti accumulati per subscription: */</span>
- <span class="k">SELECT</span> <span class="n">subname</span><span class="p">,</span> <span class="n">conflict_reason</span><span class="p">,</span> <span class="k">count</span> <span class="k">FROM</span> <span class="n">pg_stat_subscription_stats</span><span class="p">;</span> 
-<span class="o">*</span> <span class="k">In</span> <span class="n">Spring</span> <span class="n">Boot</span><span class="p">,</span> <span class="n">il</span> <span class="n">servizio</span> <span class="n">che</span> <span class="n">legge</span> <span class="n">dalla</span> <span class="n">replica</span> <span class="n">deve</span> <span class="n">gestire</span> <span class="n">dati</span>
-<span class="o">*</span> <span class="n">potenzialmente</span> <span class="n">obsoleti</span> <span class="n">e</span> <span class="n">includere</span> <span class="n">un</span> <span class="n">fallback</span> <span class="n">sul</span> <span class="n">primario</span> <span class="n">per</span> <span class="n">i</span> <span class="n">dati</span>
-<span class="o">*</span> <span class="n">critici</span><span class="p">:</span> <span class="o">@</span><span class="n">Transactional</span><span class="p">(</span><span class="n">readOnly</span> <span class="o">=</span> <span class="k">true</span><span class="p">)</span> <span class="k">public</span> <span class="k">Order</span> <span class="n">findOrder</span><span class="p">(</span><span class="n">Long</span> <span class="n">id</span><span class="p">)</span>
-<span class="p">{</span> <span class="n">try</span> 
-<span class="p">{</span> <span class="k">return</span> <span class="n">replicaOrderRepository</span><span class="p">.</span><span class="n">findById</span><span class="p">(</span><span class="n">id</span><span class="p">)</span> <span class="p">.</span><span class="n">orElseThrow</span><span class="p">(()</span> <span class="o">-&gt;</span> <span class="k">new</span>
-<span class="n">OrderNotFoundException</span><span class="p">(</span><span class="n">id</span><span class="p">));</span> <span class="p">}</span>
- <span class="n">catch</span> <span class="p">(</span><span class="n">DataAccessException</span> <span class="n">e</span><span class="p">)</span> 
-<span class="p">{</span> <span class="n">log</span><span class="p">.</span><span class="n">warn</span><span class="p">(</span><span class="nv">"Fallback al primario per ordine 
-{}
-"</span><span class="p">,</span> <span class="n">id</span><span class="p">);</span> <span class="k">return</span> <span class="n">primaryOrderRepository</span><span class="p">.</span><span class="n">findById</span><span class="p">(</span><span class="n">id</span><span class="p">)</span> <span class="p">.</span><span class="n">orElseThrow</span><span class="p">(()</span> <span class="o">-&gt;</span> <span class="k">new</span>
-<span class="n">OrderNotFoundException</span><span class="p">(</span><span class="n">id</span><span class="p">));</span> <span class="p">}</span>
- <span class="p">}</span>
- <span class="o">*/</span>
+</pre></td><td class="rouge-code"><pre>    <span class="cm">/* Verifico il lag della replica e lo stato attuale della subscription per
+        rilevare se si è bloccata. */</span> <span class="k">SELECT</span> <span class="n">subname</span><span class="p">,</span> <span class="n">received_lsn</span><span class="p">,</span>
+        <span class="n">latest_end_lsn</span><span class="p">,</span> <span class="n">pg_wal_lsn_diff</span><span class="p">(</span><span class="n">latest_end_lsn</span><span class="p">,</span> <span class="n">received_lsn</span><span class="p">)</span> <span class="k">AS</span>
+        <span class="n">lag_bytes</span> <span class="k">FROM</span> <span class="n">pg_stat_subscription</span><span class="p">;</span> <span class="cm">/* Se la replica è bloccata, trovo
+        l'LSN della transazione problematica nei log di PostgreSQL. Il messaggio
+        tipico è: ERROR: duplicate key value violates unique constraint
+        "orders_pkey" DETAIL: Key (id)=(42) already exists. CONTEXT: processing
+        remote data for replication origin "pg_16390" */</span> <span class="cm">/* Identifico l'LSN da
+        saltare dal log di errore e lo passo al comando SKIP: */</span> <span class="k">ALTER</span>
+        <span class="n">SUBSCRIPTION</span> <span class="n">my_sub</span> <span class="n">SKIP</span> <span class="p">(</span><span class="n">lsn</span> <span class="o">=</span> <span class="s1">'0/12345678'</span><span class="p">);</span> <span class="cm">/* Prevengo i conflitti
+        alla radice usando sequenze non sovrapposte tra le filiali. Ogni filiale
+        ha un range di ID dedicato: */</span> <span class="c1">-- Filiale Roma: ALTER SEQUENCE</span>
+        <span class="n">orders_id_seq</span> <span class="k">START</span> <span class="k">WITH</span> <span class="mi">1000000</span> <span class="k">INCREMENT</span> <span class="k">BY</span> <span class="mi">10</span><span class="p">;</span> <span class="c1">-- Filiale Milano:</span>
+        <span class="k">ALTER</span> <span class="n">SEQUENCE</span> <span class="n">orders_id_seq</span> <span class="k">START</span> <span class="k">WITH</span> <span class="mi">2000000</span> <span class="k">INCREMENT</span> <span class="k">BY</span> <span class="mi">10</span><span class="p">;</span> <span class="cm">/* In
+        alternativa, uso UUID come chiave primaria per eliminare completamente
+        il rischio di collisione tra nodi: */</span> <span class="k">ALTER</span> <span class="k">TABLE</span> <span class="n">orders</span> <span class="k">ADD</span> <span class="k">COLUMN</span>
+        <span class="n">uuid_id</span> <span class="n">UUID</span> <span class="k">DEFAULT</span> <span class="n">gen_random_uuid</span><span class="p">();</span> <span class="cm">/* Imposto la replica verso il
+        data warehouse in sola lettura per bloccare scritture accidentali che
+        causerebbero conflitti: */</span> <span class="k">REVOKE</span> <span class="k">INSERT</span><span class="p">,</span> <span class="k">UPDATE</span><span class="p">,</span> <span class="k">DELETE</span> <span class="k">ON</span> <span class="k">ALL</span> <span class="n">TABLES</span>
+        <span class="k">IN</span> <span class="k">SCHEMA</span> <span class="k">public</span> <span class="k">FROM</span> <span class="n">app_user</span><span class="p">;</span> <span class="cm">/* Monitoro il numero di conflitti
+        accumulati per subscription: */</span> <span class="k">SELECT</span> <span class="n">subname</span><span class="p">,</span> <span class="n">conflict_reason</span><span class="p">,</span> <span class="k">count</span>
+        <span class="k">FROM</span> <span class="n">pg_stat_subscription_stats</span><span class="p">;</span> <span class="cm">/* In Spring Boot, il servizio che
+        legge dalla replica deve gestire dati potenzialmente obsoleti e
+        includere un fallback sul primario per i dati critici:
+        @Transactional(readOnly = true) public Order findOrder(Long id) { try {
+        return replicaOrderRepository.findById(id) .orElseThrow(() -&gt; new
+        OrderNotFoundException(id)); } catch (DataAccessException e) {
+        log.warn("Fallback al primario per ordine {}", id); return
+        primaryOrderRepository.findById(id) .orElseThrow(() -&gt; new
+        OrderNotFoundException(id)); } } */</span>
 </pre></td></tr></tbody></table></code></pre></div></div>
 
         </article>

@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Decoupled Logic (th:ref) — DevLog</title>
-    <meta name="description" content="Mantenere i file HTML 'puri' per i designer, separando la logica Thymeleaf in file .th.xml, permette ai grafici di lavorare su file HTML standard senza vedere attributi th:, mentre il server applica la logica di binding esternamente. I selettori CSS 
+    <meta name="description" content="Mantenere i file HTML "puri" per i designer, separando la logica Thymeleaf in file .th.xml, permette ai grafici di lavorare su file HTML standard senza vedere attributi th:, mentre il server applica la logica di binding esternamente. I selettori CSS 
 ">
     <link rel="stylesheet" href="/appuntidiprogrammazione/assets/css/style.css">
 
@@ -89,103 +89,138 @@
 
 <h2 id="esempio-implementativo">Esempio Implementativo</h2>
 
-<pre><code class="language-thymeleaf">* STRUTTURA DEL PROGETTO con Decoupled Logic: src/main/resources/templates/ ├──
-* user-profile.html (HTML puro: il designer lo modifica liberamente) └── user-
-* profile.th.xml (Logica Thymeleaf: separata dall'HTML) */
- 
+<pre><code class="language-thymeleaf">/* STRUTTURA DEL PROGETTO con Decoupled Logic: src/main/resources/templates/ ├──
+    user-profile.html (HTML puro: il designer lo modifica liberamente) └──
+    user-profile.th.xml (Logica Thymeleaf: separata dall'HTML) */
 /* FILE: user-profile.html (HTML puro, visualizzabile in qualsiasi browser) */
- 
-// &lt;!DOCTYPE html&gt; 
-// &lt;html&gt; 
-// &lt;head&gt;&lt;title&gt;Profilo Utente&lt;/title&gt;&lt;/head&gt; 
-// &lt;body&gt; 
-//   &lt;div id="user-card"&gt; 
-//     &lt;img id="user-avatar" src="/img/placeholder.png" alt="Avatar"&gt; 
-//     &lt;h1 id="user-name"&gt;Nome Cognome&lt;/h1&gt; 
-//     &lt;span id="user-role" class="badge badge-primary"&gt;Ruolo&lt;/span&gt; 
-//     &lt;p id="user-bio"&gt;Biografia dell'utente placeholder...&lt;/p&gt; 
-//     &lt;ul id="order-list"&gt; 
-//       &lt;li class="order-item"&gt; 
-//         &lt;span class="order-id"&gt;#00001&lt;/span&gt; 
-//         &lt;span class="order-date"&gt;01/01/2026&lt;/span&gt; 
-//         &lt;span class="order-total"&gt;€ 100,00&lt;/span&gt; 
-//       &lt;/li&gt; 
-//     &lt;/ul&gt; 
-//     &lt;div id="no-orders" style="display:none"&gt; 
-//       &lt;p&gt;Nessun ordine presente&lt;/p&gt; 
-//     &lt;/div&gt; 
-//   &lt;/div&gt; 
-// &lt;/body&gt; 
-// &lt;/html&gt; 
-* FILE: user-profile.th.xml (Logica Thymeleaf separata: usa selettori CSS per
-* riferirsi agli elementi HTML) */
- 
-// &lt;?xml version="1.0"?&gt; 
-// &lt;thlogic&gt; 
-//   &lt;!-- Seleziono l'elemento tramite id CSS e applico th:src e th:alt --&gt; 
-//   &lt;attr sel="#user-avatar" th:src="@
-{'/api/users/' + $
-{user.id}
- + '/avatar'}
-" th:alt="$
-{user.name}
-" /&gt; 
-//   
-// &lt;!-- Binding del testo: il designer vede "Nome Cognome", il server inietta il
-// valore reale --&gt;
-//   &lt;attr sel="#user-name" th:text="$
-{user.fullName}
-" /&gt; 
-//   
-//   &lt;!-- Classe CSS dinamica basata sul ruolo --&gt; 
-//   &lt;attr sel="#user-role" th:text="$
-{user.role}
-" th:class="'badge ' + $
-{user.roleBadgeClass}
-" /&gt; 
-//   
-//   &lt;!-- Testo con formattazione da Expression Object custom --&gt; 
-//   &lt;attr sel="#user-bio" th:text="$
-{#strUtils.truncate(user.bio, 300)}
-" /&gt; 
-//   
-// &lt;!-- Iterazione sulla lista ordini: replico il primo li per ogni ordine --&gt;
-//   &lt;attr sel="#order-list/li" th:each="order : $
-{user.recentOrders}
-" &gt; 
-//     &lt;attr sel=".order-id" th:text="'#' + $
-{order.id}
-" /&gt; 
-//     &lt;attr sel=".order-date" th:text="$
-{#temporals.format(order.date, 'dd/MM/yyyy')}
-" /&gt; 
-//     &lt;attr sel=".order-total" th:text="$
-{#finance.formatCurrency(order.total, 'EUR')}
-" /&gt; 
-//   &lt;/attr&gt; 
-//   
-//   &lt;!-- Mostra il messaggio se la lista è vuota --&gt; 
-//   &lt;attr sel="#no-orders" th:if="$
-{user.recentOrders.isEmpty()}
-" /&gt; 
-// &lt;/thlogic&gt; 
-/* Abilito il Decoupled Logic in Spring Boot configurando il resolver: */
- @Configuration public class ThymeleafDecoupledConfig 
-{ @Bean public SpringResourceTemplateResolver templateResolver() 
-{ SpringResourceTemplateResolver resolver = new
-SpringResourceTemplateResolver(); resolver.setPrefix("classpath:/templates/");
-resolver.setSuffix(".html"); resolver.setTemplateMode(TemplateMode.HTML);
-resolver.setUseDecoupledLogic(true);
-// Abilito la lettura del file .th.xml parallelo resolver.setCacheable(false); 
-// Disabilito in sviluppo return resolver; }
- }
- 
-/* Il controller rimane invariato: non sa nulla della separazione HTML/XML. */
- @GetMapping("/profile/
-{id}
-") public String userProfile(@PathVariable Long id, Model model) 
-{ model.addAttribute("user", userService.findById(id)); return "user-profile"; 
-// Thymeleaf carica automaticamente user-profile.html + user-profile.th.xml }
+//
+&lt;!DOCTYPE html&gt;
+//
+&lt;html&gt;
+    //
+    &lt;head&gt;
+        &lt;title&gt;
+            Profilo Utente
+        &lt;/title&gt;
+    &lt;/head&gt;
+    //
+    &lt;body&gt;
+        //
+        &lt;div id="user-card"&gt;
+            //
+            &lt;img id="user-avatar" src="/img/placeholder.png" alt="Avatar"&gt;
+                //
+                &lt;h1 id="user-name"&gt;
+                    Nome Cognome
+                &lt;/h1&gt;
+                //
+                &lt;span id="user-role" class="badge badge-primary"&gt;
+                    Ruolo
+                &lt;/span&gt;
+                //
+                &lt;p id="user-bio"&gt;
+                    Biografia dell'utente placeholder...
+                &lt;/p&gt;
+                //
+                &lt;ul id="order-list"&gt;
+                    //
+                    &lt;li class="order-item"&gt;
+                        //
+                        &lt;span class="order-id"&gt;
+                            #00001
+                        &lt;/span&gt;
+                        //
+                        &lt;span class="order-date"&gt;
+                            01/01/2026
+                        &lt;/span&gt;
+                        //
+                        &lt;span class="order-total"&gt;
+                            € 100,00
+                        &lt;/span&gt;
+                        //
+                    &lt;/li&gt;
+                    //
+                &lt;/ul&gt;
+                //
+                &lt;div id="no-orders" style="display:none"&gt;
+                    //
+                    &lt;p&gt;
+                        Nessun ordine presente
+                    &lt;/p&gt;
+                    //
+                &lt;/div&gt;
+                //
+            &lt;/div&gt;
+            //
+        &lt;/body&gt;
+        //
+    &lt;/html&gt;
+    /* FILE: user-profile.th.xml (Logica Thymeleaf separata: usa selettori CSS
+        per riferirsi agli elementi HTML) */
+    //
+    &lt;?xml version="1.0"?&gt;
+        //
+        &lt;thlogic&gt;
+            //
+            &lt;!-- Seleziono l'elemento tramite id CSS e applico th:src e th:alt
+                --&gt;
+            //
+            &lt;attr sel="#user-avatar" th:src="@{'/api/users/' + ${user.id} +
+                '/avatar'}" th:alt="${user.name}" /&gt;
+            //   //
+            &lt;!-- Binding del testo: il designer vede "Nome Cognome", il server
+                inietta il valore reale --&gt;
+            //
+            &lt;attr sel="#user-name" th:text="${user.fullName}" /&gt;
+            //   //
+            &lt;!-- Classe CSS dinamica basata sul ruolo --&gt;
+            //
+            &lt;attr sel="#user-role" th:text="${user.role}" th:class="'badge ' +
+                ${user.roleBadgeClass}" /&gt;
+            //   //
+            &lt;!-- Testo con formattazione da Expression Object custom --&gt;
+            //
+            &lt;attr sel="#user-bio" th:text="${#strUtils.truncate(user.bio, 300)}"
+                /&gt;
+            //   //
+            &lt;!-- Iterazione sulla lista ordini: replico il primo li per ogni
+                ordine --&gt;
+            //
+            &lt;attr sel="#order-list/li" th:each="order : ${user.recentOrders}" &gt;
+                //
+                &lt;attr sel=".order-id" th:text="'#' + ${order.id}" /&gt;
+                //
+                &lt;attr sel=".order-date" th:text="${#temporals.format(order.date,
+                    'dd/MM/yyyy')}" /&gt;
+                //
+                &lt;attr sel=".order-total"
+                    th:text="${#finance.formatCurrency(order.total, 'EUR')}" /&gt;
+                //
+            &lt;/attr&gt;
+            //   //
+            &lt;!-- Mostra il messaggio se la lista è vuota --&gt;
+            //
+            &lt;attr sel="#no-orders" th:if="${user.recentOrders.isEmpty()}" /&gt;
+            //
+        &lt;/thlogic&gt;
+        /* Abilito il Decoupled Logic in Spring Boot configurando il resolver:
+            */
+        @Configuration public class ThymeleafDecoupledConfig { @Bean public
+            SpringResourceTemplateResolver templateResolver() {
+            SpringResourceTemplateResolver resolver = new
+            SpringResourceTemplateResolver();
+            resolver.setPrefix("classpath:/templates/");
+            resolver.setSuffix(".html");
+            resolver.setTemplateMode(TemplateMode.HTML);
+            resolver.setUseDecoupledLogic(true); // Abilito la lettura del file
+            .th.xml parallelo resolver.setCacheable(false); // Disabilito in
+            sviluppo return resolver; } }
+        /* Il controller rimane invariato: non sa nulla della separazione
+            HTML/XML. */
+        @GetMapping("/profile/{id}") public String userProfile(@PathVariable
+            Long id, Model model) { model.addAttribute("user",
+            userService.findById(id)); return "user-profile"; // Thymeleaf
+            carica automaticamente user-profile.html + user-profile.th.xml }
 </code></pre>
 
         </article>

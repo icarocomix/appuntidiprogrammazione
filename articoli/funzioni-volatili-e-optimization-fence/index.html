@@ -115,35 +115,33 @@
 24
 25
 26
-27
-</pre></td><td class="rouge-code"><pre><span class="o">*</span> <span class="n">Dimostro</span> <span class="n">l</span><span class="s1">'impatto della volatilità con un esempio concreto. Questa funzione è
-* VOLATILE per default: il Planner la chiama una volta per riga, anche se
-* l'</span><span class="k">input</span> <span class="err">è</span> <span class="n">costante</span><span class="p">.</span> <span class="o">*/</span>
- <span class="k">CREATE</span> <span class="k">OR</span> <span class="k">REPLACE</span> <span class="k">FUNCTION</span> <span class="n">convert_currency</span><span class="p">(</span><span class="n">amount</span> <span class="nb">numeric</span><span class="p">,</span> <span class="n">from_cur</span> <span class="nb">text</span><span class="p">,</span>
-<span class="n">to_cur</span> <span class="nb">text</span><span class="p">)</span> <span class="k">RETURNS</span> <span class="nb">numeric</span> <span class="k">AS</span> <span class="err">$$</span> <span class="k">SELECT</span> <span class="n">amount</span> <span class="o">*</span> <span class="n">rate</span> <span class="k">FROM</span> <span class="n">exchange_rates</span>
-<span class="k">WHERE</span> <span class="n">from_currency</span> <span class="o">=</span> <span class="n">from_cur</span> <span class="k">AND</span> <span class="n">to_currency</span> <span class="o">=</span> <span class="n">to_cur</span><span class="p">;</span> <span class="err">$$</span> <span class="k">LANGUAGE</span> <span class="k">SQL</span>
-<span class="k">VOLATILE</span><span class="p">;</span> <span class="c1">-- VOLATILE = chiamata 1 milione di volte su 1 milione di righe</span>
-<span class="o">*</span> <span class="n">La</span> <span class="n">marco</span> <span class="n">come</span> <span class="k">STABLE</span><span class="p">:</span> <span class="n">il</span> <span class="k">database</span> <span class="n">la</span> <span class="n">chiama</span> <span class="n">una</span> <span class="n">volta</span> <span class="n">per</span> <span class="n">scansione</span> <span class="n">invece</span> <span class="n">che</span>
-<span class="o">*</span> <span class="n">per</span> <span class="n">riga</span><span class="p">,</span> <span class="n">perch</span><span class="err">é</span> <span class="n">sa</span> <span class="n">che</span> <span class="n">non</span> <span class="n">cambier</span><span class="err">à</span> <span class="n">nell</span><span class="s1">'arco della stessa transazione. È
-* corretta perché exchange_rates non cambia durante una query. */
- CREATE OR REPLACE FUNCTION convert_currency(amount numeric, from_cur text,
-to_cur text) RETURNS numeric AS $$ SELECT amount * rate FROM exchange_rates
-WHERE from_currency = from_cur AND to_currency = to_cur; $$ LANGUAGE SQL STABLE;
-* Per funzioni che dipendono solo dai parametri (nessun accesso a tabelle), uso
-* IMMUTABLE: il Planner può pre-calcolarla, usarla negli indici e condividere il
-* risultato tra le righe. */
- CREATE OR REPLACE FUNCTION clean_string(input text) RETURNS text AS $$ SELECT
-trim(lower(input)); $$ LANGUAGE SQL IMMUTABLE;
-/* Grazie a IMMUTABLE posso creare un indice funzionale: */
- CREATE INDEX idx_users_clean_username ON users (clean_string(username)); 
-* La query userà l'</span><span class="n">indice</span> <span class="n">solo</span> <span class="n">se</span> <span class="n">la</span> <span class="n">funzione</span> <span class="n">nell</span><span class="s1">'indice e nella WHERE sono
-* identiche: */
- SELECT * FROM users WHERE clean_string(username) = '</span><span class="k">admin</span><span class="s1">'; 
-* Verifico la volatilità delle funzioni esistenti per trovare candidati da
-* ottimizzare: */
- SELECT proname, provolatile, -- '</span><span class="n">v</span><span class="s1">'=volatile, '</span><span class="n">s</span><span class="s1">'=stable, '</span><span class="n">i</span><span class="s1">'=immutable prosrc
-FROM pg_proc WHERE pronamespace = '</span><span class="k">public</span><span class="s1">'::regnamespace ORDER BY proname;
-</span></pre></td></tr></tbody></table></code></pre></div></div>
+</pre></td><td class="rouge-code"><pre>    <span class="cm">/* Dimostro l'impatto della volatilità con un esempio concreto. Questa
+        funzione è VOLATILE per default: il Planner la chiama una volta per
+        riga, anche se l'input è costante. */</span> <span class="k">CREATE</span> <span class="k">OR</span> <span class="k">REPLACE</span> <span class="k">FUNCTION</span>
+        <span class="n">convert_currency</span><span class="p">(</span><span class="n">amount</span> <span class="nb">numeric</span><span class="p">,</span> <span class="n">from_cur</span> <span class="nb">text</span><span class="p">,</span> <span class="n">to_cur</span> <span class="nb">text</span><span class="p">)</span> <span class="k">RETURNS</span>
+        <span class="nb">numeric</span> <span class="k">AS</span> <span class="err">$$</span> <span class="k">SELECT</span> <span class="n">amount</span> <span class="o">*</span> <span class="n">rate</span> <span class="k">FROM</span> <span class="n">exchange_rates</span> <span class="k">WHERE</span>
+        <span class="n">from_currency</span> <span class="o">=</span> <span class="n">from_cur</span> <span class="k">AND</span> <span class="n">to_currency</span> <span class="o">=</span> <span class="n">to_cur</span><span class="p">;</span> <span class="err">$$</span> <span class="k">LANGUAGE</span> <span class="k">SQL</span>
+        <span class="k">VOLATILE</span><span class="p">;</span> <span class="c1">-- VOLATILE = chiamata 1 milione di volte su 1 milione di</span>
+        <span class="n">righe</span> <span class="cm">/* La marco come STABLE: il database la chiama una volta per
+        scansione invece che per riga, perché sa che non cambierà nell'arco
+        della stessa transazione. È corretta perché exchange_rates non cambia
+        durante una query. */</span> <span class="k">CREATE</span> <span class="k">OR</span> <span class="k">REPLACE</span> <span class="k">FUNCTION</span> <span class="n">convert_currency</span><span class="p">(</span><span class="n">amount</span>
+        <span class="nb">numeric</span><span class="p">,</span> <span class="n">from_cur</span> <span class="nb">text</span><span class="p">,</span> <span class="n">to_cur</span> <span class="nb">text</span><span class="p">)</span> <span class="k">RETURNS</span> <span class="nb">numeric</span> <span class="k">AS</span> <span class="err">$$</span> <span class="k">SELECT</span> <span class="n">amount</span>
+        <span class="o">*</span> <span class="n">rate</span> <span class="k">FROM</span> <span class="n">exchange_rates</span> <span class="k">WHERE</span> <span class="n">from_currency</span> <span class="o">=</span> <span class="n">from_cur</span> <span class="k">AND</span>
+        <span class="n">to_currency</span> <span class="o">=</span> <span class="n">to_cur</span><span class="p">;</span> <span class="err">$$</span> <span class="k">LANGUAGE</span> <span class="k">SQL</span> <span class="k">STABLE</span><span class="p">;</span> <span class="cm">/* Per funzioni che
+        dipendono solo dai parametri (nessun accesso a tabelle), uso IMMUTABLE:
+        il Planner può pre-calcolarla, usarla negli indici e condividere il
+        risultato tra le righe. */</span> <span class="k">CREATE</span> <span class="k">OR</span> <span class="k">REPLACE</span> <span class="k">FUNCTION</span> <span class="n">clean_string</span><span class="p">(</span><span class="k">input</span>
+        <span class="nb">text</span><span class="p">)</span> <span class="k">RETURNS</span> <span class="nb">text</span> <span class="k">AS</span> <span class="err">$$</span> <span class="k">SELECT</span> <span class="k">trim</span><span class="p">(</span><span class="k">lower</span><span class="p">(</span><span class="k">input</span><span class="p">));</span> <span class="err">$$</span> <span class="k">LANGUAGE</span> <span class="k">SQL</span>
+        <span class="k">IMMUTABLE</span><span class="p">;</span> <span class="cm">/* Grazie a IMMUTABLE posso creare un indice funzionale: */</span>
+        <span class="k">CREATE</span> <span class="k">INDEX</span> <span class="n">idx_users_clean_username</span> <span class="k">ON</span> <span class="n">users</span> <span class="p">(</span><span class="n">clean_string</span><span class="p">(</span><span class="n">username</span><span class="p">));</span>
+        <span class="cm">/* La query userà l'indice solo se la funzione nell'indice e nella WHERE
+        sono identiche: */</span> <span class="k">SELECT</span> <span class="o">*</span> <span class="k">FROM</span> <span class="n">users</span> <span class="k">WHERE</span> <span class="n">clean_string</span><span class="p">(</span><span class="n">username</span><span class="p">)</span> <span class="o">=</span>
+        <span class="s1">'admin'</span><span class="p">;</span> <span class="cm">/* Verifico la volatilità delle funzioni esistenti per trovare
+        candidati da ottimizzare: */</span> <span class="k">SELECT</span> <span class="n">proname</span><span class="p">,</span> <span class="n">provolatile</span><span class="p">,</span> <span class="c1">--</span>
+        <span class="s1">'v'</span><span class="o">=</span><span class="k">volatile</span><span class="p">,</span> <span class="s1">'s'</span><span class="o">=</span><span class="k">stable</span><span class="p">,</span> <span class="s1">'i'</span><span class="o">=</span><span class="k">immutable</span> <span class="n">prosrc</span> <span class="k">FROM</span> <span class="n">pg_proc</span> <span class="k">WHERE</span>
+        <span class="n">pronamespace</span> <span class="o">=</span> <span class="s1">'public'</span><span class="p">::</span><span class="n">regnamespace</span> <span class="k">ORDER</span> <span class="k">BY</span> <span class="n">proname</span><span class="p">;</span>
+</pre></td></tr></tbody></table></code></pre></div></div>
 
         </article>
 

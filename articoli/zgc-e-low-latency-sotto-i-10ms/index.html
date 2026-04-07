@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ZGC e Low Latency sotto i 10ms — DevLog</title>
-    <meta name="description" content="Con heap molto grandi (>100GB), i classici GC come G1 possono avere pause 'Stop-The-World' percepibili. ZGC esegue quasi tutto il lavoro in concorrenza con i thread dell'applicazione. Il vantaggio tecnico è che i tempi di pausa sono costanti e non di
+    <meta name="description" content="Con heap molto grandi (>100GB), i classici GC come G1 possono avere pause "Stop-The-World" percepibili. ZGC esegue quasi tutto il lavoro in concorrenza con i thread dell'applicazione. Il vantaggio tecnico è che i tempi di pausa sono costanti e non di
 ">
     <link rel="stylesheet" href="/appuntidiprogrammazione/assets/css/style.css">
 
@@ -144,61 +144,61 @@
 53
 54
 55
-</pre></td><td class="rouge-code"><pre><span class="o">*</span> <span class="nc">Abilito</span> <span class="no">ZGC</span> <span class="n">con</span> <span class="n">logging</span> <span class="n">dettagliato</span> <span class="n">per</span> <span class="n">monitorare</span> <span class="n">che</span> <span class="n">le</span> <span class="n">pause</span> <span class="n">restino</span>
-<span class="o">*</span> <span class="n">effettivamente</span> <span class="n">sotto</span> <span class="n">la</span> <span class="n">soglia</span> <span class="n">desiderata</span><span class="o">.</span> <span class="no">ZGC</span> <span class="n">usa</span> <span class="s">"colored pointers"</span> <span class="n">per</span>
-<span class="o">*</span> <span class="n">tracciare</span> <span class="n">lo</span> <span class="n">stato</span> <span class="n">degli</span> <span class="n">oggetti</span> <span class="n">senza</span> <span class="nc">Stop</span><span class="o">-</span><span class="nc">The</span><span class="o">-</span><span class="nc">World</span> <span class="n">completi</span><span class="o">.</span> <span class="o">*/</span>
- <span class="n">java</span> <span class="o">-</span><span class="nl">XX:</span><span class="o">+</span><span class="nc">UseZGC</span> <span class="err">\</span> <span class="o">-</span><span class="nc">Xmx200G</span> <span class="err">\</span> <span class="o">-</span><span class="nl">XX:</span><span class="nc">ConcGCThreads</span><span class="o">=</span><span class="mi">12</span> <span class="err">\</span>
-<span class="o">-</span><span class="nl">Xlog:</span><span class="n">gc</span><span class="o">*:</span><span class="n">file</span><span class="o">=</span><span class="n">gc</span><span class="o">.</span><span class="na">log</span><span class="o">:</span><span class="n">time</span><span class="o">,</span><span class="n">level</span><span class="o">,</span><span class="n">tags</span> <span class="err">\</span> <span class="o">-</span><span class="n">jar</span> <span class="n">search</span><span class="o">-</span><span class="n">engine</span><span class="o">.</span><span class="na">jar</span>
+</pre></td><td class="rouge-code"><pre><span class="cm">/* Abilito ZGC con logging dettagliato per monitorare che le pause restino
+    effettivamente sotto la soglia desiderata. ZGC usa "colored pointers" per
+    tracciare lo stato degli oggetti senza Stop-The-World completi. */</span>
+<span class="n">java</span> <span class="o">-</span><span class="nl">XX:</span><span class="o">+</span><span class="nc">UseZGC</span> <span class="err">\</span> <span class="o">-</span><span class="nc">Xmx200G</span> <span class="err">\</span> <span class="o">-</span><span class="nl">XX:</span><span class="nc">ConcGCThreads</span><span class="o">=</span><span class="mi">12</span> <span class="err">\</span>
+    <span class="o">-</span><span class="nl">Xlog:</span><span class="n">gc</span><span class="o">*:</span><span class="n">file</span><span class="o">=</span><span class="n">gc</span><span class="o">.</span><span class="na">log</span><span class="o">:</span><span class="n">time</span><span class="o">,</span><span class="n">level</span><span class="o">,</span><span class="n">tags</span> <span class="err">\</span> <span class="o">-</span><span class="n">jar</span> <span class="n">search</span><span class="o">-</span><span class="n">engine</span><span class="o">.</span><span class="na">jar</span>
 <span class="cm">/* Verifico in tempo reale che le pause siano sotto 10ms leggendo il log: */</span>
- 
-<span class="c1">// [2026-03-25T10:15:03.123] GC(42) Pause Mark Start 1.234ms </span>
-<span class="c1">// [2026-03-25T10:15:03.456] GC(42) Pause Mark End 0.891ms </span>
-<span class="c1">// [2026-03-25T10:15:03.789] GC(42) Pause Relocate Start 0.543ms </span>
-<span class="c1">// Le tre pause sono indipendenti dalla dimensione dell'heap: sempre &lt; 5ms su</span>
-<span class="c1">// qualsiasi heap</span>
-<span class="o">*</span> <span class="nc">Misuro</span> <span class="n">la</span> <span class="n">latenza</span> <span class="n">p99</span> <span class="n">prima</span> <span class="n">e</span> <span class="n">dopo</span> <span class="n">il</span> <span class="n">passaggio</span> <span class="n">a</span> <span class="no">ZGC</span> <span class="n">con</span> <span class="n">un</span> <span class="n">benchmark</span> <span class="nl">JMH:</span> <span class="o">*/</span>
- <span class="nd">@BenchmarkMode</span><span class="o">(</span><span class="nc">Mode</span><span class="o">.</span><span class="na">AverageTime</span><span class="o">)</span> <span class="nd">@OutputTimeUnit</span><span class="o">(</span><span class="nc">TimeUnit</span><span class="o">.</span><span class="na">MILLISECONDS</span><span class="o">)</span>
-<span class="nd">@Warmup</span><span class="o">(</span><span class="n">iterations</span> <span class="o">=</span> <span class="mi">5</span><span class="o">)</span> <span class="nd">@Measurement</span><span class="o">(</span><span class="n">iterations</span> <span class="o">=</span> <span class="mi">20</span><span class="o">)</span> <span class="kd">public</span> <span class="kd">class</span>
-<span class="nc">LatencyBenchmark</span>
-<span class="o">{</span> <span class="nd">@Benchmark</span> <span class="kd">public</span> <span class="nc">SearchResult</span> <span class="nf">searchWithGCPressure</span><span class="o">(</span><span class="nc">SearchState</span> <span class="n">state</span><span class="o">)</span> 
-<span class="o">{</span> 
-<span class="c1">// Alloco deliberatamente oggetti per simulare pressione GC byte[] pressure =</span>
-<span class="c1">// new byte[1024]; return state.index.search("query"); }</span>
- <span class="o">}</span>
- 
-<span class="o">*</span> <span class="nc">In</span> <span class="nc">Spring</span> <span class="nc">Boot</span><span class="o">,</span> <span class="n">configuro</span> <span class="no">ZGC</span> <span class="n">nel</span> <span class="nc">Dockerfile</span> <span class="n">per</span> <span class="n">garantire</span> <span class="n">la</span> <span class="n">portabilità</span>
-<span class="o">*</span> <span class="n">della</span> <span class="nl">configurazione:</span> <span class="o">*/</span>
- 
-<span class="c1">// ENTRYPOINT ["java", </span>
-<span class="c1">// "-XX:+UseZGC", </span>
-<span class="c1">// "-Xmx200G", </span>
-<span class="c1">// "-XX:ConcGCThreads=12", </span>
-<span class="c1">// "-XX:SoftMaxHeapSize=180G", </span>
-<span class="c1">// Suggerisce a ZGC di mantenere l'heap sotto 180GB se possibile </span>
-<span class="c1">// "-Xlog:gc*:file=/var/log/gc.log:time,level,tags", </span>
-<span class="c1">// "-jar", "/app/search-engine.jar"] </span>
-<span class="o">*</span> <span class="nc">SoftMaxHeapSize</span> <span class="n">è</span> <span class="nl">fondamentale:</span> <span class="n">dice</span> <span class="n">a</span> <span class="no">ZGC</span> <span class="n">di</span> <span class="n">cercare</span> <span class="n">di</span> <span class="n">mantenere</span> <span class="n">l</span><span class="err">'</span><span class="n">heap</span> <span class="n">più</span>
-<span class="o">*</span> <span class="n">piccolo</span> <span class="n">del</span> <span class="n">massimo</span><span class="o">,</span> <span class="n">riducendo</span> <span class="n">ulteriormente</span> <span class="n">la</span> <span class="n">latenza</span> <span class="n">nelle</span> <span class="n">fasi</span> <span class="n">di</span>
-<span class="o">*</span> <span class="n">relocation</span><span class="o">.</span> <span class="o">*/</span>
- 
-<span class="o">*</span> <span class="nc">Monitoro</span> <span class="n">le</span> <span class="n">pause</span> <span class="no">GC</span> <span class="n">in</span> <span class="n">produzione</span> <span class="n">tramite</span> <span class="nc">Micrometer</span> <span class="n">e</span> <span class="n">le</span> <span class="n">espongo</span> <span class="n">come</span>
-<span class="o">*</span> <span class="nl">metrica:</span> <span class="o">*/</span>
- <span class="nd">@Bean</span> <span class="kd">public</span> <span class="nc">MeterBinder</span> <span class="nf">zgcPauseMetrics</span><span class="o">()</span> 
-<span class="o">{</span> <span class="k">return</span> <span class="n">registry</span> <span class="o">-&gt;</span> 
-<span class="o">{</span> 
-<span class="c1">// Registro un listener sulle notifiche JMX del GC per catturare ogni pausa for</span>
-<span class="c1">// (GarbageCollectorMXBean gc : ManagementFactory.getGarbageCollectorMXBeans())</span>
-<span class="o">{</span> <span class="k">if</span> <span class="o">(</span><span class="n">gc</span> <span class="k">instanceof</span> <span class="nc">NotificationEmitter</span> <span class="n">emitter</span><span class="o">)</span> 
-<span class="o">{</span> <span class="n">emitter</span><span class="o">.</span><span class="na">addNotificationListener</span><span class="o">((</span><span class="n">notif</span><span class="o">,</span> <span class="n">handback</span><span class="o">)</span> <span class="o">-&gt;</span> 
-<span class="o">{</span> <span class="nc">GarbageCollectionNotificationInfo</span> <span class="n">info</span> <span class="o">=</span> <span class="nc">GarbageCollectionNotificationInfo</span>
-<span class="o">.</span><span class="na">from</span><span class="o">((</span><span class="nc">CompositeData</span><span class="o">)</span> <span class="n">notif</span><span class="o">.</span><span class="na">getUserData</span><span class="o">());</span> <span class="kt">double</span> <span class="n">pauseMs</span> <span class="o">=</span>
-<span class="n">info</span><span class="o">.</span><span class="na">getGcInfo</span><span class="o">().</span><span class="na">getDuration</span><span class="o">();</span> <span class="nc">Timer</span><span class="o">.</span><span class="na">builder</span><span class="o">(</span><span class="s">"jvm.gc.pause.zgc"</span><span class="o">)</span> <span class="o">.</span><span class="na">tag</span><span class="o">(</span><span class="s">"cause"</span><span class="o">,</span>
-<span class="n">info</span><span class="o">.</span><span class="na">getGcCause</span><span class="o">())</span> <span class="o">.</span><span class="na">register</span><span class="o">(</span><span class="n">registry</span><span class="o">)</span> <span class="o">.</span><span class="na">record</span><span class="o">(</span><span class="nc">Duration</span><span class="o">.</span><span class="na">ofMillis</span><span class="o">((</span><span class="kt">long</span><span class="o">)</span>
-<span class="n">pauseMs</span><span class="o">));</span> <span class="o">}</span>
-<span class="o">,</span> <span class="kc">null</span><span class="o">,</span> <span class="kc">null</span><span class="o">);</span> <span class="o">}</span>
- <span class="o">}</span>
- <span class="o">}</span>
-<span class="o">;</span> <span class="o">}</span>
+<span class="c1">// [2026-03-25T10:15:03.123] GC(42) Pause Mark Start 1.234ms //</span>
+    <span class="o">[</span><span class="mi">2026</span><span class="o">-</span><span class="mo">03</span><span class="o">-</span><span class="mi">25</span><span class="nl">T10:</span><span class="mi">15</span><span class="o">:</span><span class="mf">03.456</span><span class="o">]</span> <span class="no">GC</span><span class="o">(</span><span class="mi">42</span><span class="o">)</span> <span class="nc">Pause</span> <span class="nc">Mark</span> <span class="nc">End</span> <span class="mf">0.891</span><span class="n">ms</span> <span class="c1">//</span>
+    <span class="o">[</span><span class="mi">2026</span><span class="o">-</span><span class="mo">03</span><span class="o">-</span><span class="mi">25</span><span class="nl">T10:</span><span class="mi">15</span><span class="o">:</span><span class="mf">03.789</span><span class="o">]</span> <span class="no">GC</span><span class="o">(</span><span class="mi">42</span><span class="o">)</span> <span class="nc">Pause</span> <span class="nc">Relocate</span> <span class="nc">Start</span> <span class="mf">0.543</span><span class="n">ms</span> <span class="c1">// Le tre</span>
+    <span class="n">pause</span> <span class="n">sono</span> <span class="n">indipendenti</span> <span class="n">dalla</span> <span class="n">dimensione</span> <span class="n">dell</span><span class="err">'</span><span class="nl">heap:</span> <span class="n">sempre</span> <span class="o">&lt;</span> <span class="mi">5</span><span class="n">ms</span> <span class="n">su</span>
+    <span class="n">qualsiasi</span> <span class="n">heap</span> <span class="cm">/* Misuro la latenza p99 prima e dopo il passaggio a ZGC con
+    un benchmark JMH: */</span> <span class="nd">@BenchmarkMode</span><span class="o">(</span><span class="nc">Mode</span><span class="o">.</span><span class="na">AverageTime</span><span class="o">)</span>
+    <span class="nd">@OutputTimeUnit</span><span class="o">(</span><span class="nc">TimeUnit</span><span class="o">.</span><span class="na">MILLISECONDS</span><span class="o">)</span> <span class="nd">@Warmup</span><span class="o">(</span><span class="n">iterations</span> <span class="o">=</span> <span class="mi">5</span><span class="o">)</span>
+    <span class="nd">@Measurement</span><span class="o">(</span><span class="n">iterations</span> <span class="o">=</span> <span class="mi">20</span><span class="o">)</span> <span class="kd">public</span> <span class="kd">class</span> <span class="nc">LatencyBenchmark</span>
+<span class="o">{</span>
+    <span class="nd">@Benchmark</span> <span class="kd">public</span> <span class="nc">SearchResult</span> <span class="nf">searchWithGCPressure</span><span class="o">(</span><span class="nc">SearchState</span> <span class="n">state</span><span class="o">)</span> <span class="o">{</span>
+        <span class="c1">// Alloco deliberatamente oggetti per simulare pressione GC byte[]</span>
+            <span class="n">pressure</span> <span class="o">=</span> <span class="k">new</span> <span class="kt">byte</span><span class="o">[</span><span class="mi">1024</span><span class="o">]</span>
+        <span class="o">;</span>
+        <span class="k">return</span> <span class="n">state</span><span class="o">.</span><span class="na">index</span><span class="o">.</span><span class="na">search</span><span class="o">(</span><span class="s">"query"</span><span class="o">);</span>
+    <span class="o">}</span>
+<span class="o">}</span>
+<span class="cm">/* In Spring Boot, configuro ZGC nel Dockerfile per garantire la portabilità
+    della configurazione: */</span>
+<span class="c1">// ENTRYPOINT ["java", // "-XX:+UseZGC", // "-Xmx200G", //</span>
+    <span class="s">"-XX:ConcGCThreads=12"</span><span class="o">,</span> <span class="c1">// "-XX:SoftMaxHeapSize=180G", // Suggerisce a ZGC</span>
+    <span class="n">di</span> <span class="n">mantenere</span> <span class="n">l</span><span class="err">'</span><span class="n">heap</span> <span class="n">sotto</span> <span class="mi">180</span><span class="no">GB</span> <span class="n">se</span> <span class="n">possibile</span> <span class="c1">//</span>
+    <span class="s">"-Xlog:gc*:file=/var/log/gc.log:time,level,tags"</span><span class="o">,</span> <span class="c1">// "-jar",</span>
+    <span class="s">"/app/search-engine.jar"</span><span class="o">]</span> <span class="cm">/* SoftMaxHeapSize è fondamentale: dice a ZGC di
+    cercare di mantenere l'heap più piccolo del massimo, riducendo ulteriormente
+    la latenza nelle fasi di relocation. */</span> <span class="cm">/* Monitoro le pause GC in
+    produzione tramite Micrometer e le espongo come metrica: */</span> <span class="nd">@Bean</span> <span class="kd">public</span>
+    <span class="nc">MeterBinder</span> <span class="nf">zgcPauseMetrics</span><span class="o">()</span>
+<span class="o">{</span>
+    <span class="k">return</span> <span class="n">registry</span> <span class="o">-&gt;</span> <span class="o">{</span>
+        <span class="c1">// Registro un listener sulle notifiche JMX del GC per catturare ogni</span>
+            <span class="n">pausa</span> <span class="nf">for</span> <span class="o">(</span><span class="nc">GarbageCollectorMXBean</span> <span class="n">gc</span> <span class="o">:</span>
+            <span class="nc">ManagementFactory</span><span class="o">.</span><span class="na">getGarbageCollectorMXBeans</span><span class="o">())</span>
+        <span class="o">{</span>
+            <span class="k">if</span> <span class="o">(</span><span class="n">gc</span> <span class="k">instanceof</span> <span class="nc">NotificationEmitter</span> <span class="n">emitter</span><span class="o">)</span> <span class="o">{</span>
+                <span class="n">emitter</span><span class="o">.</span><span class="na">addNotificationListener</span><span class="o">((</span><span class="n">notif</span><span class="o">,</span> <span class="n">handback</span><span class="o">)</span> <span class="o">-&gt;</span> <span class="o">{</span>
+                    <span class="nc">GarbageCollectionNotificationInfo</span> <span class="n">info</span> <span class="o">=</span>
+                        <span class="nc">GarbageCollectionNotificationInfo</span> <span class="o">.</span><span class="na">from</span><span class="o">((</span><span class="nc">CompositeData</span><span class="o">)</span>
+                        <span class="n">notif</span><span class="o">.</span><span class="na">getUserData</span><span class="o">());</span>
+                    <span class="kt">double</span> <span class="n">pauseMs</span> <span class="o">=</span> <span class="n">info</span><span class="o">.</span><span class="na">getGcInfo</span><span class="o">().</span><span class="na">getDuration</span><span class="o">();</span>
+                    <span class="nc">Timer</span><span class="o">.</span><span class="na">builder</span><span class="o">(</span><span class="s">"jvm.gc.pause.zgc"</span><span class="o">)</span> <span class="o">.</span><span class="na">tag</span><span class="o">(</span><span class="s">"cause"</span><span class="o">,</span>
+                        <span class="n">info</span><span class="o">.</span><span class="na">getGcCause</span><span class="o">())</span> <span class="o">.</span><span class="na">register</span><span class="o">(</span><span class="n">registry</span><span class="o">)</span>
+                        <span class="o">.</span><span class="na">record</span><span class="o">(</span><span class="nc">Duration</span><span class="o">.</span><span class="na">ofMillis</span><span class="o">((</span><span class="kt">long</span><span class="o">)</span> <span class="n">pauseMs</span><span class="o">));</span>
+                <span class="o">}</span>
+                <span class="o">,</span> <span class="kc">null</span><span class="o">,</span> <span class="kc">null</span><span class="o">);</span>
+            <span class="o">}</span>
+        <span class="o">}</span>
+    <span class="o">}</span>
+    <span class="o">;</span>
+<span class="o">}</span>
 </pre></td></tr></tbody></table></code></pre></div></div>
 
         </article>

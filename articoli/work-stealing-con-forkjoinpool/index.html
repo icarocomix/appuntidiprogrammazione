@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Work-Stealing con ForkJoinPool — DevLog</title>
-    <meta name="description" content="Per calcoli computazionali pesanti (CPU bound), un pool a dimensione fissa può essere inefficiente se alcuni task sono più lunghi di altri. ForkJoinPool implementa l'algoritmo di work-stealing: i thread inattivi 'rubano' lavoro dalle code degli altri
+    <meta name="description" content="Per calcoli computazionali pesanti (CPU bound), un pool a dimensione fissa può essere inefficiente se alcuni task sono più lunghi di altri. ForkJoinPool implementa l'algoritmo di work-stealing: i thread inattivi "rubano" lavoro dalle code degli altri
 ">
     <link rel="stylesheet" href="/appuntidiprogrammazione/assets/css/style.css">
 
@@ -136,53 +136,93 @@
 45
 46
 47
-</pre></td><td class="rouge-code"><pre><span class="o">*</span> <span class="nc">Implemento</span> <span class="nc">RecursiveTask</span> <span class="n">per</span> <span class="n">sommare</span> <span class="n">un</span> <span class="n">array</span> <span class="n">di</span> <span class="kt">long</span> <span class="n">in</span> <span class="n">parallelo</span><span class="o">.</span> <span class="nc">La</span> <span class="n">soglia</span>
-<span class="o">*</span> <span class="no">THRESHOLD</span> <span class="n">determina</span> <span class="n">quando</span> <span class="n">smettere</span> <span class="n">di</span> <span class="nl">dividere:</span> <span class="n">troppo</span> <span class="n">bassa</span> <span class="n">causa</span> <span class="n">overhead</span>
-<span class="o">*</span> <span class="n">eccessivo</span> <span class="n">di</span> <span class="n">scheduling</span><span class="o">,</span> <span class="n">troppo</span> <span class="n">alta</span> <span class="n">riduce</span> <span class="n">il</span> <span class="n">parallelismo</span><span class="o">.</span> <span class="o">*/</span>
- <span class="kd">public</span> <span class="kd">class</span> <span class="nc">SumTask</span> <span class="kd">extends</span> <span class="nc">RecursiveTask</span><span class="o">&lt;</span><span class="nc">Long</span><span class="o">&gt;</span> 
-<span class="o">{</span> <span class="kd">private</span> <span class="kd">static</span> <span class="kd">final</span> <span class="kt">int</span> <span class="no">THRESHOLD</span> <span class="o">=</span> <span class="mi">10_000</span><span class="o">;</span> <span class="kd">private</span> <span class="kd">final</span> <span class="kt">long</span><span class="o">[]</span> <span class="n">data</span><span class="o">;</span>
-<span class="kd">private</span> <span class="kd">final</span> <span class="kt">int</span> <span class="n">start</span><span class="o">,</span> <span class="n">end</span><span class="o">;</span> <span class="kd">public</span> <span class="nf">SumTask</span><span class="o">(</span><span class="kt">long</span><span class="o">[]</span> <span class="n">data</span><span class="o">,</span> <span class="kt">int</span> <span class="n">start</span><span class="o">,</span> <span class="kt">int</span> <span class="n">end</span><span class="o">)</span>
-<span class="o">{</span> <span class="k">this</span><span class="o">.</span><span class="na">data</span> <span class="o">=</span> <span class="n">data</span><span class="o">;</span> <span class="k">this</span><span class="o">.</span><span class="na">start</span> <span class="o">=</span> <span class="n">start</span><span class="o">;</span> <span class="k">this</span><span class="o">.</span><span class="na">end</span> <span class="o">=</span> <span class="n">end</span><span class="o">;</span> <span class="o">}</span>
- <span class="nd">@Override</span> <span class="kd">protected</span> <span class="nc">Long</span> <span class="nf">compute</span><span class="o">()</span> 
-<span class="o">{</span> <span class="k">if</span> <span class="o">(</span><span class="n">end</span> <span class="o">-</span> <span class="n">start</span> <span class="o">&lt;=</span> <span class="no">THRESHOLD</span><span class="o">)</span> 
-<span class="o">{</span> 
-<span class="c1">// Ho raggiunto la soglia: processo direttamente senza ulteriori fork long sum =</span>
-<span class="c1">// 0; for (int i = start; i &lt; end; i++) sum += data[i]; return sum; }</span>
- <span class="kt">int</span> <span class="n">mid</span> <span class="o">=</span> <span class="o">(</span><span class="n">start</span> <span class="o">+</span> <span class="n">end</span><span class="o">)</span> <span class="o">/</span> <span class="mi">2</span><span class="o">;</span> <span class="nc">SumTask</span> <span class="n">left</span> <span class="o">=</span> <span class="k">new</span> <span class="nc">SumTask</span><span class="o">(</span><span class="n">data</span><span class="o">,</span> <span class="n">start</span><span class="o">,</span> <span class="n">mid</span><span class="o">);</span>
-<span class="nc">SumTask</span> <span class="n">right</span> <span class="o">=</span> <span class="k">new</span> <span class="nc">SumTask</span><span class="o">(</span><span class="n">data</span><span class="o">,</span> <span class="n">mid</span><span class="o">,</span> <span class="n">end</span><span class="o">);</span> <span class="n">left</span><span class="o">.</span><span class="na">fork</span><span class="o">();</span>
-<span class="c1">// Avvio il subtask sinistro in asincrono su un altro thread long rightResult =</span>
-<span class="c1">// right.compute();</span>
-<span class="c1">// Calcolo il destro nel thread corrente long leftResult = left.join(); </span>
-<span class="c1">// Aspetto il sinistro return leftResult + rightResult; }</span>
- <span class="o">}</span>
- 
-<span class="o">*</span> <span class="nc">Utilizzo</span> <span class="n">il</span> <span class="nc">ForkJoinPool</span> <span class="n">comune</span> <span class="n">della</span> <span class="nf">JVM</span> <span class="o">(</span><span class="n">parallelismo</span> <span class="o">=</span> <span class="n">numero</span> <span class="n">di</span> <span class="n">core</span> <span class="o">-</span> <span class="mi">1</span><span class="o">)</span>
-<span class="o">*</span> <span class="n">oppure</span> <span class="n">ne</span> <span class="n">creo</span> <span class="n">uno</span> <span class="n">dedicato</span> <span class="n">per</span> <span class="n">isolare</span> <span class="n">il</span> <span class="n">carico</span> <span class="no">CPU</span> <span class="n">da</span> <span class="n">altri</span> <span class="nl">processi:</span> <span class="o">*/</span>
- <span class="nc">ForkJoinPool</span> <span class="n">pool</span> <span class="o">=</span> <span class="k">new</span>
-<span class="nc">ForkJoinPool</span><span class="o">(</span><span class="nc">Runtime</span><span class="o">.</span><span class="na">getRuntime</span><span class="o">().</span><span class="na">availableProcessors</span><span class="o">());</span> <span class="kt">long</span><span class="o">[]</span> <span class="n">bigArray</span> <span class="o">=</span>
-<span class="n">generateData</span><span class="o">(</span><span class="mi">10_000_000</span><span class="o">);</span> <span class="kt">long</span> <span class="n">result</span> <span class="o">=</span> <span class="n">pool</span><span class="o">.</span><span class="na">invoke</span><span class="o">(</span><span class="k">new</span> <span class="nc">SumTask</span><span class="o">(</span><span class="n">bigArray</span><span class="o">,</span> <span class="mi">0</span><span class="o">,</span>
-<span class="n">bigArray</span><span class="o">.</span><span class="na">length</span><span class="o">));</span> <span class="n">pool</span><span class="o">.</span><span class="na">shutdown</span><span class="o">();</span>
-<span class="o">*</span> <span class="nc">In</span> <span class="nc">Spring</span> <span class="nc">Boot</span><span class="o">,</span> <span class="n">espongo</span> <span class="n">il</span> <span class="n">calcolo</span> <span class="n">parallelo</span> <span class="n">tramite</span> <span class="n">un</span> <span class="n">service</span><span class="o">.</span> <span class="nc">Uso</span> <span class="n">un</span>
-<span class="o">*</span> <span class="nc">ForkJoinPool</span> <span class="n">dedicato</span> <span class="n">per</span> <span class="n">non</span> <span class="n">intaccare</span> <span class="n">il</span> <span class="n">pool</span> <span class="n">comune</span> <span class="n">usato</span> <span class="n">dai</span> <span class="n">parallel</span>
-<span class="o">*</span> <span class="nl">stream:</span> <span class="o">*/</span>
- <span class="nd">@Service</span> <span class="kd">public</span> <span class="kd">class</span> <span class="nc">StatisticsService</span> 
-<span class="o">{</span> <span class="kd">private</span> <span class="kd">final</span> <span class="nc">ForkJoinPool</span> <span class="n">cpuPool</span> <span class="o">=</span> <span class="k">new</span> <span class="nc">ForkJoinPool</span><span class="o">(</span>
-<span class="nc">Runtime</span><span class="o">.</span><span class="na">getRuntime</span><span class="o">().</span><span class="na">availableProcessors</span><span class="o">()</span> <span class="o">);</span> <span class="kd">public</span> <span class="kt">long</span> <span class="nf">computeSum</span><span class="o">(</span><span class="kt">long</span><span class="o">[]</span>
-<span class="n">data</span><span class="o">)</span>
-<span class="o">{</span> <span class="k">try</span> 
-<span class="o">{</span> <span class="k">return</span> <span class="n">cpuPool</span><span class="o">.</span><span class="na">submit</span><span class="o">(</span><span class="k">new</span> <span class="nc">SumTask</span><span class="o">(</span><span class="n">data</span><span class="o">,</span> <span class="mi">0</span><span class="o">,</span> <span class="n">data</span><span class="o">.</span><span class="na">length</span><span class="o">)).</span><span class="na">get</span><span class="o">();</span> <span class="o">}</span>
- <span class="k">catch</span> <span class="o">(</span><span class="nc">InterruptedException</span> <span class="o">|</span> <span class="nc">ExecutionException</span> <span class="n">e</span><span class="o">)</span> 
-<span class="o">{</span> <span class="nc">Thread</span><span class="o">.</span><span class="na">currentThread</span><span class="o">().</span><span class="na">interrupt</span><span class="o">();</span> <span class="k">throw</span> <span class="k">new</span> <span class="nc">ComputationException</span><span class="o">(</span><span class="s">"Errore nel
-calcolo parallelo"</span><span class="o">,</span> <span class="n">e</span><span class="o">);</span> <span class="o">}</span>
- <span class="o">}</span>
- <span class="o">}</span>
- 
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+</pre></td><td class="rouge-code"><pre><span class="cm">/* Implemento RecursiveTask per sommare un array di long in parallelo. La soglia
+    THRESHOLD determina quando smettere di dividere: troppo bassa causa overhead
+    eccessivo di scheduling, troppo alta riduce il parallelismo. */</span>
+<span class="kd">public</span> <span class="kd">class</span> <span class="nc">SumTask</span> <span class="kd">extends</span> <span class="nc">RecursiveTask</span><span class="o">&lt;</span><span class="nc">Long</span><span class="o">&gt;</span> <span class="o">{</span>
+    <span class="kd">private</span> <span class="kd">static</span> <span class="kd">final</span> <span class="kt">int</span> <span class="no">THRESHOLD</span> <span class="o">=</span> <span class="mi">10_000</span><span class="o">;</span>
+    <span class="kd">private</span> <span class="kd">final</span> <span class="kt">long</span><span class="o">[]</span> <span class="n">data</span><span class="o">;</span>
+    <span class="kd">private</span> <span class="kd">final</span> <span class="kt">int</span> <span class="n">start</span><span class="o">,</span> <span class="n">end</span><span class="o">;</span>
+    <span class="kd">public</span> <span class="nf">SumTask</span><span class="o">(</span><span class="kt">long</span><span class="o">[]</span> <span class="n">data</span><span class="o">,</span> <span class="kt">int</span> <span class="n">start</span><span class="o">,</span> <span class="kt">int</span> <span class="n">end</span><span class="o">)</span> <span class="o">{</span>
+        <span class="k">this</span><span class="o">.</span><span class="na">data</span> <span class="o">=</span> <span class="n">data</span><span class="o">;</span>
+        <span class="k">this</span><span class="o">.</span><span class="na">start</span> <span class="o">=</span> <span class="n">start</span><span class="o">;</span>
+        <span class="k">this</span><span class="o">.</span><span class="na">end</span> <span class="o">=</span> <span class="n">end</span><span class="o">;</span>
+    <span class="o">}</span>
+    <span class="nd">@Override</span> <span class="kd">protected</span> <span class="nc">Long</span> <span class="nf">compute</span><span class="o">()</span> <span class="o">{</span>
+        <span class="k">if</span> <span class="o">(</span><span class="n">end</span> <span class="o">-</span> <span class="n">start</span> <span class="o">&lt;=</span> <span class="no">THRESHOLD</span><span class="o">)</span> <span class="o">{</span>
+            <span class="c1">// Ho raggiunto la soglia: processo direttamente senza ulteriori</span>
+                <span class="n">fork</span> <span class="kt">long</span> <span class="n">sum</span> <span class="o">=</span> <span class="mi">0</span>
+            <span class="o">;</span>
+            <span class="k">for</span> <span class="o">(</span><span class="kt">int</span> <span class="n">i</span> <span class="o">=</span> <span class="n">start</span><span class="o">;</span>
+            <span class="n">i</span> <span class="o">&lt;</span> <span class="n">end</span><span class="o">;</span>
+            <span class="n">i</span><span class="o">++)</span> <span class="n">sum</span> <span class="o">+=</span> <span class="n">data</span><span class="o">[</span><span class="n">i</span><span class="o">];</span>
+            <span class="k">return</span> <span class="n">sum</span><span class="o">;</span>
+        <span class="o">}</span>
+        <span class="kt">int</span> <span class="n">mid</span> <span class="o">=</span> <span class="o">(</span><span class="n">start</span> <span class="o">+</span> <span class="n">end</span><span class="o">)</span> <span class="o">/</span> <span class="mi">2</span><span class="o">;</span>
+        <span class="nc">SumTask</span> <span class="n">left</span> <span class="o">=</span> <span class="k">new</span> <span class="nc">SumTask</span><span class="o">(</span><span class="n">data</span><span class="o">,</span> <span class="n">start</span><span class="o">,</span> <span class="n">mid</span><span class="o">);</span>
+        <span class="nc">SumTask</span> <span class="n">right</span> <span class="o">=</span> <span class="k">new</span> <span class="nc">SumTask</span><span class="o">(</span><span class="n">data</span><span class="o">,</span> <span class="n">mid</span><span class="o">,</span> <span class="n">end</span><span class="o">);</span>
+        <span class="n">left</span><span class="o">.</span><span class="na">fork</span><span class="o">();</span>
+        <span class="c1">// Avvio il subtask sinistro in asincrono su un altro thread long</span>
+            <span class="n">rightResult</span> <span class="o">=</span> <span class="n">right</span><span class="o">.</span><span class="na">compute</span><span class="o">()</span>
+        <span class="o">;</span>
+        <span class="c1">// Calcolo il destro nel thread corrente long leftResult = left.join()</span>
+        <span class="o">;</span>
+        <span class="c1">// Aspetto il sinistro</span>
+        <span class="k">return</span> <span class="n">leftResult</span> <span class="o">+</span> <span class="n">rightResult</span><span class="o">;</span>
+    <span class="o">}</span>
+<span class="o">}</span>
+<span class="cm">/* Utilizzo il ForkJoinPool comune della JVM (parallelismo = numero di core - 1)
+    oppure ne creo uno dedicato per isolare il carico CPU da altri processi: */</span>
+<span class="nc">ForkJoinPool</span> <span class="n">pool</span> <span class="o">=</span> <span class="k">new</span>
+    <span class="nc">ForkJoinPool</span><span class="o">(</span><span class="nc">Runtime</span><span class="o">.</span><span class="na">getRuntime</span><span class="o">().</span><span class="na">availableProcessors</span><span class="o">());</span>
+<span class="kt">long</span><span class="o">[]</span> <span class="n">bigArray</span> <span class="o">=</span> <span class="n">generateData</span><span class="o">(</span><span class="mi">10_000_000</span><span class="o">);</span>
+<span class="kt">long</span> <span class="n">result</span> <span class="o">=</span> <span class="n">pool</span><span class="o">.</span><span class="na">invoke</span><span class="o">(</span><span class="k">new</span> <span class="nc">SumTask</span><span class="o">(</span><span class="n">bigArray</span><span class="o">,</span> <span class="mi">0</span><span class="o">,</span> <span class="n">bigArray</span><span class="o">.</span><span class="na">length</span><span class="o">));</span>
+<span class="n">pool</span><span class="o">.</span><span class="na">shutdown</span><span class="o">();</span>
+<span class="cm">/* In Spring Boot, espongo il calcolo parallelo tramite un service. Uso un
+    ForkJoinPool dedicato per non intaccare il pool comune usato dai parallel
+    stream: */</span>
+<span class="nd">@Service</span> <span class="kd">public</span> <span class="kd">class</span> <span class="nc">StatisticsService</span> <span class="o">{</span>
+    <span class="kd">private</span> <span class="kd">final</span> <span class="nc">ForkJoinPool</span> <span class="n">cpuPool</span> <span class="o">=</span> <span class="k">new</span> <span class="nc">ForkJoinPool</span><span class="o">(</span>
+        <span class="nc">Runtime</span><span class="o">.</span><span class="na">getRuntime</span><span class="o">().</span><span class="na">availableProcessors</span><span class="o">()</span> <span class="o">);</span>
+    <span class="kd">public</span> <span class="kt">long</span> <span class="nf">computeSum</span><span class="o">(</span><span class="kt">long</span><span class="o">[]</span> <span class="n">data</span><span class="o">)</span> <span class="o">{</span>
+        <span class="k">try</span> <span class="o">{</span>
+            <span class="k">return</span> <span class="n">cpuPool</span><span class="o">.</span><span class="na">submit</span><span class="o">(</span><span class="k">new</span> <span class="nc">SumTask</span><span class="o">(</span><span class="n">data</span><span class="o">,</span> <span class="mi">0</span><span class="o">,</span> <span class="n">data</span><span class="o">.</span><span class="na">length</span><span class="o">)).</span><span class="na">get</span><span class="o">();</span>
+        <span class="o">}</span>
+        <span class="k">catch</span> <span class="o">(</span><span class="nc">InterruptedException</span> <span class="o">|</span> <span class="nc">ExecutionException</span> <span class="n">e</span><span class="o">)</span> <span class="o">{</span>
+            <span class="nc">Thread</span><span class="o">.</span><span class="na">currentThread</span><span class="o">().</span><span class="na">interrupt</span><span class="o">();</span>
+            <span class="k">throw</span> <span class="k">new</span> <span class="nf">ComputationException</span><span class="o">(</span><span class="s">"Errore nel calcolo parallelo"</span><span class="o">,</span> <span class="n">e</span><span class="o">);</span>
+        <span class="o">}</span>
+    <span class="o">}</span>
+<span class="o">}</span>
 <span class="cm">/* Misuro il guadagno di speedup con JMH o con un semplice benchmark: */</span>
- <span class="kt">long</span> <span class="n">start</span> <span class="o">=</span> <span class="nc">System</span><span class="o">.</span><span class="na">nanoTime</span><span class="o">();</span> <span class="kt">long</span> <span class="n">seqResult</span> <span class="o">=</span> <span class="nc">Arrays</span><span class="o">.</span><span class="na">stream</span><span class="o">(</span><span class="n">bigArray</span><span class="o">).</span><span class="na">sum</span><span class="o">();</span>
-<span class="c1">// Sequenziale long seqTime = System.nanoTime() - start; start =</span>
-<span class="c1">// System.nanoTime(); long parResult = pool.invoke(new SumTask(bigArray, 0,</span>
-<span class="c1">// bigArray.length)); long parTime = System.nanoTime() - start;</span>
-<span class="c1">// System.out.printf("Speedup: %.2fx%n", (double) seqTime / parTime);</span>
+<span class="kt">long</span> <span class="n">start</span> <span class="o">=</span> <span class="nc">System</span><span class="o">.</span><span class="na">nanoTime</span><span class="o">();</span>
+<span class="kt">long</span> <span class="n">seqResult</span> <span class="o">=</span> <span class="nc">Arrays</span><span class="o">.</span><span class="na">stream</span><span class="o">(</span><span class="n">bigArray</span><span class="o">).</span><span class="na">sum</span><span class="o">();</span>
+<span class="c1">// Sequenziale long seqTime = System.nanoTime() - start</span>
+<span class="o">;</span>
+<span class="n">start</span> <span class="o">=</span> <span class="nc">System</span><span class="o">.</span><span class="na">nanoTime</span><span class="o">();</span>
+<span class="kt">long</span> <span class="n">parResult</span> <span class="o">=</span> <span class="n">pool</span><span class="o">.</span><span class="na">invoke</span><span class="o">(</span><span class="k">new</span> <span class="nc">SumTask</span><span class="o">(</span><span class="n">bigArray</span><span class="o">,</span> <span class="mi">0</span><span class="o">,</span> <span class="n">bigArray</span><span class="o">.</span><span class="na">length</span><span class="o">));</span>
+<span class="kt">long</span> <span class="n">parTime</span> <span class="o">=</span> <span class="nc">System</span><span class="o">.</span><span class="na">nanoTime</span><span class="o">()</span> <span class="o">-</span> <span class="n">start</span><span class="o">;</span>
+<span class="nc">System</span><span class="o">.</span><span class="na">out</span><span class="o">.</span><span class="na">printf</span><span class="o">(</span><span class="s">"Speedup: %.2fx%n"</span><span class="o">,</span> <span class="o">(</span><span class="kt">double</span><span class="o">)</span> <span class="n">seqTime</span> <span class="o">/</span> <span class="n">parTime</span><span class="o">);</span>
 </pre></td></tr></tbody></table></code></pre></div></div>
 
         </article>

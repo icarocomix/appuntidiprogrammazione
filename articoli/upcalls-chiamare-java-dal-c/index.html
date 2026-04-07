@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Upcalls: Chiamare Java dal C — DevLog</title>
-    <meta name="description" content="A volte è il codice C che deve inviare una notifica a Java (callback). Panama permette di creare 'stub' per le upcall tramite linker.upcallStub(). Le upcall sono più lente delle downcall (Java -> C) perché devono ricreare il contesto Java. Vanno prog
+    <meta name="description" content="A volte è il codice C che deve inviare una notifica a Java (callback). Panama permette di creare "stub" per le upcall tramite linker.upcallStub(). Le upcall sono più lente delle downcall (Java -> C) perché devono ricreare il contesto Java. Vanno prog
 ">
     <link rel="stylesheet" href="/appuntidiprogrammazione/assets/css/style.css">
 
@@ -159,76 +159,120 @@
 68
 69
 70
-</pre></td><td class="rouge-code"><pre><span class="o">*</span> <span class="nc">Definisco</span> <span class="n">il</span> <span class="n">metodo</span> <span class="nc">Java</span> <span class="n">che</span> <span class="n">verrà</span> <span class="n">chiamato</span> <span class="n">dalla</span> <span class="n">libreria</span> <span class="no">C</span> <span class="n">come</span> <span class="n">callback</span><span class="o">.</span> <span class="nc">Il</span>
-<span class="o">*</span> <span class="n">metodo</span> <span class="n">deve</span> <span class="n">essere</span> <span class="kd">static</span> <span class="n">per</span> <span class="n">poter</span> <span class="n">essere</span> <span class="n">convertito</span> <span class="n">in</span> <span class="n">un</span> <span class="nc">MethodHandle</span> <span class="n">senza</span>
-<span class="o">*</span> <span class="n">binding</span> <span class="n">all</span><span class="err">'</span><span class="n">istanza</span><span class="o">.</span> <span class="o">*/</span>
- <span class="kd">public</span> <span class="kd">class</span> <span class="nc">TemperatureMonitor</span> 
-<span class="o">{</span> 
-<span class="c1">// Questo metodo viene chiamato dalla libreria C quando la temperatura supera la</span>
-<span class="c1">// soglia public static void onTemperatureAlert(float temperature, int sensorId)</span>
-<span class="o">{</span> <span class="n">log</span><span class="o">.</span><span class="na">warn</span><span class="o">(</span><span class="s">"ALERT: sensore 
-{}
- ha raggiunto 
-{}
-°C"</span><span class="o">,</span> <span class="n">sensorId</span><span class="o">,</span> <span class="n">temperature</span><span class="o">);</span> <span class="n">meterRegistry</span><span class="o">.</span><span class="na">counter</span><span class="o">(</span><span class="s">"temperature.alert"</span><span class="o">,</span>
-<span class="s">"sensor"</span><span class="o">,</span> <span class="nc">String</span><span class="o">.</span><span class="na">valueOf</span><span class="o">(</span><span class="n">sensorId</span><span class="o">)).</span><span class="na">increment</span><span class="o">();</span>
-<span class="n">alertService</span><span class="o">.</span><span class="na">sendCritical</span><span class="o">(</span><span class="s">"Temperatura critica: "</span> <span class="o">+</span> <span class="n">temperature</span> <span class="o">+</span> <span class="s">"°C su sensore
-"</span> <span class="o">+</span> <span class="n">sensorId</span><span class="o">);</span> <span class="o">}</span>
- <span class="o">}</span>
- 
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+</pre></td><td class="rouge-code"><pre><span class="cm">/* Definisco il metodo Java che verrà chiamato dalla libreria C come callback.
+    Il metodo deve essere static per poter essere convertito in un MethodHandle
+    senza binding all'istanza. */</span>
+<span class="kd">public</span> <span class="kd">class</span> <span class="nc">TemperatureMonitor</span> <span class="o">{</span>
+    <span class="c1">// Questo metodo viene chiamato dalla libreria C quando la temperatura</span>
+        <span class="n">supera</span> <span class="n">la</span> <span class="n">soglia</span> <span class="kd">public</span> <span class="kd">static</span> <span class="kt">void</span> <span class="nf">onTemperatureAlert</span><span class="o">(</span><span class="kt">float</span>
+        <span class="n">temperature</span><span class="o">,</span> <span class="kt">int</span> <span class="n">sensorId</span><span class="o">)</span>
+    <span class="o">{</span>
+        <span class="n">log</span><span class="o">.</span><span class="na">warn</span><span class="o">(</span><span class="s">"ALERT: sensore {
+        }
+        ha raggiunto {
+        }
+        °C"</span><span class="o">,</span> <span class="n">sensorId</span><span class="o">,</span> <span class="n">temperature</span><span class="o">);</span>
+        <span class="n">meterRegistry</span><span class="o">.</span><span class="na">counter</span><span class="o">(</span><span class="s">"temperature.alert"</span><span class="o">,</span> <span class="s">"sensor"</span><span class="o">,</span>
+            <span class="nc">String</span><span class="o">.</span><span class="na">valueOf</span><span class="o">(</span><span class="n">sensorId</span><span class="o">)).</span><span class="na">increment</span><span class="o">();</span>
+        <span class="n">alertService</span><span class="o">.</span><span class="na">sendCritical</span><span class="o">(</span><span class="s">"Temperatura critica: "</span> <span class="o">+</span> <span class="n">temperature</span> <span class="o">+</span> <span class="s">"°C su
+            sensore "</span> <span class="o">+</span> <span class="n">sensorId</span><span class="o">);</span>
+    <span class="o">}</span>
+<span class="o">}</span>
 <span class="cm">/* Registro il callback con la libreria C di monitoraggio hardware: */</span>
- <span class="nd">@Service</span> <span class="kd">public</span> <span class="kd">class</span> <span class="nc">HardwareMonitoringService</span> 
-<span class="o">{</span> <span class="kd">private</span> <span class="kd">final</span> <span class="nc">Arena</span> <span class="n">callbackArena</span> <span class="o">=</span> <span class="nc">Arena</span><span class="o">.</span><span class="na">ofShared</span><span class="o">();</span> 
-<span class="c1">// Shared: il C può chiamarlo da qualsiasi thread private MemorySegment</span>
-<span class="c1">// callbackPtr; @PostConstruct public void init() throws Throwable</span>
-<span class="o">{</span> <span class="nc">Linker</span> <span class="n">linker</span> <span class="o">=</span> <span class="nc">Linker</span><span class="o">.</span><span class="na">nativeLinker</span><span class="o">();</span> <span class="nc">SymbolLookup</span> <span class="n">monitorLib</span> <span class="o">=</span>
-<span class="nc">SymbolLookup</span><span class="o">.</span><span class="na">libraryLookup</span><span class="o">(</span><span class="s">"libhw_monitor.so"</span><span class="o">,</span> <span class="nc">Arena</span><span class="o">.</span><span class="na">global</span><span class="o">());</span>
-<span class="c1">// Creo il MethodHandle per il metodo Java di callback MethodHandle</span>
-<span class="c1">// onAlertHandle = MethodHandles.lookup().findStatic( TemperatureMonitor.class,</span>
-<span class="c1">// "onTemperatureAlert", MethodType.methodType(void.class, float.class,</span>
-<span class="c1">// int.class) );</span>
-<span class="c1">// Descrivo la firma della funzione C del callback: void (*callback)(float temp,</span>
-<span class="c1">// int sensor_id) FunctionDescriptor callbackDescriptor =</span>
-<span class="c1">// FunctionDescriptor.ofVoid( ValueLayout.JAVA_FLOAT, ValueLayout.JAVA_INT );</span>
-<span class="c1">// Trasformo il MethodHandle in un puntatore a funzione che il C può chiamare</span>
-<span class="c1">// callbackPtr = linker.upcallStub(onAlertHandle, callbackDescriptor,</span>
-<span class="c1">// callbackArena);</span>
-<span class="c1">// Registro il callback con la libreria nativa MethodHandle registerCallback =</span>
-<span class="c1">// linker.downcallHandle(</span>
-<span class="c1">// monitorLib.find("register_temperature_callback").orElseThrow(),</span>
-<span class="c1">// FunctionDescriptor.ofVoid(ValueLayout.ADDRESS, ValueLayout.JAVA_FLOAT) );</span>
-<span class="c1">// registerCallback.invokeExact(callbackPtr, 85.0f);</span>
-<span class="c1">// Soglia: 85°C log.info("Callback temperatura registrato: soglia 85°C"); }</span>
- <span class="nd">@PreDestroy</span> <span class="kd">public</span> <span class="kt">void</span> <span class="nf">cleanup</span><span class="o">()</span> 
-<span class="o">{</span> 
-<span class="c1">// Deregistro il callback prima di chiudere l'Arena per evitare che il C chiami</span>
-<span class="c1">// un puntatore pendente deregisterCallbackFromLibrary(); callbackArena.close();</span>
-<span class="c1">// Ora il puntatore è invalido: nessun dangling pointer }</span>
- <span class="o">}</span>
- 
-<span class="o">*</span> <span class="nc">Per</span> <span class="n">callback</span> <span class="n">ad</span> <span class="n">alta</span> <span class="n">frequenza</span> <span class="n">dove</span> <span class="n">la</span> <span class="n">latenza</span> <span class="n">conta</span><span class="o">,</span> <span class="n">uso</span> <span class="n">un</span> <span class="n">buffer</span> <span class="n">ad</span> <span class="n">anello</span>
-<span class="o">*</span> <span class="n">invece</span> <span class="n">di</span> <span class="n">upcall</span> <span class="n">dirette</span><span class="o">.</span> <span class="nc">Il</span> <span class="no">C</span> <span class="n">scrive</span> <span class="n">gli</span> <span class="n">eventi</span> <span class="n">nel</span> <span class="n">buffer</span><span class="o">,</span> <span class="nc">Java</span> <span class="n">lo</span> <span class="n">legge</span>
-<span class="o">*</span> <span class="n">periodicamente</span> <span class="n">senza</span> <span class="nl">upcall:</span> <span class="o">*/</span>
- <span class="nd">@Service</span> <span class="kd">public</span> <span class="kd">class</span> <span class="nc">HighFrequencyEventService</span> 
-<span class="o">{</span> <span class="kd">private</span> <span class="kd">final</span> <span class="nc">MemorySegment</span> <span class="n">ringBuffer</span><span class="o">;</span> <span class="kd">private</span> <span class="kd">final</span> <span class="nc">MemorySegment</span>
-<span class="n">writeIndex</span><span class="o">;</span> <span class="kd">private</span> <span class="kd">final</span> <span class="nc">MemorySegment</span> <span class="n">readIndex</span><span class="o">;</span> <span class="kd">public</span>
-<span class="nf">HighFrequencyEventService</span><span class="o">()</span>
-<span class="o">{</span> <span class="nc">Arena</span> <span class="n">arena</span> <span class="o">=</span> <span class="nc">Arena</span><span class="o">.</span><span class="na">ofShared</span><span class="o">();</span> 
-<span class="c1">// Buffer ad anello da 1MB per 65536 eventi da 16 byte ciascuno ringBuffer =</span>
-<span class="c1">// arena.allocate(65536 * 16); writeIndex =</span>
-<span class="c1">// arena.allocate(ValueLayout.JAVA_INT); readIndex =</span>
-<span class="c1">// arena.allocate(ValueLayout.JAVA_INT);</span>
-<span class="c1">// Il C riceve il puntatore al buffer e scrive direttamente senza upcall</span>
-<span class="c1">// initNativeRingBuffer(ringBuffer, writeIndex, 65536); }</span>
- <span class="nd">@Scheduled</span><span class="o">(</span><span class="n">fixedDelay</span> <span class="o">=</span> <span class="mi">1</span><span class="o">)</span> 
-<span class="c1">// Poll ogni millisecondo public void pollEvents() </span>
-<span class="o">{</span> <span class="kt">int</span> <span class="n">wIdx</span> <span class="o">=</span> <span class="o">(</span><span class="kt">int</span><span class="o">)</span> <span class="nc">ValueLayout</span><span class="o">.</span><span class="na">JAVA_INT</span><span class="o">.</span><span class="na">varHandle</span><span class="o">().</span><span class="na">get</span><span class="o">(</span><span class="n">writeIndex</span><span class="o">,</span> <span class="mi">0L</span><span class="o">);</span> <span class="kt">int</span>
-<span class="n">rIdx</span> <span class="o">=</span> <span class="o">(</span><span class="kt">int</span><span class="o">)</span> <span class="nc">ValueLayout</span><span class="o">.</span><span class="na">JAVA_INT</span><span class="o">.</span><span class="na">varHandle</span><span class="o">().</span><span class="na">get</span><span class="o">(</span><span class="n">readIndex</span><span class="o">,</span> <span class="mi">0L</span><span class="o">);</span> <span class="k">while</span> <span class="o">(</span><span class="n">rIdx</span> <span class="o">!=</span>
-<span class="n">wIdx</span><span class="o">)</span>
-<span class="o">{</span> <span class="kt">long</span> <span class="n">offset</span> <span class="o">=</span> <span class="o">(</span><span class="kt">long</span><span class="o">)(</span><span class="n">rIdx</span> <span class="o">%</span> <span class="mi">65536</span><span class="o">)</span> <span class="o">*</span> <span class="mi">16</span><span class="o">;</span>
-<span class="n">processEvent</span><span class="o">(</span><span class="n">ringBuffer</span><span class="o">.</span><span class="na">asSlice</span><span class="o">(</span><span class="n">offset</span><span class="o">,</span> <span class="mi">16</span><span class="o">));</span> <span class="n">rIdx</span> <span class="o">=</span> <span class="o">(</span><span class="n">rIdx</span> <span class="o">+</span> <span class="mi">1</span><span class="o">)</span> <span class="o">&amp;</span> <span class="mh">0xFFFF</span><span class="o">;</span> <span class="o">}</span>
- <span class="nc">ValueLayout</span><span class="o">.</span><span class="na">JAVA_INT</span><span class="o">.</span><span class="na">varHandle</span><span class="o">().</span><span class="na">set</span><span class="o">(</span><span class="n">readIndex</span><span class="o">,</span> <span class="mi">0L</span><span class="o">,</span> <span class="n">rIdx</span><span class="o">);</span> <span class="o">}</span>
- <span class="o">}</span>
+<span class="nd">@Service</span> <span class="kd">public</span> <span class="kd">class</span> <span class="nc">HardwareMonitoringService</span> <span class="o">{</span>
+    <span class="kd">private</span> <span class="kd">final</span> <span class="nc">Arena</span> <span class="n">callbackArena</span> <span class="o">=</span> <span class="nc">Arena</span><span class="o">.</span><span class="na">ofShared</span><span class="o">();</span>
+    <span class="c1">// Shared: il C può chiamarlo da qualsiasi thread private MemorySegment</span>
+        <span class="n">callbackPtr</span>
+    <span class="o">;</span>
+    <span class="nd">@PostConstruct</span> <span class="kd">public</span> <span class="kt">void</span> <span class="nf">init</span><span class="o">()</span> <span class="kd">throws</span> <span class="nc">Throwable</span> <span class="o">{</span>
+        <span class="nc">Linker</span> <span class="n">linker</span> <span class="o">=</span> <span class="nc">Linker</span><span class="o">.</span><span class="na">nativeLinker</span><span class="o">();</span>
+        <span class="nc">SymbolLookup</span> <span class="n">monitorLib</span> <span class="o">=</span> <span class="nc">SymbolLookup</span><span class="o">.</span><span class="na">libraryLookup</span><span class="o">(</span><span class="s">"libhw_monitor.so"</span><span class="o">,</span>
+            <span class="nc">Arena</span><span class="o">.</span><span class="na">global</span><span class="o">());</span>
+        <span class="c1">// Creo il MethodHandle per il metodo Java di callback MethodHandle</span>
+            <span class="n">onAlertHandle</span> <span class="o">=</span> <span class="nc">MethodHandles</span><span class="o">.</span><span class="na">lookup</span><span class="o">().</span><span class="na">findStatic</span><span class="o">(</span>
+            <span class="nc">TemperatureMonitor</span><span class="o">.</span><span class="na">class</span><span class="o">,</span> <span class="s">"onTemperatureAlert"</span><span class="o">,</span>
+            <span class="nc">MethodType</span><span class="o">.</span><span class="na">methodType</span><span class="o">(</span><span class="kt">void</span><span class="o">.</span><span class="na">class</span><span class="o">,</span> <span class="kt">float</span><span class="o">.</span><span class="na">class</span><span class="o">,</span> <span class="kt">int</span><span class="o">.</span><span class="na">class</span><span class="o">)</span> <span class="o">)</span>
+        <span class="o">;</span>
+        <span class="c1">// Descrivo la firma della funzione C del callback: void</span>
+            <span class="o">(*</span><span class="n">callback</span><span class="o">)(</span><span class="kt">float</span> <span class="n">temp</span><span class="o">,</span> <span class="kt">int</span> <span class="n">sensor_id</span><span class="o">)</span> <span class="nc">FunctionDescriptor</span>
+            <span class="n">callbackDescriptor</span> <span class="o">=</span> <span class="nc">FunctionDescriptor</span><span class="o">.</span><span class="na">ofVoid</span><span class="o">(</span>
+            <span class="nc">ValueLayout</span><span class="o">.</span><span class="na">JAVA_FLOAT</span><span class="o">,</span> <span class="nc">ValueLayout</span><span class="o">.</span><span class="na">JAVA_INT</span> <span class="o">)</span>
+        <span class="o">;</span>
+        <span class="c1">// Trasformo il MethodHandle in un puntatore a funzione che il C può</span>
+            <span class="n">chiamare</span> <span class="n">callbackPtr</span> <span class="o">=</span> <span class="n">linker</span><span class="o">.</span><span class="na">upcallStub</span><span class="o">(</span><span class="n">onAlertHandle</span><span class="o">,</span>
+            <span class="n">callbackDescriptor</span><span class="o">,</span> <span class="n">callbackArena</span><span class="o">)</span>
+        <span class="o">;</span>
+        <span class="c1">// Registro il callback con la libreria nativa MethodHandle</span>
+            <span class="n">registerCallback</span> <span class="o">=</span> <span class="n">linker</span><span class="o">.</span><span class="na">downcallHandle</span><span class="o">(</span>
+            <span class="n">monitorLib</span><span class="o">.</span><span class="na">find</span><span class="o">(</span><span class="s">"register_temperature_callback"</span><span class="o">).</span><span class="na">orElseThrow</span><span class="o">(),</span>
+            <span class="nc">FunctionDescriptor</span><span class="o">.</span><span class="na">ofVoid</span><span class="o">(</span><span class="nc">ValueLayout</span><span class="o">.</span><span class="na">ADDRESS</span><span class="o">,</span>
+            <span class="nc">ValueLayout</span><span class="o">.</span><span class="na">JAVA_FLOAT</span><span class="o">)</span> <span class="o">)</span>
+        <span class="o">;</span>
+        <span class="n">registerCallback</span><span class="o">.</span><span class="na">invokeExact</span><span class="o">(</span><span class="n">callbackPtr</span><span class="o">,</span> <span class="mf">85.0f</span><span class="o">);</span>
+        <span class="c1">// Soglia: 85°C log.info("Callback temperatura registrato: soglia 85°C")</span>
+        <span class="o">;</span>
+    <span class="o">}</span>
+    <span class="nd">@PreDestroy</span> <span class="kd">public</span> <span class="kt">void</span> <span class="nf">cleanup</span><span class="o">()</span> <span class="o">{</span>
+        <span class="c1">// Deregistro il callback prima di chiudere l'Arena per evitare che il C</span>
+            <span class="n">chiami</span> <span class="n">un</span> <span class="n">puntatore</span> <span class="n">pendente</span> <span class="nf">deregisterCallbackFromLibrary</span><span class="o">()</span>
+        <span class="o">;</span>
+        <span class="n">callbackArena</span><span class="o">.</span><span class="na">close</span><span class="o">();</span>
+        <span class="c1">// Ora il puntatore è invalido: nessun dangling pointer</span>
+    <span class="o">}</span>
+<span class="o">}</span>
+<span class="cm">/* Per callback ad alta frequenza dove la latenza conta, uso un buffer ad anello
+    invece di upcall dirette. Il C scrive gli eventi nel buffer, Java lo legge
+    periodicamente senza upcall: */</span>
+<span class="nd">@Service</span> <span class="kd">public</span> <span class="kd">class</span> <span class="nc">HighFrequencyEventService</span> <span class="o">{</span>
+    <span class="kd">private</span> <span class="kd">final</span> <span class="nc">MemorySegment</span> <span class="n">ringBuffer</span><span class="o">;</span>
+    <span class="kd">private</span> <span class="kd">final</span> <span class="nc">MemorySegment</span> <span class="n">writeIndex</span><span class="o">;</span>
+    <span class="kd">private</span> <span class="kd">final</span> <span class="nc">MemorySegment</span> <span class="n">readIndex</span><span class="o">;</span>
+    <span class="kd">public</span> <span class="nf">HighFrequencyEventService</span><span class="o">()</span> <span class="o">{</span>
+        <span class="nc">Arena</span> <span class="n">arena</span> <span class="o">=</span> <span class="nc">Arena</span><span class="o">.</span><span class="na">ofShared</span><span class="o">();</span>
+        <span class="c1">// Buffer ad anello da 1MB per 65536 eventi da 16 byte ciascuno</span>
+            <span class="n">ringBuffer</span> <span class="o">=</span> <span class="n">arena</span><span class="o">.</span><span class="na">allocate</span><span class="o">(</span><span class="mi">65536</span> <span class="o">*</span> <span class="mi">16</span><span class="o">)</span>
+        <span class="o">;</span>
+        <span class="n">writeIndex</span> <span class="o">=</span> <span class="n">arena</span><span class="o">.</span><span class="na">allocate</span><span class="o">(</span><span class="nc">ValueLayout</span><span class="o">.</span><span class="na">JAVA_INT</span><span class="o">);</span>
+        <span class="n">readIndex</span> <span class="o">=</span> <span class="n">arena</span><span class="o">.</span><span class="na">allocate</span><span class="o">(</span><span class="nc">ValueLayout</span><span class="o">.</span><span class="na">JAVA_INT</span><span class="o">);</span>
+        <span class="c1">// Il C riceve il puntatore al buffer e scrive direttamente senza upcall</span>
+            <span class="n">initNativeRingBuffer</span><span class="o">(</span><span class="n">ringBuffer</span><span class="o">,</span> <span class="n">writeIndex</span><span class="o">,</span> <span class="mi">65536</span><span class="o">)</span>
+        <span class="o">;</span>
+    <span class="o">}</span>
+    <span class="nd">@Scheduled</span><span class="o">(</span><span class="n">fixedDelay</span> <span class="o">=</span> <span class="mi">1</span><span class="o">)</span>
+    <span class="c1">// Poll ogni millisecondo public void pollEvents()</span>
+    <span class="o">{</span>
+        <span class="kt">int</span> <span class="n">wIdx</span> <span class="o">=</span> <span class="o">(</span><span class="kt">int</span><span class="o">)</span> <span class="nc">ValueLayout</span><span class="o">.</span><span class="na">JAVA_INT</span><span class="o">.</span><span class="na">varHandle</span><span class="o">().</span><span class="na">get</span><span class="o">(</span><span class="n">writeIndex</span><span class="o">,</span> <span class="mi">0L</span><span class="o">);</span>
+        <span class="kt">int</span> <span class="n">rIdx</span> <span class="o">=</span> <span class="o">(</span><span class="kt">int</span><span class="o">)</span> <span class="nc">ValueLayout</span><span class="o">.</span><span class="na">JAVA_INT</span><span class="o">.</span><span class="na">varHandle</span><span class="o">().</span><span class="na">get</span><span class="o">(</span><span class="n">readIndex</span><span class="o">,</span> <span class="mi">0L</span><span class="o">);</span>
+        <span class="k">while</span> <span class="o">(</span><span class="n">rIdx</span> <span class="o">!=</span> <span class="n">wIdx</span><span class="o">)</span> <span class="o">{</span>
+            <span class="kt">long</span> <span class="n">offset</span> <span class="o">=</span> <span class="o">(</span><span class="kt">long</span><span class="o">)(</span><span class="n">rIdx</span> <span class="o">%</span> <span class="mi">65536</span><span class="o">)</span> <span class="o">*</span> <span class="mi">16</span><span class="o">;</span>
+            <span class="n">processEvent</span><span class="o">(</span><span class="n">ringBuffer</span><span class="o">.</span><span class="na">asSlice</span><span class="o">(</span><span class="n">offset</span><span class="o">,</span> <span class="mi">16</span><span class="o">));</span>
+            <span class="n">rIdx</span> <span class="o">=</span> <span class="o">(</span><span class="n">rIdx</span> <span class="o">+</span> <span class="mi">1</span><span class="o">)</span> <span class="o">&amp;</span> <span class="mh">0xFFFF</span><span class="o">;</span>
+        <span class="o">}</span>
+        <span class="nc">ValueLayout</span><span class="o">.</span><span class="na">JAVA_INT</span><span class="o">.</span><span class="na">varHandle</span><span class="o">().</span><span class="na">set</span><span class="o">(</span><span class="n">readIndex</span><span class="o">,</span> <span class="mi">0L</span><span class="o">,</span> <span class="n">rIdx</span><span class="o">);</span>
+    <span class="o">}</span>
+<span class="o">}</span>
 </pre></td></tr></tbody></table></code></pre></div></div>
 
         </article>

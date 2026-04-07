@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Visibility Map e Index Scans — DevLog</title>
-    <meta name="description" content="La Visibility Map (VM) è un file che indica a Postgres quali blocchi contengono solo tuple visibili a tutti. Senza una VM aggiornata, gli 'Index-Only Scans' non funzionano: il DB deve comunque leggere la tabella per verificare la visibilità. Il Vacuu
+    <meta name="description" content="La Visibility Map (VM) è un file che indica a Postgres quali blocchi contengono solo tuple visibili a tutti. Senza una VM aggiornata, gli "Index-Only Scans" non funzionano: il DB deve comunque leggere la tabella per verificare la visibilità. Il Vacuu
 ">
     <link rel="stylesheet" href="/appuntidiprogrammazione/assets/css/style.css">
 
@@ -101,28 +101,18 @@
 10
 11
 12
-13
-14
-15
-16
-17
-</pre></td><td class="rouge-code"><pre><span class="o">*</span> <span class="n">Controllo</span> <span class="n">la</span> <span class="n">percentuale</span> <span class="n">di</span> <span class="n">pagine</span> <span class="n">visibili</span><span class="p">:</span> <span class="n">se</span> <span class="err">è</span> <span class="n">bassa</span><span class="p">,</span> <span class="n">l</span><span class="s1">'Index-Only Scan non
-* sarà efficace */
- SELECT relname, relpages, relallvisible, round((relallvisible::float /
-NULLIF(relpages::float, 0)) * 100, 2) AS visibility_pct FROM pg_class WHERE
-relname = '</span><span class="n">orders</span><span class="s1">';
-/* Se visibility_pct &lt; 90, forzo un vacuum per aggiornare la VM */
- VACUUM (ANALYZE) orders; 
-/* Verifico con EXPLAIN che il piano usi effettivamente un Index-Only Scan */
- EXPLAIN (ANALYZE, BUFFERS) SELECT COUNT(*) FROM orders WHERE status =
-'</span><span class="n">completed</span><span class="s1">';
-* Dopo il vacuum, il piano deve mostrare "Index Only Scan" e "Heap Fetches: 0"
-* */
- 
-* Monitoro nel tempo: se visibility_pct scende di nuovo rapidamente,
-* l'</span><span class="n">autovacuum</span> <span class="err">è</span> <span class="n">ancora</span> <span class="n">troppo</span> <span class="n">lento</span> <span class="o">*/</span>
- <span class="k">SELECT</span> <span class="n">relname</span><span class="p">,</span> <span class="n">last_autovacuum</span><span class="p">,</span> <span class="n">n_dead_tup</span> <span class="k">FROM</span> <span class="n">pg_stat_user_tables</span> <span class="k">WHERE</span>
-<span class="n">relname</span> <span class="o">=</span> <span class="s1">'orders'</span><span class="p">;</span>
+</pre></td><td class="rouge-code"><pre>    <span class="cm">/* Controllo la percentuale di pagine visibili: se è bassa, l'Index-Only
+        Scan non sarà efficace */</span> <span class="k">SELECT</span> <span class="n">relname</span><span class="p">,</span> <span class="n">relpages</span><span class="p">,</span> <span class="n">relallvisible</span><span class="p">,</span>
+        <span class="n">round</span><span class="p">((</span><span class="n">relallvisible</span><span class="p">::</span><span class="nb">float</span> <span class="o">/</span> <span class="k">NULLIF</span><span class="p">(</span><span class="n">relpages</span><span class="p">::</span><span class="nb">float</span><span class="p">,</span> <span class="mi">0</span><span class="p">))</span> <span class="o">*</span> <span class="mi">100</span><span class="p">,</span> <span class="mi">2</span><span class="p">)</span> <span class="k">AS</span>
+        <span class="n">visibility_pct</span> <span class="k">FROM</span> <span class="n">pg_class</span> <span class="k">WHERE</span> <span class="n">relname</span> <span class="o">=</span> <span class="s1">'orders'</span><span class="p">;</span> <span class="cm">/* Se
+        visibility_pct &lt; 90, forzo un vacuum per aggiornare la VM */</span> <span class="k">VACUUM</span>
+        <span class="p">(</span><span class="k">ANALYZE</span><span class="p">)</span> <span class="n">orders</span><span class="p">;</span> <span class="cm">/* Verifico con EXPLAIN che il piano usi
+        effettivamente un Index-Only Scan */</span> <span class="k">EXPLAIN</span> <span class="p">(</span><span class="k">ANALYZE</span><span class="p">,</span> <span class="n">BUFFERS</span><span class="p">)</span> <span class="k">SELECT</span>
+        <span class="k">COUNT</span><span class="p">(</span><span class="o">*</span><span class="p">)</span> <span class="k">FROM</span> <span class="n">orders</span> <span class="k">WHERE</span> <span class="n">status</span> <span class="o">=</span> <span class="s1">'completed'</span><span class="p">;</span> <span class="cm">/* Dopo il vacuum, il
+        piano deve mostrare "Index Only Scan" e "Heap Fetches: 0" */</span> <span class="cm">/* Monitoro
+        nel tempo: se visibility_pct scende di nuovo rapidamente, l'autovacuum è
+        ancora troppo lento */</span> <span class="k">SELECT</span> <span class="n">relname</span><span class="p">,</span> <span class="n">last_autovacuum</span><span class="p">,</span> <span class="n">n_dead_tup</span> <span class="k">FROM</span>
+        <span class="n">pg_stat_user_tables</span> <span class="k">WHERE</span> <span class="n">relname</span> <span class="o">=</span> <span class="s1">'orders'</span><span class="p">;</span>
 </pre></td></tr></tbody></table></code></pre></div></div>
 
         </article>

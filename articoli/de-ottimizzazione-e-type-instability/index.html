@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>De-ottimizzazione e Type Instability — DevLog</title>
-    <meta name="description" content="La pipeline JIT (TurboFan) ottimizza il codice basandosi sui tipi visti finora. Passare tipi diversi (es. a volte un int, a volte una string) a una funzione 'calda' causa una 'Deopt': V8 deve scartare il codice macchina ottimizzato e tornare all'inte
+    <meta name="description" content="La pipeline JIT (TurboFan) ottimizza il codice basandosi sui tipi visti finora. Passare tipi diversi (es. a volte un int, a volte una string) a una funzione "calda" causa una "Deopt": V8 deve scartare il codice macchina ottimizzato e tornare all'inte
 ">
     <link rel="stylesheet" href="/appuntidiprogrammazione/assets/css/style.css">
 
@@ -170,88 +170,118 @@
 79
 80
 81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
 </pre></td><td class="rouge-code"><pre><span class="cm">/* Dimostro il problema della Deopt con un esempio misurabile. */</span>
- 
 <span class="c1">// FUNZIONE POLIMORFICA: causa deopt quando riceve tipi diversi function</span>
-<span class="c1">// addPolymorphic(a, b)</span>
-<span class="p">{</span> <span class="k">return</span> <span class="nx">a</span> <span class="o">+</span> <span class="nx">b</span><span class="p">;</span> 
-<span class="c1">// L'operatore + ha semantica diversa per number vs string }</span>
- <span class="nx">addPolymorphic</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">);</span> 
-<span class="c1">// TurboFan ottimizza per number + number addPolymorphic('hello', ' world'); </span>
-<span class="c1">// DEOPT: tipo diverso, TurboFan scarta il codice addPolymorphic(1, 2); </span>
-<span class="c1">// Re-ottimizzazione per gestire entrambi i tipi (megamorphic) </span>
-<span class="cm">/* Verifico le Deopt in Node.js con il flag --trace-deopt: */</span>
- 
-<span class="c1">// node --trace-deopt --allow-natives-syntax app.js </span>
-<span class="c1">// Output: [deoptimize] reason: wrong type at addPolymorphic </span>
-<span class="cm">/* SOLUZIONE 1: funzioni separate e monomorfiche per tipo. */</span>
- <span class="kd">function</span> <span class="nx">addNumbers</span><span class="p">(</span><span class="nx">a</span><span class="p">,</span> <span class="nx">b</span><span class="p">)</span> 
-<span class="p">{</span> 
-<span class="c1">// Sempre chiamata con number: TurboFan ottimizza una sola volta return a + b; }</span>
- <span class="kd">function</span> <span class="nx">concatStrings</span><span class="p">(</span><span class="nx">a</span><span class="p">,</span> <span class="nx">b</span><span class="p">)</span> 
-<span class="p">{</span> 
-<span class="c1">// Sempre chiamata con string: path separato return a + b; }</span>
- 
-<span class="o">*</span> <span class="nx">SOLUZIONE</span> <span class="mi">2</span><span class="p">:</span> <span class="nx">TypeScript</span> <span class="nx">per</span> <span class="nx">intercettare</span> <span class="nx">la</span> <span class="nx">polimorfizzazione</span> <span class="nx">a</span> <span class="nx">compile</span> <span class="nx">time</span><span class="p">.</span>
-<span class="o">*</span> <span class="nx">Con</span> <span class="nx">TypeScript</span><span class="p">,</span> <span class="nx">l</span><span class="dl">'</span><span class="s1">errore è a compile time, non a runtime: */
- 
-// function add(a: number, b: number): number 
-{ return a + b; }
- 
-// add(1, 2); 
-// OK 
-// add(</span><span class="dl">'</span><span class="nx">hello</span><span class="dl">'</span><span class="s1">, </span><span class="dl">'</span> <span class="nx">world</span><span class="dl">'</span><span class="s1">); 
-// Error TS: Argument of type </span><span class="dl">'</span><span class="nx">string</span><span class="dl">'</span><span class="s1"> is not assignable to parameter of type
-// </span><span class="dl">'</span><span class="nx">number</span><span class="dl">'</span><span class="s1">
-* SOLUZIONE 3: guard espliciti che stabilizzano il tipo prima della funzione
-* calda. */
- function processValue(value) 
-{ 
-// Normalizzo il tipo all</span><span class="dl">'</span><span class="nx">ingresso</span><span class="p">:</span> <span class="nx">la</span> <span class="nx">funzione</span> <span class="nx">interna</span> <span class="nx">rimane</span> <span class="nx">monomorfica</span> <span class="k">if</span>
-<span class="c1">// (typeof value === 'string')</span>
-<span class="p">{</span> <span class="k">return</span> <span class="nx">processString</span><span class="p">(</span><span class="nx">value</span><span class="p">);</span> <span class="p">}</span>
- <span class="k">if</span> <span class="p">(</span><span class="k">typeof</span> <span class="nx">value</span> <span class="o">===</span> <span class="dl">'</span><span class="s1">number</span><span class="dl">'</span><span class="p">)</span> 
-<span class="p">{</span> <span class="k">return</span> <span class="nx">processNumber</span><span class="p">(</span><span class="nx">value</span><span class="p">);</span> <span class="p">}</span>
- <span class="k">throw</span> <span class="k">new</span> <span class="nx">TypeError</span><span class="p">(</span><span class="dl">'</span><span class="s1">Tipo non supportato: </span><span class="dl">'</span> <span class="o">+</span> <span class="k">typeof</span> <span class="nx">value</span><span class="p">);</span> <span class="p">}</span>
- 
+    <span class="nx">addPolymorphic</span><span class="p">(</span><span class="nx">a</span><span class="p">,</span> <span class="nx">b</span><span class="p">)</span>
+<span class="p">{</span>
+    <span class="k">return</span> <span class="nx">a</span> <span class="o">+</span> <span class="nx">b</span><span class="p">;</span>
+    <span class="c1">// L'operatore + ha semantica diversa per number vs string</span>
+<span class="p">}</span>
+<span class="nx">addPolymorphic</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">);</span>
+<span class="c1">// TurboFan ottimizza per number + number addPolymorphic('hello', ' world')</span>
+<span class="p">;</span>
+<span class="c1">// DEOPT: tipo diverso, TurboFan scarta il codice addPolymorphic(1, 2)</span>
+<span class="p">;</span>
+<span class="c1">// Re-ottimizzazione per gestire entrambi i tipi (megamorphic) /* Verifico le</span>
+    <span class="nx">Deopt</span> <span class="k">in</span> <span class="nx">Node</span><span class="p">.</span><span class="nx">js</span> <span class="nx">con</span> <span class="nx">il</span> <span class="nx">flag</span> <span class="o">--</span><span class="nx">trace</span><span class="o">-</span><span class="nx">deopt</span><span class="p">:</span> <span class="o">*</span><span class="sr">/ /</span><span class="o">/</span> <span class="nx">node</span> <span class="o">--</span><span class="nx">trace</span><span class="o">-</span><span class="nx">deopt</span>
+    <span class="o">--</span><span class="nx">allow</span><span class="o">-</span><span class="nx">natives</span><span class="o">-</span><span class="nx">syntax</span> <span class="nx">app</span><span class="p">.</span><span class="nx">js</span> <span class="c1">// Output: [deoptimize] reason: wrong type at</span>
+    <span class="nx">addPolymorphic</span> <span class="cm">/* SOLUZIONE 1: funzioni separate e monomorfiche per tipo. */</span>
+    <span class="kd">function</span> <span class="nx">addNumbers</span><span class="p">(</span><span class="nx">a</span><span class="p">,</span> <span class="nx">b</span><span class="p">)</span>
+<span class="p">{</span>
+    <span class="c1">// Sempre chiamata con number: TurboFan ottimizza una sola volta</span>
+    <span class="k">return</span> <span class="nx">a</span> <span class="o">+</span> <span class="nx">b</span><span class="p">;</span>
+<span class="p">}</span>
+<span class="kd">function</span> <span class="nx">concatStrings</span><span class="p">(</span><span class="nx">a</span><span class="p">,</span> <span class="nx">b</span><span class="p">)</span> <span class="p">{</span>
+    <span class="c1">// Sempre chiamata con string: path separato</span>
+    <span class="k">return</span> <span class="nx">a</span> <span class="o">+</span> <span class="nx">b</span><span class="p">;</span>
+<span class="p">}</span>
+<span class="cm">/* SOLUZIONE 2: TypeScript per intercettare la polimorfizzazione a compile time.
+    Con TypeScript, l'errore è a compile time, non a runtime: */</span>
+<span class="c1">// function add(a: number, b: number): number</span>
+<span class="p">{</span>
+    <span class="k">return</span> <span class="nx">a</span> <span class="o">+</span> <span class="nx">b</span><span class="p">;</span>
+<span class="p">}</span>
+<span class="c1">// add(1, 2)</span>
+<span class="p">;</span>
+<span class="c1">// OK // add('hello', ' world')</span>
+<span class="p">;</span>
+<span class="c1">// Error TS: Argument of type 'string' is not assignable to parameter of type</span>
+    <span class="dl">'</span><span class="s1">number</span><span class="dl">'</span> <span class="cm">/* SOLUZIONE 3: guard espliciti che stabilizzano il tipo prima
+    della funzione calda. */</span> <span class="kd">function</span> <span class="nx">processValue</span><span class="p">(</span><span class="nx">value</span><span class="p">)</span>
+<span class="p">{</span>
+    <span class="c1">// Normalizzo il tipo all'ingresso: la funzione interna rimane monomorfica</span>
+        <span class="k">if</span> <span class="p">(</span><span class="k">typeof</span> <span class="nx">value</span> <span class="o">===</span> <span class="dl">'</span><span class="s1">string</span><span class="dl">'</span><span class="p">)</span>
+    <span class="p">{</span>
+        <span class="k">return</span> <span class="nx">processString</span><span class="p">(</span><span class="nx">value</span><span class="p">);</span>
+    <span class="p">}</span>
+    <span class="k">if</span> <span class="p">(</span><span class="k">typeof</span> <span class="nx">value</span> <span class="o">===</span> <span class="dl">'</span><span class="s1">number</span><span class="dl">'</span><span class="p">)</span> <span class="p">{</span>
+        <span class="k">return</span> <span class="nx">processNumber</span><span class="p">(</span><span class="nx">value</span><span class="p">);</span>
+    <span class="p">}</span>
+    <span class="k">throw</span> <span class="k">new</span> <span class="nx">TypeError</span><span class="p">(</span><span class="dl">'</span><span class="s1">Tipo non supportato: </span><span class="dl">'</span> <span class="o">+</span> <span class="k">typeof</span> <span class="nx">value</span><span class="p">);</span>
+<span class="p">}</span>
 <span class="c1">// Queste funzioni sono sempre chiamate con un solo tipo: TurboFan le ottimizza</span>
-<span class="c1">// perfettamente function processNumber(n)</span>
-<span class="p">{</span> <span class="k">return</span> <span class="nx">n</span> <span class="o">*</span> <span class="mi">2</span> <span class="o">+</span> <span class="mi">1</span><span class="p">;</span> <span class="p">}</span>
- <span class="kd">function</span> <span class="nx">processString</span><span class="p">(</span><span class="nx">s</span><span class="p">)</span> 
-<span class="p">{</span> <span class="k">return</span> <span class="nx">s</span><span class="p">.</span><span class="nx">trim</span><span class="p">().</span><span class="nx">toLowerCase</span><span class="p">();</span> <span class="p">}</span>
- 
+    <span class="nx">perfettamente</span> <span class="kd">function</span> <span class="nx">processNumber</span><span class="p">(</span><span class="nx">n</span><span class="p">)</span>
+<span class="p">{</span>
+    <span class="k">return</span> <span class="nx">n</span> <span class="o">*</span> <span class="mi">2</span> <span class="o">+</span> <span class="mi">1</span><span class="p">;</span>
+<span class="p">}</span>
+<span class="kd">function</span> <span class="nx">processString</span><span class="p">(</span><span class="nx">s</span><span class="p">)</span> <span class="p">{</span>
+    <span class="k">return</span> <span class="nx">s</span><span class="p">.</span><span class="nx">trim</span><span class="p">().</span><span class="nx">toLowerCase</span><span class="p">();</span>
+<span class="p">}</span>
 <span class="cm">/* Identifico le funzioni con Deopt frequenti tramite profiling V8: */</span>
- 
-<span class="c1">// node --prof app.js </span>
-<span class="c1">// node --prof-process isolate-*.log &gt; profile.txt </span>
-<span class="c1">// grep -A 5 "DeoptimizeReason" profile.txt </span>
-<span class="o">*</span> <span class="nx">In</span> <span class="nx">un</span><span class="dl">'</span><span class="s1">applicazione real-world con loop stretto su array di oggetti, garantisco
-* la monomorfia pre-filtrando i tipi: */
- function sumValues(items) 
-{ 
-// Pre-condizione: tutti gli elementi devono essere number 
-// Se items è un array misto, questa funzione andrà in Deopt al primo elemento
-// non-number let total = 0; for (let i = 0; i &lt; items.length; i++)
-{ total += items[i]; 
-// Monomorfico se items è sempre number[] }
- return total; }
- 
-// Uso corretto: sumValues(new Float64Array([1.1, 2.2, 3.3])); 
-// Monomorfico garantito sumValues([1, 2, 3]); 
-// Monomorfico se non mescolo tipi 
-* Monitoro le Deopt in produzione tramite un custom V8 profiler integrato nel
-* server: */
- if (process.env.NODE_ENV === </span><span class="dl">'</span><span class="nx">development</span><span class="dl">'</span><span class="s1">) 
-{ 
-// Esporto le statistiche di ottimizzazione delle funzioni critiche
-// setInterval(() =&gt;
-{ 
-// %GetOptimizationStatus richiede --allow-natives-syntax const status =
-// %GetOptimizationStatus(sumValues);
-// 1=interpreted, 2=optimized, 3=always_optimized, 4=never_optimized,
-// 6=maybe_deoptimized console.log(</span><span class="dl">'</span><span class="nx">sumValues</span> <span class="nx">optimization</span> <span class="nx">status</span><span class="p">:</span><span class="dl">'</span><span class="s1">, status); }
-, 5000); }
-</span></pre></td></tr></tbody></table></code></pre></div></div>
+<span class="c1">// node --prof app.js // node --prof-process isolate-*.log &gt; profile.txt // grep</span>
+    <span class="o">-</span><span class="nx">A</span> <span class="mi">5</span> <span class="dl">"</span><span class="s2">DeoptimizeReason</span><span class="dl">"</span> <span class="nx">profile</span><span class="p">.</span><span class="nx">txt</span> <span class="cm">/* In un'applicazione real-world con
+    loop stretto su array di oggetti, garantisco la monomorfia pre-filtrando i
+    tipi: */</span> <span class="kd">function</span> <span class="nx">sumValues</span><span class="p">(</span><span class="nx">items</span><span class="p">)</span>
+<span class="p">{</span>
+    <span class="c1">// Pre-condizione: tutti gli elementi devono essere number // Se items è un</span>
+        <span class="nx">array</span> <span class="nx">misto</span><span class="p">,</span> <span class="nx">questa</span> <span class="nx">funzione</span> <span class="nx">andrà</span> <span class="k">in</span> <span class="nx">Deopt</span> <span class="nx">al</span> <span class="nx">primo</span> <span class="nx">elemento</span> <span class="nx">non</span><span class="o">-</span><span class="nx">number</span>
+        <span class="kd">let</span> <span class="nx">total</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="p">;</span>
+    <span class="k">for</span> <span class="p">(</span><span class="kd">let</span> <span class="nx">i</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
+    <span class="nx">i</span> <span class="o">&lt;</span> <span class="nx">items</span><span class="p">.</span><span class="nx">length</span><span class="p">;</span>
+    <span class="nx">i</span><span class="o">++</span><span class="p">)</span> <span class="p">{</span>
+        <span class="nx">total</span> <span class="o">+=</span> <span class="nx">items</span><span class="p">[</span><span class="nx">i</span><span class="p">];</span>
+        <span class="c1">// Monomorfico se items è sempre number[]</span>
+    <span class="p">}</span>
+    <span class="k">return</span> <span class="nx">total</span><span class="p">;</span>
+<span class="p">}</span>
+<span class="c1">// Uso corretto: sumValues(new Float64Array([1.1, 2.2, 3.3]))</span>
+<span class="p">;</span>
+<span class="c1">// Monomorfico garantito sumValues([1, 2, 3])</span>
+<span class="p">;</span>
+<span class="c1">// Monomorfico se non mescolo tipi /* Monitoro le Deopt in produzione tramite un</span>
+    <span class="nx">custom</span> <span class="nx">V8</span> <span class="nx">profiler</span> <span class="nx">integrato</span> <span class="nx">nel</span> <span class="nx">server</span><span class="p">:</span> <span class="o">*</span><span class="sr">/ if </span><span class="se">(</span><span class="sr">process.env.NODE_ENV ==</span><span class="err">=
+</span>    <span class="dl">'</span><span class="s1">development</span><span class="dl">'</span><span class="p">)</span>
+<span class="p">{</span>
+    <span class="c1">// Esporto le statistiche di ottimizzazione delle funzioni critiche</span>
+        <span class="nx">setInterval</span><span class="p">(()</span> <span class="o">=&gt;</span>
+    <span class="p">{</span>
+        <span class="c1">// %GetOptimizationStatus richiede --allow-natives-syntax const status =</span>
+            <span class="o">%</span><span class="nx">GetOptimizationStatus</span><span class="p">(</span><span class="nx">sumValues</span><span class="p">)</span>
+        <span class="p">;</span>
+        <span class="c1">// 1=interpreted, 2=optimized, 3=always_optimized, 4=never_optimized,</span>
+            <span class="mi">6</span><span class="o">=</span><span class="nx">maybe_deoptimized</span> <span class="nx">console</span><span class="p">.</span><span class="nx">log</span><span class="p">(</span><span class="dl">'</span><span class="s1">sumValues optimization status:</span><span class="dl">'</span><span class="p">,</span>
+            <span class="nx">status</span><span class="p">)</span>
+        <span class="p">;</span>
+    <span class="p">}</span>
+    <span class="p">,</span> <span class="mi">5000</span><span class="p">);</span>
+<span class="p">}</span>
+</pre></td></tr></tbody></table></code></pre></div></div>
 
         </article>
 

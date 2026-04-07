@@ -201,118 +201,168 @@
 110
 111
 112
-</pre></td><td class="rouge-code"><pre><span class="o">*</span> <span class="no">FASE</span> <span class="mi">1</span><span class="o">:</span> <span class="n">confermo</span> <span class="n">che</span> <span class="n">il</span> <span class="n">leak</span> <span class="n">è</span> <span class="n">nativo</span> <span class="n">e</span> <span class="n">non</span> <span class="n">sull</span><span class="err">'</span><span class="n">heap</span> <span class="n">confrontando</span> <span class="n">heap</span> <span class="n">e</span> <span class="no">RSS</span><span class="o">.</span>
-<span class="o">*</span> <span class="o">*/</span>
- <span class="nd">@Scheduled</span><span class="o">(</span><span class="n">fixedDelay</span> <span class="o">=</span> <span class="mi">30_000</span><span class="o">)</span> <span class="kd">public</span> <span class="kt">void</span> <span class="nf">detectNativeMemoryLeak</span><span class="o">()</span> 
-<span class="o">{</span> 
-<span class="c1">// Heap Java: gestito dal GC, visibile tramite JMX MemoryUsage heapUsage =</span>
-<span class="c1">// ManagementFactory.getMemoryMXBean().getHeapMemoryUsage(); long heapUsedMB =</span>
-<span class="c1">// heapUsage.getUsed() / 1_048_576;</span>
-<span class="c1">// RSS del processo: include heap + metaspace + native + stack long rssMB =</span>
-<span class="c1">// getProcessRssMb(); long nativeMemoryEstimateMB = rssMB - heapUsedMB - 512;</span>
-<span class="c1">// 512MB stima per metaspace+stack log.info("Heap: </span>
-<span class="o">{}</span>
-<span class="no">MB</span><span class="o">,</span> <span class="no">RSS</span> <span class="nl">totale:</span> 
-<span class="o">{}</span>
-<span class="no">MB</span><span class="o">,</span> <span class="nc">Stima</span> <span class="nl">nativa:</span> 
-<span class="o">{}</span>
-<span class="no">MB</span><span class="s">", heapUsedMB, rssMB, nativeMemoryEstimateMB); if (nativeMemoryEstimateMB &gt;
-2048 &amp;&amp; heapUsedMB &lt; heapUsage.getMax() / 1_048_576 * 0.5)
-{ log.error("</span><span class="no">POSSIBILE</span> <span class="no">LEAK</span> <span class="nl">NATIVO:</span> <span class="no">RAM</span> <span class="n">nativa</span> 
-<span class="o">{}</span>
-<span class="no">MB</span> <span class="n">con</span> <span class="n">heap</span> <span class="n">al</span> <span class="mi">50</span><span class="o">%</span><span class="s">", nativeMemoryEstimateMB); alertService.sendCritical("</span><span class="nc">Leak</span>
-<span class="n">nativo</span> <span class="nl">sospetto:</span> <span class="s">" + nativeMemoryEstimateMB + "</span><span class="no">MB</span><span class="s">"); }
- }
- private long getProcessRssMb() 
-{ try 
-{ 
-// Leggo il RSS dal filesystem /proc su Linux long pid =
-// ProcessHandle.current().pid(); Path statusFile = Path.of("</span><span class="o">/</span><span class="n">proc</span><span class="o">/</span><span class="s">" + pid +
-// "</span><span class="o">/</span><span class="n">status</span><span class="s">"); List&lt;String&gt; lines = Files.readAllLines(statusFile); return
-// lines.stream() .filter(l -&gt; l.startsWith("</span><span class="nl">VmRSS:</span><span class="s">")) .mapToLong(l -&gt;
-// Long.parseLong(l.replaceAll("</span><span class="o">[^</span><span class="mi">0</span><span class="o">-</span><span class="mi">9</span><span class="o">]</span><span class="s">", "")) / 1024) .findFirst() .orElse(-1);
-// }
- catch (IOException e) 
-{ return -1; }
- }
- 
-* FASE 2: uso NativeMemoryTracking per identificare quale componente alloca di
-* più. */
- 
-// Avvio la JVM con: java -XX:NativeMemoryTracking=detail -jar app.jar 
-// Poi in produzione: 
-// jcmd &lt;PID&gt; VM.native_memory summary scale=MB 
-// jcmd &lt;PID&gt; VM.native_memory detail scale=MB 
-// jcmd &lt;PID&gt; VM.native_memory baseline 
-// Aspetto 1 ora 
-// jcmd &lt;PID&gt; VM.native_memory summary.diff scale=MB 
-// Confronto con baseline 
-* FASE 3: per leak nelle Arena Panama, abilito il tracking degli Arena non
-* chiuse. */
- 
-// java -Djdk.foreign.trackSegmentAsyncCleanup=true -jar app.jar 
-/* Implemento un wrapper per Arena che logga ogni allocazione e rilascio: */
- @Component public class TrackedArenaFactory 
-{ private final AtomicLong openArenas = new AtomicLong(0); private final
-AtomicLong totalAllocatedBytes = new AtomicLong(0); public Arena create(String
-purpose)
-{ openArenas.incrementAndGet(); return new TrackedArena(Arena.ofConfined(),
-purpose); }
- private class TrackedArena implements Arena 
-{ private final Arena delegate; private final String purpose; private final long
-createdAt = System.currentTimeMillis(); TrackedArena(Arena delegate, String
-purpose)
-{ this.delegate = delegate; this.purpose = purpose; log.debug("</span><span class="nc">Arena</span> <span class="nl">aperta:</span> 
-<span class="o">{}</span>
- <span class="o">(</span><span class="n">totale</span> <span class="nl">aperte:</span> 
-<span class="o">{}</span>
-<span class="o">)</span><span class="s">", purpose, openArenas.get()); }
- @Override public MemorySegment allocate(long byteSize, long byteAlignment) 
-{ totalAllocatedBytes.addAndGet(byteSize); return delegate.allocate(byteSize,
-byteAlignment); }
- @Override public void close() 
-{ long duration = System.currentTimeMillis() - createdAt; if (duration &gt; 60_000)
-{ log.warn("</span><span class="nc">Arena</span> <span class="err">'</span>
-<span class="o">{}</span>
-<span class="err">'</span> <span class="n">rimasta</span> <span class="n">aperta</span> <span class="n">per</span> 
-<span class="o">{}</span>
-<span class="nl">s:</span> <span class="n">possibile</span> <span class="n">leak</span><span class="s">", purpose, duration/1000); }
- openArenas.decrementAndGet(); delegate.close(); }
- @Override public MemorySegment.Scope scope() 
-{ return delegate.scope(); }
- }
- 
-/* Espongo le metriche delle Arena tramite Actuator: */
- @Bean public MeterBinder arenaMetrics() 
-{ return registry -&gt; 
-{ Gauge.builder("</span><span class="n">panama</span><span class="o">.</span><span class="na">arena</span><span class="o">.</span><span class="na">open_count</span><span class="s">", openArenas, AtomicLong::get)
-.description("</span><span class="nc">Numero</span> <span class="n">di</span> <span class="nc">Arena</span> <span class="nc">Panama</span> <span class="n">attualmente</span> <span class="n">aperte</span><span class="s">").register(registry);
-Gauge.builder("</span><span class="n">panama</span><span class="o">.</span><span class="na">arena</span><span class="o">.</span><span class="na">total_allocated_bytes</span><span class="s">", totalAllocatedBytes,
-AtomicLong::get) .description("</span><span class="nc">Byte</span> <span class="n">totali</span> <span class="n">allocati</span> <span class="n">in</span> <span class="n">memoria</span>
-<span class="n">nativa</span><span class="s">").register(registry); }
-; }
- }
- 
-* FASE 4: per identificare il codice che non chiude l'Arena, uso valgrind in
-* ambiente di test. */
- 
-// valgrind --leak-check=full --track-origins=yes java -jar app.jar 
-// Valgrind traccia ogni malloc/free nativo e identifica i leak con lo stack
-// trace C corrispondente
-* In Spring Boot, il test di regressione che verifica assenza di leak nativi: */
- @Test @Tag("</span><span class="n">memory</span><span class="s">") public void verifyNoNativeLeak() throws Exception 
-{ long rssBefore = getRssMb(); 
-// Eseguo l'operazione sospetta 1000 volte for (int i = 0; i &lt; 1000; i++) 
-{ serviceUnderTest.processWithNativeMemory(testData); }
- System.gc(); Thread.sleep(500); long rssAfter = getRssMb(); long leakMB =
-rssAfter - rssBefore; log.info("</span><span class="no">RSS</span> <span class="nl">prima:</span>
-<span class="o">{}</span>
-<span class="no">MB</span><span class="o">,</span> <span class="nl">dopo:</span> 
-<span class="o">{}</span>
-<span class="no">MB</span><span class="o">,</span> <span class="nl">delta:</span> 
-<span class="o">{}</span>
-<span class="no">MB</span><span class="s">", rssBefore, rssAfter, leakMB); assertTrue(leakMB &lt; 10, "</span><span class="nc">Possibile</span> <span class="n">leak</span>
-<span class="nl">nativo:</span> <span class="no">RSS</span> <span class="n">cresciuto</span> <span class="n">di</span> <span class="s">" + leakMB + "</span><span class="no">MB</span> <span class="n">in</span> <span class="mi">1000</span> <span class="n">iterazioni</span><span class="err">"</span><span class="o">);</span> <span class="o">}</span>
+113
+114
+115
+116
+117
+118
+119
+120
+121
+122
+123
+124
+125
+126
+127
+128
+129
+130
+131
+132
+133
+134
+135
+136
+137
+</pre></td><td class="rouge-code"><pre><span class="cm">/* FASE 1: confermo che il leak è nativo e non sull'heap confrontando heap e
+    RSS. */</span>
+<span class="nd">@Scheduled</span><span class="o">(</span><span class="n">fixedDelay</span> <span class="o">=</span> <span class="mi">30_000</span><span class="o">)</span> <span class="kd">public</span> <span class="kt">void</span> <span class="nf">detectNativeMemoryLeak</span><span class="o">()</span> <span class="o">{</span>
+    <span class="c1">// Heap Java: gestito dal GC, visibile tramite JMX MemoryUsage heapUsage =</span>
+        <span class="nc">ManagementFactory</span><span class="o">.</span><span class="na">getMemoryMXBean</span><span class="o">().</span><span class="na">getHeapMemoryUsage</span><span class="o">()</span>
+    <span class="o">;</span>
+    <span class="kt">long</span> <span class="n">heapUsedMB</span> <span class="o">=</span> <span class="n">heapUsage</span><span class="o">.</span><span class="na">getUsed</span><span class="o">()</span> <span class="o">/</span> <span class="mi">1_048_576</span><span class="o">;</span>
+    <span class="c1">// RSS del processo: include heap + metaspace + native + stack long rssMB =</span>
+        <span class="n">getProcessRssMb</span><span class="o">()</span>
+    <span class="o">;</span>
+    <span class="kt">long</span> <span class="n">nativeMemoryEstimateMB</span> <span class="o">=</span> <span class="n">rssMB</span> <span class="o">-</span> <span class="n">heapUsedMB</span> <span class="o">-</span> <span class="mi">512</span><span class="o">;</span>
+    <span class="c1">// 512MB stima per metaspace+stack log.info("Heap:</span>
+    <span class="o">{</span>
+    <span class="o">}</span>
+    <span class="no">MB</span><span class="o">,</span> <span class="no">RSS</span> <span class="nl">totale:</span> <span class="o">{</span>
+    <span class="o">}</span>
+    <span class="no">MB</span><span class="o">,</span> <span class="nc">Stima</span> <span class="nl">nativa:</span> <span class="o">{</span>
+    <span class="o">}</span>
+    <span class="no">MB</span><span class="s">", heapUsedMB, rssMB, nativeMemoryEstimateMB);
+    if (nativeMemoryEstimateMB &gt; 2048 &amp;&amp; heapUsedMB &lt; heapUsage.getMax() /
+        1_048_576 * 0.5) {
+        log.error("</span><span class="no">POSSIBILE</span> <span class="no">LEAK</span> <span class="nl">NATIVO:</span> <span class="no">RAM</span> <span class="n">nativa</span> <span class="o">{</span>
+        <span class="o">}</span>
+        <span class="no">MB</span> <span class="n">con</span> <span class="n">heap</span> <span class="n">al</span> <span class="mi">50</span><span class="o">%</span><span class="s">", nativeMemoryEstimateMB);
+        alertService.sendCritical("</span><span class="nc">Leak</span> <span class="n">nativo</span> <span class="nl">sospetto:</span> <span class="s">" +
+            nativeMemoryEstimateMB + "</span><span class="no">MB</span><span class="s">");
+    }
+}
+private long getProcessRssMb() {
+    try {
+        // Leggo il RSS dal filesystem /proc su Linux long pid =
+            ProcessHandle.current().pid()
+        ;
+        Path statusFile = Path.of("</span><span class="o">/</span><span class="n">proc</span><span class="o">/</span><span class="s">" + pid + "</span><span class="o">/</span><span class="n">status</span><span class="s">");
+        List&lt;String&gt; lines = Files.readAllLines(statusFile);
+        return lines.stream() .filter(l -&gt; l.startsWith("</span><span class="nl">VmRSS:</span><span class="s">")) .mapToLong(l
+            -&gt; Long.parseLong(l.replaceAll("</span><span class="o">[^</span><span class="mi">0</span><span class="o">-</span><span class="mi">9</span><span class="o">]</span><span class="s">", "")) / 1024) .findFirst()
+            .orElse(-1);
+    }
+    catch (IOException e) {
+        return -1;
+    }
+}
+/* FASE 2: uso NativeMemoryTracking per identificare quale componente alloca di
+    più. */
+// Avvio la JVM con: java -XX:NativeMemoryTracking=detail -jar app.jar // Poi in
+    produzione: // jcmd &lt;PID&gt; VM.native_memory summary scale=MB // jcmd &lt;PID&gt;
+    VM.native_memory detail scale=MB // jcmd &lt;PID&gt; VM.native_memory baseline //
+    Aspetto 1 ora // jcmd &lt;PID&gt; VM.native_memory summary.diff scale=MB //
+    Confronto con baseline /* FASE 3: per leak nelle Arena Panama, abilito il
+    tracking degli Arena non chiuse. */ // java
+    -Djdk.foreign.trackSegmentAsyncCleanup=true -jar app.jar /* Implemento un
+    wrapper per Arena che logga ogni allocazione e rilascio: */ @Component
+    public class TrackedArenaFactory
+{
+    private final AtomicLong openArenas = new AtomicLong(0);
+    private final AtomicLong totalAllocatedBytes = new AtomicLong(0);
+    public Arena create(String purpose) {
+        openArenas.incrementAndGet();
+        return new TrackedArena(Arena.ofConfined(), purpose);
+    }
+    private class TrackedArena implements Arena {
+        private final Arena delegate;
+        private final String purpose;
+        private final long createdAt = System.currentTimeMillis();
+        TrackedArena(Arena delegate, String purpose) {
+            this.delegate = delegate;
+            this.purpose = purpose;
+            log.debug("</span><span class="nc">Arena</span> <span class="nl">aperta:</span> <span class="o">{</span>
+            <span class="o">}</span>
+            <span class="o">(</span><span class="n">totale</span> <span class="nl">aperte:</span> <span class="o">{</span>
+            <span class="o">}</span>
+            <span class="o">)</span><span class="s">", purpose, openArenas.get());
+        }
+        @Override public MemorySegment allocate(long byteSize, long
+            byteAlignment) {
+            totalAllocatedBytes.addAndGet(byteSize);
+            return delegate.allocate(byteSize, byteAlignment);
+        }
+        @Override public void close() {
+            long duration = System.currentTimeMillis() - createdAt;
+            if (duration &gt; 60_000) {
+                log.warn("</span><span class="nc">Arena</span> <span class="err">'</span><span class="o">{</span>
+                <span class="o">}</span>
+                <span class="err">'</span> <span class="n">rimasta</span> <span class="n">aperta</span> <span class="n">per</span> <span class="o">{</span>
+                <span class="o">}</span>
+                <span class="nl">s:</span> <span class="n">possibile</span> <span class="n">leak</span><span class="s">", purpose, duration/1000);
+            }
+            openArenas.decrementAndGet();
+            delegate.close();
+        }
+        @Override public MemorySegment.Scope scope() {
+            return delegate.scope();
+        }
+    }
+    /* Espongo le metriche delle Arena tramite Actuator: */
+    @Bean public MeterBinder arenaMetrics() {
+        return registry -&gt; {
+            Gauge.builder("</span><span class="n">panama</span><span class="o">.</span><span class="na">arena</span><span class="o">.</span><span class="na">open_count</span><span class="s">", openArenas,
+                AtomicLong::get) .description("</span><span class="nc">Numero</span> <span class="n">di</span> <span class="nc">Arena</span> <span class="nc">Panama</span>
+                <span class="n">attualmente</span> <span class="n">aperte</span><span class="s">").register(registry);
+            Gauge.builder("</span><span class="n">panama</span><span class="o">.</span><span class="na">arena</span><span class="o">.</span><span class="na">total_allocated_bytes</span><span class="s">",
+                totalAllocatedBytes, AtomicLong::get) .description("</span><span class="nc">Byte</span> <span class="n">totali</span>
+                <span class="n">allocati</span> <span class="n">in</span> <span class="n">memoria</span> <span class="n">nativa</span><span class="s">").register(registry);
+        }
+        ;
+    }
+}
+/* FASE 4: per identificare il codice che non chiude l'Arena, uso valgrind in
+    ambiente di test. */
+// valgrind --leak-check=full --track-origins=yes java -jar app.jar // Valgrind
+    traccia ogni malloc/free nativo e identifica i leak con lo stack trace C
+    corrispondente /* In Spring Boot, il test di regressione che verifica
+    assenza di leak nativi: */ @Test @Tag("</span><span class="n">memory</span><span class="s">") public void
+    verifyNoNativeLeak() throws Exception
+{
+    long rssBefore = getRssMb();
+    // Eseguo l'operazione sospetta 1000 volte for (int i = 0
+    ;
+    i &lt; 1000;
+    i++) {
+        serviceUnderTest.processWithNativeMemory(testData);
+    }
+    System.gc();
+    Thread.sleep(500);
+    long rssAfter = getRssMb();
+    long leakMB = rssAfter - rssBefore;
+    log.info("</span><span class="no">RSS</span> <span class="nl">prima:</span> <span class="o">{</span>
+    <span class="o">}</span>
+    <span class="no">MB</span><span class="o">,</span> <span class="nl">dopo:</span> <span class="o">{</span>
+    <span class="o">}</span>
+    <span class="no">MB</span><span class="o">,</span> <span class="nl">delta:</span> <span class="o">{</span>
+    <span class="o">}</span>
+    <span class="no">MB</span><span class="s">", rssBefore, rssAfter, leakMB);
+    assertTrue(leakMB &lt; 10, "</span><span class="nc">Possibile</span> <span class="n">leak</span> <span class="nl">nativo:</span> <span class="no">RSS</span> <span class="n">cresciuto</span> <span class="n">di</span> <span class="s">" + leakMB
+        + "</span><span class="no">MB</span> <span class="n">in</span> <span class="mi">1000</span> <span class="n">iterazioni</span><span class="err">"</span><span class="o">);</span>
+<span class="o">}</span>
 </pre></td></tr></tbody></table></code></pre></div></div>
 
         </article>

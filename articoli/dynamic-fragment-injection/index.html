@@ -89,80 +89,93 @@
 
 <h2 id="esempio-implementativo">Esempio Implementativo</h2>
 
-<pre><code class="language-thymeleaf">* Controller: recupero la configurazione della dashboard dal DB e la passo al
-* template. */
- @GetMapping("/dashboard") public String dashboard(Model model,
-@AuthenticationPrincipal UserDetails user)
-{ 
-// Recupero i widget configurati per questo utente: ogni widget ha un tipo e
-// parametri List&lt;WidgetConfig&gt; widgets =
-// dashboardService.getWidgetsForUser(user.getUsername());
-// model.addAttribute("widgets", widgets); return "dashboard"; }
- 
-/* WidgetConfig: definisce il tipo e i dati del widget. */
- public record WidgetConfig( String type, 
-// Es: "sales-chart", "user-stats", "alert-banner" String title, Map&lt;String,
-// Object&gt; params
-// Parametri specifici per tipo ) 
-{}
- 
-/* Nel service: carico i dati specifici per ogni tipo di widget. */
- @Service public class DashboardService 
-{ public List&lt;WidgetConfig&gt; getWidgetsForUser(String username) 
-{ List&lt;UserWidget&gt; dbWidgets = widgetRepository.findByUsername(username); return
-dbWidgets.stream() .map(w -&gt; new WidgetConfig( w.getType(), w.getTitle(),
-loadWidgetData(w.getType(), w.getParams()) )) .collect(Collectors.toList()); }
- private Map&lt;String, Object&gt; loadWidgetData(String type, Map&lt;String, String&gt;
-params)
-{ return switch (type) 
-{ case "sales-chart" -&gt; Map.of("data", salesService.getLast30Days()); case
-"user-stats" -&gt; Map.of("stats", userService.getStats()); case "alert-banner" -&gt;
-Map.of("alerts", alertService.getActive()); default -&gt; Collections.emptyMap(); }
-; }
- }
- &lt;!-- Template dashboard.html: un solo th:each gestisce tutti i tipi di widget.
---&gt; &lt;!-- Il path del frammento viene costruito dinamicamente: zero th:if --&gt;
-&lt;!-- struttura directory: templates/widgets/sales-chart.html, user-stats.html,
-alert-banner.html --&gt; &lt;div class="dashboard-grid"&gt; &lt;div th:each="widget : $
-{widgets}
-" class="widget-container"&gt; &lt;!-- Iniezione dinamica: Thymeleaf risolve
-'widgets/' + widget.type prima di cercare il frammento. Se il frammento non
-esiste, Thymeleaf lancia un errore: gestisco con th:if preventivo. --&gt; &lt;div
-th:if="$
-{@widgetRegistry.exists(widget.type)}
-" th:insert="~
-{'widgets/' + $
-{widget.type}
- + ' :: content(title=$
-{widget.title}
-, params=$
-{widget.params}
-)'}
-"&gt; &lt;/div&gt; &lt;!-- Fallback per widget sconosciuti --&gt; &lt;div th:unless="$
-{@widgetRegistry.exists(widget.type)}
-" class="alert alert-warning"&gt; Widget non riconosciuto: &lt;strong th:text="$
-{widget.type}
-"&gt;tipo&lt;/strong&gt; &lt;/div&gt; &lt;/div&gt; &lt;/div&gt; &lt;!-- Template widgets/sales-chart.html: --&gt;
-&lt;!-- &lt;div th:fragment="content(title, params)" class="widget-sales-chart"&gt; --&gt;
-&lt;!--   &lt;h4 th:text="$
-{title}
-"&gt;Vendite&lt;/h4&gt; --&gt; &lt;!--   &lt;canvas th:id="$
-{'chart-' + #ids.seq('chart')}
-" --&gt; &lt;!--           th:attr="data-values=$
-{params.data}
-"&gt;&lt;/canvas&gt; --&gt; &lt;!-- &lt;/div&gt; --&gt; 
-/* WidgetRegistry: verifica l'esistenza del template prima del rendering. */
- @Component public class WidgetRegistry 
-{ @Autowired private TemplateEngine templateEngine; public boolean exists(String
-widgetType)
-{ try 
-{ templateEngine.getConfiguration().getTemplateManager() .parseStandalone(new
-EngineConfiguration(), "widgets/" + widgetType, null, TemplateMode.HTML, false,
-null); return true; }
- catch (TemplateInputException e) 
-{ return false; }
- }
- }
+<pre><code class="language-thymeleaf">/* Controller: recupero la configurazione della dashboard dal DB e la passo al
+    template. */
+@GetMapping("/dashboard") public String dashboard(Model model,
+    @AuthenticationPrincipal UserDetails user) { // Recupero i widget
+    configurati per questo utente: ogni widget ha un tipo e parametri List
+&lt;WidgetConfig&gt;
+    widgets = dashboardService.getWidgetsForUser(user.getUsername());
+        model.addAttribute("widgets", widgets); return "dashboard"; }
+    /* WidgetConfig: definisce il tipo e i dati del widget. */
+    public record WidgetConfig( String type, // Es: "sales-chart", "user-stats",
+        "alert-banner" String title, Map
+    &lt;String, Object&gt;
+        params // Parametri specifici per tipo ) {}
+        /* Nel service: carico i dati specifici per ogni tipo di widget. */
+        @Service public class DashboardService { public List
+        &lt;WidgetConfig&gt;
+            getWidgetsForUser(String username) { List
+            &lt;UserWidget&gt;
+                dbWidgets = widgetRepository.findByUsername(username); return
+                    dbWidgets.stream() .map(w -&gt; new WidgetConfig( w.getType(),
+                    w.getTitle(), loadWidgetData(w.getType(), w.getParams()) ))
+                    .collect(Collectors.toList()); } private Map
+                &lt;String, Object&gt;
+                    loadWidgetData(String type, Map
+                    &lt;String, String&gt;
+                        params) { return switch (type) { case "sales-chart" -&gt;
+                            Map.of("data", salesService.getLast30Days()); case
+                            "user-stats" -&gt; Map.of("stats",
+                            userService.getStats()); case "alert-banner" -&gt;
+                            Map.of("alerts", alertService.getActive()); default
+                            -&gt; Collections.emptyMap(); }; } }
+                        &lt;!-- Template dashboard.html: un solo th:each gestisce
+                            tutti i tipi di widget. --&gt;
+                        &lt;!-- Il path del frammento viene costruito
+                            dinamicamente: zero th:if --&gt;
+                        &lt;!-- struttura directory:
+                            templates/widgets/sales-chart.html, user-stats.html,
+                            alert-banner.html --&gt;
+                        &lt;div class="dashboard-grid"&gt;
+                            &lt;div th:each="widget : ${widgets}"
+                                class="widget-container"&gt;
+                                &lt;!-- Iniezione dinamica: Thymeleaf risolve
+                                    'widgets/' + widget.type prima di cercare il
+                                    frammento. Se il frammento non esiste,
+                                    Thymeleaf lancia un errore: gestisco con
+                                    th:if preventivo. --&gt;
+                                &lt;div
+                                    th:if="${@widgetRegistry.exists(widget.type)
+                                    }" th:insert="~{'widgets/' + ${widget.type}
+                                    + ' :: content(title=${widget.title},
+                                    params=${widget.params})'}"&gt;
+                                &lt;/div&gt;
+                                &lt;!-- Fallback per widget sconosciuti --&gt;
+                                &lt;div
+                                    th:unless="${@widgetRegistry.exists(widget.t
+                                    ype)}" class="alert alert-warning"&gt;
+                                    Widget non riconosciuto:
+                                    &lt;strong th:text="${widget.type}"&gt;
+                                        tipo
+                                    &lt;/strong&gt;
+                                &lt;/div&gt;
+                            &lt;/div&gt;
+                        &lt;/div&gt;
+                        &lt;!-- Template widgets/sales-chart.html: --&gt;
+                        &lt;!-- &lt;div th:fragment="content(title, params)"
+                            class="widget-sales-chart"&gt;
+                        --&gt;
+                        &lt;!--   &lt;h4 th:text="${title}"&gt;
+                        Vendite
+                    &lt;/h4&gt;
+                    --&gt;
+                    &lt;!--   &lt;canvas th:id="${'chart-' + #ids.seq('chart')}" --&gt;
+                    &lt;!--           th:attr="data-values=${params.data}"&gt;
+                &lt;/canvas&gt;
+                --&gt;
+                &lt;!-- &lt;/div&gt;
+                --&gt;
+                /* WidgetRegistry: verifica l'esistenza del template prima del
+                    rendering. */
+                @Component public class WidgetRegistry { @Autowired private
+                    TemplateEngine templateEngine; public boolean exists(String
+                    widgetType) { try {
+                    templateEngine.getConfiguration().getTemplateManager()
+                    .parseStandalone(new EngineConfiguration(), "widgets/" +
+                    widgetType, null, TemplateMode.HTML, false, null); return
+                    true; } catch (TemplateInputException e) { return false; } }
+                    }
 </code></pre>
 
         </article>

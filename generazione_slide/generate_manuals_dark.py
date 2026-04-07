@@ -1,20 +1,7 @@
-# --- ESEMPIO DI UTILIZZO ---
-# Generazione Totale (PDF):
-# python generate_manuals_dark.py
-# 
-# Generazione Mirata (Java in PDF):
-# python generate_manuals_dark.py --tech java
-# 
-# Generazione Sorgenti HTML (per debug o modifiche):
-# python generate_manuals_dark.py --tech db --format source
-#
-# Generazione Carosello Instagram (PNG):
-# python generate_manuals_dark.py --tech java --format insta
-
 import os
+import sys
 import re
 import asyncio
-import subprocess
 import argparse
 import html
 import textwrap
@@ -22,13 +9,24 @@ import pandas as pd
 from pathlib import Path
 from playwright.async_api import async_playwright
 
+# --- LOGICA DI IMPORTAZIONE DALLA CARTELLA SUPERIORE ---
+parent_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+if parent_dir not in sys.path:
+    sys.path.insert(0, parent_dir)
+
+try:
+    import code_formatter as cf
+except ImportError:
+    print(f"❌ Errore: code_formatter.py non trovato in {parent_dir}")
+    sys.exit(1)
+
 # --- CONFIGURAZIONE TECNOLOGICA ---
 TECH_CONFIG = {
-    "java": {"color": "#f89820", "parser": "java", "plugins": ["prettier-plugin-java"]},
-    "js": {"color": "#f7df1e", "parser": "espree", "plugins": []},
-    "db": {"color": "#336791", "parser": "sql", "plugins": []},
-    "thymeleaf": {"color": "#005f00", "parser": "html", "plugins": []},
-    "default": {"color": "#FF4081", "parser": "babel", "plugins": []}
+    "java": {"color": "#f89820"},
+    "js": {"color": "#f7df1e"},
+    "db": {"color": "#336791"},
+    "thymeleaf": {"color": "#005f00"},
+    "default": {"color": "#FF4081"}
 }
 
 SQUARE_SIZE = 1080 
@@ -36,27 +34,69 @@ MAX_CHARS_WIDTH = 55
 MAX_CODE_LINES_PER_SLIDE = 12
 MAX_TOTAL_SLIDES = 10
 
-def smart_wrap_code(code_text, width=70):
-    code_text = str(code_text).replace("\\n", "\n")
-    lines = code_text.splitlines()
-    wrapped_lines = []
-    for line in lines:
-        if len(line) > width:
-            indent = re.match(r"^\s*", line).group(0)
-            if line.strip().startswith('/*') or line.strip().startswith('*'):
-                prefix = indent + "* "
-                content = line.lstrip('/* ').lstrip('* ')
-                sub_wrapped = textwrap.wrap(content, width=width-len(prefix))
-                for i, w_line in enumerate(sub_wrapped):
-                    if i == 0 and line.strip().startswith('/*'):
-                        wrapped_lines.append(indent + "/* " + w_line)
-                    else:
-                        wrapped_lines.append(prefix + w_line)
+def highlight_code(code_html):
+    """Evidenzia le parole chiave avvolgendole in uno span arancione."""
+    # Lista estesa di keyword per i vari linguaggi supportati
+    keywords = [
+        "public", "private", "protected", "class", "interface", "extends", "implements",
+        "static", "final", "void", "return", "new", "if", "else", "for", "while", "do",
+        "switch", "case", "break", "continue", "try", "catch", "finally", "throw", "throws",
+        "package", "import", "instanceof", "volatile", "transient", "synchronized",
+        "SELECT", "FROM", "WHERE", "INSERT", "UPDATE", "DELETE", "CREATE", "DROP", "ALTER",
+        "TABLE", "INTO", "VALUES", "SET", "JOIN", "ON", "GROUP", "BY", "ORDER", "HAVING",
+        "const", "let", "var", "function", "async", "await", "export", "default"
+    ]
+    
+    # Regex per trovare le keyword come parole intere (case insensitive per SQL)
+    pattern = r'\b(' + '|'.join(keywords) + r')\b'
+    
+    # Sostituiamo le keyword con lo span colorato. 
+    # Nota: usiamo una funzione di replace per gestire il case originale
+    def replacer(match):
+        return f'<span class="keyword">{match.group(0)}</span>'
+    
+    return re.sub(pattern, replacer, code_html, flags=re.IGNORECASE)
+
+def format_code(code_text, tech):
+    """Utilizza code_formatter.py con pre-correzione e wrapping logico."""
+    if not code_text or str(code_text).strip() == 'nan':
+        return ""
+
+    code = str(code_text).replace("\\n", "\n").replace("\r", "").strip()
+    
+    # 1. Pulizia strutturale pre-formattazione
+    code = re.sub(r'\s+;', ';', code)
+    code = re.sub(r'\*/(?!\n)', '*/\n', code)
+
+    lang = "db" if tech.lower() == "db" else tech.lower()
+    
+    try:
+        lines = cf.normalize_to_lines(code, lang)
+        indented_lines = cf.indent_lines(lines, lang)
+        
+        final_lines = []
+        for line in indented_lines:
+            clean_line = line.rstrip()
+            if not clean_line: continue
+                
+            if len(clean_line) <= MAX_CHARS_WIDTH:
+                final_lines.append(clean_line)
             else:
-                wrapped_lines.extend(textwrap.wrap(line, width=width, break_long_words=False, replace_whitespace=False))
-        else:
-            wrapped_lines.append(line)
-    return "\n".join(wrapped_lines)
+                indent_match = re.match(r"^\s*", clean_line)
+                indent = indent_match.group(0) if indent_match else ""
+                wrapped = textwrap.fill(
+                    clean_line,
+                    width=MAX_CHARS_WIDTH,
+                    subsequent_indent=indent + "    ",
+                    expand_tabs=False,
+                    replace_whitespace=False,
+                    drop_whitespace=False
+                )
+                final_lines.append(wrapped)
+        return "\n".join(final_lines)
+    except Exception as e:
+        print(f"⚠️ Errore nel formattatore: {e}")
+        return code
 
 def process_text_formatting(text):
     if pd.isna(text): return ""
@@ -79,115 +119,36 @@ def process_text_formatting(text):
     if in_list: processed_lines.append('</ul>')
     return "".join(processed_lines)
 
-def pre_format_cleanup(code):
-    # Rimuoviamo gli eccessi di spazi bianchi orizzontali ma manteniamo i newline
-    code = str(code).replace("\\n", "\n").strip()
-
-    # 1. ISOLAMENTO GRAFFE: Forza la graffa ad essere l'unico carattere della riga
-    # Gestisce casi come '}public' o '){return'
-    code = re.sub(r'\{', r'\n{\n', code)
-    code = re.sub(r'\}', r'\n}\n', code)
-
-    # 2. MODIFICATORI E PAROLE CHIAVE: A capo prima di iniziare un blocco
-    keywords = r'public|private|protected|class|interface|static|final|return|SELECT|FROM|WHERE|UPDATE|DELETE|INSERT'
-    code = re.sub(rf'\b({keywords})\b', r'\n\1', code, flags=re.IGNORECASE)
-
-    # 3. COMMENTI: Isolamento dai blocchi di codice
-    code = re.sub(r'/\*', r'\n/* ', code)
-    code = re.sub(r'\*/', r' */\n', code)
-    code = re.sub(r'(?<!:)\/\/', r'\n// ', code) # Evita di rompere gli URL http://
-
-    # 4. NORMALIZZAZIONE: Pulizia delle righe vuote create dai passaggi sopra
-    lines = []
-    for line in code.splitlines():
-        clean_line = line.strip()
-        if clean_line:
-            lines.append(clean_line)
-    
-    # Riuniamo tutto
-    code = "\n".join(lines)
-    
-    # 5. RESPIRO: Massimo un rigo vuoto (2 newline) per non sprecare spazio nelle slide
-    code = re.sub(r'\n{3,}', '\n\n', code)
-    
-    return code.strip()
-    
-def format_code(code_text, tech):
-    actual_tech = "java" if tech=="thymeleaf" and any(re.search(p, str(code_text)) for p in [r"@Controller", r"package\s+"]) else tech
-    cfg = TECH_CONFIG.get(actual_tech, TECH_CONFIG["default"])
-    
-    # Primo passo: Prettier (se fallisce usiamo il codice originale)
-    code = str(code_text).replace("\\n", "\n").strip()
-    try:
-        cmd = ['npx', 'prettier', '--parser', cfg["parser"], '--tab-width', '4', '--print-width', str(MAX_CHARS_WIDTH)]
-        for pl in cfg.get("plugins", []): cmd.extend(['--plugin', pl])
-        p = subprocess.Popen(cmd, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, text=True)
-        stdout, _ = p.communicate(input=code)
-        if p.returncode == 0: 
-            code = stdout
-    except: 
-        pass
-
-    # Secondo passo: SQL Formatter (se tech è db)
-    if actual_tech == "db":
-        try:
-            cmd = ['npx', 'sql-formatter', '-l', 'postgresql', '--config', '{"keywordCase": "upper"}']
-            p = subprocess.Popen(cmd, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, text=True)
-            stdout, _ = p.communicate(input=code)
-            if p.returncode == 0: code = stdout
-        except: pass
-
-    # Terzo passo: LA TUA PULIZIA (deve essere l'ultima parola)
-    code = pre_format_cleanup(code)
-    
-    # Quarto passo: Smart Wrap per i commenti lunghi
-    code = smart_wrap_code(code, width=MAX_CHARS_WIDTH)
-    
-    return code
-
 def get_css(color, is_insta=False):
     w, h = (SQUARE_SIZE, SQUARE_SIZE) if is_insta else (1920, 1080)
-    
-    # Solo per Insta aumentiamo leggermente il corpo del testo e i margini di sicurezza
     fs_body = "28px" if is_insta else "22px"
-    fs_code = "21px" if is_insta else "19px" # Incremento minimo per non rompere il layout
-    padding_slide = "90px" if is_insta else "70px" # Più spazio dai bordi UI di Instagram
+    fs_code = "21px" if is_insta else "19px"
+    padding_slide = "90px" if is_insta else "70px"
 
     return f"""
     @import url('https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500&family=Montserrat:wght@700;900&family=Poppins:wght@300;400;600&display=swap');
-    :root {{ --tech-accent: {color}; --neon-green: #4AF626; }}
-    body {{ margin: 0; background: #000; color: white; font-family: 'Poppins', sans-serif; }}
-    
+    :root {{ --tech-accent: {color}; --neon-green: #4AF626; --keyword-color: #FF9800; }}
+    body {{ margin: 0; background: #000; color: white; font-family: 'Poppins', sans-serif; overflow: hidden; }}
     .slide {{ width: {w}px; height: {h}px; padding: {padding_slide}; box-sizing: border-box; display: flex; flex-direction: column; position: relative; background: #0a0a0a; }}
-    
-    /* 1. RIPRISTINO COVER (Stile Originale) */
     .cover-slide {{ justify-content: center; text-align: center; border: 20px solid var(--tech-accent); }}
     .cover-badge {{ background: var(--tech-accent); color: #000; font-family: 'Montserrat'; font-weight: 900; font-size: 28px; padding: 12px 30px; display: inline-block; margin-bottom: 25px; }}
     .cover-title {{ font-family: 'Montserrat'; font-weight: 900; font-size: 65px; line-height: 1.1; margin: 0; text-transform: uppercase; }}
-    
-    /* 2. ANALISI TECNICA (Ottimizzata per leggibilità) */
     .header {{ border-left: 12px solid var(--tech-accent); padding-left: 25px; margin-bottom: 30px; }}
     .section-label {{ font-family: 'Montserrat'; font-weight: 700; color: var(--tech-accent); text-transform: uppercase; font-size: 20px; margin-bottom: 10px; display: block; }}
-    .section-content {{ font-size: {fs_body}; line-height: 1.6; }} /* Testo più leggibile su smartphone */
-    .section-content li {{ margin-bottom: 12px; }}
-
-    /* 3. CODICE (Quasi originale, solo leggermente più definito) */
-    .code-container {{ background: #121212; padding: 35px; border-radius: 6px; border: 1px solid #222; flex-grow: 1; }}
+    .section-content {{ font-size: {fs_body}; line-height: 1.6; }}
+    .code-container {{ background: #121212; padding: 35px; border-radius: 6px; border: 1px solid #222; flex-grow: 1; overflow: hidden; }}
     pre {{ font-family: 'Fira Code', monospace; font-size: {fs_code}; color: #E0E0E0; line-height: 1.5; margin: 0; white-space: pre-wrap; }}
-    
+    .keyword {{ color: var(--keyword-color); font-weight: 500; }}
     .footer-page {{ position: absolute; bottom: 30px; right: 60px; font-size: 18px; color: #333; font-weight: 900; }}
-    
-    /* 4. RIPRISTINO CONSOLE DEBUG (Stile Originale) */
-    .cta-debug {{ justify-content: center; font-family: 'Fira Code', monospace; padding: 100px; background: #0a0a0a; }}
-    .console-title {{ font-family: 'Montserrat'; font-weight: 900; font-size: 45px; color: white; margin-bottom: 60px; text-transform: uppercase; text-align: center; letter-spacing: 2px; }}
-    .console-line {{ font-size: 32px; margin-bottom: 25px; line-height: 1.4; }}
-    .console-prompt {{ color: white; margin-right: 15px; opacity: 0.5; }}
-    .console-key {{ color: white; }}
-    .console-val-green {{ color: var(--neon-green); text-shadow: 0 0 10px var(--neon-green); }}
-    .console-val-accent {{ color: var(--tech-accent); text-shadow: 0 0 10px var(--tech-accent); }}
-    .cursor {{ display: inline-block; width: 15px; height: 35px; background: white; margin-left: 5px; animation: blink 1s infinite; vertical-align: middle; }}
+    .cta-debug {{ justify-content: center; font-family: 'Fira Code', monospace; padding: 100px; }}
+    .console-title {{ font-family: 'Montserrat'; font-weight: 900; font-size: 45px; color: white; margin-bottom: 60px; text-transform: uppercase; text-align: center; }}
+    .console-line {{ font-size: 32px; margin-bottom: 25px; }}
+    .console-prompt {{ color: white; opacity: 0.5; margin-right: 15px; }}
+    .console-val-green {{ color: var(--neon-green); }}
+    .console-val-accent {{ color: var(--tech-accent); }}
+    .cursor {{ display: inline-block; width: 15px; height: 35px; background: white; animation: blink 1s infinite; vertical-align: middle; }}
     @keyframes blink {{ 50% {{ opacity: 0; }} }}
-    .cta-footer {{ position: absolute; bottom: 50px; width: 100%; left: 0; text-align: center; font-size: 20px; color: #444; font-weight: bold; }}
+    .cta-footer {{ position: absolute; bottom: 50px; width: 100%; left: 0; text-align: center; font-size: 20px; color: #444; }}
     """
 
 async def run_gen(selected_techs, output_format):
@@ -216,10 +177,7 @@ async def run_gen(selected_techs, output_format):
                     full_code = format_code("\n".join(code_parts), tech)
                     
                     titolo = str(row.get('TITOLO', f'Topic {idx+1}')).replace('_', ' ')
-                    # Slug standard per cartelle
                     topic_slug = re.sub(r'[^a-zA-Z0-9]+', '_', titolo)
-                    
-                    # Nome file PDF: minuscolo e con trattini "-"
                     pdf_filename = re.sub(r'[^a-zA-Z0-9]+', '-', titolo).lower()
 
                     out_dir = Path(f"output/{tech}/{sheet_slug}") / (topic_slug if is_insta else "")
@@ -229,32 +187,28 @@ async def run_gen(selected_techs, output_format):
                     chunks = [lines[i:i + MAX_CODE_LINES_PER_SLIDE] for i in range(0, len(lines), MAX_CODE_LINES_PER_SLIDE)]
                     
                     slides = []
-                    # 1. Cover
                     slides.append(f'<div class="slide cover-slide"><div class="cover-badge">{tech.upper()}</div><h1 class="cover-title">{titolo}</h1><div style="margin-top:40px; color:var(--tech-accent); font-weight:900; font-size:24px;">https://icarocomix.github.io/appuntidiprogrammazione</div></div>')
-                    # 2. Analisi
+                    
                     analisi = process_text_formatting(row.get('ANALISI TECNICA', row.get('SINTESI DEL PROBLEMA', '')))
-                    slides.append(f'<div class="slide content-slide"><div class="header"><h1>{titolo}</h1></div><span class="section-label">Analisi Tecnica</span><div class="section-content">{analisi}</div></div>')
-                    # 3. Codice
+                    slides.append(f'<div class="slide"><div class="header"><h1>{titolo}</h1></div><span class="section-label">Analisi Tecnica</span><div class="section-content">{analisi}</div></div>')
+                    
                     truncated = False
                     for c_idx, chunk in enumerate(chunks):
                         if (c_idx + 3) >= MAX_TOTAL_SLIDES:
                             truncated = True; break
-                            # Uso "\n" (singolo) per unire le righe, così html.escape preserva i newline reali
-                        code_content = html.escape("\n".join(chunk))
-                        slides.append(f'<div class="slide"><div class="header"><span class="section-label">Codice Part {c_idx+1}</span></div><div class="code-container"><pre><code>{code_content}</code></pre></div><div class="footer-page">{c_idx+3}/{len(chunks)+2}</div></div>')
-                        # slides.append(f'<div class="slide"><div class="header"><span class="section-label">Codice Part {c_idx+1}</span></div><div class="code-container"><pre><code>{html.escape("\\n".join(chunk))}</code></pre></div><div class="footer-page">{c_idx+3}/{len(chunks)+2}</div></div>')
-
-                    # 4. CTA DEBUG CONSOLE
+                        # Escape HTML per sicurezza, poi applichiamo l'evidenziazione
+                        code_html = html.escape("\n".join(chunk))
+                        code_highlighted = highlight_code(code_html)
+                        
+                        slides.append(f'<div class="slide"><div class="header"><span class="section-label">Esempio Implementativo - Part {c_idx+1}</span></div><div class="code-container"><pre><code>{code_highlighted}</code></pre></div><div class="footer-page">{c_idx+3}/{len(chunks)+2}</div></div>')
+                    
                     final_msg = "scopri_di_più()" if truncated else "salva_post_ora()"
                     slides.append(f"""
                     <div class="slide cta-debug">
                         <div class="console-title">Console di Debug</div>
-                        <div class="console-line"><span class="console-prompt">></span><span class="console-key">Stato post:</span> <span class="console-val-accent">[utile]</span></div>
-                        <div class="console-line"><span class="console-prompt">></span><span class="console-key">Azione:</span> <span class="console-val-green">{final_msg}</span><span class="cursor"></span></div>
-                        <div class="console-line" style="margin-top:40px;">
-                            <span class="console-prompt">></span><span class="console-key">Requisito:</span><br>
-                            <span class="console-val-accent" style="margin-left:45px;">Click sull'icona Segnalibro</span>
-                        </div>
+                        <div class="console-line"><span class="console-prompt">></span>Stato post: <span class="console-val-accent">[utile]</span></div>
+                        <div class="console-line"><span class="console-prompt">></span>Azione: <span class="console-val-green">{final_msg}</span><span class="cursor"></span></div>
+                        <div class="console-line" style="margin-top:40px;"><span class="console-prompt">></span>Requisito:<br><span class="console-val-accent" style="margin-left:45px;">Click sull'icona Segnalibro</span></div>
                         <div class="cta-footer">https://icarocomix.github.io/appuntidiprogrammazione</div>
                     </div>
                     """)
@@ -272,7 +226,7 @@ async def run_gen(selected_techs, output_format):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--tech", default="all")
-    parser.add_argument("--format", default="insta", choices=["pdf", "source", "insta"])
+    parser.add_argument("--format", default="insta", choices=["pdf", "insta"])
     args = parser.parse_args()
     
     if args.tech == "all":

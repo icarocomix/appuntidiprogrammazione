@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Pattern Observer e RxJS Multicasting — DevLog</title>
-    <meta name="description" content="I semplici EventEmitter possono causare memory leak se i listener non vengono rimossi. Subject e ReplaySubject permettono di gestire flussi di dati multi-consumatore. L'operatore takeUntil deregistra automaticamente gli osservatori, evitando che 'gho
+    <meta name="description" content="I semplici EventEmitter possono causare memory leak se i listener non vengono rimossi. Subject e ReplaySubject permettono di gestire flussi di dati multi-consumatore. L'operatore takeUntil deregistra automaticamente gli osservatori, evitando che "gho
 ">
     <link rel="stylesheet" href="/appuntidiprogrammazione/assets/css/style.css">
 
@@ -203,120 +203,206 @@
 112
 113
 114
-</pre></td><td class="rouge-code"><pre><span class="o">*</span> <span class="nx">Implemento</span> <span class="nx">un</span> <span class="nx">Observer</span> <span class="nx">pattern</span> <span class="nx">minimale</span> <span class="k">in</span> <span class="nx">Vanilla</span> <span class="nx">JS</span> <span class="nx">per</span> <span class="nx">ambienti</span> <span class="nx">senza</span> <span class="nx">RxJS</span><span class="p">.</span>
-<span class="o">*</span> <span class="o">*</span><span class="sr">/</span><span class="err">
-</span> <span class="kd">class</span> <span class="nx">Subject</span> 
-<span class="p">{</span> <span class="kd">constructor</span><span class="p">()</span> 
-<span class="p">{</span> <span class="k">this</span><span class="p">.</span><span class="nx">_observers</span> <span class="o">=</span> <span class="k">new</span> <span class="nb">Set</span><span class="p">();</span> 
-<span class="c1">// Set per evitare duplicati }</span>
- <span class="nx">subscribe</span><span class="p">(</span><span class="nx">observer</span><span class="p">)</span> 
-<span class="p">{</span> <span class="k">this</span><span class="p">.</span><span class="nx">_observers</span><span class="p">.</span><span class="nx">add</span><span class="p">(</span><span class="nx">observer</span><span class="p">);</span> 
-<span class="c1">// Ritorno una funzione di unsubscribe: il chiamante la chiama quando ha finito</span>
-<span class="c1">// return () =&gt; this._observers.delete(observer); }</span>
- <span class="nx">next</span><span class="p">(</span><span class="nx">value</span><span class="p">)</span> 
-<span class="p">{</span> <span class="k">this</span><span class="p">.</span><span class="nx">_observers</span><span class="p">.</span><span class="nx">forEach</span><span class="p">(</span><span class="nx">observer</span> <span class="o">=&gt;</span> 
-<span class="p">{</span> <span class="k">try</span> 
-<span class="p">{</span> <span class="nx">observer</span><span class="p">(</span><span class="nx">value</span><span class="p">);</span> <span class="p">}</span>
- <span class="k">catch</span> <span class="p">(</span><span class="nx">e</span><span class="p">)</span> 
-<span class="p">{</span> <span class="nx">console</span><span class="p">.</span><span class="nx">error</span><span class="p">(</span><span class="dl">'</span><span class="s1">Errore in observer:</span><span class="dl">'</span><span class="p">,</span> <span class="nx">e</span><span class="p">);</span> 
-<span class="c1">// Isolo gli errori: un observer rotto non blocca gli altri }</span>
- <span class="p">}</span>
-<span class="p">);</span> <span class="p">}</span>
- <span class="kd">get</span> <span class="nx">observerCount</span><span class="p">()</span> 
-<span class="p">{</span> <span class="k">return</span> <span class="k">this</span><span class="p">.</span><span class="nx">_observers</span><span class="p">.</span><span class="nx">size</span><span class="p">;</span> <span class="p">}</span>
- <span class="p">}</span>
- 
-<span class="o">*</span> <span class="nx">Implemento</span> <span class="nx">un</span> <span class="nx">ReplaySubject</span> <span class="nx">che</span> <span class="nx">emette</span> <span class="nx">gli</span> <span class="nx">ultimi</span> <span class="nx">N</span> <span class="nx">valori</span> <span class="nx">ai</span> <span class="nx">nuovi</span>
-<span class="o">*</span> <span class="nx">subscriber</span><span class="p">.</span> <span class="o">*</span><span class="sr">/</span><span class="err">
-</span> <span class="kd">class</span> <span class="nx">ReplaySubject</span> <span class="kd">extends</span> <span class="nx">Subject</span> 
-<span class="p">{</span> <span class="kd">constructor</span><span class="p">(</span><span class="nx">bufferSize</span> <span class="o">=</span> <span class="mi">1</span><span class="p">)</span> 
-<span class="p">{</span> <span class="k">super</span><span class="p">();</span> <span class="k">this</span><span class="p">.</span><span class="nx">_buffer</span> <span class="o">=</span> <span class="p">[];</span> <span class="k">this</span><span class="p">.</span><span class="nx">_bufferSize</span> <span class="o">=</span> <span class="nx">bufferSize</span><span class="p">;</span> <span class="p">}</span>
- <span class="nx">next</span><span class="p">(</span><span class="nx">value</span><span class="p">)</span> 
-<span class="p">{</span> 
-<span class="c1">// Mantengo il buffer degli ultimi N valori this._buffer.push(value); if</span>
-<span class="c1">// (this._buffer.length &gt; this._bufferSize)</span>
-<span class="p">{</span> <span class="k">this</span><span class="p">.</span><span class="nx">_buffer</span><span class="p">.</span><span class="nx">shift</span><span class="p">();</span> <span class="p">}</span>
- <span class="k">super</span><span class="p">.</span><span class="nx">next</span><span class="p">(</span><span class="nx">value</span><span class="p">);</span> <span class="p">}</span>
- <span class="nx">subscribe</span><span class="p">(</span><span class="nx">observer</span><span class="p">)</span> 
-<span class="p">{</span> 
-<span class="c1">// Replay dei valori in buffer per il nuovo subscriber</span>
-<span class="c1">// this._buffer.forEach(value =&gt; observer(value)); return</span>
-<span class="c1">// super.subscribe(observer); }</span>
- <span class="p">}</span>
- 
+115
+116
+117
+118
+119
+120
+121
+122
+123
+124
+125
+126
+127
+128
+129
+130
+131
+132
+133
+134
+135
+136
+137
+138
+139
+140
+141
+142
+143
+144
+145
+146
+147
+148
+149
+150
+151
+152
+153
+154
+155
+156
+157
+</pre></td><td class="rouge-code"><pre><span class="cm">/* Implemento un Observer pattern minimale in Vanilla JS per ambienti senza
+    RxJS. */</span>
+<span class="kd">class</span> <span class="nx">Subject</span> <span class="p">{</span>
+    <span class="kd">constructor</span><span class="p">()</span> <span class="p">{</span>
+        <span class="k">this</span><span class="p">.</span><span class="nx">_observers</span> <span class="o">=</span> <span class="k">new</span> <span class="nb">Set</span><span class="p">();</span>
+        <span class="c1">// Set per evitare duplicati</span>
+    <span class="p">}</span>
+    <span class="nx">subscribe</span><span class="p">(</span><span class="nx">observer</span><span class="p">)</span> <span class="p">{</span>
+        <span class="k">this</span><span class="p">.</span><span class="nx">_observers</span><span class="p">.</span><span class="nx">add</span><span class="p">(</span><span class="nx">observer</span><span class="p">);</span>
+        <span class="c1">// Ritorno una funzione di unsubscribe: il chiamante la chiama quando ha</span>
+            <span class="nx">finito</span>
+        <span class="k">return</span> <span class="p">()</span> <span class="o">=&gt;</span> <span class="k">this</span><span class="p">.</span><span class="nx">_observers</span><span class="p">.</span><span class="k">delete</span><span class="p">(</span><span class="nx">observer</span><span class="p">);</span>
+    <span class="p">}</span>
+    <span class="nx">next</span><span class="p">(</span><span class="nx">value</span><span class="p">)</span> <span class="p">{</span>
+        <span class="k">this</span><span class="p">.</span><span class="nx">_observers</span><span class="p">.</span><span class="nx">forEach</span><span class="p">(</span><span class="nx">observer</span> <span class="o">=&gt;</span> <span class="p">{</span>
+            <span class="k">try</span> <span class="p">{</span>
+                <span class="nx">observer</span><span class="p">(</span><span class="nx">value</span><span class="p">);</span>
+            <span class="p">}</span>
+            <span class="k">catch</span> <span class="p">(</span><span class="nx">e</span><span class="p">)</span> <span class="p">{</span>
+                <span class="nx">console</span><span class="p">.</span><span class="nx">error</span><span class="p">(</span><span class="dl">'</span><span class="s1">Errore in observer:</span><span class="dl">'</span><span class="p">,</span> <span class="nx">e</span><span class="p">);</span>
+                <span class="c1">// Isolo gli errori: un observer rotto non blocca gli altri</span>
+            <span class="p">}</span>
+        <span class="p">}</span>
+        <span class="p">);</span>
+    <span class="p">}</span>
+    <span class="kd">get</span> <span class="nx">observerCount</span><span class="p">()</span> <span class="p">{</span>
+        <span class="k">return</span> <span class="k">this</span><span class="p">.</span><span class="nx">_observers</span><span class="p">.</span><span class="nx">size</span><span class="p">;</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+<span class="cm">/* Implemento un ReplaySubject che emette gli ultimi N valori ai nuovi
+    subscriber. */</span>
+<span class="kd">class</span> <span class="nx">ReplaySubject</span> <span class="kd">extends</span> <span class="nx">Subject</span> <span class="p">{</span>
+    <span class="kd">constructor</span><span class="p">(</span><span class="nx">bufferSize</span> <span class="o">=</span> <span class="mi">1</span><span class="p">)</span> <span class="p">{</span>
+        <span class="k">super</span><span class="p">();</span>
+        <span class="k">this</span><span class="p">.</span><span class="nx">_buffer</span> <span class="o">=</span> <span class="p">[];</span>
+        <span class="k">this</span><span class="p">.</span><span class="nx">_bufferSize</span> <span class="o">=</span> <span class="nx">bufferSize</span><span class="p">;</span>
+    <span class="p">}</span>
+    <span class="nx">next</span><span class="p">(</span><span class="nx">value</span><span class="p">)</span> <span class="p">{</span>
+        <span class="c1">// Mantengo il buffer degli ultimi N valori this._buffer.push(value)</span>
+        <span class="p">;</span>
+        <span class="k">if</span> <span class="p">(</span><span class="k">this</span><span class="p">.</span><span class="nx">_buffer</span><span class="p">.</span><span class="nx">length</span> <span class="o">&gt;</span> <span class="k">this</span><span class="p">.</span><span class="nx">_bufferSize</span><span class="p">)</span> <span class="p">{</span>
+            <span class="k">this</span><span class="p">.</span><span class="nx">_buffer</span><span class="p">.</span><span class="nx">shift</span><span class="p">();</span>
+        <span class="p">}</span>
+        <span class="k">super</span><span class="p">.</span><span class="nx">next</span><span class="p">(</span><span class="nx">value</span><span class="p">);</span>
+    <span class="p">}</span>
+    <span class="nx">subscribe</span><span class="p">(</span><span class="nx">observer</span><span class="p">)</span> <span class="p">{</span>
+        <span class="c1">// Replay dei valori in buffer per il nuovo subscriber</span>
+            <span class="k">this</span><span class="p">.</span><span class="nx">_buffer</span><span class="p">.</span><span class="nx">forEach</span><span class="p">(</span><span class="nx">value</span> <span class="o">=&gt;</span> <span class="nx">observer</span><span class="p">(</span><span class="nx">value</span><span class="p">))</span>
+        <span class="p">;</span>
+        <span class="k">return</span> <span class="k">super</span><span class="p">.</span><span class="nx">subscribe</span><span class="p">(</span><span class="nx">observer</span><span class="p">);</span>
+    <span class="p">}</span>
+<span class="p">}</span>
 <span class="cm">/* Implemento il WebSocket data stream centralizzato per la dashboard. */</span>
- <span class="kd">class</span> <span class="nx">DashboardDataStream</span> 
-<span class="p">{</span> <span class="kd">constructor</span><span class="p">(</span><span class="nx">wsUrl</span><span class="p">)</span> 
-<span class="p">{</span> 
-<span class="c1">// Un solo Subject per tutti i widget: un solo WebSocket, N subscriber</span>
-<span class="c1">// this.priceStream$ = new ReplaySubject(1);</span>
-<span class="c1">// Ultimo prezzo sempre disponibile this.alertStream$ = new Subject(); </span>
-<span class="c1">// Solo nuovi alert, nessun replay this.statusStream$ = new ReplaySubject(5); </span>
-<span class="c1">// Ultimi 5 stati const ws = new WebSocket(wsUrl); ws.onmessage = (</span>
-<span class="p">{</span> <span class="nx">data</span> <span class="p">}</span>
-<span class="p">)</span> <span class="o">=&gt;</span> 
-<span class="p">{</span> <span class="kd">const</span> <span class="nx">message</span> <span class="o">=</span> <span class="nx">JSON</span><span class="p">.</span><span class="nx">parse</span><span class="p">(</span><span class="nx">data</span><span class="p">);</span> <span class="k">switch</span> <span class="p">(</span><span class="nx">message</span><span class="p">.</span><span class="nx">type</span><span class="p">)</span> 
-<span class="p">{</span> <span class="k">case</span> <span class="dl">'</span><span class="s1">PRICE_UPDATE</span><span class="dl">'</span><span class="p">:</span> <span class="k">this</span><span class="p">.</span><span class="nx">priceStream$</span><span class="p">.</span><span class="nx">next</span><span class="p">(</span><span class="nx">message</span><span class="p">.</span><span class="nx">payload</span><span class="p">);</span> <span class="k">break</span><span class="p">;</span> <span class="k">case</span>
-<span class="dl">'</span><span class="s1">ALERT</span><span class="dl">'</span><span class="p">:</span> <span class="k">this</span><span class="p">.</span><span class="nx">alertStream$</span><span class="p">.</span><span class="nx">next</span><span class="p">(</span><span class="nx">message</span><span class="p">.</span><span class="nx">payload</span><span class="p">);</span> <span class="k">break</span><span class="p">;</span> <span class="k">case</span> <span class="dl">'</span><span class="s1">STATUS</span><span class="dl">'</span><span class="p">:</span>
-<span class="k">this</span><span class="p">.</span><span class="nx">statusStream$</span><span class="p">.</span><span class="nx">next</span><span class="p">(</span><span class="nx">message</span><span class="p">.</span><span class="nx">payload</span><span class="p">);</span> <span class="k">break</span><span class="p">;</span> <span class="p">}</span>
- <span class="p">}</span>
-<span class="p">;</span> <span class="nx">ws</span><span class="p">.</span><span class="nx">onclose</span> <span class="o">=</span> <span class="p">()</span> <span class="o">=&gt;</span> 
-<span class="p">{</span> <span class="nx">console</span><span class="p">.</span><span class="nx">warn</span><span class="p">(</span><span class="dl">'</span><span class="s1">WebSocket chiuso: riconnessione in 3s</span><span class="dl">'</span><span class="p">);</span> <span class="nx">setTimeout</span><span class="p">(()</span> <span class="o">=&gt;</span> <span class="k">new</span>
-<span class="nx">DashboardDataStream</span><span class="p">(</span><span class="nx">wsUrl</span><span class="p">),</span> <span class="mi">3000</span><span class="p">);</span> <span class="p">}</span>
-<span class="p">;</span> <span class="p">}</span>
- <span class="p">}</span>
- 
+<span class="kd">class</span> <span class="nx">DashboardDataStream</span> <span class="p">{</span>
+    <span class="kd">constructor</span><span class="p">(</span><span class="nx">wsUrl</span><span class="p">)</span> <span class="p">{</span>
+        <span class="c1">// Un solo Subject per tutti i widget: un solo WebSocket, N subscriber</span>
+            <span class="k">this</span><span class="p">.</span><span class="nx">priceStream$</span> <span class="o">=</span> <span class="k">new</span> <span class="nx">ReplaySubject</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+        <span class="p">;</span>
+        <span class="c1">// Ultimo prezzo sempre disponibile this.alertStream$ = new Subject()</span>
+        <span class="p">;</span>
+        <span class="c1">// Solo nuovi alert, nessun replay this.statusStream$ = new</span>
+            <span class="nx">ReplaySubject</span><span class="p">(</span><span class="mi">5</span><span class="p">)</span>
+        <span class="p">;</span>
+        <span class="c1">// Ultimi 5 stati const ws = new WebSocket(wsUrl)</span>
+        <span class="p">;</span>
+        <span class="nx">ws</span><span class="p">.</span><span class="nx">onmessage</span> <span class="o">=</span> <span class="p">({</span>
+            <span class="nx">data</span>
+        <span class="p">}</span>
+        <span class="p">)</span> <span class="o">=&gt;</span> <span class="p">{</span>
+            <span class="kd">const</span> <span class="nx">message</span> <span class="o">=</span> <span class="nx">JSON</span><span class="p">.</span><span class="nx">parse</span><span class="p">(</span><span class="nx">data</span><span class="p">);</span>
+            <span class="k">switch</span> <span class="p">(</span><span class="nx">message</span><span class="p">.</span><span class="nx">type</span><span class="p">)</span> <span class="p">{</span>
+                <span class="k">case</span> <span class="dl">'</span><span class="s1">PRICE_UPDATE</span><span class="dl">'</span><span class="p">:</span> <span class="k">this</span><span class="p">.</span><span class="nx">priceStream$</span><span class="p">.</span><span class="nx">next</span><span class="p">(</span><span class="nx">message</span><span class="p">.</span><span class="nx">payload</span><span class="p">);</span>
+                <span class="k">break</span><span class="p">;</span>
+                <span class="k">case</span> <span class="dl">'</span><span class="s1">ALERT</span><span class="dl">'</span><span class="p">:</span> <span class="k">this</span><span class="p">.</span><span class="nx">alertStream$</span><span class="p">.</span><span class="nx">next</span><span class="p">(</span><span class="nx">message</span><span class="p">.</span><span class="nx">payload</span><span class="p">);</span>
+                <span class="k">break</span><span class="p">;</span>
+                <span class="k">case</span> <span class="dl">'</span><span class="s1">STATUS</span><span class="dl">'</span><span class="p">:</span> <span class="k">this</span><span class="p">.</span><span class="nx">statusStream$</span><span class="p">.</span><span class="nx">next</span><span class="p">(</span><span class="nx">message</span><span class="p">.</span><span class="nx">payload</span><span class="p">);</span>
+                <span class="k">break</span><span class="p">;</span>
+            <span class="p">}</span>
+        <span class="p">}</span>
+        <span class="p">;</span>
+        <span class="nx">ws</span><span class="p">.</span><span class="nx">onclose</span> <span class="o">=</span> <span class="p">()</span> <span class="o">=&gt;</span> <span class="p">{</span>
+            <span class="nx">console</span><span class="p">.</span><span class="nx">warn</span><span class="p">(</span><span class="dl">'</span><span class="s1">WebSocket chiuso: riconnessione in 3s</span><span class="dl">'</span><span class="p">);</span>
+            <span class="nx">setTimeout</span><span class="p">(()</span> <span class="o">=&gt;</span> <span class="k">new</span> <span class="nx">DashboardDataStream</span><span class="p">(</span><span class="nx">wsUrl</span><span class="p">),</span> <span class="mi">3000</span><span class="p">);</span>
+        <span class="p">}</span>
+        <span class="p">;</span>
+    <span class="p">}</span>
+<span class="p">}</span>
 <span class="cm">/* Uso il pattern nei widget della dashboard con pulizia automatica. */</span>
- <span class="kd">class</span> <span class="nx">PriceWidget</span> 
-<span class="p">{</span> <span class="kd">constructor</span><span class="p">(</span><span class="nx">dataStream</span><span class="p">)</span> 
-<span class="p">{</span> <span class="k">this</span><span class="p">.</span><span class="nx">_unsubscribeFns</span> <span class="o">=</span> <span class="p">[];</span> 
-<span class="c1">// Tengo traccia di tutte le unsubscribe </span>
-<span class="c1">// Sottoscrivo lo stream dei prezzi: al mount del widget const unsubPrice =</span>
-<span class="c1">// dataStream.priceStream$.subscribe(price =&gt;</span>
-<span class="p">{</span> <span class="k">this</span><span class="p">.</span><span class="nx">render</span><span class="p">(</span><span class="nx">price</span><span class="p">);</span> <span class="p">}</span>
-<span class="p">);</span> 
-<span class="c1">// Sottoscrivo anche gli alert per questo widget const unsubAlert =</span>
-<span class="c1">// dataStream.alertStream$.subscribe(alert =&gt;</span>
-<span class="p">{</span> <span class="k">if</span> <span class="p">(</span><span class="nx">alert</span><span class="p">.</span><span class="nx">severity</span> <span class="o">===</span> <span class="dl">'</span><span class="s1">HIGH</span><span class="dl">'</span><span class="p">)</span> <span class="k">this</span><span class="p">.</span><span class="nx">showAlert</span><span class="p">(</span><span class="nx">alert</span><span class="p">);</span> <span class="p">}</span>
-<span class="p">);</span> <span class="k">this</span><span class="p">.</span><span class="nx">_unsubscribeFns</span><span class="p">.</span><span class="nx">push</span><span class="p">(</span><span class="nx">unsubPrice</span><span class="p">,</span> <span class="nx">unsubAlert</span><span class="p">);</span> <span class="p">}</span>
- <span class="nx">render</span><span class="p">(</span><span class="nx">price</span><span class="p">)</span> 
-<span class="p">{</span> <span class="nb">document</span><span class="p">.</span><span class="nx">getElementById</span><span class="p">(</span><span class="dl">'</span><span class="s1">price</span><span class="dl">'</span><span class="p">).</span><span class="nx">textContent</span> <span class="o">=</span> <span class="s2">`€$
-{price.toFixed(2)}
-`</span><span class="p">;</span> <span class="p">}</span>
- <span class="nx">showAlert</span><span class="p">(</span><span class="nx">alert</span><span class="p">)</span> 
-<span class="p">{</span> <span class="nx">console</span><span class="p">.</span><span class="nx">warn</span><span class="p">(</span><span class="dl">'</span><span class="s1">Alert critico:</span><span class="dl">'</span><span class="p">,</span> <span class="nx">alert</span><span class="p">.</span><span class="nx">message</span><span class="p">);</span> <span class="p">}</span>
- 
-<span class="c1">// Chiamo destroy() quando il widget viene rimosso dal DOM: zero ghost</span>
-<span class="c1">// subscriptions destroy()</span>
-<span class="p">{</span> <span class="k">this</span><span class="p">.</span><span class="nx">_unsubscribeFns</span><span class="p">.</span><span class="nx">forEach</span><span class="p">(</span><span class="nx">unsub</span> <span class="o">=&gt;</span> <span class="nx">unsub</span><span class="p">());</span> <span class="k">this</span><span class="p">.</span><span class="nx">_unsubscribeFns</span> <span class="o">=</span> <span class="p">[];</span>
-<span class="nx">console</span><span class="p">.</span><span class="nx">log</span><span class="p">(</span><span class="dl">'</span><span class="s1">Widget distrutto: tutte le sottoscrizioni rimosse</span><span class="dl">'</span><span class="p">);</span> <span class="p">}</span>
- <span class="p">}</span>
- 
+<span class="kd">class</span> <span class="nx">PriceWidget</span> <span class="p">{</span>
+    <span class="kd">constructor</span><span class="p">(</span><span class="nx">dataStream</span><span class="p">)</span> <span class="p">{</span>
+        <span class="k">this</span><span class="p">.</span><span class="nx">_unsubscribeFns</span> <span class="o">=</span> <span class="p">[];</span>
+        <span class="c1">// Tengo traccia di tutte le unsubscribe // Sottoscrivo lo stream dei</span>
+            <span class="nl">prezzi</span><span class="p">:</span> <span class="nx">al</span> <span class="nx">mount</span> <span class="nx">del</span> <span class="nx">widget</span> <span class="kd">const</span> <span class="nx">unsubPrice</span> <span class="o">=</span>
+            <span class="nx">dataStream</span><span class="p">.</span><span class="nx">priceStream$</span><span class="p">.</span><span class="nx">subscribe</span><span class="p">(</span><span class="nx">price</span> <span class="o">=&gt;</span>
+        <span class="p">{</span>
+            <span class="k">this</span><span class="p">.</span><span class="nx">render</span><span class="p">(</span><span class="nx">price</span><span class="p">);</span>
+        <span class="p">}</span>
+        <span class="p">);</span>
+        <span class="c1">// Sottoscrivo anche gli alert per questo widget const unsubAlert =</span>
+            <span class="nx">dataStream</span><span class="p">.</span><span class="nx">alertStream$</span><span class="p">.</span><span class="nx">subscribe</span><span class="p">(</span><span class="nx">alert</span> <span class="o">=&gt;</span>
+        <span class="p">{</span>
+            <span class="k">if</span> <span class="p">(</span><span class="nx">alert</span><span class="p">.</span><span class="nx">severity</span> <span class="o">===</span> <span class="dl">'</span><span class="s1">HIGH</span><span class="dl">'</span><span class="p">)</span> <span class="k">this</span><span class="p">.</span><span class="nx">showAlert</span><span class="p">(</span><span class="nx">alert</span><span class="p">);</span>
+        <span class="p">}</span>
+        <span class="p">);</span>
+        <span class="k">this</span><span class="p">.</span><span class="nx">_unsubscribeFns</span><span class="p">.</span><span class="nx">push</span><span class="p">(</span><span class="nx">unsubPrice</span><span class="p">,</span> <span class="nx">unsubAlert</span><span class="p">);</span>
+    <span class="p">}</span>
+    <span class="nx">render</span><span class="p">(</span><span class="nx">price</span><span class="p">)</span> <span class="p">{</span>
+        <span class="nb">document</span><span class="p">.</span><span class="nx">getElementById</span><span class="p">(</span><span class="dl">'</span><span class="s1">price</span><span class="dl">'</span><span class="p">).</span><span class="nx">textContent</span> <span class="o">=</span> <span class="s2">`€</span><span class="p">${</span>
+            <span class="nx">price</span><span class="p">.</span><span class="nx">toFixed</span><span class="p">(</span><span class="mi">2</span><span class="p">)</span>
+        <span class="p">}</span><span class="s2">
+        `</span><span class="p">;</span>
+    <span class="p">}</span>
+    <span class="nx">showAlert</span><span class="p">(</span><span class="nx">alert</span><span class="p">)</span> <span class="p">{</span>
+        <span class="nx">console</span><span class="p">.</span><span class="nx">warn</span><span class="p">(</span><span class="dl">'</span><span class="s1">Alert critico:</span><span class="dl">'</span><span class="p">,</span> <span class="nx">alert</span><span class="p">.</span><span class="nx">message</span><span class="p">);</span>
+    <span class="p">}</span>
+    <span class="c1">// Chiamo destroy() quando il widget viene rimosso dal DOM: zero ghost</span>
+        <span class="nx">subscriptions</span> <span class="nx">destroy</span><span class="p">()</span>
+    <span class="p">{</span>
+        <span class="k">this</span><span class="p">.</span><span class="nx">_unsubscribeFns</span><span class="p">.</span><span class="nx">forEach</span><span class="p">(</span><span class="nx">unsub</span> <span class="o">=&gt;</span> <span class="nx">unsub</span><span class="p">());</span>
+        <span class="k">this</span><span class="p">.</span><span class="nx">_unsubscribeFns</span> <span class="o">=</span> <span class="p">[];</span>
+        <span class="nx">console</span><span class="p">.</span><span class="nx">log</span><span class="p">(</span><span class="dl">'</span><span class="s1">Widget distrutto: tutte le sottoscrizioni rimosse</span><span class="dl">'</span><span class="p">);</span>
+    <span class="p">}</span>
+<span class="p">}</span>
 <span class="cm">/* Con RxJS, il pattern è più espressivo grazie a takeUntil: */</span>
- <span class="k">import</span> 
-<span class="p">{</span> <span class="nx">Subject</span><span class="p">,</span> <span class="nx">ReplaySubject</span> <span class="p">}</span>
- <span class="k">from</span> <span class="dl">'</span><span class="s1">rxjs</span><span class="dl">'</span><span class="p">;</span> <span class="k">import</span> 
-<span class="p">{</span> <span class="nx">takeUntil</span><span class="p">,</span> <span class="nx">filter</span><span class="p">,</span> <span class="nx">map</span><span class="p">,</span> <span class="nx">distinctUntilChanged</span> <span class="p">}</span>
- <span class="k">from</span> <span class="dl">'</span><span class="s1">rxjs/operators</span><span class="dl">'</span><span class="p">;</span> <span class="kd">class</span> <span class="nx">PriceWidgetRx</span> 
-<span class="p">{</span> <span class="kd">constructor</span><span class="p">(</span><span class="nx">dataStream$</span><span class="p">)</span> 
-<span class="p">{</span> <span class="k">this</span><span class="p">.</span><span class="nx">_destroy$</span> <span class="o">=</span> <span class="k">new</span> <span class="nx">Subject</span><span class="p">();</span> 
-<span class="c1">// Signal di distruzione </span>
-<span class="c1">// takeUntil si disiscrive automaticamente quando destroy$ emette</span>
-<span class="c1">// dataStream$.priceStream$.pipe( distinctUntilChanged(),</span>
-<span class="c1">// Ignoro duplicati: emetto solo se il prezzo è cambiato filter(price =&gt; price &gt;</span>
-<span class="c1">// 0),</span>
-<span class="c1">// Ignoro prezzi non validi map(price =&gt; price.toFixed(2)), </span>
-<span class="c1">// Formato takeUntil(this._destroy$) </span>
-<span class="c1">// Auto-cleanup: nessun leak possibile ).subscribe(formattedPrice =&gt; </span>
-<span class="p">{</span> <span class="nb">document</span><span class="p">.</span><span class="nx">getElementById</span><span class="p">(</span><span class="dl">'</span><span class="s1">price</span><span class="dl">'</span><span class="p">).</span><span class="nx">textContent</span> <span class="o">=</span> <span class="s2">`€$
-{formattedPrice}
-`</span><span class="p">;</span> <span class="p">}</span>
-<span class="p">);</span> <span class="p">}</span>
- <span class="nx">destroy</span><span class="p">()</span> 
-<span class="p">{</span> <span class="k">this</span><span class="p">.</span><span class="nx">_destroy$</span><span class="p">.</span><span class="nx">next</span><span class="p">();</span> 
-<span class="c1">// Tutti gli stream con takeUntil(this._destroy$) si chiudono</span>
-<span class="c1">// this._destroy$.complete(); }</span>
- <span class="p">}</span>
+<span class="k">import</span> <span class="p">{</span>
+    <span class="nx">Subject</span><span class="p">,</span> <span class="nx">ReplaySubject</span>
+<span class="p">}</span>
+<span class="k">from</span> <span class="dl">'</span><span class="s1">rxjs</span><span class="dl">'</span><span class="p">;</span>
+<span class="k">import</span> <span class="p">{</span>
+    <span class="nx">takeUntil</span><span class="p">,</span> <span class="nx">filter</span><span class="p">,</span> <span class="nx">map</span><span class="p">,</span> <span class="nx">distinctUntilChanged</span>
+<span class="p">}</span>
+<span class="k">from</span> <span class="dl">'</span><span class="s1">rxjs/operators</span><span class="dl">'</span><span class="p">;</span>
+<span class="kd">class</span> <span class="nx">PriceWidgetRx</span> <span class="p">{</span>
+    <span class="kd">constructor</span><span class="p">(</span><span class="nx">dataStream$</span><span class="p">)</span> <span class="p">{</span>
+        <span class="k">this</span><span class="p">.</span><span class="nx">_destroy$</span> <span class="o">=</span> <span class="k">new</span> <span class="nx">Subject</span><span class="p">();</span>
+        <span class="c1">// Signal di distruzione // takeUntil si disiscrive automaticamente</span>
+            <span class="nx">quando</span> <span class="nx">destroy$</span> <span class="nx">emette</span> <span class="nx">dataStream$</span><span class="p">.</span><span class="nx">priceStream$</span><span class="p">.</span><span class="nx">pipe</span><span class="p">(</span>
+            <span class="nx">distinctUntilChanged</span><span class="p">(),</span> <span class="c1">// Ignoro duplicati: emetto solo se il</span>
+            <span class="nx">prezzo</span> <span class="nx">è</span> <span class="nx">cambiato</span> <span class="nx">filter</span><span class="p">(</span><span class="nx">price</span> <span class="o">=&gt;</span> <span class="nx">price</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">),</span> <span class="c1">// Ignoro prezzi non</span>
+            <span class="nx">validi</span> <span class="nx">map</span><span class="p">(</span><span class="nx">price</span> <span class="o">=&gt;</span> <span class="nx">price</span><span class="p">.</span><span class="nx">toFixed</span><span class="p">(</span><span class="mi">2</span><span class="p">)),</span> <span class="c1">// Formato</span>
+            <span class="nx">takeUntil</span><span class="p">(</span><span class="k">this</span><span class="p">.</span><span class="nx">_destroy$</span><span class="p">)</span> <span class="c1">// Auto-cleanup: nessun leak possibile</span>
+            <span class="p">).</span><span class="nx">subscribe</span><span class="p">(</span><span class="nx">formattedPrice</span> <span class="o">=&gt;</span>
+        <span class="p">{</span>
+            <span class="nb">document</span><span class="p">.</span><span class="nx">getElementById</span><span class="p">(</span><span class="dl">'</span><span class="s1">price</span><span class="dl">'</span><span class="p">).</span><span class="nx">textContent</span> <span class="o">=</span> <span class="s2">`€</span><span class="p">${</span>
+                <span class="nx">formattedPrice</span>
+            <span class="p">}</span><span class="s2">
+            `</span><span class="p">;</span>
+        <span class="p">}</span>
+        <span class="p">);</span>
+    <span class="p">}</span>
+    <span class="nx">destroy</span><span class="p">()</span> <span class="p">{</span>
+        <span class="k">this</span><span class="p">.</span><span class="nx">_destroy$</span><span class="p">.</span><span class="nx">next</span><span class="p">();</span>
+        <span class="c1">// Tutti gli stream con takeUntil(this._destroy$) si chiudono</span>
+            <span class="k">this</span><span class="p">.</span><span class="nx">_destroy$</span><span class="p">.</span><span class="nx">complete</span><span class="p">()</span>
+        <span class="p">;</span>
+    <span class="p">}</span>
+<span class="p">}</span>
 </pre></td></tr></tbody></table></code></pre></div></div>
 
         </article>

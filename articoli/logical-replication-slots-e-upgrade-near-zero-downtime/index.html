@@ -118,53 +118,35 @@
 27
 28
 29
-30
-31
-32
-33
-34
-35
-36
-37
-38
-</pre></td><td class="rouge-code"><pre><span class="cm">/* STEP 1: Sul vecchio DB (v15) — abilitare la replica logica */</span>
- <span class="n">wal_level</span> <span class="o">=</span> <span class="n">logical</span><span class="p">;</span> 
-<span class="o">*</span> <span class="n">Nel</span> <span class="n">postgresql</span><span class="p">.</span><span class="n">conf</span><span class="p">:</span> <span class="n">obbligatorio</span><span class="p">,</span> <span class="n">senza</span> <span class="n">questo</span> <span class="n">la</span> <span class="n">publication</span> <span class="n">non</span> <span class="n">funziona</span> <span class="o">*/</span>
- <span class="k">CREATE</span> <span class="n">PUBLICATION</span> <span class="n">upgrade_pub</span> <span class="k">FOR</span> <span class="k">ALL</span> <span class="n">TABLES</span><span class="p">;</span> 
-<span class="cm">/* STEP 2: Sul nuovo DB (v17) — caricare lo schema prima della subscription */</span>
- <span class="n">pg_dump</span> <span class="o">-</span><span class="n">s</span> <span class="o">-</span><span class="n">h</span> <span class="n">old_db</span> <span class="o">-</span><span class="n">U</span> <span class="n">postgres</span> <span class="n">mydb</span> <span class="o">|</span> <span class="n">psql</span> <span class="o">-</span><span class="n">h</span> <span class="n">new_db</span> <span class="o">-</span><span class="n">U</span> <span class="n">postgres</span> <span class="n">mydb</span> 
-<span class="cm">/* Ho eseguito solo lo schema (-s): i dati arriveranno tramite replica logica */</span>
- 
-<span class="cm">/* STEP 3: Sul nuovo DB (v17) — creare la subscription */</span>
- <span class="k">CREATE</span> <span class="n">SUBSCRIPTION</span> <span class="n">upgrade_sub</span> <span class="k">CONNECTION</span> <span class="s1">'host=old_db port=5432 user=rep_user
-password=secret dbname=mydb'</span> <span class="n">PUBLICATION</span> <span class="n">upgrade_pub</span><span class="p">;</span>
-<span class="cm">/* STEP 4: Monitoraggio del lag fino ad allineamento */</span>
- <span class="k">SELECT</span> <span class="n">subname</span><span class="p">,</span> <span class="n">received_lsn</span><span class="p">,</span> <span class="n">latest_end_lsn</span><span class="p">,</span> <span class="n">pg_wal_lsn_diff</span><span class="p">(</span><span class="n">latest_end_lsn</span><span class="p">,</span>
-<span class="n">received_lsn</span><span class="p">)</span> <span class="k">AS</span> <span class="n">lag_bytes</span> <span class="k">FROM</span> <span class="n">pg_stat_subscription</span><span class="p">;</span>
-<span class="cm">/* Attendo che lag_bytes sia 0 prima di procedere */</span>
- 
-<span class="o">*</span> <span class="n">STEP</span> <span class="mi">5</span><span class="p">:</span> <span class="n">Sincronizzazione</span> <span class="n">manuale</span> <span class="n">delle</span> <span class="n">sequenze</span> <span class="err">—</span> <span class="n">passaggio</span> <span class="n">critico</span> <span class="n">spesso</span>
-<span class="o">*</span> <span class="n">dimenticato</span> <span class="o">*/</span>
- <span class="k">SELECT</span> <span class="s1">'SELECT setval('</span> <span class="o">||</span> <span class="n">quote_literal</span><span class="p">(</span><span class="n">sequence_name</span><span class="p">)</span> <span class="o">||</span> <span class="s1">', '</span> <span class="o">||</span> <span class="n">last_value</span>
-<span class="o">||</span> <span class="s1">');'</span> <span class="k">FROM</span> <span class="n">information_schema</span><span class="p">.</span><span class="n">sequences</span> <span class="k">JOIN</span> <span class="p">(</span><span class="k">SELECT</span> <span class="n">sequence_name</span><span class="p">,</span> <span class="n">last_value</span>
-<span class="k">FROM</span> <span class="n">pg_sequences</span><span class="p">)</span> <span class="n">s</span> <span class="k">USING</span> <span class="p">(</span><span class="n">sequence_name</span><span class="p">);</span>
-<span class="cm">/* Ho generato ed eseguito questi setval() sul nuovo DB prima dello switch */</span>
- 
-<span class="cm">/* STEP 6: Switch delle connessioni applicative (finestra di 30 secondi) */</span>
- 
-<span class="cm">/* Sul vecchio DB: blocco nuove scritture */</span>
- <span class="k">REVOKE</span> <span class="k">CONNECT</span> <span class="k">ON</span> <span class="k">DATABASE</span> <span class="n">mydb</span> <span class="k">FROM</span> <span class="n">app_user</span><span class="p">;</span> <span class="k">SELECT</span> <span class="n">pg_terminate_backend</span><span class="p">(</span><span class="n">pid</span><span class="p">)</span>
-<span class="k">FROM</span> <span class="n">pg_stat_activity</span> <span class="k">WHERE</span> <span class="n">datname</span> <span class="o">=</span> <span class="s1">'mydb'</span> <span class="k">AND</span> <span class="n">usename</span> <span class="o">=</span> <span class="s1">'app_user'</span><span class="p">;</span>
-<span class="cm">/* Aspetto lag_bytes = 0, poi disabilito la subscription sul nuovo DB */</span>
- <span class="k">ALTER</span> <span class="n">SUBSCRIPTION</span> <span class="n">upgrade_sub</span> <span class="n">DISABLE</span><span class="p">;</span> 
-<span class="o">*</span> <span class="n">Punto</span> <span class="n">le</span> <span class="n">connessioni</span> <span class="n">applicative</span> <span class="n">al</span> <span class="n">nuovo</span> <span class="n">DB</span> <span class="p">(</span><span class="n">v17</span><span class="p">):</span> <span class="n">modifica</span> <span class="n">del</span> <span class="k">connection</span>
-<span class="o">*</span> <span class="n">string</span> <span class="n">o</span> <span class="n">del</span> <span class="k">load</span> <span class="n">balancer</span> <span class="o">*/</span>
- 
-<span class="cm">/* STEP 7: Verifica post-switch sul nuovo DB */</span>
- <span class="k">SELECT</span> <span class="k">version</span><span class="p">();</span> 
-<span class="cm">/* Deve restituire PostgreSQL 17.x */</span>
- <span class="k">SELECT</span> <span class="k">count</span><span class="p">(</span><span class="o">*</span><span class="p">)</span> <span class="k">FROM</span> <span class="n">pg_stat_user_tables</span><span class="p">;</span> 
-<span class="cm">/* Verifico che tutte le tabelle siano presenti e popolate */</span>
+</pre></td><td class="rouge-code"><pre>    <span class="cm">/* STEP 1: Sul vecchio DB (v15) — abilitare la replica logica */</span> <span class="n">wal_level</span> <span class="o">=</span>
+        <span class="n">logical</span><span class="p">;</span> <span class="cm">/* Nel postgresql.conf: obbligatorio, senza questo la
+        publication non funziona */</span> <span class="k">CREATE</span> <span class="n">PUBLICATION</span> <span class="n">upgrade_pub</span> <span class="k">FOR</span> <span class="k">ALL</span>
+        <span class="n">TABLES</span><span class="p">;</span> <span class="cm">/* STEP 2: Sul nuovo DB (v17) — caricare lo schema prima della
+        subscription */</span> <span class="n">pg_dump</span> <span class="o">-</span><span class="n">s</span> <span class="o">-</span><span class="n">h</span> <span class="n">old_db</span> <span class="o">-</span><span class="n">U</span> <span class="n">postgres</span> <span class="n">mydb</span> <span class="o">|</span> <span class="n">psql</span> <span class="o">-</span><span class="n">h</span> <span class="n">new_db</span>
+        <span class="o">-</span><span class="n">U</span> <span class="n">postgres</span> <span class="n">mydb</span> <span class="cm">/* Ho eseguito solo lo schema (-s): i dati arriveranno
+        tramite replica logica */</span> <span class="cm">/* STEP 3: Sul nuovo DB (v17) — creare la
+        subscription */</span> <span class="k">CREATE</span> <span class="n">SUBSCRIPTION</span> <span class="n">upgrade_sub</span> <span class="k">CONNECTION</span> <span class="s1">'host=old_db
+        port=5432 user=rep_user password=secret dbname=mydb'</span> <span class="n">PUBLICATION</span>
+        <span class="n">upgrade_pub</span><span class="p">;</span> <span class="cm">/* STEP 4: Monitoraggio del lag fino ad allineamento */</span>
+        <span class="k">SELECT</span> <span class="n">subname</span><span class="p">,</span> <span class="n">received_lsn</span><span class="p">,</span> <span class="n">latest_end_lsn</span><span class="p">,</span>
+        <span class="n">pg_wal_lsn_diff</span><span class="p">(</span><span class="n">latest_end_lsn</span><span class="p">,</span> <span class="n">received_lsn</span><span class="p">)</span> <span class="k">AS</span> <span class="n">lag_bytes</span> <span class="k">FROM</span>
+        <span class="n">pg_stat_subscription</span><span class="p">;</span> <span class="cm">/* Attendo che lag_bytes sia 0 prima di procedere
+        */</span> <span class="cm">/* STEP 5: Sincronizzazione manuale delle sequenze — passaggio
+        critico spesso dimenticato */</span> <span class="k">SELECT</span> <span class="s1">'SELECT setval('</span> <span class="o">||</span>
+        <span class="n">quote_literal</span><span class="p">(</span><span class="n">sequence_name</span><span class="p">)</span> <span class="o">||</span> <span class="s1">', '</span> <span class="o">||</span> <span class="n">last_value</span> <span class="o">||</span> <span class="s1">');'</span> <span class="k">FROM</span>
+        <span class="n">information_schema</span><span class="p">.</span><span class="n">sequences</span> <span class="k">JOIN</span> <span class="p">(</span><span class="k">SELECT</span> <span class="n">sequence_name</span><span class="p">,</span> <span class="n">last_value</span> <span class="k">FROM</span>
+        <span class="n">pg_sequences</span><span class="p">)</span> <span class="n">s</span> <span class="k">USING</span> <span class="p">(</span><span class="n">sequence_name</span><span class="p">);</span> <span class="cm">/* Ho generato ed eseguito questi
+        setval() sul nuovo DB prima dello switch */</span> <span class="cm">/* STEP 6: Switch delle
+        connessioni applicative (finestra di 30 secondi) */</span> <span class="cm">/* Sul vecchio DB:
+        blocco nuove scritture */</span> <span class="k">REVOKE</span> <span class="k">CONNECT</span> <span class="k">ON</span> <span class="k">DATABASE</span> <span class="n">mydb</span> <span class="k">FROM</span> <span class="n">app_user</span><span class="p">;</span>
+        <span class="k">SELECT</span> <span class="n">pg_terminate_backend</span><span class="p">(</span><span class="n">pid</span><span class="p">)</span> <span class="k">FROM</span> <span class="n">pg_stat_activity</span> <span class="k">WHERE</span> <span class="n">datname</span> <span class="o">=</span>
+        <span class="s1">'mydb'</span> <span class="k">AND</span> <span class="n">usename</span> <span class="o">=</span> <span class="s1">'app_user'</span><span class="p">;</span> <span class="cm">/* Aspetto lag_bytes = 0, poi
+        disabilito la subscription sul nuovo DB */</span> <span class="k">ALTER</span> <span class="n">SUBSCRIPTION</span>
+        <span class="n">upgrade_sub</span> <span class="n">DISABLE</span><span class="p">;</span> <span class="cm">/* Punto le connessioni applicative al nuovo DB
+        (v17): modifica del connection string o del load balancer */</span> <span class="cm">/* STEP 7:
+        Verifica post-switch sul nuovo DB */</span> <span class="k">SELECT</span> <span class="k">version</span><span class="p">();</span> <span class="cm">/* Deve
+        restituire PostgreSQL 17.x */</span> <span class="k">SELECT</span> <span class="k">count</span><span class="p">(</span><span class="o">*</span><span class="p">)</span> <span class="k">FROM</span> <span class="n">pg_stat_user_tables</span><span class="p">;</span>
+        <span class="cm">/* Verifico che tutte le tabelle siano presenti e popolate */</span>
 </pre></td></tr></tbody></table></code></pre></div></div>
 
         </article>

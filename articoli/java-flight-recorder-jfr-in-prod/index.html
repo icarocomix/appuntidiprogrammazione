@@ -169,86 +169,88 @@
 78
 79
 80
-</pre></td><td class="rouge-code"><pre><span class="o">*</span> <span class="nc">Avvio</span> <span class="n">la</span> <span class="n">registrazione</span> <span class="n">continua</span> <span class="n">degli</span> <span class="n">eventi</span> <span class="no">JVM</span><span class="o">.</span> <span class="n">maxsize</span><span class="o">=</span><span class="mi">1</span><span class="n">g</span> <span class="n">mantiene</span> <span class="n">solo</span>
-<span class="o">*</span> <span class="n">l</span><span class="err">'</span><span class="n">ultimo</span> <span class="mi">1</span><span class="no">GB</span> <span class="n">di</span> <span class="n">eventi</span><span class="o">,</span> <span class="n">sovrascrivendo</span> <span class="n">i</span> <span class="n">dati</span> <span class="n">più</span> <span class="n">vecchi</span> <span class="n">in</span> <span class="n">modalità</span>
-<span class="o">*</span> <span class="nl">circolare:</span> <span class="n">la</span> <span class="s">"scatola nera"</span> <span class="n">è</span> <span class="n">sempre</span> <span class="n">piena</span> <span class="n">degli</span> <span class="n">ultimi</span> <span class="no">N</span> <span class="n">minuti</span> <span class="n">di</span> <span class="n">attività</span><span class="o">.</span>
-<span class="o">*</span> <span class="o">*/</span>
- <span class="n">java</span> <span class="o">-</span><span class="nl">XX:</span><span class="nc">StartFlightRecording</span><span class="o">=</span><span class="n">disk</span><span class="o">=</span><span class="kc">true</span><span class="o">,</span><span class="err">\</span> <span class="n">dumponexit</span><span class="o">=</span><span class="kc">true</span><span class="o">,</span><span class="err">\</span> <span class="n">maxsize</span><span class="o">=</span><span class="mi">1</span><span class="n">g</span><span class="o">,</span><span class="err">\</span>
-<span class="n">maxage</span><span class="o">=</span><span class="mi">1</span><span class="n">h</span><span class="o">,</span><span class="err">\</span> <span class="n">filename</span><span class="o">=/</span><span class="kt">var</span><span class="o">/</span><span class="n">log</span><span class="o">/</span><span class="n">jfr</span><span class="o">/</span><span class="n">recording</span><span class="o">.</span><span class="na">jfr</span><span class="o">,</span><span class="err">\</span> <span class="n">settings</span><span class="o">=</span><span class="n">profile</span> <span class="err">\</span> <span class="o">-</span><span class="n">jar</span>
-<span class="n">mission</span><span class="o">-</span><span class="n">critical</span><span class="o">-</span><span class="n">app</span><span class="o">.</span><span class="na">jar</span>
-<span class="o">*</span> <span class="nc">Per</span> <span class="n">scaricare</span> <span class="n">il</span> <span class="n">recording</span> <span class="n">senza</span> <span class="n">fermare</span> <span class="n">l</span><span class="err">'</span><span class="n">applicazione</span><span class="o">,</span> <span class="n">identifico</span> <span class="n">il</span> <span class="no">PID</span> <span class="n">e</span>
-<span class="o">*</span> <span class="n">uso</span> <span class="nl">jcmd:</span> <span class="o">*/</span>
- 
-<span class="c1">// jcmd &lt;PID&gt; JFR.dump filename=/tmp/incident-$(date +%Y%m%d_%H%M%S).jfr </span>
-<span class="c1">// Il file .jfr viene creato istantaneamente: contiene gli ultimi 60 minuti di</span>
-<span class="c1">// eventi JVM</span>
-<span class="o">*</span> <span class="nc">Avvio</span> <span class="n">una</span> <span class="n">registrazione</span> <span class="n">mirata</span> <span class="n">di</span> <span class="mi">60</span> <span class="n">secondi</span> <span class="n">in</span> <span class="n">risposta</span> <span class="n">a</span> <span class="n">un</span> <span class="n">alert</span> <span class="n">di</span>
-<span class="o">*</span> <span class="nl">produzione:</span> <span class="o">*/</span>
- 
-<span class="c1">// jcmd &lt;PID&gt; JFR.start name=incident duration=60s filename=/tmp/incident.jfr</span>
-<span class="c1">// settings=profile</span>
-<span class="o">*</span> <span class="nc">Creo</span> <span class="n">un</span> <span class="n">profilo</span> <span class="no">JFR</span> <span class="n">custom</span> <span class="n">per</span> <span class="n">catturare</span> <span class="n">eventi</span> <span class="n">specifici</span> <span class="n">alla</span> <span class="n">mia</span>
-<span class="o">*</span> <span class="n">applicazione</span><span class="o">,</span> <span class="n">con</span> <span class="n">overhead</span> <span class="nl">minimo:</span> <span class="o">*/</span>
- <span class="nd">@Component</span> <span class="kd">public</span> <span class="kd">class</span> <span class="nc">CustomJfrEvents</span> 
-<span class="o">{</span> 
-<span class="o">*</span> <span class="nc">Definisco</span> <span class="n">un</span> <span class="n">evento</span> <span class="no">JFR</span> <span class="n">custom</span> <span class="n">per</span> <span class="n">tracciare</span> <span class="n">le</span> <span class="n">operazioni</span> <span class="n">lente</span> <span class="n">del</span> <span class="n">mio</span>
-<span class="o">*</span> <span class="n">dominio</span><span class="o">.</span> <span class="o">*/</span>
- <span class="kd">static</span> <span class="kd">class</span> <span class="nc">SlowOrderEvent</span> <span class="kd">extends</span> <span class="n">jdk</span><span class="o">.</span><span class="na">jfr</span><span class="o">.</span><span class="na">Event</span> 
-<span class="o">{</span> <span class="nd">@jdk</span><span class="o">.</span><span class="na">jfr</span><span class="o">.</span><span class="na">Label</span><span class="o">(</span><span class="s">"Order ID"</span><span class="o">)</span> <span class="kt">long</span> <span class="n">orderId</span><span class="o">;</span> <span class="nd">@jdk</span><span class="o">.</span><span class="na">jfr</span><span class="o">.</span><span class="na">Label</span><span class="o">(</span><span class="s">"Duration ms"</span><span class="o">)</span> <span class="kt">long</span>
-<span class="n">durationMs</span><span class="o">;</span> <span class="nd">@jdk</span><span class="o">.</span><span class="na">jfr</span><span class="o">.</span><span class="na">Label</span><span class="o">(</span><span class="s">"Operation"</span><span class="o">)</span> <span class="nc">String</span> <span class="n">operation</span><span class="o">;</span> <span class="o">}</span>
- <span class="kd">public</span> <span class="kt">void</span> <span class="nf">processOrder</span><span class="o">(</span><span class="kt">long</span> <span class="n">orderId</span><span class="o">)</span> 
-<span class="o">{</span> <span class="nc">SlowOrderEvent</span> <span class="n">event</span> <span class="o">=</span> <span class="k">new</span> <span class="nc">SlowOrderEvent</span><span class="o">();</span> <span class="n">event</span><span class="o">.</span><span class="na">begin</span><span class="o">();</span> 
-<span class="c1">// Avvio la registrazione temporale try </span>
-<span class="o">{</span> <span class="n">doProcessOrder</span><span class="o">(</span><span class="n">orderId</span><span class="o">);</span> <span class="o">}</span>
- <span class="k">finally</span> 
-<span class="o">{</span> <span class="n">event</span><span class="o">.</span><span class="na">orderId</span> <span class="o">=</span> <span class="n">orderId</span><span class="o">;</span> <span class="n">event</span><span class="o">.</span><span class="na">durationMs</span> <span class="o">=</span> <span class="n">event</span><span class="o">.</span><span class="na">getDuration</span><span class="o">().</span><span class="na">toMillis</span><span class="o">();</span>
-<span class="n">event</span><span class="o">.</span><span class="na">operation</span> <span class="o">=</span> <span class="s">"processOrder"</span><span class="o">;</span> <span class="n">event</span><span class="o">.</span><span class="na">commit</span><span class="o">();</span>
-<span class="c1">// Scrivo l'evento nel JFR buffer solo se l'evento è abilitato }</span>
- <span class="o">}</span>
- <span class="o">}</span>
- 
-<span class="o">*</span> <span class="nc">Aggiungo</span> <span class="n">il</span> <span class="n">file</span> <span class="n">di</span> <span class="n">configurazione</span> <span class="no">JFR</span> <span class="nf">custom</span> <span class="o">(</span><span class="n">custom</span><span class="o">-</span><span class="n">profile</span><span class="o">.</span><span class="na">jfc</span><span class="o">)</span> <span class="n">per</span> <span class="n">ridurre</span>
-<span class="o">*</span> <span class="n">l</span><span class="err">'</span><span class="n">overhead</span> <span class="n">al</span> <span class="nl">minimo:</span> <span class="o">*/</span>
- 
-<span class="c1">// &lt;configuration version="2.0"&gt; </span>
-<span class="c1">// &lt;event name="com.myapp.SlowOrderEvent"&gt; </span>
-<span class="c1">// &lt;setting name="enabled"&gt;true&lt;/setting&gt; </span>
-<span class="c1">// &lt;setting name="threshold"&gt;100 ms&lt;/setting&gt; &lt;!-- Registro solo gli eventi &gt;</span>
-<span class="c1">// 100ms --&gt;</span>
-<span class="c1">// &lt;/event&gt; </span>
-<span class="c1">// &lt;event name="jdk.ThreadSleep"&gt; </span>
-<span class="c1">// &lt;setting name="enabled"&gt;true&lt;/setting&gt; </span>
-<span class="c1">// &lt;setting name="threshold"&gt;10 ms&lt;/setting&gt; </span>
-<span class="c1">// &lt;/event&gt; </span>
-<span class="c1">// &lt;/configuration&gt; </span>
-<span class="o">*</span> <span class="nc">In</span> <span class="nc">Spring</span> <span class="nc">Boot</span><span class="o">,</span> <span class="n">automatizzo</span> <span class="n">il</span> <span class="n">dump</span> <span class="no">JFR</span> <span class="n">quando</span> <span class="n">viene</span> <span class="n">rilevato</span> <span class="n">un</span> <span class="n">alert</span> <span class="n">critico</span>
-<span class="o">*</span> <span class="o">(</span><span class="n">es</span><span class="o">.</span> <span class="n">latenza</span> <span class="n">p99</span> <span class="o">&gt;</span> <span class="n">soglia</span><span class="o">):</span> <span class="o">*/</span>
- <span class="nd">@Component</span> <span class="kd">public</span> <span class="kd">class</span> <span class="nc">JfrDumpOnAlert</span> 
-<span class="o">{</span> <span class="nd">@EventListener</span> <span class="kd">public</span> <span class="kt">void</span> <span class="nf">onLatencyAlert</span><span class="o">(</span><span class="nc">HighLatencyAlertEvent</span> <span class="n">alert</span><span class="o">)</span> 
-<span class="o">{</span> <span class="k">try</span> 
-<span class="o">{</span> <span class="nc">String</span> <span class="n">filename</span> <span class="o">=</span> <span class="s">"/var/log/jfr/alert-"</span> <span class="o">+</span> <span class="nc">System</span><span class="o">.</span><span class="na">currentTimeMillis</span><span class="o">()</span> <span class="o">+</span> <span class="s">".jfr"</span><span class="o">;</span>
-<span class="c1">// Eseguo il dump tramite l'API JFR programmatica (Java 9+) for (Recording</span>
-<span class="c1">// recording : FlightRecorder.getFlightRecorder().getRecordings())</span>
-<span class="o">{</span> <span class="k">if</span> <span class="o">(</span><span class="n">recording</span><span class="o">.</span><span class="na">getState</span><span class="o">()</span> <span class="o">==</span> <span class="nc">RecordingState</span><span class="o">.</span><span class="na">RUNNING</span><span class="o">)</span> 
-<span class="o">{</span> <span class="n">recording</span><span class="o">.</span><span class="na">dump</span><span class="o">(</span><span class="nc">Path</span><span class="o">.</span><span class="na">of</span><span class="o">(</span><span class="n">filename</span><span class="o">));</span> <span class="n">log</span><span class="o">.</span><span class="na">info</span><span class="o">(</span><span class="s">"JFR dump salvato automaticamente
-in
-{}
- per alert: 
-{}
-"</span><span class="o">,</span> <span class="n">filename</span><span class="o">,</span> <span class="n">alert</span><span class="o">.</span><span class="na">getReason</span><span class="o">());</span> <span class="k">break</span><span class="o">;</span> <span class="o">}</span>
- <span class="o">}</span>
- <span class="o">}</span>
- <span class="k">catch</span> <span class="o">(</span><span class="nc">IOException</span> <span class="n">e</span><span class="o">)</span> 
-<span class="o">{</span> <span class="n">log</span><span class="o">.</span><span class="na">error</span><span class="o">(</span><span class="s">"Impossibile salvare il JFR dump"</span><span class="o">,</span> <span class="n">e</span><span class="o">);</span> <span class="o">}</span>
- <span class="o">}</span>
- <span class="o">}</span>
- 
-<span class="o">*</span> <span class="nc">Carico</span> <span class="n">il</span> <span class="o">.</span><span class="na">jfr</span> <span class="n">in</span> <span class="no">JDK</span> <span class="nc">Mission</span> <span class="nc">Control</span> <span class="n">per</span> <span class="n">l</span><span class="err">'</span><span class="nl">analisi:</span> <span class="n">le</span> <span class="n">view</span> <span class="n">più</span> <span class="n">utili</span> <span class="nl">sono:</span> <span class="o">-</span>
-<span class="o">*</span> <span class="nc">Method</span> <span class="nl">Profiling:</span> <span class="n">quale</span> <span class="n">metodo</span> <span class="n">consuma</span> <span class="n">più</span> <span class="no">CPU</span> <span class="o">(</span><span class="n">campionamento</span> <span class="n">a</span> <span class="mi">10</span><span class="n">ms</span><span class="o">)</span> <span class="o">-</span> <span class="nc">Lock</span>
-<span class="o">*</span> <span class="nl">Instances:</span> <span class="n">quali</span> <span class="n">lock</span> <span class="n">sono</span> <span class="n">contesi</span> <span class="n">e</span> <span class="n">per</span> <span class="n">quanto</span> <span class="n">tempo</span> <span class="o">-</span> <span class="nc">Allocation</span> <span class="n">in</span> <span class="nc">New</span>
-<span class="o">*</span> <span class="nl">TLAB:</span> <span class="n">quali</span> <span class="n">classi</span> <span class="n">allocano</span> <span class="n">più</span> <span class="n">memoria</span> <span class="o">-</span> <span class="nc">Socket</span> <span class="nc">Read</span><span class="o">/</span><span class="nl">Write:</span> <span class="n">quali</span> <span class="n">host</span>
-<span class="o">*</span> <span class="n">causano</span> <span class="n">latenza</span> <span class="no">I</span><span class="o">/</span><span class="no">O</span> <span class="o">-</span> <span class="no">GC</span> <span class="nc">Configuration</span> <span class="n">e</span> <span class="no">GC</span> <span class="nl">Pauses:</span> <span class="n">configurazione</span> <span class="n">e</span> <span class="n">pause</span>
-<span class="o">*</span> <span class="n">effettive</span> <span class="n">del</span> <span class="no">GC</span> <span class="o">*/</span>
+81
+</pre></td><td class="rouge-code"><pre><span class="cm">/* Avvio la registrazione continua degli eventi JVM. maxsize=1g mantiene solo
+    l'ultimo 1GB di eventi, sovrascrivendo i dati più vecchi in modalità
+    circolare: la "scatola nera" è sempre piena degli ultimi N minuti di
+    attività. */</span>
+<span class="n">java</span> <span class="o">-</span><span class="nl">XX:</span><span class="nc">StartFlightRecording</span><span class="o">=</span><span class="n">disk</span><span class="o">=</span><span class="kc">true</span><span class="o">,</span><span class="err">\</span> <span class="n">dumponexit</span><span class="o">=</span><span class="kc">true</span><span class="o">,</span><span class="err">\</span> <span class="n">maxsize</span><span class="o">=</span><span class="mi">1</span><span class="n">g</span><span class="o">,</span><span class="err">\</span>
+    <span class="n">maxage</span><span class="o">=</span><span class="mi">1</span><span class="n">h</span><span class="o">,</span><span class="err">\</span> <span class="n">filename</span><span class="o">=/</span><span class="kt">var</span><span class="o">/</span><span class="n">log</span><span class="o">/</span><span class="n">jfr</span><span class="o">/</span><span class="n">recording</span><span class="o">.</span><span class="na">jfr</span><span class="o">,</span><span class="err">\</span> <span class="n">settings</span><span class="o">=</span><span class="n">profile</span> <span class="err">\</span> <span class="o">-</span><span class="n">jar</span>
+    <span class="n">mission</span><span class="o">-</span><span class="n">critical</span><span class="o">-</span><span class="n">app</span><span class="o">.</span><span class="na">jar</span>
+<span class="cm">/* Per scaricare il recording senza fermare l'applicazione, identifico il PID e
+    uso jcmd: */</span>
+<span class="c1">// jcmd &lt;PID&gt; JFR.dump filename=/tmp/incident-$(date +%Y%m%d_%H%M%S).jfr // Il</span>
+    <span class="n">file</span> <span class="o">.</span><span class="na">jfr</span> <span class="n">viene</span> <span class="n">creato</span> <span class="nl">istantaneamente:</span> <span class="n">contiene</span> <span class="n">gli</span> <span class="n">ultimi</span> <span class="mi">60</span> <span class="n">minuti</span> <span class="n">di</span>
+    <span class="n">eventi</span> <span class="no">JVM</span> <span class="cm">/* Avvio una registrazione mirata di 60 secondi in risposta a un
+    alert di produzione: */</span> <span class="c1">// jcmd &lt;PID&gt; JFR.start name=incident duration=60s</span>
+    <span class="n">filename</span><span class="o">=/</span><span class="n">tmp</span><span class="o">/</span><span class="n">incident</span><span class="o">.</span><span class="na">jfr</span> <span class="n">settings</span><span class="o">=</span><span class="n">profile</span> <span class="cm">/* Creo un profilo JFR custom
+    per catturare eventi specifici alla mia applicazione, con overhead minimo:
+    */</span> <span class="nd">@Component</span> <span class="kd">public</span> <span class="kd">class</span> <span class="nc">CustomJfrEvents</span>
+<span class="o">{</span>
+    <span class="cm">/* Definisco un evento JFR custom per tracciare le operazioni lente del mio
+        dominio. */</span>
+    <span class="kd">static</span> <span class="kd">class</span> <span class="nc">SlowOrderEvent</span> <span class="kd">extends</span> <span class="n">jdk</span><span class="o">.</span><span class="na">jfr</span><span class="o">.</span><span class="na">Event</span> <span class="o">{</span>
+        <span class="nd">@jdk</span><span class="o">.</span><span class="na">jfr</span><span class="o">.</span><span class="na">Label</span><span class="o">(</span><span class="s">"Order ID"</span><span class="o">)</span> <span class="kt">long</span> <span class="n">orderId</span><span class="o">;</span>
+        <span class="nd">@jdk</span><span class="o">.</span><span class="na">jfr</span><span class="o">.</span><span class="na">Label</span><span class="o">(</span><span class="s">"Duration ms"</span><span class="o">)</span> <span class="kt">long</span> <span class="n">durationMs</span><span class="o">;</span>
+        <span class="nd">@jdk</span><span class="o">.</span><span class="na">jfr</span><span class="o">.</span><span class="na">Label</span><span class="o">(</span><span class="s">"Operation"</span><span class="o">)</span> <span class="nc">String</span> <span class="n">operation</span><span class="o">;</span>
+    <span class="o">}</span>
+    <span class="kd">public</span> <span class="kt">void</span> <span class="nf">processOrder</span><span class="o">(</span><span class="kt">long</span> <span class="n">orderId</span><span class="o">)</span> <span class="o">{</span>
+        <span class="nc">SlowOrderEvent</span> <span class="n">event</span> <span class="o">=</span> <span class="k">new</span> <span class="nc">SlowOrderEvent</span><span class="o">();</span>
+        <span class="n">event</span><span class="o">.</span><span class="na">begin</span><span class="o">();</span>
+        <span class="c1">// Avvio la registrazione temporale try</span>
+        <span class="o">{</span>
+            <span class="n">doProcessOrder</span><span class="o">(</span><span class="n">orderId</span><span class="o">);</span>
+        <span class="o">}</span>
+        <span class="k">finally</span> <span class="o">{</span>
+            <span class="n">event</span><span class="o">.</span><span class="na">orderId</span> <span class="o">=</span> <span class="n">orderId</span><span class="o">;</span>
+            <span class="n">event</span><span class="o">.</span><span class="na">durationMs</span> <span class="o">=</span> <span class="n">event</span><span class="o">.</span><span class="na">getDuration</span><span class="o">().</span><span class="na">toMillis</span><span class="o">();</span>
+            <span class="n">event</span><span class="o">.</span><span class="na">operation</span> <span class="o">=</span> <span class="s">"processOrder"</span><span class="o">;</span>
+            <span class="n">event</span><span class="o">.</span><span class="na">commit</span><span class="o">();</span>
+            <span class="c1">// Scrivo l'evento nel JFR buffer solo se l'evento è abilitato</span>
+        <span class="o">}</span>
+    <span class="o">}</span>
+<span class="o">}</span>
+<span class="cm">/* Aggiungo il file di configurazione JFR custom (custom-profile.jfc) per
+    ridurre l'overhead al minimo: */</span>
+<span class="c1">// &lt;configuration version="2.0"&gt; // &lt;event name="com.myapp.SlowOrderEvent"&gt; //</span>
+    <span class="o">&lt;</span><span class="n">setting</span> <span class="n">name</span><span class="o">=</span><span class="s">"enabled"</span><span class="o">&gt;</span><span class="kc">true</span><span class="o">&lt;/</span><span class="n">setting</span><span class="o">&gt;</span> <span class="c1">// &lt;setting name="threshold"&gt;100</span>
+    <span class="n">ms</span><span class="o">&lt;/</span><span class="n">setting</span><span class="o">&gt;</span> <span class="o">&lt;!--</span> <span class="nc">Registro</span> <span class="n">solo</span> <span class="n">gli</span> <span class="n">eventi</span> <span class="o">&gt;</span> <span class="mi">100</span><span class="n">ms</span> <span class="o">--&gt;</span> <span class="c1">// &lt;/event&gt; // &lt;event</span>
+    <span class="n">name</span><span class="o">=</span><span class="s">"jdk.ThreadSleep"</span><span class="o">&gt;</span> <span class="c1">// &lt;setting name="enabled"&gt;true&lt;/setting&gt; //</span>
+    <span class="o">&lt;</span><span class="n">setting</span> <span class="n">name</span><span class="o">=</span><span class="s">"threshold"</span><span class="o">&gt;</span><span class="mi">10</span> <span class="n">ms</span><span class="o">&lt;/</span><span class="n">setting</span><span class="o">&gt;</span> <span class="c1">// &lt;/event&gt; // &lt;/configuration&gt; /*</span>
+    <span class="nc">In</span> <span class="nc">Spring</span> <span class="nc">Boot</span><span class="o">,</span> <span class="n">automatizzo</span> <span class="n">il</span> <span class="n">dump</span> <span class="no">JFR</span> <span class="n">quando</span> <span class="n">viene</span> <span class="n">rilevato</span> <span class="n">un</span> <span class="n">alert</span>
+    <span class="nf">critico</span> <span class="o">(</span><span class="n">es</span><span class="o">.</span> <span class="n">latenza</span> <span class="n">p99</span> <span class="o">&gt;</span> <span class="n">soglia</span><span class="o">):</span> <span class="o">*/</span> <span class="nd">@Component</span> <span class="kd">public</span> <span class="kd">class</span>
+    <span class="nc">JfrDumpOnAlert</span>
+<span class="o">{</span>
+    <span class="nd">@EventListener</span> <span class="kd">public</span> <span class="kt">void</span> <span class="nf">onLatencyAlert</span><span class="o">(</span><span class="nc">HighLatencyAlertEvent</span> <span class="n">alert</span><span class="o">)</span> <span class="o">{</span>
+        <span class="k">try</span> <span class="o">{</span>
+            <span class="nc">String</span> <span class="n">filename</span> <span class="o">=</span> <span class="s">"/var/log/jfr/alert-"</span> <span class="o">+</span> <span class="nc">System</span><span class="o">.</span><span class="na">currentTimeMillis</span><span class="o">()</span>
+                <span class="o">+</span> <span class="s">".jfr"</span><span class="o">;</span>
+            <span class="c1">// Eseguo il dump tramite l'API JFR programmatica (Java 9+) for</span>
+                <span class="o">(</span><span class="nc">Recording</span> <span class="n">recording</span> <span class="o">:</span>
+                <span class="nc">FlightRecorder</span><span class="o">.</span><span class="na">getFlightRecorder</span><span class="o">().</span><span class="na">getRecordings</span><span class="o">())</span>
+            <span class="o">{</span>
+                <span class="k">if</span> <span class="o">(</span><span class="n">recording</span><span class="o">.</span><span class="na">getState</span><span class="o">()</span> <span class="o">==</span> <span class="nc">RecordingState</span><span class="o">.</span><span class="na">RUNNING</span><span class="o">)</span> <span class="o">{</span>
+                    <span class="n">recording</span><span class="o">.</span><span class="na">dump</span><span class="o">(</span><span class="nc">Path</span><span class="o">.</span><span class="na">of</span><span class="o">(</span><span class="n">filename</span><span class="o">));</span>
+                    <span class="n">log</span><span class="o">.</span><span class="na">info</span><span class="o">(</span><span class="s">"JFR dump salvato automaticamente in {
+                    }
+                    per alert: {
+                    }
+                    "</span><span class="o">,</span> <span class="n">filename</span><span class="o">,</span> <span class="n">alert</span><span class="o">.</span><span class="na">getReason</span><span class="o">());</span>
+                    <span class="k">break</span><span class="o">;</span>
+                <span class="o">}</span>
+            <span class="o">}</span>
+        <span class="o">}</span>
+        <span class="k">catch</span> <span class="o">(</span><span class="nc">IOException</span> <span class="n">e</span><span class="o">)</span> <span class="o">{</span>
+            <span class="n">log</span><span class="o">.</span><span class="na">error</span><span class="o">(</span><span class="s">"Impossibile salvare il JFR dump"</span><span class="o">,</span> <span class="n">e</span><span class="o">);</span>
+        <span class="o">}</span>
+    <span class="o">}</span>
+<span class="o">}</span>
+<span class="cm">/* Carico il .jfr in JDK Mission Control per l'analisi: le view più utili sono:
+    - Method Profiling: quale metodo consuma più CPU (campionamento a 10ms) -
+    Lock Instances: quali lock sono contesi e per quanto tempo - Allocation in
+    New TLAB: quali classi allocano più memoria - Socket Read/Write: quali host
+    causano latenza I/O - GC Configuration e GC Pauses: configurazione e pause
+    effettive del GC */</span>
 </pre></td></tr></tbody></table></code></pre></div></div>
 
         </article>

@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Multi-column Indexes e lordine delle colonne — DevLog</title>
-    <meta name="description" content="L'ordine delle colonne in un indice composto (B-Tree) è critico. La 'regola del prefisso' stabilisce che un indice su (A, B) può essere usato per ricerche su A e su A+B, ma è quasi inutile per ricerche solo su B. Le colonne con la maggiore selettivit
+    <meta name="description" content="L'ordine delle colonne in un indice composto (B-Tree) è critico. La "regola del prefisso" stabilisce che un indice su (A, B) può essere usato per ricerche su A e su A+B, ma è quasi inutile per ricerche solo su B. Le colonne con la maggiore selettivit
 ">
     <link rel="stylesheet" href="/appuntidiprogrammazione/assets/css/style.css">
 
@@ -123,51 +123,41 @@
 32
 33
 34
-35
-36
-37
-38
-39
-</pre></td><td class="rouge-code"><pre><span class="o">*</span> <span class="n">Creo</span> <span class="n">l</span><span class="s1">'indice mettendo la colonna più selettiva e più usata nelle WHERE di
-* uguaglianza per prima. Questo indice serve query su (app_id) e query su
-* (app_id + severity), ma non query solo su severity. */
- CREATE INDEX idx_logs_app_severity ON logs (app_id, severity); 
-* Verifico che il Planner usi l'</span><span class="n">indice</span> <span class="n">per</span> <span class="n">entrambi</span> <span class="n">i</span> <span class="n">pattern</span> <span class="n">di</span> <span class="n">query</span> <span class="n">attesi</span><span class="p">:</span>
-<span class="o">*</span> <span class="o">*/</span>
- <span class="c1">-- Pattern 1: filtro solo su app_id (usa il prefisso dell'indice) EXPLAIN</span>
-<span class="p">(</span><span class="k">ANALYZE</span><span class="p">,</span> <span class="n">BUFFERS</span><span class="p">)</span> <span class="k">SELECT</span> <span class="n">id</span><span class="p">,</span> <span class="n">message</span><span class="p">,</span> <span class="n">created_at</span> <span class="k">FROM</span> <span class="n">logs</span> <span class="k">WHERE</span> <span class="n">app_id</span> <span class="o">=</span> <span class="mi">7</span><span class="p">;</span> <span class="c1">--</span>
-<span class="n">Pattern</span> <span class="mi">2</span><span class="p">:</span> <span class="n">filtro</span> <span class="n">su</span> <span class="n">entrambe</span> <span class="n">le</span> <span class="n">colonne</span> <span class="p">(</span><span class="n">usa</span> <span class="n">l</span><span class="s1">'indice completo) EXPLAIN
-(ANALYZE, BUFFERS) SELECT id, message, created_at FROM logs WHERE app_id = 7 AND
-severity = '</span><span class="n">ERROR</span><span class="s1">'; -- Pattern 3: filtro solo su severity (NON usa l'</span><span class="n">indice</span><span class="p">:</span>
-<span class="n">serve</span> <span class="n">un</span> <span class="n">indice</span> <span class="n">separato</span><span class="p">)</span> <span class="k">EXPLAIN</span> <span class="p">(</span><span class="k">ANALYZE</span><span class="p">,</span> <span class="n">BUFFERS</span><span class="p">)</span> <span class="k">SELECT</span> <span class="n">id</span><span class="p">,</span> <span class="n">message</span><span class="p">,</span>
-<span class="n">created_at</span> <span class="k">FROM</span> <span class="n">logs</span> <span class="k">WHERE</span> <span class="n">severity</span> <span class="o">=</span> <span class="s1">'ERROR'</span><span class="p">;</span>
-<span class="cm">/* Per il pattern 3, creo un indice separato o parziale dedicato: */</span>
- <span class="k">CREATE</span> <span class="k">INDEX</span> <span class="n">idx_logs_severity_errors</span> <span class="k">ON</span> <span class="n">logs</span> <span class="p">(</span><span class="n">created_at</span> <span class="k">DESC</span><span class="p">)</span> <span class="k">WHERE</span> <span class="n">severity</span>
-<span class="o">=</span> <span class="s1">'ERROR'</span><span class="p">;</span>
-<span class="o">*</span> <span class="n">Estendo</span> <span class="n">l</span><span class="s1">'indice composito con una terza colonna per ottimizzare anche
-* l'</span><span class="n">ordinamento</span> <span class="n">temporale</span><span class="p">,</span> <span class="n">frequente</span> <span class="n">nelle</span> <span class="n">query</span> <span class="n">di</span> <span class="n">monitoraggio</span><span class="p">:</span> <span class="o">*/</span>
- <span class="k">CREATE</span> <span class="k">INDEX</span> <span class="n">idx_logs_app_severity_time</span> <span class="k">ON</span> <span class="n">logs</span> <span class="p">(</span><span class="n">app_id</span><span class="p">,</span> <span class="n">severity</span><span class="p">,</span> <span class="n">created_at</span>
-<span class="k">DESC</span><span class="p">);</span>
-<span class="o">*</span> <span class="n">Questa</span> <span class="n">query</span> <span class="n">usa</span> <span class="n">l</span><span class="s1">'indice completo per filtrare e ordinare senza un Sort node
-* aggiuntivo: */
- EXPLAIN (ANALYZE) SELECT id, message, created_at FROM logs WHERE app_id = 7 AND
-severity = '</span><span class="n">ERROR</span><span class="s1">' ORDER BY created_at DESC LIMIT 50;
-* Verifico quali indici vengono effettivamente usati e quali sono inutilizzati
-* (candidati alla rimozione): */
- SELECT indexrelname, idx_scan, idx_tup_read,
-pg_size_pretty(pg_relation_size(indexrelid)) AS size FROM pg_stat_user_indexes
-WHERE relname = '</span><span class="n">logs</span><span class="s1">' ORDER BY idx_scan ASC;
-* Un idx_scan = 0 dopo settimane di produzione è un forte segnale che l'</span><span class="n">indice</span> <span class="err">è</span>
-<span class="o">*</span> <span class="n">ridondante</span> <span class="n">e</span> <span class="n">va</span> <span class="n">rimosso</span> <span class="n">per</span> <span class="n">alleggerire</span> <span class="n">il</span> <span class="n">carico</span> <span class="n">sugli</span> <span class="k">INSERT</span><span class="p">.</span> <span class="o">*/</span>
- 
-<span class="o">*</span> <span class="k">In</span> <span class="n">Spring</span> <span class="n">Boot</span> <span class="n">con</span> <span class="n">Spring</span> <span class="k">Data</span> <span class="n">JPA</span><span class="p">,</span> <span class="n">le</span> <span class="n">query</span> <span class="n">generate</span> <span class="n">da</span> <span class="n">metodi</span> <span class="n">come</span>
-<span class="o">*</span> <span class="n">findByAppIdAndSeverity</span> <span class="n">sfruttano</span> <span class="n">automaticamente</span> <span class="n">l</span><span class="s1">'indice composito, mentre
-* findBySeverity non lo farà: è necessario un indice separato su severity o una
-* query nativa con hint. */
- @Query("SELECT l FROM Log l WHERE l.appId = :appId AND l.severity = :severity
-ORDER BY l.createdAt DESC") Page&lt;Log&gt; findByAppIdAndSeverity(@Param("appId")
-Long appId, @Param("severity") String severity, Pageable pageable);
-</span></pre></td></tr></tbody></table></code></pre></div></div>
+</pre></td><td class="rouge-code"><pre>    <span class="cm">/* Creo l'indice mettendo la colonna più selettiva e più usata nelle WHERE
+        di uguaglianza per prima. Questo indice serve query su (app_id) e query
+        su (app_id + severity), ma non query solo su severity. */</span> <span class="k">CREATE</span> <span class="k">INDEX</span>
+        <span class="n">idx_logs_app_severity</span> <span class="k">ON</span> <span class="n">logs</span> <span class="p">(</span><span class="n">app_id</span><span class="p">,</span> <span class="n">severity</span><span class="p">);</span> <span class="cm">/* Verifico che il
+        Planner usi l'indice per entrambi i pattern di query attesi: */</span> <span class="c1">--</span>
+        <span class="n">Pattern</span> <span class="mi">1</span><span class="p">:</span> <span class="n">filtro</span> <span class="n">solo</span> <span class="n">su</span> <span class="n">app_id</span> <span class="p">(</span><span class="n">usa</span> <span class="n">il</span> <span class="n">prefisso</span> <span class="n">dell</span><span class="s1">'indice) EXPLAIN
+        (ANALYZE, BUFFERS) SELECT id, message, created_at FROM logs WHERE app_id
+        = 7; -- Pattern 2: filtro su entrambe le colonne (usa l'</span><span class="n">indice</span> <span class="n">completo</span><span class="p">)</span>
+        <span class="k">EXPLAIN</span> <span class="p">(</span><span class="k">ANALYZE</span><span class="p">,</span> <span class="n">BUFFERS</span><span class="p">)</span> <span class="k">SELECT</span> <span class="n">id</span><span class="p">,</span> <span class="n">message</span><span class="p">,</span> <span class="n">created_at</span> <span class="k">FROM</span> <span class="n">logs</span>
+        <span class="k">WHERE</span> <span class="n">app_id</span> <span class="o">=</span> <span class="mi">7</span> <span class="k">AND</span> <span class="n">severity</span> <span class="o">=</span> <span class="s1">'ERROR'</span><span class="p">;</span> <span class="c1">-- Pattern 3: filtro solo su</span>
+        <span class="n">severity</span> <span class="p">(</span><span class="n">NON</span> <span class="n">usa</span> <span class="n">l</span><span class="s1">'indice: serve un indice separato) EXPLAIN (ANALYZE,
+        BUFFERS) SELECT id, message, created_at FROM logs WHERE severity =
+        '</span><span class="n">ERROR</span><span class="s1">'; /* Per il pattern 3, creo un indice separato o parziale
+        dedicato: */ CREATE INDEX idx_logs_severity_errors ON logs (created_at
+        DESC) WHERE severity = '</span><span class="n">ERROR</span><span class="s1">'; /* Estendo l'</span><span class="n">indice</span> <span class="n">composito</span> <span class="n">con</span> <span class="n">una</span>
+        <span class="n">terza</span> <span class="n">colonna</span> <span class="n">per</span> <span class="n">ottimizzare</span> <span class="n">anche</span> <span class="n">l</span><span class="s1">'ordinamento temporale, frequente
+        nelle query di monitoraggio: */ CREATE INDEX idx_logs_app_severity_time
+        ON logs (app_id, severity, created_at DESC); /* Questa query usa
+        l'</span><span class="n">indice</span> <span class="n">completo</span> <span class="n">per</span> <span class="n">filtrare</span> <span class="n">e</span> <span class="n">ordinare</span> <span class="n">senza</span> <span class="n">un</span> <span class="n">Sort</span> <span class="n">node</span> <span class="n">aggiuntivo</span><span class="p">:</span>
+        <span class="o">*/</span> <span class="k">EXPLAIN</span> <span class="p">(</span><span class="k">ANALYZE</span><span class="p">)</span> <span class="k">SELECT</span> <span class="n">id</span><span class="p">,</span> <span class="n">message</span><span class="p">,</span> <span class="n">created_at</span> <span class="k">FROM</span> <span class="n">logs</span> <span class="k">WHERE</span>
+        <span class="n">app_id</span> <span class="o">=</span> <span class="mi">7</span> <span class="k">AND</span> <span class="n">severity</span> <span class="o">=</span> <span class="s1">'ERROR'</span> <span class="k">ORDER</span> <span class="k">BY</span> <span class="n">created_at</span> <span class="k">DESC</span> <span class="k">LIMIT</span> <span class="mi">50</span><span class="p">;</span> <span class="cm">/*
+        Verifico quali indici vengono effettivamente usati e quali sono
+        inutilizzati (candidati alla rimozione): */</span> <span class="k">SELECT</span> <span class="n">indexrelname</span><span class="p">,</span>
+        <span class="n">idx_scan</span><span class="p">,</span> <span class="n">idx_tup_read</span><span class="p">,</span> <span class="n">pg_size_pretty</span><span class="p">(</span><span class="n">pg_relation_size</span><span class="p">(</span><span class="n">indexrelid</span><span class="p">))</span> <span class="k">AS</span>
+        <span class="k">size</span> <span class="k">FROM</span> <span class="n">pg_stat_user_indexes</span> <span class="k">WHERE</span> <span class="n">relname</span> <span class="o">=</span> <span class="s1">'logs'</span> <span class="k">ORDER</span> <span class="k">BY</span> <span class="n">idx_scan</span>
+        <span class="k">ASC</span><span class="p">;</span> <span class="cm">/* Un idx_scan = 0 dopo settimane di produzione è un forte segnale
+        che l'indice è ridondante e va rimosso per alleggerire il carico sugli
+        INSERT. */</span> <span class="cm">/* In Spring Boot con Spring Data JPA, le query generate da
+        metodi come findByAppIdAndSeverity sfruttano automaticamente l'indice
+        composito, mentre findBySeverity non lo farà: è necessario un indice
+        separato su severity o una query nativa con hint. */</span> <span class="o">@</span><span class="n">Query</span><span class="p">(</span><span class="nv">"SELECT l
+        FROM Log l WHERE l.appId = :appId AND l.severity = :severity ORDER BY
+        l.createdAt DESC"</span><span class="p">)</span> <span class="n">Page</span><span class="o">&lt;</span><span class="n">Log</span><span class="o">&gt;</span> <span class="n">findByAppIdAndSeverity</span><span class="p">(</span><span class="o">@</span><span class="n">Param</span><span class="p">(</span><span class="nv">"appId"</span><span class="p">)</span> <span class="n">Long</span>
+        <span class="n">appId</span><span class="p">,</span> <span class="o">@</span><span class="n">Param</span><span class="p">(</span><span class="nv">"severity"</span><span class="p">)</span> <span class="n">String</span> <span class="n">severity</span><span class="p">,</span> <span class="n">Pageable</span> <span class="n">pageable</span><span class="p">);</span>
+</pre></td></tr></tbody></table></code></pre></div></div>
 
         </article>
 

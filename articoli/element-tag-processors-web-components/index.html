@@ -89,81 +89,93 @@
 
 <h2 id="esempio-implementativo">Esempio Implementativo</h2>
 
-<pre><code class="language-thymeleaf">* Definisco un Element Tag Processor che trasforma &lt;app:navbar&gt; in un menu
-* dinamico basato sui permessi dell'utente corrente. */
- public class NavbarTagProcessor extends AbstractElementTagProcessor 
-{ private static final String TAG_NAME = "navbar"; private static final int
-PRECEDENCE = 100; private final RouteRegistry routeRegistry;
-// Iniettato via costruttore public NavbarTagProcessor(String dialectPrefix,
-// RouteRegistry routeRegistry)
-{ super(TemplateMode.HTML, dialectPrefix, TAG_NAME, 
-// Tag intercettato: &lt;app:navbar&gt; true, 
-// Match del tag esatto null, false, PRECEDENCE); this.routeRegistry =
-// routeRegistry; }
- @Override protected void doProcess( ITemplateContext context,
-IProcessableElementTag tag, IElementTagStructureHandler structureHandler)
-{ 
-// Recupero l'autenticazione corrente Authentication auth =
-// SecurityContextHolder.getContext().getAuthentication();
-// Recupero le voci di menu filtrate per ruolo List&lt;NavItem&gt; allowedItems =
-// routeRegistry.getNavItems().stream() .filter(item -&gt;
-// item.getRoles().isEmpty() || item.getRoles().stream() .anyMatch(role -&gt;
-// auth.getAuthorities().stream() .anyMatch(a -&gt; a.getAuthority().equals("ROLE_"
-// + role)))) .collect(Collectors.toList());
-// Costruisco il modello HTML con IModelFactory IModelFactory modelFactory =
-// context.getModelFactory(); IModel model = modelFactory.createModel();
-// &lt;nav class="navbar navbar-expand-lg"&gt;
-// model.add(modelFactory.createOpenElementTag("nav", "class", "navbar navbar-
-// expand-lg navbar-dark bg-dark"));
-// model.add(modelFactory.createOpenElementTag("div", "class", "container-
-// fluid"));
-// Logo model.add(modelFactory.createOpenElementTag("a", Map.of("class",
-// "navbar-brand", "href", "/"), false));
-// model.add(modelFactory.createText("MyApp"));
-// model.add(modelFactory.createCloseElementTag("a"));
-// Menu items model.add(modelFactory.createOpenElementTag("ul", "class",
-// "navbar-nav me-auto")); for (NavItem item : allowedItems)
-{ Map&lt;String, String&gt; liAttrs = new HashMap&lt;&gt;(); 
-// Evidenzio la voce attiva confrontando con il percorso corrente String
-// currentPath = ((WebContext) context).getRequest().getRequestURI(); if
-// (currentPath.startsWith(item.getPath()))
-{ liAttrs.put("class", "nav-item active"); }
- else 
-{ liAttrs.put("class", "nav-item"); }
- model.add(modelFactory.createOpenElementTag("li", liAttrs,
-AttributeValueQuotes.DOUBLE, false));
-model.add(modelFactory.createOpenElementTag("a", Map.of("class", "nav-link",
-"href", item.getPath()), false));
-model.add(modelFactory.createText(item.getLabel()));
-model.add(modelFactory.createCloseElementTag("a"));
-model.add(modelFactory.createCloseElementTag("li")); }
- model.add(modelFactory.createCloseElementTag("ul"));
-model.add(modelFactory.createCloseElementTag("div"));
-model.add(modelFactory.createCloseElementTag("nav"));
-// Sostituisco il tag &lt;app:navbar&gt; con il markup generato
-// structureHandler.replaceWith(model, true); }
- }
- 
-/* Registro il processore nel dialetto aziendale: */
- @Override public Set&lt;IProcessor&gt; getProcessors(String dialectPrefix) 
-{ Set&lt;IProcessor&gt; processors = new HashSet&lt;&gt;(); processors.add(new
-NavbarTagProcessor(dialectPrefix, routeRegistry));
-// ... altri processori return processors; }
- 
-* Uso nel template base layout.html: una sola riga invece di decine di righe di
-* markup. */
- 
-// &lt;!DOCTYPE html&gt; 
-// &lt;html xmlns:app="http:
-//www.mycompany.com/thymeleaf"&gt; 
-// &lt;body&gt; 
-// &lt;app:navbar&gt;&lt;/app:navbar&gt; &lt;!-- Generato dinamicamente con voci filtrate per
-// ruolo --&gt;
-//   &lt;div th:replace="~
-{::content}
-"&gt;&lt;/div&gt; 
-// &lt;/body&gt; 
-// &lt;/html&gt;
+<pre><code class="language-thymeleaf">/* Definisco un Element Tag Processor che trasforma &lt;app:navbar&gt; in un menu
+    dinamico basato sui permessi dell'utente corrente. */
+public class NavbarTagProcessor extends AbstractElementTagProcessor { private
+    static final String TAG_NAME = "navbar"; private static final int PRECEDENCE
+    = 100; private final RouteRegistry routeRegistry; // Iniettato via
+    costruttore public NavbarTagProcessor(String dialectPrefix, RouteRegistry
+    routeRegistry) { super(TemplateMode.HTML, dialectPrefix, TAG_NAME, // Tag
+    intercettato:
+&lt;app:navbar&gt;
+    true, // Match del tag esatto null, false, PRECEDENCE); this.routeRegistry =
+        routeRegistry; } @Override protected void doProcess( ITemplateContext
+        context, IProcessableElementTag tag, IElementTagStructureHandler
+        structureHandler) { // Recupero l'autenticazione corrente Authentication
+        auth = SecurityContextHolder.getContext().getAuthentication(); //
+        Recupero le voci di menu filtrate per ruolo List
+    &lt;NavItem&gt;
+        allowedItems = routeRegistry.getNavItems().stream() .filter(item -&gt;
+            item.getRoles().isEmpty() || item.getRoles().stream() .anyMatch(role
+            -&gt; auth.getAuthorities().stream() .anyMatch(a -&gt;
+            a.getAuthority().equals("ROLE_" + role))))
+            .collect(Collectors.toList()); // Costruisco il modello HTML con
+            IModelFactory IModelFactory modelFactory =
+            context.getModelFactory(); IModel model =
+            modelFactory.createModel(); //
+        &lt;nav class="navbar navbar-expand-lg"&gt;
+            model.add(modelFactory.createOpenElementTag("nav", "class", "navbar
+                navbar-expand-lg navbar-dark bg-dark"));
+                model.add(modelFactory.createOpenElementTag("div", "class",
+                "container-fluid")); // Logo
+                model.add(modelFactory.createOpenElementTag("a", Map.of("class",
+                "navbar-brand", "href", "/"), false));
+                model.add(modelFactory.createText("MyApp"));
+                model.add(modelFactory.createCloseElementTag("a")); // Menu
+                items model.add(modelFactory.createOpenElementTag("ul", "class",
+                "navbar-nav me-auto")); for (NavItem item : allowedItems) { Map
+            &lt;String, String&gt;
+                liAttrs = new HashMap&lt;&gt;(); // Evidenzio la voce attiva
+                    confrontando con il percorso corrente String currentPath =
+                    ((WebContext) context).getRequest().getRequestURI(); if
+                    (currentPath.startsWith(item.getPath())) {
+                    liAttrs.put("class", "nav-item active"); } else {
+                    liAttrs.put("class", "nav-item"); }
+                    model.add(modelFactory.createOpenElementTag("li", liAttrs,
+                    AttributeValueQuotes.DOUBLE, false));
+                    model.add(modelFactory.createOpenElementTag("a",
+                    Map.of("class", "nav-link", "href", item.getPath()),
+                    false));
+                    model.add(modelFactory.createText(item.getLabel()));
+                    model.add(modelFactory.createCloseElementTag("a"));
+                    model.add(modelFactory.createCloseElementTag("li")); }
+                    model.add(modelFactory.createCloseElementTag("ul"));
+                    model.add(modelFactory.createCloseElementTag("div"));
+                    model.add(modelFactory.createCloseElementTag("nav")); //
+                    Sostituisco il tag
+                &lt;app:navbar&gt;
+                    con il markup generato structureHandler.replaceWith(model,
+                        true); } }
+                    /* Registro il processore nel dialetto aziendale: */
+                    @Override public Set
+                    &lt;IProcessor&gt;
+                        getProcessors(String dialectPrefix) { Set
+                        &lt;IProcessor&gt;
+                            processors = new HashSet&lt;&gt;(); processors.add(new
+                                NavbarTagProcessor(dialectPrefix,
+                                routeRegistry)); // ... altri processori return
+                                processors; }
+                            /* Uso nel template base layout.html: una sola riga
+                                invece di decine di righe di markup. */
+                            //
+                            &lt;!DOCTYPE html&gt;
+                            //
+                            &lt;html
+                                xmlns:app="http://www.mycompany.com/thymeleaf"&gt;
+                                //
+                                &lt;body&gt;
+                                    //
+                                    &lt;app:navbar&gt;
+                                    &lt;/app:navbar&gt;
+                                    &lt;!-- Generato dinamicamente con voci
+                                        filtrate per ruolo --&gt;
+                                    //
+                                    &lt;div th:replace="~{::content}"&gt;
+                                    &lt;/div&gt;
+                                    //
+                                &lt;/body&gt;
+                                //
+                            &lt;/html&gt;
 </code></pre>
 
         </article>

@@ -164,81 +164,99 @@
 73
 74
 75
-</pre></td><td class="rouge-code"><pre><span class="o">*</span> <span class="nc">Struttura</span> <span class="n">del</span> <span class="n">progetto</span> <span class="nl">agent:</span> <span class="n">deve</span> <span class="n">produrre</span> <span class="n">un</span> <span class="no">JAR</span> <span class="n">con</span> <span class="n">il</span> <span class="no">MANIFEST</span><span class="o">.</span><span class="na">MF</span> <span class="n">che</span>
-<span class="o">*</span> <span class="n">dichiara</span> <span class="n">il</span> <span class="n">punto</span> <span class="n">di</span> <span class="n">ingresso</span><span class="o">.</span> <span class="o">*/</span>
- 
-<span class="c1">// MANIFEST.MF: </span>
-<span class="c1">// Premain-Class: com.myagent.TimingAgent </span>
-<span class="c1">// Agent-Class: com.myagent.TimingAgent </span>
-<span class="c1">// Can-Redefine-Classes: true </span>
-<span class="c1">// Can-Retransform-Classes: true </span>
-<span class="o">*</span> <span class="nc">Definisco</span> <span class="n">il</span> <span class="n">punto</span> <span class="n">di</span> <span class="n">ingresso</span> <span class="n">dell</span><span class="err">'</span><span class="n">agente</span><span class="o">.</span> <span class="n">premain</span> <span class="n">viene</span> <span class="n">invocato</span> <span class="n">prima</span> <span class="n">del</span>
-<span class="o">*</span> <span class="n">main</span> <span class="n">dell</span><span class="err">'</span><span class="n">applicazione</span> <span class="n">target</span><span class="o">.</span> <span class="o">*/</span>
- <span class="kd">public</span> <span class="kd">class</span> <span class="nc">TimingAgent</span> 
-<span class="o">{</span> <span class="kd">private</span> <span class="kd">static</span> <span class="kd">final</span> <span class="nc">MeterRegistry</span> <span class="n">registry</span> <span class="o">=</span> <span class="k">new</span> <span class="nc">SimpleMeterRegistry</span><span class="o">();</span>
-<span class="kd">public</span> <span class="kd">static</span> <span class="kt">void</span> <span class="nf">premain</span><span class="o">(</span><span class="nc">String</span> <span class="n">agentArgs</span><span class="o">,</span> <span class="nc">Instrumentation</span> <span class="n">instrumentation</span><span class="o">)</span>
-<span class="o">{</span> <span class="n">log</span><span class="o">.</span><span class="na">info</span><span class="o">(</span><span class="s">"TimingAgent avviato con args: 
-{}
-"</span><span class="o">,</span> <span class="n">agentArgs</span><span class="o">);</span> 
-<span class="c1">// Uso ByteBuddy tramite AgentBuilder per trasformare le classi al caricamento</span>
-<span class="c1">// new AgentBuilder.Default()</span>
-<span class="c1">// Intercetto tutte le classi nel package specificato negli args</span>
-<span class="c1">// .type(ElementMatchers.nameStartsWith(agentArgs != null ? agentArgs : "com."))</span>
-<span class="c1">// .transform((builder, typeDescription, classLoader, module, protectionDomain)</span>
-<span class="c1">// -&gt; builder .method(ElementMatchers.isPublic()</span>
-<span class="c1">// .and(ElementMatchers.not(ElementMatchers.isConstructor()))</span>
-<span class="c1">// .and(ElementMatchers.not(ElementMatchers.isStatic())))</span>
-<span class="c1">// .intercept(MethodDelegation.to(TimingInterceptor.class)) )</span>
-<span class="c1">// .with(AgentBuilder.Listener.StreamWriting.toSystemError())</span>
-<span class="c1">// Log degli errori di trasformazione .installOn(instrumentation); }</span>
- 
-<span class="o">*</span> <span class="n">agentmain</span> <span class="n">viene</span> <span class="n">invocato</span> <span class="n">quando</span> <span class="n">l</span><span class="err">'</span><span class="n">agente</span> <span class="n">viene</span> <span class="n">allegato</span> <span class="n">a</span> <span class="n">una</span> <span class="no">JVM</span> <span class="n">già</span> <span class="n">in</span>
-<span class="o">*</span> <span class="n">esecuzione</span> <span class="o">(</span><span class="n">attach</span> <span class="no">API</span><span class="o">).</span> <span class="o">*/</span>
- <span class="kd">public</span> <span class="kd">static</span> <span class="kt">void</span> <span class="nf">agentmain</span><span class="o">(</span><span class="nc">String</span> <span class="n">agentArgs</span><span class="o">,</span> <span class="nc">Instrumentation</span> <span class="n">instrumentation</span><span class="o">)</span>
-<span class="o">{</span> <span class="n">premain</span><span class="o">(</span><span class="n">agentArgs</span><span class="o">,</span> <span class="n">instrumentation</span><span class="o">);</span> 
-<span class="c1">// Stessa logica: può essere usato sia a startup che a runtime }</span>
- <span class="o">}</span>
- 
+76
+77
+78
+79
+80
+81
+82
+83
+84
+</pre></td><td class="rouge-code"><pre><span class="cm">/* Struttura del progetto agent: deve produrre un JAR con il MANIFEST.MF che
+    dichiara il punto di ingresso. */</span>
+<span class="c1">// MANIFEST.MF: // Premain-Class: com.myagent.TimingAgent // Agent-Class:</span>
+    <span class="n">com</span><span class="o">.</span><span class="na">myagent</span><span class="o">.</span><span class="na">TimingAgent</span> <span class="c1">// Can-Redefine-Classes: true //</span>
+    <span class="nc">Can</span><span class="o">-</span><span class="nc">Retransform</span><span class="o">-</span><span class="nl">Classes:</span> <span class="kc">true</span> <span class="cm">/* Definisco il punto di ingresso dell'agente.
+    premain viene invocato prima del main dell'applicazione target. */</span> <span class="kd">public</span>
+    <span class="kd">class</span> <span class="nc">TimingAgent</span>
+<span class="o">{</span>
+    <span class="kd">private</span> <span class="kd">static</span> <span class="kd">final</span> <span class="nc">MeterRegistry</span> <span class="n">registry</span> <span class="o">=</span> <span class="k">new</span> <span class="nc">SimpleMeterRegistry</span><span class="o">();</span>
+    <span class="kd">public</span> <span class="kd">static</span> <span class="kt">void</span> <span class="nf">premain</span><span class="o">(</span><span class="nc">String</span> <span class="n">agentArgs</span><span class="o">,</span> <span class="nc">Instrumentation</span>
+        <span class="n">instrumentation</span><span class="o">)</span> <span class="o">{</span>
+        <span class="n">log</span><span class="o">.</span><span class="na">info</span><span class="o">(</span><span class="s">"TimingAgent avviato con args: {
+        }
+        "</span><span class="o">,</span> <span class="n">agentArgs</span><span class="o">);</span>
+        <span class="c1">// Uso ByteBuddy tramite AgentBuilder per trasformare le classi al</span>
+            <span class="n">caricamento</span> <span class="k">new</span> <span class="nc">AgentBuilder</span><span class="o">.</span><span class="na">Default</span><span class="o">()</span> <span class="c1">// Intercetto tutte le classi</span>
+            <span class="n">nel</span> <span class="kn">package</span> <span class="nn">specificato</span> <span class="n">negli</span> <span class="n">args</span>
+            <span class="o">.</span><span class="na">type</span><span class="o">(</span><span class="nc">ElementMatchers</span><span class="o">.</span><span class="na">nameStartsWith</span><span class="o">(</span><span class="n">agentArgs</span> <span class="o">!=</span> <span class="kc">null</span> <span class="o">?</span> <span class="n">agentArgs</span> <span class="o">:</span>
+            <span class="s">"com."</span><span class="o">))</span> <span class="o">.</span><span class="na">transform</span><span class="o">((</span><span class="n">builder</span><span class="o">,</span> <span class="n">typeDescription</span><span class="o">,</span> <span class="n">classLoader</span><span class="o">,</span> <span class="n">module</span><span class="o">,</span>
+            <span class="n">protectionDomain</span><span class="o">)</span> <span class="o">-&gt;</span> <span class="n">builder</span> <span class="o">.</span><span class="na">method</span><span class="o">(</span><span class="nc">ElementMatchers</span><span class="o">.</span><span class="na">isPublic</span><span class="o">()</span>
+            <span class="o">.</span><span class="na">and</span><span class="o">(</span><span class="nc">ElementMatchers</span><span class="o">.</span><span class="na">not</span><span class="o">(</span><span class="nc">ElementMatchers</span><span class="o">.</span><span class="na">isConstructor</span><span class="o">()))</span>
+            <span class="o">.</span><span class="na">and</span><span class="o">(</span><span class="nc">ElementMatchers</span><span class="o">.</span><span class="na">not</span><span class="o">(</span><span class="nc">ElementMatchers</span><span class="o">.</span><span class="na">isStatic</span><span class="o">())))</span>
+            <span class="o">.</span><span class="na">intercept</span><span class="o">(</span><span class="nc">MethodDelegation</span><span class="o">.</span><span class="na">to</span><span class="o">(</span><span class="nc">TimingInterceptor</span><span class="o">.</span><span class="na">class</span><span class="o">))</span> <span class="o">)</span>
+            <span class="o">.</span><span class="na">with</span><span class="o">(</span><span class="nc">AgentBuilder</span><span class="o">.</span><span class="na">Listener</span><span class="o">.</span><span class="na">StreamWriting</span><span class="o">.</span><span class="na">toSystemError</span><span class="o">())</span> <span class="c1">// Log</span>
+            <span class="n">degli</span> <span class="n">errori</span> <span class="n">di</span> <span class="n">trasformazione</span> <span class="o">.</span><span class="na">installOn</span><span class="o">(</span><span class="n">instrumentation</span><span class="o">)</span>
+        <span class="o">;</span>
+    <span class="o">}</span>
+    <span class="cm">/* agentmain viene invocato quando l'agente viene allegato a una JVM già in
+        esecuzione (attach API). */</span>
+    <span class="kd">public</span> <span class="kd">static</span> <span class="kt">void</span> <span class="nf">agentmain</span><span class="o">(</span><span class="nc">String</span> <span class="n">agentArgs</span><span class="o">,</span> <span class="nc">Instrumentation</span>
+        <span class="n">instrumentation</span><span class="o">)</span> <span class="o">{</span>
+        <span class="n">premain</span><span class="o">(</span><span class="n">agentArgs</span><span class="o">,</span> <span class="n">instrumentation</span><span class="o">);</span>
+        <span class="c1">// Stessa logica: può essere usato sia a startup che a runtime</span>
+    <span class="o">}</span>
+<span class="o">}</span>
 <span class="cm">/* Implemento l'interceptor che misura il tempo di ogni metodo: */</span>
- <span class="kd">public</span> <span class="kd">class</span> <span class="nc">TimingInterceptor</span> 
-<span class="o">{</span> <span class="nd">@RuntimeType</span> <span class="kd">public</span> <span class="kd">static</span> <span class="nc">Object</span> <span class="nf">intercept</span><span class="o">(</span> <span class="nd">@Origin</span> <span class="nc">Method</span> <span class="n">method</span><span class="o">,</span>
-<span class="nd">@AllArguments</span> <span class="nc">Object</span><span class="o">[]</span> <span class="n">args</span><span class="o">,</span> <span class="nd">@SuperCall</span> <span class="nc">Callable</span><span class="o">&lt;?&gt;</span> <span class="n">superMethod</span> <span class="o">)</span> <span class="kd">throws</span>
-<span class="nc">Exception</span>
-<span class="o">{</span> <span class="nc">String</span> <span class="n">metricName</span> <span class="o">=</span> <span class="n">method</span><span class="o">.</span><span class="na">getDeclaringClass</span><span class="o">().</span><span class="na">getSimpleName</span><span class="o">()</span> <span class="o">+</span> <span class="s">"."</span> <span class="o">+</span>
-<span class="n">method</span><span class="o">.</span><span class="na">getName</span><span class="o">();</span> <span class="nc">Timer</span><span class="o">.</span><span class="na">Sample</span> <span class="n">sample</span> <span class="o">=</span> <span class="nc">Timer</span><span class="o">.</span><span class="na">start</span><span class="o">();</span> <span class="k">try</span>
-<span class="o">{</span> <span class="k">return</span> <span class="n">superMethod</span><span class="o">.</span><span class="na">call</span><span class="o">();</span> <span class="o">}</span>
- <span class="k">catch</span> <span class="o">(</span><span class="nc">Exception</span> <span class="n">e</span><span class="o">)</span> 
-<span class="o">{</span> <span class="nc">Counter</span><span class="o">.</span><span class="na">builder</span><span class="o">(</span><span class="n">metricName</span> <span class="o">+</span>
-<span class="s">".errors"</span><span class="o">).</span><span class="na">register</span><span class="o">(</span><span class="nc">TimingAgent</span><span class="o">.</span><span class="na">registry</span><span class="o">).</span><span class="na">increment</span><span class="o">();</span> <span class="k">throw</span> <span class="n">e</span><span class="o">;</span> <span class="o">}</span>
- <span class="k">finally</span> 
-<span class="o">{</span> <span class="n">sample</span><span class="o">.</span><span class="na">stop</span><span class="o">(</span><span class="nc">Timer</span><span class="o">.</span><span class="na">builder</span><span class="o">(</span><span class="n">metricName</span> <span class="o">+</span> <span class="s">".duration"</span><span class="o">)</span> <span class="o">.</span><span class="na">description</span><span class="o">(</span><span class="s">"Durata
-metodo "</span> <span class="o">+</span> <span class="n">metricName</span><span class="o">)</span> <span class="o">.</span><span class="na">register</span><span class="o">(</span><span class="nc">TimingAgent</span><span class="o">.</span><span class="na">registry</span><span class="o">));</span> <span class="o">}</span>
- <span class="o">}</span>
- <span class="o">}</span>
- 
-<span class="o">*</span> <span class="nc">Creo</span> <span class="n">il</span> <span class="no">JAR</span> <span class="n">dell</span><span class="err">'</span><span class="n">agente</span> <span class="n">con</span> <span class="nc">Maven</span> <span class="nc">Shade</span> <span class="nc">Plugin</span> <span class="n">e</span> <span class="n">lo</span> <span class="n">allego</span> <span class="n">all</span><span class="err">'</span><span class="n">applicazione</span>
-<span class="o">*</span> <span class="nl">target:</span> <span class="o">*/</span>
- 
-<span class="c1">// java -javaagent:timing-agent.jar=com.myapp.service -jar target-app.jar </span>
-<span class="o">*</span> <span class="nc">Per</span> <span class="n">allegare</span> <span class="n">l</span><span class="err">'</span><span class="n">agente</span> <span class="n">a</span> <span class="n">una</span> <span class="no">JVM</span> <span class="n">già</span> <span class="n">in</span> <span class="nf">esecuzione</span> <span class="o">(</span><span class="n">attach</span> <span class="n">dinamico</span><span class="o">,</span> <span class="n">senza</span>
-<span class="o">*</span> <span class="n">riavvio</span><span class="o">):</span> <span class="o">*/</span>
- <span class="kd">public</span> <span class="kd">class</span> <span class="nc">AgentAttacher</span> 
-<span class="o">{</span> <span class="kd">public</span> <span class="kd">static</span> <span class="kt">void</span> <span class="nf">attachToRunningJvm</span><span class="o">(</span><span class="nc">String</span> <span class="n">pid</span><span class="o">,</span> <span class="nc">String</span> <span class="n">agentJarPath</span><span class="o">)</span> <span class="kd">throws</span>
-<span class="nc">Exception</span>
-<span class="o">{</span> <span class="nc">VirtualMachine</span> <span class="n">vm</span> <span class="o">=</span> <span class="nc">VirtualMachine</span><span class="o">.</span><span class="na">attach</span><span class="o">(</span><span class="n">pid</span><span class="o">);</span> <span class="k">try</span> 
-<span class="o">{</span> <span class="n">vm</span><span class="o">.</span><span class="na">loadAgent</span><span class="o">(</span><span class="n">agentJarPath</span><span class="o">,</span> <span class="s">"com.myapp.service"</span><span class="o">);</span> <span class="n">log</span><span class="o">.</span><span class="na">info</span><span class="o">(</span><span class="s">"Agent allegato alla
-JVM PID
-{}
- con successo"</span><span class="o">,</span> <span class="n">pid</span><span class="o">);</span> <span class="o">}</span>
- <span class="k">finally</span> 
-<span class="o">{</span> <span class="n">vm</span><span class="o">.</span><span class="na">detach</span><span class="o">();</span> <span class="o">}</span>
- <span class="o">}</span>
- <span class="o">}</span>
- 
+<span class="kd">public</span> <span class="kd">class</span> <span class="nc">TimingInterceptor</span> <span class="o">{</span>
+    <span class="nd">@RuntimeType</span> <span class="kd">public</span> <span class="kd">static</span> <span class="nc">Object</span> <span class="nf">intercept</span><span class="o">(</span>
+    <span class="nd">@Origin</span> <span class="nc">Method</span> <span class="n">method</span><span class="o">,</span>
+    <span class="nd">@AllArguments</span> <span class="nc">Object</span><span class="o">[]</span> <span class="n">args</span><span class="o">,</span>
+    <span class="nd">@SuperCall</span> <span class="nc">Callable</span><span class="o">&lt;?&gt;</span> <span class="n">superMethod</span> <span class="o">)</span> <span class="kd">throws</span> <span class="nc">Exception</span> <span class="o">{</span>
+        <span class="nc">String</span> <span class="n">metricName</span> <span class="o">=</span> <span class="n">method</span><span class="o">.</span><span class="na">getDeclaringClass</span><span class="o">().</span><span class="na">getSimpleName</span><span class="o">()</span> <span class="o">+</span> <span class="s">"."</span> <span class="o">+</span>
+            <span class="n">method</span><span class="o">.</span><span class="na">getName</span><span class="o">();</span>
+        <span class="nc">Timer</span><span class="o">.</span><span class="na">Sample</span> <span class="n">sample</span> <span class="o">=</span> <span class="nc">Timer</span><span class="o">.</span><span class="na">start</span><span class="o">();</span>
+        <span class="k">try</span> <span class="o">{</span>
+            <span class="k">return</span> <span class="n">superMethod</span><span class="o">.</span><span class="na">call</span><span class="o">();</span>
+        <span class="o">}</span>
+        <span class="k">catch</span> <span class="o">(</span><span class="nc">Exception</span> <span class="n">e</span><span class="o">)</span> <span class="o">{</span>
+            <span class="nc">Counter</span><span class="o">.</span><span class="na">builder</span><span class="o">(</span><span class="n">metricName</span> <span class="o">+</span>
+                <span class="s">".errors"</span><span class="o">).</span><span class="na">register</span><span class="o">(</span><span class="nc">TimingAgent</span><span class="o">.</span><span class="na">registry</span><span class="o">).</span><span class="na">increment</span><span class="o">();</span>
+            <span class="k">throw</span> <span class="n">e</span><span class="o">;</span>
+        <span class="o">}</span>
+        <span class="k">finally</span> <span class="o">{</span>
+            <span class="n">sample</span><span class="o">.</span><span class="na">stop</span><span class="o">(</span><span class="nc">Timer</span><span class="o">.</span><span class="na">builder</span><span class="o">(</span><span class="n">metricName</span> <span class="o">+</span> <span class="s">".duration"</span><span class="o">)</span>
+                <span class="o">.</span><span class="na">description</span><span class="o">(</span><span class="s">"Durata metodo "</span> <span class="o">+</span> <span class="n">metricName</span><span class="o">)</span>
+                <span class="o">.</span><span class="na">register</span><span class="o">(</span><span class="nc">TimingAgent</span><span class="o">.</span><span class="na">registry</span><span class="o">));</span>
+        <span class="o">}</span>
+    <span class="o">}</span>
+<span class="o">}</span>
+<span class="cm">/* Creo il JAR dell'agente con Maven Shade Plugin e lo allego all'applicazione
+    target: */</span>
+<span class="c1">// java -javaagent:timing-agent.jar=com.myapp.service -jar target-app.jar /* Per</span>
+    <span class="n">allegare</span> <span class="n">l</span><span class="err">'</span><span class="n">agente</span> <span class="n">a</span> <span class="n">una</span> <span class="no">JVM</span> <span class="n">già</span> <span class="n">in</span> <span class="nf">esecuzione</span> <span class="o">(</span><span class="n">attach</span> <span class="n">dinamico</span><span class="o">,</span> <span class="n">senza</span>
+    <span class="n">riavvio</span><span class="o">):</span> <span class="o">*/</span> <span class="kd">public</span> <span class="kd">class</span> <span class="nc">AgentAttacher</span>
+<span class="o">{</span>
+    <span class="kd">public</span> <span class="kd">static</span> <span class="kt">void</span> <span class="nf">attachToRunningJvm</span><span class="o">(</span><span class="nc">String</span> <span class="n">pid</span><span class="o">,</span> <span class="nc">String</span> <span class="n">agentJarPath</span><span class="o">)</span>
+        <span class="kd">throws</span> <span class="nc">Exception</span> <span class="o">{</span>
+        <span class="nc">VirtualMachine</span> <span class="n">vm</span> <span class="o">=</span> <span class="nc">VirtualMachine</span><span class="o">.</span><span class="na">attach</span><span class="o">(</span><span class="n">pid</span><span class="o">);</span>
+        <span class="k">try</span> <span class="o">{</span>
+            <span class="n">vm</span><span class="o">.</span><span class="na">loadAgent</span><span class="o">(</span><span class="n">agentJarPath</span><span class="o">,</span> <span class="s">"com.myapp.service"</span><span class="o">);</span>
+            <span class="n">log</span><span class="o">.</span><span class="na">info</span><span class="o">(</span><span class="s">"Agent allegato alla JVM PID {
+            }
+            con successo"</span><span class="o">,</span> <span class="n">pid</span><span class="o">);</span>
+        <span class="o">}</span>
+        <span class="k">finally</span> <span class="o">{</span>
+            <span class="n">vm</span><span class="o">.</span><span class="na">detach</span><span class="o">();</span>
+        <span class="o">}</span>
+    <span class="o">}</span>
+<span class="o">}</span>
 <span class="cm">/* In Spring Boot, espongo le metriche raccolte dall'agente tramite Actuator: */</span>
- <span class="nd">@Bean</span> <span class="kd">public</span> <span class="nc">MeterRegistryCustomizer</span><span class="o">&lt;</span><span class="nc">MeterRegistry</span><span class="o">&gt;</span> <span class="nf">agentMetricsExporter</span><span class="o">()</span> 
-<span class="o">{</span> <span class="k">return</span> <span class="n">registry</span> <span class="o">-&gt;</span> <span class="nc">TimingAgent</span><span class="o">.</span><span class="na">getRegistry</span><span class="o">().</span><span class="na">getMeters</span><span class="o">()</span> <span class="o">.</span><span class="na">forEach</span><span class="o">(</span><span class="n">meter</span> <span class="o">-&gt;</span>
-<span class="n">registry</span><span class="o">.</span><span class="na">register</span><span class="o">(</span><span class="n">meter</span><span class="o">));</span> <span class="o">}</span>
+<span class="nd">@Bean</span> <span class="kd">public</span> <span class="nc">MeterRegistryCustomizer</span><span class="o">&lt;</span><span class="nc">MeterRegistry</span><span class="o">&gt;</span> <span class="nf">agentMetricsExporter</span><span class="o">()</span> <span class="o">{</span>
+    <span class="k">return</span> <span class="n">registry</span> <span class="o">-&gt;</span> <span class="nc">TimingAgent</span><span class="o">.</span><span class="na">getRegistry</span><span class="o">().</span><span class="na">getMeters</span><span class="o">()</span> <span class="o">.</span><span class="na">forEach</span><span class="o">(</span><span class="n">meter</span> <span class="o">-&gt;</span>
+        <span class="n">registry</span><span class="o">.</span><span class="na">register</span><span class="o">(</span><span class="n">meter</span><span class="o">));</span>
+<span class="o">}</span>
 </pre></td></tr></tbody></table></code></pre></div></div>
 
         </article>

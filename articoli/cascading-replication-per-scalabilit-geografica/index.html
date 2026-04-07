@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Cascading Replication per Scalabilit Geografica — DevLog</title>
-    <meta name="description" content="In architetture distribuite globalmente, avere 100 repliche collegate a un unico Master saturerebbe la sua banda di rete. La 'Cascading Replication' permette a una replica di comportarsi a sua volta come un publisher per altre repliche 'nipoti'. Ques
+    <meta name="description" content="In architetture distribuite globalmente, avere 100 repliche collegate a un unico Master saturerebbe la sua banda di rete. La "Cascading Replication" permette a una replica di comportarsi a sua volta come un publisher per altre repliche "nipoti". Ques
 ">
     <link rel="stylesheet" href="/appuntidiprogrammazione/assets/css/style.css">
 
@@ -97,14 +97,14 @@
 6
 7
 8
-</pre></td><td class="rouge-code"><pre><span class="cm">/* Sulla replica intermedia (Hub regionale) */</span>
- <span class="n">primary_conninfo</span> <span class="o">=</span> <span class="s1">'host=master_italy port=5432 user=rep_user'</span><span class="p">;</span> <span class="n">wal_level</span> <span class="o">=</span>
-<span class="n">replica</span><span class="p">;</span> <span class="n">hot_standby</span> <span class="o">=</span> <span class="k">on</span><span class="p">;</span> <span class="n">max_wal_senders</span> <span class="o">=</span> <span class="mi">5</span><span class="p">;</span>
-<span class="cm">/* Le repliche locali si collegano a questo hub, non al master originale */</span>
- <span class="n">primary_conninfo</span> <span class="o">=</span> <span class="s1">'host=hub_usa port=5432 user=rep_user'</span><span class="p">;</span> 
-<span class="cm">/* Verifica della cascata dal Master */</span>
- <span class="k">SELECT</span> <span class="n">application_name</span><span class="p">,</span> <span class="n">client_addr</span><span class="p">,</span> <span class="n">pg_wal_lsn_diff</span><span class="p">(</span><span class="n">pg_current_wal_lsn</span><span class="p">(),</span>
-<span class="n">replay_lsn</span><span class="p">)</span> <span class="k">AS</span> <span class="n">lag_bytes</span> <span class="k">FROM</span> <span class="n">pg_stat_replication</span> <span class="k">ORDER</span> <span class="k">BY</span> <span class="n">application_name</span><span class="p">;</span>
+</pre></td><td class="rouge-code"><pre>    <span class="cm">/* Sulla replica intermedia (Hub regionale) */</span> <span class="n">primary_conninfo</span> <span class="o">=</span>
+        <span class="s1">'host=master_italy port=5432 user=rep_user'</span><span class="p">;</span> <span class="n">wal_level</span> <span class="o">=</span> <span class="n">replica</span><span class="p">;</span>
+        <span class="n">hot_standby</span> <span class="o">=</span> <span class="k">on</span><span class="p">;</span> <span class="n">max_wal_senders</span> <span class="o">=</span> <span class="mi">5</span><span class="p">;</span> <span class="cm">/* Le repliche locali si
+        collegano a questo hub, non al master originale */</span> <span class="n">primary_conninfo</span> <span class="o">=</span>
+        <span class="s1">'host=hub_usa port=5432 user=rep_user'</span><span class="p">;</span> <span class="cm">/* Verifica della cascata dal
+        Master */</span> <span class="k">SELECT</span> <span class="n">application_name</span><span class="p">,</span> <span class="n">client_addr</span><span class="p">,</span>
+        <span class="n">pg_wal_lsn_diff</span><span class="p">(</span><span class="n">pg_current_wal_lsn</span><span class="p">(),</span> <span class="n">replay_lsn</span><span class="p">)</span> <span class="k">AS</span> <span class="n">lag_bytes</span> <span class="k">FROM</span>
+        <span class="n">pg_stat_replication</span> <span class="k">ORDER</span> <span class="k">BY</span> <span class="n">application_name</span><span class="p">;</span>
 </pre></td></tr></tbody></table></code></pre></div></div>
 
         </article>

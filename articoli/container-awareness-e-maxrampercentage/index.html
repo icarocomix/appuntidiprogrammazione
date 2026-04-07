@@ -133,68 +133,50 @@
 42
 43
 44
-45
-46
-47
-48
-49
-50
-51
-52
-53
-</pre></td><td class="rouge-code"><pre><span class="o">*</span> <span class="nc">Configuro</span> <span class="n">la</span> <span class="no">JVM</span> <span class="n">per</span> <span class="n">occupare</span> <span class="n">al</span> <span class="n">massimo</span> <span class="n">il</span> <span class="mi">75</span><span class="o">%</span> <span class="n">della</span> <span class="n">memoria</span> <span class="n">del</span> <span class="n">container</span><span class="o">,</span>
-<span class="o">*</span> <span class="n">lasciando</span> <span class="n">spazio</span> <span class="nl">per:</span> <span class="o">-</span> <span class="nc">Off</span><span class="o">-</span><span class="n">heap</span> <span class="o">(</span><span class="nc">Metaspace</span><span class="o">,</span> <span class="nc">Direct</span> <span class="nc">Memory</span><span class="o">,</span> <span class="nc">Code</span> <span class="nc">Cache</span><span class="o">):</span> <span class="o">~</span><span class="mi">15</span><span class="o">%</span>
-<span class="o">*</span> <span class="o">-</span> <span class="nc">Stack</span> <span class="n">dei</span> <span class="nl">thread:</span> <span class="o">~</span><span class="mi">5</span><span class="o">%</span> <span class="o">-</span> <span class="nc">Overhead</span> <span class="no">JVM</span> <span class="nl">interno:</span> <span class="o">~</span><span class="mi">5</span><span class="o">%</span> <span class="o">*/</span>
- <span class="n">java</span> <span class="o">-</span><span class="nl">XX:</span><span class="o">+</span><span class="nc">UseContainerSupport</span> <span class="err">\</span> <span class="o">-</span><span class="nl">XX:</span><span class="nc">MaxRAMPercentage</span><span class="o">=</span><span class="mf">75.0</span> <span class="err">\</span>
-<span class="o">-</span><span class="nl">XX:</span><span class="nc">MinRAMPercentage</span><span class="o">=</span><span class="mf">50.0</span> <span class="err">\</span> <span class="o">-</span><span class="nl">XX:</span><span class="nc">InitialRAMPercentage</span><span class="o">=</span><span class="mf">50.0</span> <span class="err">\</span> <span class="o">-</span><span class="n">jar</span> <span class="n">spring</span><span class="o">-</span><span class="n">app</span><span class="o">.</span><span class="na">jar</span>
+</pre></td><td class="rouge-code"><pre><span class="cm">/* Configuro la JVM per occupare al massimo il 75% della memoria del container,
+    lasciando spazio per: - Off-heap (Metaspace, Direct Memory, Code Cache):
+    ~15% - Stack dei thread: ~5% - Overhead JVM interno: ~5% */</span>
+<span class="n">java</span> <span class="o">-</span><span class="nl">XX:</span><span class="o">+</span><span class="nc">UseContainerSupport</span> <span class="err">\</span> <span class="o">-</span><span class="nl">XX:</span><span class="nc">MaxRAMPercentage</span><span class="o">=</span><span class="mf">75.0</span> <span class="err">\</span>
+    <span class="o">-</span><span class="nl">XX:</span><span class="nc">MinRAMPercentage</span><span class="o">=</span><span class="mf">50.0</span> <span class="err">\</span> <span class="o">-</span><span class="nl">XX:</span><span class="nc">InitialRAMPercentage</span><span class="o">=</span><span class="mf">50.0</span> <span class="err">\</span> <span class="o">-</span><span class="n">jar</span>
+    <span class="n">spring</span><span class="o">-</span><span class="n">app</span><span class="o">.</span><span class="na">jar</span>
 <span class="cm">/* Verifico che la JVM stia leggendo correttamente i limiti del container: */</span>
- <span class="n">java</span> <span class="o">-</span><span class="nl">XX:</span><span class="o">+</span><span class="nc">UseContainerSupport</span> <span class="o">-</span><span class="nl">XX:</span><span class="nc">MaxRAMPercentage</span><span class="o">=</span><span class="mf">75.0</span> <span class="o">-</span><span class="nl">XshowSettings:</span><span class="n">vm</span>
-<span class="o">-</span><span class="n">version</span>
-<span class="c1">// Output atteso: </span>
-<span class="c1">// VM settings: </span>
-<span class="c1">// Max. Heap Size (Estimated): 1.50G </span>
-<span class="c1">// (se il container ha 2GB di limit) </span>
-<span class="o">*</span> <span class="nc">Nel</span> <span class="nc">Kubernetes</span> <span class="n">deployment</span><span class="o">.</span><span class="na">yaml</span><span class="o">,</span> <span class="n">definisco</span> <span class="n">i</span> <span class="n">limiti</span> <span class="n">in</span> <span class="n">modo</span> <span class="n">che</span> <span class="n">la</span> <span class="no">JVM</span> <span class="n">possa</span>
-<span class="o">*</span> <span class="n">calcolare</span> <span class="n">correttamente</span> <span class="n">l</span><span class="err">'</span><span class="nl">heap:</span> <span class="o">*/</span>
- 
-<span class="c1">// resources: </span>
-<span class="c1">// requests: </span>
-<span class="c1">// memory: "1Gi" </span>
-<span class="c1">// cpu: "500m" </span>
-<span class="c1">// limits: </span>
-<span class="c1">// memory: "2Gi" </span>
-<span class="c1">// cpu: "2000m" </span>
-<span class="o">*</span> <span class="nc">Con</span> <span class="nc">MaxRAMPercentage</span><span class="o">=</span><span class="mi">75</span> <span class="n">e</span> <span class="n">limit</span><span class="o">=</span><span class="mi">2</span><span class="nc">Gi</span><span class="o">,</span> <span class="n">l</span><span class="err">'</span><span class="n">heap</span> <span class="n">sarà</span> <span class="o">~</span><span class="mf">1.5</span><span class="no">GB</span><span class="o">.</span> <span class="nc">Senza</span>
-<span class="o">*</span> <span class="nc">UseContainerSupport</span><span class="o">,</span> <span class="n">la</span> <span class="no">JVM</span> <span class="n">vedrebbe</span> <span class="n">la</span> <span class="no">RAM</span> <span class="n">totale</span> <span class="n">del</span> <span class="n">nodo</span> <span class="nf">K8s</span> <span class="o">(</span><span class="n">es</span><span class="o">.</span> <span class="mi">64</span><span class="no">GB</span><span class="o">)</span> <span class="n">e</span>
-<span class="o">*</span> <span class="n">imposterebbe</span> <span class="n">un</span> <span class="n">heap</span> <span class="n">enorme</span><span class="o">,</span> <span class="n">garantendo</span> <span class="n">l</span><span class="err">'</span><span class="nc">OOMKill</span><span class="o">.</span> <span class="o">*/</span>
- 
-<span class="o">*</span> <span class="nc">Aggiungo</span> <span class="n">nel</span> <span class="nc">Dockerfile</span> <span class="n">le</span> <span class="n">opzioni</span> <span class="no">JVM</span> <span class="n">come</span> <span class="n">variabile</span> <span class="n">d</span><span class="err">'</span><span class="n">ambiente</span> <span class="n">per</span>
-<span class="o">*</span> <span class="n">permettere</span> <span class="n">l</span><span class="err">'</span><span class="n">override</span> <span class="n">a</span> <span class="n">runtime</span> <span class="n">senza</span> <span class="n">ricostruire</span> <span class="n">l</span><span class="err">'</span><span class="nl">immagine:</span> <span class="o">*/</span>
- 
-<span class="c1">// ENV JAVA_OPTS="-XX:+UseContainerSupport -XX:MaxRAMPercentage=75.0</span>
-<span class="c1">// -XX:+UseZGC"</span>
-<span class="c1">// ENTRYPOINT ["sh", "-c", "java $JAVA_OPTS -jar /app/service.jar"] </span>
-<span class="o">*</span> <span class="nc">In</span> <span class="nc">Spring</span> <span class="nc">Boot</span> <span class="mi">3</span><span class="o">.</span><span class="na">x</span><span class="o">,</span> <span class="n">configuro</span> <span class="n">anche</span> <span class="n">il</span> <span class="n">pool</span> <span class="n">di</span> <span class="n">thread</span> <span class="nc">Tomcat</span> <span class="n">in</span> <span class="n">base</span> <span class="n">alla</span>
-<span class="o">*</span> <span class="n">memoria</span> <span class="n">disponibile</span> <span class="n">per</span> <span class="n">evitare</span> <span class="n">che</span> <span class="n">troppi</span> <span class="n">thread</span> <span class="n">consumino</span> <span class="n">lo</span> <span class="n">stack</span> <span class="n">oltre</span> <span class="n">i</span>
-<span class="o">*</span> <span class="nl">limiti:</span> <span class="o">*/</span>
- <span class="nd">@Bean</span> <span class="kd">public</span> <span class="nc">TomcatProtocolHandlerCustomizer</span><span class="o">&lt;?&gt;</span> <span class="n">threadPoolCustomizer</span><span class="o">()</span> 
-<span class="o">{</span> <span class="k">return</span> <span class="n">handler</span> <span class="o">-&gt;</span> 
-<span class="o">{</span> 
-<span class="c1">// Calcolo i thread in base alla RAM disponibile: ogni thread usa ~512KB di</span>
-<span class="c1">// stack long maxRam = Runtime.getRuntime().maxMemory(); int maxThreads = (int)</span>
-<span class="c1">// Math.min(200, maxRam / (512 * 1024 * 50)); handler.setMaxThreads(maxThreads);</span>
-<span class="c1">// handler.setMinSpareThreads(maxThreads / 4); log.info("Tomcat configurato con</span>
-<span class="o">{}</span>
- <span class="n">thread</span> <span class="nf">max</span> <span class="o">(</span><span class="nl">heap:</span> 
-<span class="o">{}</span>
-<span class="no">MB</span><span class="o">)</span><span class="err">"</span><span class="o">,</span> <span class="n">maxThreads</span><span class="o">,</span> <span class="n">maxRam</span> <span class="o">/</span> <span class="mi">1_048_576</span><span class="o">);</span> <span class="o">}</span>
-<span class="o">;</span> <span class="o">}</span>
- 
+<span class="n">java</span> <span class="o">-</span><span class="nl">XX:</span><span class="o">+</span><span class="nc">UseContainerSupport</span> <span class="o">-</span><span class="nl">XX:</span><span class="nc">MaxRAMPercentage</span><span class="o">=</span><span class="mf">75.0</span> <span class="o">-</span><span class="nl">XshowSettings:</span><span class="n">vm</span>
+    <span class="o">-</span><span class="n">version</span>
+<span class="c1">// Output atteso: // VM settings: // Max. Heap Size (Estimated): 1.50G // (se il</span>
+    <span class="n">container</span> <span class="n">ha</span> <span class="mi">2</span><span class="no">GB</span> <span class="n">di</span> <span class="n">limit</span><span class="o">)</span> <span class="cm">/* Nel Kubernetes deployment.yaml, definisco i
+    limiti in modo che la JVM possa calcolare correttamente l'heap: */</span> <span class="c1">//</span>
+    <span class="nl">resources:</span> <span class="c1">// requests: // memory: "1Gi" // cpu: "500m" // limits: //</span>
+    <span class="nl">memory:</span> <span class="s">"2Gi"</span> <span class="c1">// cpu: "2000m" /* Con MaxRAMPercentage=75 e limit=2Gi, l'heap</span>
+    <span class="n">sarà</span> <span class="o">~</span><span class="mf">1.5</span><span class="no">GB</span><span class="o">.</span> <span class="nc">Senza</span> <span class="nc">UseContainerSupport</span><span class="o">,</span> <span class="n">la</span> <span class="no">JVM</span> <span class="n">vedrebbe</span> <span class="n">la</span> <span class="no">RAM</span> <span class="n">totale</span> <span class="n">del</span>
+    <span class="n">nodo</span> <span class="nf">K8s</span> <span class="o">(</span><span class="n">es</span><span class="o">.</span> <span class="mi">64</span><span class="no">GB</span><span class="o">)</span> <span class="n">e</span> <span class="n">imposterebbe</span> <span class="n">un</span> <span class="n">heap</span> <span class="n">enorme</span><span class="o">,</span> <span class="n">garantendo</span> <span class="n">l</span><span class="err">'</span><span class="nc">OOMKill</span><span class="o">.</span> <span class="o">*/</span>
+    <span class="cm">/* Aggiungo nel Dockerfile le opzioni JVM come variabile d'ambiente per
+    permettere l'override a runtime senza ricostruire l'immagine: */</span> <span class="c1">// ENV</span>
+    <span class="no">JAVA_OPTS</span><span class="o">=</span><span class="s">"-XX:+UseContainerSupport -XX:MaxRAMPercentage=75.0 -XX:+UseZGC"</span>
+    <span class="c1">// ENTRYPOINT ["sh", "-c", "java $JAVA_OPTS -jar /app/service.jar"] /* In</span>
+    <span class="nc">Spring</span> <span class="nc">Boot</span> <span class="mi">3</span><span class="o">.</span><span class="na">x</span><span class="o">,</span> <span class="n">configuro</span> <span class="n">anche</span> <span class="n">il</span> <span class="n">pool</span> <span class="n">di</span> <span class="n">thread</span> <span class="nc">Tomcat</span> <span class="n">in</span> <span class="n">base</span> <span class="n">alla</span>
+    <span class="n">memoria</span> <span class="n">disponibile</span> <span class="n">per</span> <span class="n">evitare</span> <span class="n">che</span> <span class="n">troppi</span> <span class="n">thread</span> <span class="n">consumino</span> <span class="n">lo</span> <span class="n">stack</span> <span class="n">oltre</span> <span class="n">i</span>
+    <span class="nl">limiti:</span> <span class="o">*/</span> <span class="nd">@Bean</span> <span class="kd">public</span> <span class="nc">TomcatProtocolHandlerCustomizer</span><span class="o">&lt;?&gt;</span>
+    <span class="n">threadPoolCustomizer</span><span class="o">()</span>
+<span class="o">{</span>
+    <span class="k">return</span> <span class="n">handler</span> <span class="o">-&gt;</span> <span class="o">{</span>
+        <span class="c1">// Calcolo i thread in base alla RAM disponibile: ogni thread usa ~512KB</span>
+            <span class="n">di</span> <span class="n">stack</span> <span class="kt">long</span> <span class="n">maxRam</span> <span class="o">=</span> <span class="nc">Runtime</span><span class="o">.</span><span class="na">getRuntime</span><span class="o">().</span><span class="na">maxMemory</span><span class="o">()</span>
+        <span class="o">;</span>
+        <span class="kt">int</span> <span class="n">maxThreads</span> <span class="o">=</span> <span class="o">(</span><span class="kt">int</span><span class="o">)</span> <span class="nc">Math</span><span class="o">.</span><span class="na">min</span><span class="o">(</span><span class="mi">200</span><span class="o">,</span> <span class="n">maxRam</span> <span class="o">/</span> <span class="o">(</span><span class="mi">512</span> <span class="o">*</span> <span class="mi">1024</span> <span class="o">*</span> <span class="mi">50</span><span class="o">));</span>
+        <span class="n">handler</span><span class="o">.</span><span class="na">setMaxThreads</span><span class="o">(</span><span class="n">maxThreads</span><span class="o">);</span>
+        <span class="n">handler</span><span class="o">.</span><span class="na">setMinSpareThreads</span><span class="o">(</span><span class="n">maxThreads</span> <span class="o">/</span> <span class="mi">4</span><span class="o">);</span>
+        <span class="n">log</span><span class="o">.</span><span class="na">info</span><span class="o">(</span><span class="s">"Tomcat configurato con {
+        }
+        thread max (heap: {
+        }
+        MB)"</span><span class="o">,</span> <span class="n">maxThreads</span><span class="o">,</span> <span class="n">maxRam</span> <span class="o">/</span> <span class="mi">1_048_576</span><span class="o">);</span>
+    <span class="o">}</span>
+    <span class="o">;</span>
+<span class="o">}</span>
 <span class="cm">/* Monitoro l'utilizzo effettivo dell'heap in produzione tramite Actuator: */</span>
- 
-<span class="c1">// GET /actuator/metrics/jvm.memory.used?tag=area:heap </span>
-<span class="c1">// GET /actuator/metrics/jvm.memory.max?tag=area:heap </span>
-<span class="c1">// Se used/max &gt; 85% costantemente, aumento MaxRAMPercentage o il limit del pod</span>
+<span class="c1">// GET /actuator/metrics/jvm.memory.used?tag=area:heap // GET</span>
+    <span class="o">/</span><span class="n">actuator</span><span class="o">/</span><span class="n">metrics</span><span class="o">/</span><span class="n">jvm</span><span class="o">.</span><span class="na">memory</span><span class="o">.</span><span class="na">max</span><span class="o">?</span><span class="n">tag</span><span class="o">=</span><span class="nl">area:</span><span class="n">heap</span> <span class="c1">// Se used/max &gt; 85%</span>
+    <span class="n">costantemente</span><span class="o">,</span> <span class="n">aumento</span> <span class="nc">MaxRAMPercentage</span> <span class="n">o</span> <span class="n">il</span> <span class="n">limit</span> <span class="n">del</span> <span class="n">pod</span>
 </pre></td></tr></tbody></table></code></pre></div></div>
 
         </article>

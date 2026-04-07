@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Transaction ID (XID) Wraparound — DevLog</title>
-    <meta name="description" content="Ogni transazione in Postgres riceve un ID numerico a 32 bit. Poiché i numeri finiscono (circa 4 miliardi), Postgres deve riutilizzarli. Se non gestito, questo porta al 'wraparound', un evento catastrofico dove i vecchi dati sembrano sparire o diventa
+    <meta name="description" content="Ogni transazione in Postgres riceve un ID numerico a 32 bit. Poiché i numeri finiscono (circa 4 miliardi), Postgres deve riutilizzarli. Se non gestito, questo porta al "wraparound", un evento catastrofico dove i vecchi dati sembrano sparire o diventa
 ">
     <link rel="stylesheet" href="/appuntidiprogrammazione/assets/css/style.css">
 
@@ -112,36 +112,30 @@
 21
 22
 23
-24
-25
-26
-</pre></td><td class="rouge-code"><pre><span class="o">*</span> <span class="n">Verifico</span> <span class="n">la</span> <span class="n">distanza</span> <span class="n">dal</span> <span class="n">wraparound</span> <span class="n">per</span> <span class="n">ogni</span> <span class="k">database</span><span class="p">.</span> <span class="n">Se</span> <span class="s1">'age'</span> <span class="n">si</span> <span class="n">avvicina</span> <span class="n">a</span>
-<span class="o">*</span> <span class="mi">2</span> <span class="n">miliardi</span><span class="p">,</span> <span class="n">Postgres</span> <span class="n">entrer</span><span class="err">à</span> <span class="k">in</span> <span class="n">modalit</span><span class="err">à</span> <span class="n">di</span> <span class="n">sola</span> <span class="n">lettura</span> <span class="n">di</span> <span class="n">emergenza</span><span class="p">.</span> <span class="n">La</span>
-<span class="o">*</span> <span class="n">soglia</span> <span class="n">di</span> <span class="n">allarme</span> <span class="n">deve</span> <span class="n">essere</span> <span class="n">fissata</span> <span class="n">intorno</span> <span class="n">a</span> <span class="mi">1</span><span class="p">.</span><span class="mi">5</span> <span class="n">miliardi</span> <span class="p">(</span><span class="mi">75</span><span class="o">%</span><span class="p">).</span> <span class="o">*/</span>
- <span class="k">SELECT</span> <span class="n">datname</span><span class="p">,</span> <span class="n">age</span><span class="p">(</span><span class="n">datfrozenxid</span><span class="p">)</span> <span class="k">AS</span> <span class="n">xid_age</span><span class="p">,</span> <span class="n">round</span><span class="p">(</span><span class="mi">100</span><span class="p">.</span><span class="mi">0</span> <span class="o">*</span> <span class="n">age</span><span class="p">(</span><span class="n">datfrozenxid</span><span class="p">)</span> <span class="o">/</span>
-<span class="mi">2000000000</span><span class="p">,</span> <span class="mi">2</span><span class="p">)</span> <span class="k">AS</span> <span class="n">pct_used</span> <span class="k">FROM</span> <span class="n">pg_database</span> <span class="k">ORDER</span> <span class="k">BY</span> <span class="n">xid_age</span> <span class="k">DESC</span><span class="p">;</span>
-<span class="o">*</span> <span class="n">Identifico</span> <span class="n">le</span> <span class="n">tabelle</span> <span class="n">pi</span><span class="err">ù</span> <span class="nv">"anziane"</span> <span class="n">che</span> <span class="n">non</span> <span class="n">sono</span> <span class="k">state</span> <span class="n">congelate</span> <span class="n">di</span> <span class="n">recente</span><span class="p">.</span>
-<span class="o">*</span> <span class="n">Sono</span> <span class="n">i</span> <span class="n">candidati</span> <span class="n">prioritari</span> <span class="n">per</span> <span class="n">un</span> <span class="k">VACUUM</span> <span class="k">FREEZE</span> <span class="n">manuale</span><span class="p">.</span> <span class="o">*/</span>
- <span class="k">SELECT</span> <span class="n">relname</span><span class="p">,</span> <span class="n">age</span><span class="p">(</span><span class="n">relfrozenxid</span><span class="p">)</span> <span class="k">AS</span> <span class="n">table_xid_age</span><span class="p">,</span> <span class="n">n_dead_tup</span><span class="p">,</span> <span class="n">last_vacuum</span><span class="p">,</span>
-<span class="n">last_autovacuum</span> <span class="k">FROM</span> <span class="n">pg_stat_user_tables</span> <span class="k">ORDER</span> <span class="k">BY</span> <span class="n">table_xid_age</span> <span class="k">DESC</span> <span class="k">LIMIT</span> <span class="mi">10</span><span class="p">;</span>
-<span class="o">*</span> <span class="n">Forzo</span> <span class="n">il</span> <span class="n">congelamento</span> <span class="n">sulle</span> <span class="n">tabelle</span> <span class="n">critiche</span> <span class="n">durante</span> <span class="n">una</span> <span class="n">finestra</span> <span class="n">di</span>
-<span class="o">*</span> <span class="n">manutenzione</span><span class="p">.</span> <span class="k">FREEZE</span> <span class="n">marca</span> <span class="n">le</span> <span class="n">righe</span> <span class="n">come</span> <span class="n">permanentemente</span> <span class="n">visibili</span><span class="p">,</span> <span class="n">azzerando</span>
-<span class="o">*</span> <span class="n">il</span> <span class="n">contatore</span> <span class="n">di</span> <span class="n">et</span><span class="err">à</span> <span class="n">per</span> <span class="n">quella</span> <span class="n">tabella</span><span class="p">.</span> <span class="o">*/</span>
- <span class="k">VACUUM</span> <span class="p">(</span><span class="k">FREEZE</span><span class="p">,</span> <span class="k">ANALYZE</span><span class="p">,</span> <span class="k">VERBOSE</span><span class="p">)</span> <span class="n">log_events</span><span class="p">;</span> 
-<span class="o">*</span> <span class="n">Nel</span> <span class="n">file</span> <span class="n">postgresql</span><span class="p">.</span><span class="n">conf</span><span class="p">,</span> <span class="n">configuro</span> <span class="n">l</span><span class="s1">'autovacuum in modo aggressivo per
-* database ad alta frequenza transazionale: autovacuum_freeze_max_age =
-* 500000000 -- Forza freeze a 500M XID autovacuum_vacuum_cost_delay = '</span><span class="mi">2</span><span class="n">ms</span><span class="s1">' --
-* Riduco la pausa tra le fasi del vacuum */
- 
-* Implemento un job di monitoraggio (es. in Spring Scheduler) che lancia un
-* alert se xid_age supera 1 miliardo: @Scheduled(cron = "0 0 * * * *") public
-* void checkXidAge()
-{ long age = jdbcTemplate.queryForObject( "SELECT max(age(datfrozenxid)) FROM
-pg_database", Long.class); if (age &gt; 1_000_000_000L)
-{ alertService.send("CRITICO: XID age al " + (age/20000000) + "%"); }
- }
- */
-</span></pre></td></tr></tbody></table></code></pre></div></div>
+</pre></td><td class="rouge-code"><pre>    <span class="cm">/* Verifico la distanza dal wraparound per ogni database. Se 'age' si
+        avvicina a 2 miliardi, Postgres entrerà in modalità di sola lettura di
+        emergenza. La soglia di allarme deve essere fissata intorno a 1.5
+        miliardi (75%). */</span> <span class="k">SELECT</span> <span class="n">datname</span><span class="p">,</span> <span class="n">age</span><span class="p">(</span><span class="n">datfrozenxid</span><span class="p">)</span> <span class="k">AS</span> <span class="n">xid_age</span><span class="p">,</span>
+        <span class="n">round</span><span class="p">(</span><span class="mi">100</span><span class="p">.</span><span class="mi">0</span> <span class="o">*</span> <span class="n">age</span><span class="p">(</span><span class="n">datfrozenxid</span><span class="p">)</span> <span class="o">/</span> <span class="mi">2000000000</span><span class="p">,</span> <span class="mi">2</span><span class="p">)</span> <span class="k">AS</span> <span class="n">pct_used</span> <span class="k">FROM</span>
+        <span class="n">pg_database</span> <span class="k">ORDER</span> <span class="k">BY</span> <span class="n">xid_age</span> <span class="k">DESC</span><span class="p">;</span> <span class="cm">/* Identifico le tabelle più
+        "anziane" che non sono state congelate di recente. Sono i candidati
+        prioritari per un VACUUM FREEZE manuale. */</span> <span class="k">SELECT</span> <span class="n">relname</span><span class="p">,</span>
+        <span class="n">age</span><span class="p">(</span><span class="n">relfrozenxid</span><span class="p">)</span> <span class="k">AS</span> <span class="n">table_xid_age</span><span class="p">,</span> <span class="n">n_dead_tup</span><span class="p">,</span> <span class="n">last_vacuum</span><span class="p">,</span>
+        <span class="n">last_autovacuum</span> <span class="k">FROM</span> <span class="n">pg_stat_user_tables</span> <span class="k">ORDER</span> <span class="k">BY</span> <span class="n">table_xid_age</span> <span class="k">DESC</span>
+        <span class="k">LIMIT</span> <span class="mi">10</span><span class="p">;</span> <span class="cm">/* Forzo il congelamento sulle tabelle critiche durante una
+        finestra di manutenzione. FREEZE marca le righe come permanentemente
+        visibili, azzerando il contatore di età per quella tabella. */</span> <span class="k">VACUUM</span>
+        <span class="p">(</span><span class="k">FREEZE</span><span class="p">,</span> <span class="k">ANALYZE</span><span class="p">,</span> <span class="k">VERBOSE</span><span class="p">)</span> <span class="n">log_events</span><span class="p">;</span> <span class="cm">/* Nel file postgresql.conf,
+        configuro l'autovacuum in modo aggressivo per database ad alta frequenza
+        transazionale: autovacuum_freeze_max_age = 500000000 -- Forza freeze a
+        500M XID autovacuum_vacuum_cost_delay = '2ms' -- Riduco la pausa tra le
+        fasi del vacuum */</span> <span class="cm">/* Implemento un job di monitoraggio (es. in Spring
+        Scheduler) che lancia un alert se xid_age supera 1 miliardo:
+        @Scheduled(cron = "0 0 * * * *") public void checkXidAge() { long age =
+        jdbcTemplate.queryForObject( "SELECT max(age(datfrozenxid)) FROM
+        pg_database", Long.class); if (age &gt; 1_000_000_000L) {
+        alertService.send("CRITICO: XID age al " + (age/20000000) + "%"); } } */</span>
+</pre></td></tr></tbody></table></code></pre></div></div>
 
         </article>
 

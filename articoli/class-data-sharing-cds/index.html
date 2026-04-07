@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Class Data Sharing (CDS) — DevLog</title>
-    <meta name="description" content="Il caricamento delle classi (parsing dei byte, verifica, creazione metadati) è un costo fisso allo startup. AppCDS permette di scattare una 'fotografia' (archivio .jsa) delle classi già caricate e mapparle direttamente in memoria ai successivi avvii.
+    <meta name="description" content="Il caricamento delle classi (parsing dei byte, verifica, creazione metadati) è un costo fisso allo startup. AppCDS permette di scattare una "fotografia" (archivio .jsa) delle classi già caricate e mapparle direttamente in memoria ai successivi avvii.
 ">
     <link rel="stylesheet" href="/appuntidiprogrammazione/assets/css/style.css">
 
@@ -138,99 +138,55 @@
 47
 48
 49
-50
-51
-52
-53
-54
-55
-56
-57
-58
-59
-60
-61
-62
-63
-64
-65
-66
-67
-68
-69
-70
-71
-</pre></td><td class="rouge-code"><pre><span class="o">*</span> <span class="nc">Processo</span> <span class="n">in</span> <span class="n">tre</span> <span class="n">fasi</span> <span class="n">per</span> <span class="n">generare</span> <span class="n">e</span> <span class="n">usare</span> <span class="n">l</span><span class="err">'</span><span class="n">archivio</span> <span class="no">CDS</span><span class="o">.</span> <span class="nc">Le</span> <span class="n">fasi</span> <span class="mi">1</span> <span class="n">e</span> <span class="mi">2</span>
-<span class="o">*</span> <span class="n">vengono</span> <span class="n">eseguite</span> <span class="n">una</span> <span class="n">volta</span> <span class="n">sola</span> <span class="n">durante</span> <span class="n">la</span> <span class="n">build</span> <span class="n">dell</span><span class="err">'</span><span class="n">immagine</span> <span class="nc">Docker</span><span class="o">.</span> <span class="o">*/</span>
- 
-<span class="o">*</span> <span class="no">FASE</span> <span class="mi">1</span><span class="o">:</span> <span class="n">eseguo</span> <span class="n">l</span><span class="err">'</span><span class="n">app</span> <span class="n">una</span> <span class="n">volta</span> <span class="n">per</span> <span class="n">registrare</span> <span class="n">le</span> <span class="n">classi</span> <span class="n">caricate</span> <span class="n">durante</span> <span class="n">lo</span>
-<span class="o">*</span> <span class="n">startup</span><span class="o">.</span> <span class="o">*/</span>
- 
-<span class="c1">// java -XX:DumpLoadedClassList=classes.lst \ </span>
-<span class="c1">// -Dspring.context.exit=onRefresh \ </span>
-<span class="c1">// -jar app.jar </span>
-<span class="c1">// Il flag onRefresh fa terminare Spring Boot subito dopo il refresh del</span>
-<span class="c1">// contesto:</span>
-<span class="c1">// cattura tutte le classi caricate durante lo startup senza eseguire il</span>
-<span class="c1">// business logic</span>
-<span class="cm">/* FASE 2: creo l'archivio condiviso a partire dalla lista delle classi. */</span>
- 
-<span class="c1">// java -Xshare:dump \ </span>
-<span class="c1">// -XX:SharedClassListFile=classes.lst \ </span>
-<span class="c1">// -XX:SharedArchiveFile=app.jsa \ </span>
-<span class="c1">// -cp app.jar:lib</span>
-<span class="cm">/* \ 
-// org.springframework.boot.loader.JarLauncher 
-* FASE 3: ogni avvio usa l'archivio pre-compilato. Il parsing e la verifica del
-* bytecode vengono saltati per tutte le classi nell'archivio. */</span>
- 
-<span class="c1">// java -Xshare:on \ </span>
-<span class="c1">// -XX:SharedArchiveFile=app.jsa \ </span>
-<span class="c1">// -jar app.jar </span>
-<span class="cm">/* Misuro la riduzione dello startup time prima e dopo: */</span>
- <span class="nd">@SpringBootTest</span> <span class="kd">public</span> <span class="kd">class</span> <span class="nc">StartupTimeTest</span> 
-<span class="o">{</span> <span class="nd">@Test</span> <span class="kd">public</span> <span class="kt">void</span> <span class="nf">measureStartupTime</span><span class="o">()</span> <span class="kd">throws</span> <span class="nc">Exception</span> 
-<span class="o">{</span> <span class="kt">long</span> <span class="n">start</span> <span class="o">=</span> <span class="nc">System</span><span class="o">.</span><span class="na">currentTimeMillis</span><span class="o">();</span> <span class="nc">ConfigurableApplicationContext</span> <span class="n">ctx</span> <span class="o">=</span>
-<span class="nc">SpringApplication</span><span class="o">.</span><span class="na">run</span><span class="o">(</span><span class="nc">MyApplication</span><span class="o">.</span><span class="na">class</span><span class="o">);</span> <span class="kt">long</span> <span class="n">startupMs</span> <span class="o">=</span>
-<span class="nc">System</span><span class="o">.</span><span class="na">currentTimeMillis</span><span class="o">()</span> <span class="o">-</span> <span class="n">start</span><span class="o">;</span> <span class="n">log</span><span class="o">.</span><span class="na">info</span><span class="o">(</span><span class="s">"Startup time:
-{}
-ms"</span><span class="o">,</span> <span class="n">startupMs</span><span class="o">);</span> 
-<span class="c1">// Senza CDS: ~3200ms, Con CDS: ~1600ms (tipicamente -40/-50%)</span>
-<span class="c1">// assertTrue(startupMs &lt; 2000, "Startup troppo lento: " + startupMs + "ms");</span>
-<span class="c1">// ctx.close(); }</span>
- <span class="o">}</span>
- 
+</pre></td><td class="rouge-code"><pre><span class="cm">/* Processo in tre fasi per generare e usare l'archivio CDS. Le fasi 1 e 2
+    vengono eseguite una volta sola durante la build dell'immagine Docker. */</span>
+<span class="cm">/* FASE 1: eseguo l'app una volta per registrare le classi caricate durante lo
+    startup. */</span>
+<span class="c1">// java -XX:DumpLoadedClassList=classes.lst \ // -Dspring.context.exit=onRefresh</span>
+    <span class="err">\</span> <span class="c1">// -jar app.jar // Il flag onRefresh fa terminare Spring Boot subito dopo</span>
+    <span class="n">il</span> <span class="n">refresh</span> <span class="n">del</span> <span class="nl">contesto:</span> <span class="c1">// cattura tutte le classi caricate durante lo</span>
+    <span class="n">startup</span> <span class="n">senza</span> <span class="n">eseguire</span> <span class="n">il</span> <span class="n">business</span> <span class="n">logic</span> <span class="cm">/* FASE 2: creo l'archivio
+    condiviso a partire dalla lista delle classi. */</span> <span class="c1">// java -Xshare:dump \ //</span>
+    <span class="o">-</span><span class="nl">XX:</span><span class="nc">SharedClassListFile</span><span class="o">=</span><span class="n">classes</span><span class="o">.</span><span class="na">lst</span> <span class="err">\</span> <span class="c1">// -XX:SharedArchiveFile=app.jsa \ //</span>
+    <span class="o">-</span><span class="n">cp</span> <span class="n">app</span><span class="o">.</span><span class="na">jar</span><span class="o">:</span><span class="n">lib</span><span class="cm">/* \ // org.springframework.boot.loader.JarLauncher /* FASE
+    3: ogni avvio usa l'archivio pre-compilato. Il parsing e la verifica del
+    bytecode vengono saltati per tutte le classi nell'archivio. */</span> <span class="c1">// java</span>
+    <span class="o">-</span><span class="nl">Xshare:</span><span class="n">on</span> <span class="err">\</span> <span class="c1">// -XX:SharedArchiveFile=app.jsa \ // -jar app.jar /* Misuro la</span>
+    <span class="n">riduzione</span> <span class="n">dello</span> <span class="n">startup</span> <span class="n">time</span> <span class="n">prima</span> <span class="n">e</span> <span class="nl">dopo:</span> <span class="o">*/</span> <span class="nd">@SpringBootTest</span> <span class="kd">public</span> <span class="kd">class</span>
+    <span class="nc">StartupTimeTest</span>
+<span class="o">{</span>
+    <span class="nd">@Test</span> <span class="kd">public</span> <span class="kt">void</span> <span class="nf">measureStartupTime</span><span class="o">()</span> <span class="kd">throws</span> <span class="nc">Exception</span> <span class="o">{</span>
+        <span class="kt">long</span> <span class="n">start</span> <span class="o">=</span> <span class="nc">System</span><span class="o">.</span><span class="na">currentTimeMillis</span><span class="o">();</span>
+        <span class="nc">ConfigurableApplicationContext</span> <span class="n">ctx</span> <span class="o">=</span>
+            <span class="nc">SpringApplication</span><span class="o">.</span><span class="na">run</span><span class="o">(</span><span class="nc">MyApplication</span><span class="o">.</span><span class="na">class</span><span class="o">);</span>
+        <span class="kt">long</span> <span class="n">startupMs</span> <span class="o">=</span> <span class="nc">System</span><span class="o">.</span><span class="na">currentTimeMillis</span><span class="o">()</span> <span class="o">-</span> <span class="n">start</span><span class="o">;</span>
+        <span class="n">log</span><span class="o">.</span><span class="na">info</span><span class="o">(</span><span class="s">"Startup time: {
+        }
+        ms"</span><span class="o">,</span> <span class="n">startupMs</span><span class="o">);</span>
+        <span class="c1">// Senza CDS: ~3200ms, Con CDS: ~1600ms (tipicamente -40/-50%)</span>
+            <span class="n">assertTrue</span><span class="o">(</span><span class="n">startupMs</span> <span class="o">&lt;</span> <span class="mi">2000</span><span class="o">,</span> <span class="s">"Startup troppo lento: "</span> <span class="o">+</span> <span class="n">startupMs</span> <span class="o">+</span>
+            <span class="s">"ms"</span><span class="o">)</span>
+        <span class="o">;</span>
+        <span class="n">ctx</span><span class="o">.</span><span class="na">close</span><span class="o">();</span>
+    <span class="o">}</span>
+<span class="o">}</span>
 <span class="cm">/* Integro la generazione del CDS nel Dockerfile per Spring Boot: */</span>
- 
-<span class="c1">// FROM eclipse-temurin:21-jre AS cds-builder </span>
-<span class="c1">// WORKDIR /app </span>
-<span class="c1">// COPY target/app.jar . </span>
-<span class="c1">// # Fase 1: genera la lista delle classi </span>
-<span class="c1">// RUN java -XX:DumpLoadedClassList=classes.lst \ </span>
-<span class="c1">// -Dspring.context.exit=onRefresh -jar app.jar || true </span>
-<span class="c1">// # Fase 2: genera l'archivio CDS </span>
-<span class="c1">// RUN java -Xshare:dump \ </span>
-<span class="c1">// -XX:SharedClassListFile=classes.lst \ </span>
-<span class="c1">// -XX:SharedArchiveFile=app.jsa \ </span>
-<span class="c1">// -jar app.jar || true </span>
-<span class="c1">// FROM eclipse-temurin:21-jre </span>
-<span class="c1">// WORKDIR /app </span>
-<span class="c1">// COPY --from=cds-builder /app/app.jar . </span>
-<span class="c1">// COPY --from=cds-builder /app/app.jsa . </span>
-<span class="c1">// ENTRYPOINT ["java", "-Xshare:on", "-XX:SharedArchiveFile=app.jsa", "-jar",</span>
-<span class="c1">// "app.jar"]</span>
-<span class="o">*</span> <span class="nc">Per</span> <span class="nc">Spring</span> <span class="nc">Boot</span> <span class="mf">3.3</span><span class="o">+,</span> <span class="n">uso</span> <span class="n">il</span> <span class="n">supporto</span> <span class="n">nativo</span> <span class="no">CDS</span> <span class="n">integrato</span> <span class="n">che</span> <span class="n">automatizza</span> <span class="n">le</span>
-<span class="o">*</span> <span class="n">fasi</span> <span class="mi">1</span> <span class="n">e</span> <span class="mi">2</span><span class="o">:</span> <span class="o">*/</span>
- 
-<span class="c1">// ./mvnw spring-boot:process-aot </span>
-<span class="c1">// java -Dspring.aot.enabled=true -XX:SharedArchiveFile=app.jsa -jar app.jar </span>
-<span class="o">*</span> <span class="nc">Verifico</span> <span class="n">che</span> <span class="n">l</span><span class="err">'</span><span class="n">archivio</span> <span class="n">sia</span> <span class="n">effettivamente</span> <span class="n">usato</span> <span class="n">controllando</span> <span class="n">il</span> <span class="n">log</span> <span class="n">di</span> <span class="nl">avvio:</span>
-<span class="o">*</span> <span class="o">*/</span>
- 
-<span class="c1">// java -Xshare:on -XX:SharedArchiveFile=app.jsa -Xlog:class+load=info -jar</span>
-<span class="c1">// app.jar</span>
-<span class="c1">// Se vedo "source: shared objects file" per le classi Spring, il CDS funziona</span>
-<span class="c1">// correttamente</span>
+<span class="c1">// FROM eclipse-temurin:21-jre AS cds-builder // WORKDIR /app // COPY</span>
+    <span class="n">target</span><span class="o">/</span><span class="n">app</span><span class="o">.</span><span class="na">jar</span> <span class="o">.</span> <span class="c1">// # Fase 1: genera la lista delle classi // RUN java</span>
+    <span class="o">-</span><span class="nl">XX:</span><span class="nc">DumpLoadedClassList</span><span class="o">=</span><span class="n">classes</span><span class="o">.</span><span class="na">lst</span> <span class="err">\</span> <span class="c1">// -Dspring.context.exit=onRefresh</span>
+    <span class="o">-</span><span class="n">jar</span> <span class="n">app</span><span class="o">.</span><span class="na">jar</span> <span class="o">||</span> <span class="kc">true</span> <span class="c1">// # Fase 2: genera l'archivio CDS // RUN java</span>
+    <span class="o">-</span><span class="nl">Xshare:</span><span class="n">dump</span> <span class="err">\</span> <span class="c1">// -XX:SharedClassListFile=classes.lst \ //</span>
+    <span class="o">-</span><span class="nl">XX:</span><span class="nc">SharedArchiveFile</span><span class="o">=</span><span class="n">app</span><span class="o">.</span><span class="na">jsa</span> <span class="err">\</span> <span class="c1">// -jar app.jar || true // FROM</span>
+    <span class="n">eclipse</span><span class="o">-</span><span class="nl">temurin:</span><span class="mi">21</span><span class="o">-</span><span class="n">jre</span> <span class="c1">// WORKDIR /app // COPY --from=cds-builder</span>
+    <span class="o">/</span><span class="n">app</span><span class="o">/</span><span class="n">app</span><span class="o">.</span><span class="na">jar</span> <span class="o">.</span> <span class="c1">// COPY --from=cds-builder /app/app.jsa . // ENTRYPOINT</span>
+    <span class="o">[</span><span class="s">"java"</span><span class="o">,</span> <span class="s">"-Xshare:on"</span><span class="o">,</span> <span class="s">"-XX:SharedArchiveFile=app.jsa"</span><span class="o">,</span> <span class="s">"-jar"</span><span class="o">,</span> <span class="s">"app.jar"</span><span class="o">]</span>
+    <span class="cm">/* Per Spring Boot 3.3+, uso il supporto nativo CDS integrato che
+    automatizza le fasi 1 e 2: */</span> <span class="c1">// ./mvnw spring-boot:process-aot // java</span>
+    <span class="o">-</span><span class="nc">Dspring</span><span class="o">.</span><span class="na">aot</span><span class="o">.</span><span class="na">enabled</span><span class="o">=</span><span class="kc">true</span> <span class="o">-</span><span class="nl">XX:</span><span class="nc">SharedArchiveFile</span><span class="o">=</span><span class="n">app</span><span class="o">.</span><span class="na">jsa</span> <span class="o">-</span><span class="n">jar</span> <span class="n">app</span><span class="o">.</span><span class="na">jar</span> <span class="cm">/*
+    Verifico che l'archivio sia effettivamente usato controllando il log di
+    avvio: */</span> <span class="c1">// java -Xshare:on -XX:SharedArchiveFile=app.jsa</span>
+    <span class="o">-</span><span class="nl">Xlog:</span><span class="kd">class</span><span class="err">+</span><span class="nc">load</span><span class="o">=</span><span class="n">info</span> <span class="o">-</span><span class="n">jar</span> <span class="n">app</span><span class="o">.</span><span class="na">jar</span> <span class="c1">// Se vedo "source: shared objects file"</span>
+    <span class="n">per</span> <span class="n">le</span> <span class="n">classi</span> <span class="nc">Spring</span><span class="o">,</span> <span class="n">il</span> <span class="no">CDS</span> <span class="n">funziona</span> <span class="n">correttamente</span>
 </pre></td></tr></tbody></table></code></pre></div></div>
 
         </article>

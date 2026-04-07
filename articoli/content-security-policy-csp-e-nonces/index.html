@@ -154,72 +154,112 @@
 63
 64
 65
-</pre></td><td class="rouge-code"><pre><span class="o">*</span> <span class="nx">Genero</span> <span class="nx">un</span> <span class="nx">nonce</span> <span class="nx">crittograficamente</span> <span class="nx">casuale</span> <span class="nx">per</span> <span class="nx">ogni</span> <span class="nx">richiesta</span> <span class="nx">HTTP</span><span class="p">.</span> <span class="nx">Il</span> <span class="nx">nonce</span>
-<span class="o">*</span> <span class="nx">deve</span> <span class="nx">essere</span> <span class="nx">diverso</span> <span class="nx">per</span> <span class="nx">ogni</span> <span class="nx">risposta</span><span class="p">:</span> <span class="nx">se</span> <span class="nx">fosse</span> <span class="nx">fisso</span><span class="p">,</span> <span class="nx">un</span> <span class="nx">attaccante</span> <span class="nx">potrebbe</span>
-<span class="o">*</span> <span class="nx">usarlo</span> <span class="nx">per</span> <span class="nx">bypassare</span> <span class="nx">la</span> <span class="nx">CSP</span><span class="p">.</span> <span class="o">*</span><span class="sr">/</span><span class="err">
-</span> <span class="kd">const</span> <span class="nx">crypto</span> <span class="o">=</span> <span class="nx">require</span><span class="p">(</span><span class="dl">'</span><span class="s1">crypto</span><span class="dl">'</span><span class="p">);</span> <span class="kd">function</span> <span class="nx">generateNonce</span><span class="p">()</span> 
-<span class="p">{</span> <span class="k">return</span> <span class="nx">crypto</span><span class="p">.</span><span class="nx">randomBytes</span><span class="p">(</span><span class="mi">16</span><span class="p">).</span><span class="nx">toString</span><span class="p">(</span><span class="dl">'</span><span class="s1">base64</span><span class="dl">'</span><span class="p">);</span> 
-<span class="c1">// 128 bit di entropia }</span>
- 
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+</pre></td><td class="rouge-code"><pre><span class="cm">/* Genero un nonce crittograficamente casuale per ogni richiesta HTTP. Il nonce
+    deve essere diverso per ogni risposta: se fosse fisso, un attaccante
+    potrebbe usarlo per bypassare la CSP. */</span>
+<span class="kd">const</span> <span class="nx">crypto</span> <span class="o">=</span> <span class="nx">require</span><span class="p">(</span><span class="dl">'</span><span class="s1">crypto</span><span class="dl">'</span><span class="p">);</span>
+<span class="kd">function</span> <span class="nx">generateNonce</span><span class="p">()</span> <span class="p">{</span>
+    <span class="k">return</span> <span class="nx">crypto</span><span class="p">.</span><span class="nx">randomBytes</span><span class="p">(</span><span class="mi">16</span><span class="p">).</span><span class="nx">toString</span><span class="p">(</span><span class="dl">'</span><span class="s1">base64</span><span class="dl">'</span><span class="p">);</span>
+    <span class="c1">// 128 bit di entropia</span>
+<span class="p">}</span>
 <span class="cm">/* Middleware Express che genera il nonce e imposta la CSP header. */</span>
- <span class="kd">function</span> <span class="nx">cspMiddleware</span><span class="p">(</span><span class="nx">req</span><span class="p">,</span> <span class="nx">res</span><span class="p">,</span> <span class="nx">next</span><span class="p">)</span> 
-<span class="p">{</span> <span class="kd">const</span> <span class="nx">nonce</span> <span class="o">=</span> <span class="nx">generateNonce</span><span class="p">();</span> <span class="nx">res</span><span class="p">.</span><span class="nx">locals</span><span class="p">.</span><span class="nx">nonce</span> <span class="o">=</span> <span class="nx">nonce</span><span class="p">;</span> 
-<span class="c1">// Disponibile ai template Thymeleaf/EJS/Handlebars </span>
-<span class="c1">// CSP completa: definisce fonti autorizzate per ogni tipo di risorsa</span>
-<span class="c1">// res.setHeader('Content-Security-Policy', [ `default-src 'self'`,</span>
-<span class="c1">// Default: solo origine propria `script-src 'self' 'nonce-$</span>
-<span class="p">{</span><span class="nx">nonce</span><span class="p">}</span>
-<span class="dl">'</span><span class="s1">`, 
-// Script: solo src propria o con il nonce corretto `style-src </span><span class="dl">'</span><span class="nb">self</span><span class="dl">'</span><span class="s1"> </span><span class="dl">'</span><span class="nx">nonce</span><span class="o">-</span><span class="nx">$</span>
-<span class="p">{</span><span class="nx">nonce</span><span class="p">}</span>
-<span class="dl">'</span><span class="s1"> https:
-//fonts.googleapis.com`, 
-// CSS: idem + Google Fonts `img-src </span><span class="dl">'</span><span class="nb">self</span><span class="dl">'</span><span class="s1"> data: https:`, 
-// Immagini: src propria, data URI, HTTPS `font-src </span><span class="dl">'</span><span class="nb">self</span><span class="dl">'</span><span class="s1"> https:
-//fonts.gstatic.com`, 
-// Font: src propria + Google Fonts `connect-src </span><span class="dl">'</span><span class="nb">self</span><span class="dl">'</span><span class="s1"> wss:
-//api.myapp.com`, 
-// XHR/WebSocket: src propria + WS API `frame-src </span><span class="dl">'</span><span class="nx">none</span><span class="dl">'</span><span class="s1">`, 
-// Nessun iframe consentito `object-src </span><span class="dl">'</span><span class="nx">none</span><span class="dl">'</span><span class="s1">`, 
-// Nessun plugin (Flash, etc.) `base-uri </span><span class="dl">'</span><span class="nb">self</span><span class="dl">'</span><span class="s1">`, 
-// Previene attacchi con tag &lt;base&gt; `form-action </span><span class="dl">'</span><span class="nb">self</span><span class="dl">'</span><span class="s1">`, 
-// Form solo verso origine propria `upgrade-insecure-requests`, 
-// Upgrade automatico HTTP -&gt; HTTPS `report-uri /api/csp-violation` 
-// Endpoint per raccogliere le violazioni ].join(</span><span class="dl">'</span><span class="p">;</span> <span class="dl">'</span><span class="s1">)); next(); }
- app.use(cspMiddleware); 
+<span class="kd">function</span> <span class="nx">cspMiddleware</span><span class="p">(</span><span class="nx">req</span><span class="p">,</span> <span class="nx">res</span><span class="p">,</span> <span class="nx">next</span><span class="p">)</span> <span class="p">{</span>
+    <span class="kd">const</span> <span class="nx">nonce</span> <span class="o">=</span> <span class="nx">generateNonce</span><span class="p">();</span>
+    <span class="nx">res</span><span class="p">.</span><span class="nx">locals</span><span class="p">.</span><span class="nx">nonce</span> <span class="o">=</span> <span class="nx">nonce</span><span class="p">;</span>
+    <span class="c1">// Disponibile ai template Thymeleaf/EJS/Handlebars // CSP completa:</span>
+        <span class="nx">definisce</span> <span class="nx">fonti</span> <span class="nx">autorizzate</span> <span class="nx">per</span> <span class="nx">ogni</span> <span class="nx">tipo</span> <span class="nx">di</span> <span class="nx">risorsa</span>
+        <span class="nx">res</span><span class="p">.</span><span class="nx">setHeader</span><span class="p">(</span><span class="dl">'</span><span class="s1">Content-Security-Policy</span><span class="dl">'</span><span class="p">,</span> <span class="p">[</span> <span class="s2">`default-src 'self'`</span><span class="p">,</span> <span class="c1">//</span>
+        <span class="nx">Default</span><span class="p">:</span> <span class="nx">solo</span> <span class="nx">origine</span> <span class="nx">propria</span> <span class="s2">`script-src 'self' 'nonce-$
+    {
+        nonce
+    }
+    '`</span><span class="p">,</span>
+    <span class="c1">// Script: solo src propria o con il nonce corretto `style-src 'self'</span>
+        <span class="dl">'</span><span class="s1">nonce-$
+    {
+        nonce
+    }
+    </span><span class="dl">'</span> <span class="nx">https</span><span class="p">:</span>
+    <span class="c1">//fonts.googleapis.com`, // CSS: idem + Google Fonts `img-src 'self' data:</span>
+        <span class="nx">https</span><span class="p">:</span><span class="s2">`, // Immagini: src propria, data URI, HTTPS `</span><span class="nx">font</span><span class="o">-</span><span class="nx">src</span> <span class="dl">'</span><span class="s1">self</span><span class="dl">'</span>
+        <span class="nx">https</span><span class="p">:</span><span class="c1">//fonts.gstatic.com`, // Font: src propria + Google Fonts</span>
+        <span class="s2">`connect-src 'self' wss://api.myapp.com`</span><span class="p">,</span> <span class="c1">// XHR/WebSocket: src propria</span>
+        <span class="o">+</span> <span class="nx">WS</span> <span class="nx">API</span> <span class="s2">`frame-src 'none'`</span><span class="p">,</span> <span class="c1">// Nessun iframe consentito `object-src</span>
+        <span class="dl">'</span><span class="s1">none</span><span class="dl">'</span><span class="s2">`, // Nessun plugin (Flash, etc.) `</span><span class="nx">base</span><span class="o">-</span><span class="nx">uri</span> <span class="dl">'</span><span class="s1">self</span><span class="dl">'</span><span class="s2">`, // Previene
+        attacchi con tag &lt;base&gt; `</span><span class="nx">form</span><span class="o">-</span><span class="nx">action</span> <span class="dl">'</span><span class="s1">self</span><span class="dl">'</span><span class="s2">`, // Form solo verso origine
+        propria `</span><span class="nx">upgrade</span><span class="o">-</span><span class="nx">insecure</span><span class="o">-</span><span class="nx">requests</span><span class="s2">`, // Upgrade automatico HTTP -&gt; HTTPS
+        `</span><span class="nx">report</span><span class="o">-</span><span class="nx">uri</span> <span class="o">/</span><span class="nx">api</span><span class="o">/</span><span class="nx">csp</span><span class="o">-</span><span class="nx">violation</span><span class="s2">` // Endpoint per raccogliere le
+        violazioni ].join('
+    ;
+    '));
+    next();
+}
+app.use(cspMiddleware);
 /* Template HTML che usa il nonce per gli script interni: */
- 
-// &lt;script nonce="&lt;%= nonce %&gt;"&gt; 
-// 
-// Questo script viene eseguito: ha il nonce corretto 
-// initializeApp(); 
-// &lt;/script&gt; 
-// &lt;script&gt; 
-// 
-// Questo viene BLOCCATO dalla CSP: nessun nonce 
-// alert(</span><span class="dl">'</span><span class="nx">XSS</span> <span class="nx">injection</span><span class="dl">'</span><span class="s1">); 
-// &lt;/script&gt; 
-/* Endpoint per raccogliere le violazioni CSP e monitorarle in produzione: */
- app.post(</span><span class="dl">'</span><span class="o">/</span><span class="nx">api</span><span class="o">/</span><span class="nx">csp</span><span class="o">-</span><span class="nx">violation</span><span class="dl">'</span><span class="s1">, express.json(
-{ type: </span><span class="dl">'</span><span class="nx">application</span><span class="o">/</span><span class="nx">csp</span><span class="o">-</span><span class="nx">report</span><span class="dl">'</span><span class="s1"> }
-), (req, res) =&gt; 
-{ const report = req.body[</span><span class="dl">'</span><span class="nx">csp</span><span class="o">-</span><span class="nx">report</span><span class="dl">'</span><span class="s1">]; console.warn(</span><span class="dl">'</span><span class="nx">CSP</span> <span class="nx">Violation</span><span class="p">:</span><span class="dl">'</span><span class="s1">, 
-{ blockedUri: report[</span><span class="dl">'</span><span class="nx">blocked</span><span class="o">-</span><span class="nx">uri</span><span class="dl">'</span><span class="s1">], violatedDirective: report[</span><span class="dl">'</span><span class="nx">violated</span><span class="o">-</span>
-<span class="nx">directive</span><span class="dl">'</span><span class="s1">], documentUri: report[</span><span class="dl">'</span><span class="nb">document</span><span class="o">-</span><span class="nx">uri</span><span class="dl">'</span><span class="s1">], ip: req.ip }
-); 
-// Invio a sistema di alerting per rilevare attacchi XSS in corso
-// alerting.track(</span><span class="dl">'</span><span class="nx">csp_violation</span><span class="dl">'</span><span class="s1">, report); res.status(204).end(); }
-); 
+// &lt;script nonce="&lt;%= nonce %&gt;"&gt; // // Questo script viene eseguito: ha il nonce
+    corretto // initializeApp()
+;
+// &lt;/script&gt; // &lt;script&gt; // // Questo viene BLOCCATO dalla CSP: nessun nonce //
+    alert('XSS injection')
+;
+// &lt;/script&gt; /* Endpoint per raccogliere le violazioni CSP e monitorarle in
+    produzione: */ app.post('/api/csp-violation', express.json(
+{
+    type: 'application/csp-report'
+}
+), (req, res) =&gt; {
+    const report = req.body['csp-report'];
+    console.warn('CSP Violation:', {
+        blockedUri: report['blocked-uri'], violatedDirective:
+            report['violated-directive'], documentUri: report['document-uri'],
+            ip: req.ip
+    }
+    );
+    // Invio a sistema di alerting per rilevare attacchi XSS in corso
+        alerting.track('csp_violation', report)
+    ;
+    res.status(204).end();
+}
+);
 /* Implemento anche gli header di sicurezza complementari: */
- function securityHeadersMiddleware(req, res, next) 
-{ res.setHeader(</span><span class="dl">'</span><span class="nx">X</span><span class="o">-</span><span class="nx">Content</span><span class="o">-</span><span class="nx">Type</span><span class="o">-</span><span class="nx">Options</span><span class="dl">'</span><span class="s1">, </span><span class="dl">'</span><span class="nx">nosniff</span><span class="dl">'</span><span class="s1">); 
-// Previene MIME sniffing res.setHeader(</span><span class="dl">'</span><span class="nx">X</span><span class="o">-</span><span class="nx">Frame</span><span class="o">-</span><span class="nx">Options</span><span class="dl">'</span><span class="s1">, </span><span class="dl">'</span><span class="nx">DENY</span><span class="dl">'</span><span class="s1">); 
-// Previene clickjacking res.setHeader(</span><span class="dl">'</span><span class="nx">X</span><span class="o">-</span><span class="nx">XSS</span><span class="o">-</span><span class="nx">Protection</span><span class="dl">'</span><span class="s1">, </span><span class="dl">'</span><span class="mi">1</span><span class="p">;</span> <span class="nx">mode</span><span class="o">=</span><span class="nx">block</span><span class="dl">'</span><span class="s1">); 
-// Legacy XSS filter res.setHeader(</span><span class="dl">'</span><span class="nx">Referrer</span><span class="o">-</span><span class="nx">Policy</span><span class="dl">'</span><span class="s1">, </span><span class="dl">'</span><span class="nx">strict</span><span class="o">-</span><span class="nx">origin</span><span class="o">-</span><span class="nx">when</span><span class="o">-</span><span class="nx">cross</span><span class="o">-</span>
-<span class="c1">// origin'); res.setHeader('Permissions-Policy', 'camera=(), microphone=(),</span>
-<span class="c1">// geolocation=()'); res.setHeader('Strict-Transport-Security', 'max-</span>
-<span class="c1">// age=31536000; includeSubDomains; preload'); next(); }</span>
-</pre></td></tr></tbody></table></code></pre></div></div>
+function securityHeadersMiddleware(req, res, next) {
+    res.setHeader('X-Content-Type-Options', 'nosniff');
+    // Previene MIME sniffing res.setHeader('X-Frame-Options', 'DENY')
+    ;
+    // Previene clickjacking res.setHeader('X-XSS-Protection', '1
+    ;
+    mode=block');
+    // Legacy XSS filter res.setHeader('Referrer-Policy',
+        'strict-origin-when-cross-origin')
+    ;
+    res.setHeader('Permissions-Policy', 'camera=(), microphone=(),
+        geolocation=()');
+    res.setHeader('Strict-Transport-Security', 'max-age=31536000;
+    includeSubDomains;
+    preload');
+    next();
+}
+</span></pre></td></tr></tbody></table></code></pre></div></div>
 
         </article>
 

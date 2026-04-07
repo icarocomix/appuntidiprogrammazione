@@ -151,68 +151,98 @@
 60
 61
 62
-</pre></td><td class="rouge-code"><pre><span class="o">*</span> <span class="nc">Esistono</span> <span class="n">quattro</span> <span class="n">tipi</span> <span class="n">di</span> <span class="nc">Arena</span> <span class="n">con</span> <span class="n">semantiche</span> <span class="nl">diverse:</span> <span class="n">scelgo</span> <span class="n">in</span> <span class="n">base</span> <span class="n">al</span> <span class="n">ciclo</span>
-<span class="o">*</span> <span class="n">di</span> <span class="n">vita</span> <span class="n">e</span> <span class="n">al</span> <span class="n">threading</span><span class="o">.</span> <span class="o">*/</span>
- 
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+</pre></td><td class="rouge-code"><pre><span class="cm">/* Esistono quattro tipi di Arena con semantiche diverse: scelgo in base al
+    ciclo di vita e al threading. */</span>
 <span class="c1">// Arena.ofConfined() -&gt; accesso da un solo thread, liberazione deterministca</span>
-<span class="c1">// (try-with-resources)</span>
-<span class="c1">// Arena.ofShared() -&gt; accesso da più thread, liberazione deterministca (thread-</span>
-<span class="c1">// safe)</span>
-<span class="c1">// Arena.ofAuto() -&gt; gestita dal GC come un WeakReference (non deterministica,</span>
-<span class="c1">// solo per compatibilità)</span>
-<span class="c1">// Arena.global() -&gt; memoria mai liberata: per risorse globali come handle di</span>
-<span class="c1">// librerie</span>
-<span class="cm">/* Caso 1: buffer per un'operazione single-thread con ciclo di vita breve. */</span>
- <span class="nd">@Service</span> <span class="kd">public</span> <span class="kd">class</span> <span class="nc">ImageFilterService</span> 
-<span class="o">{</span> <span class="kd">public</span> <span class="kt">byte</span><span class="o">[]</span> <span class="nf">applyFilter</span><span class="o">(</span><span class="kt">byte</span><span class="o">[]</span> <span class="n">inputImage</span><span class="o">,</span> <span class="nc">FilterParams</span> <span class="n">params</span><span class="o">)</span> <span class="kd">throws</span>
-<span class="nc">Throwable</span>
-<span class="o">{</span> <span class="k">try</span> <span class="o">(</span><span class="nc">Arena</span> <span class="n">arena</span> <span class="o">=</span> <span class="nc">Arena</span><span class="o">.</span><span class="na">ofConfined</span><span class="o">())</span> 
-<span class="o">{</span> 
-<span class="c1">// Confined: solo questo thread può accedere MemorySegment src =</span>
-<span class="c1">// arena.allocateFrom(ValueLayout.JAVA_BYTE, inputImage); int outputSize =</span>
-<span class="c1">// inputImage.length;</span>
-<span class="c1">// Dimensione output uguale all'input MemorySegment dst =</span>
-<span class="c1">// arena.allocate(outputSize);</span>
-<span class="c1">// Chiamo la funzione C del filtro: lavora sui puntatori senza copiare</span>
-<span class="c1">// nativeFilterHandle.invokeExact(src, dst, params.getBrightness(),</span>
-<span class="c1">// params.getContrast()); return dst.toArray(ValueLayout.JAVA_BYTE);</span>
-<span class="c1">// Copio solo il risultato finale in Java }</span>
- 
-<span class="c1">// Qui: src e dst vengono liberati istantaneamente. Nessuna pressione sul GC. }</span>
- <span class="o">}</span>
- 
+    <span class="o">(</span><span class="k">try</span><span class="o">-</span><span class="n">with</span><span class="o">-</span><span class="n">resources</span><span class="o">)</span> <span class="c1">// Arena.ofShared() -&gt; accesso da più thread,</span>
+    <span class="n">liberazione</span> <span class="nf">deterministca</span> <span class="o">(</span><span class="n">thread</span><span class="o">-</span><span class="n">safe</span><span class="o">)</span> <span class="c1">// Arena.ofAuto() -&gt; gestita dal GC</span>
+    <span class="n">come</span> <span class="n">un</span> <span class="nf">WeakReference</span> <span class="o">(</span><span class="n">non</span> <span class="n">deterministica</span><span class="o">,</span> <span class="n">solo</span> <span class="n">per</span> <span class="n">compatibilità</span><span class="o">)</span> <span class="c1">//</span>
+    <span class="nc">Arena</span><span class="o">.</span><span class="na">global</span><span class="o">()</span> <span class="o">-&gt;</span> <span class="n">memoria</span> <span class="n">mai</span> <span class="nl">liberata:</span> <span class="n">per</span> <span class="n">risorse</span> <span class="n">globali</span> <span class="n">come</span> <span class="n">handle</span> <span class="n">di</span>
+    <span class="n">librerie</span> <span class="cm">/* Caso 1: buffer per un'operazione single-thread con ciclo di vita
+    breve. */</span> <span class="nd">@Service</span> <span class="kd">public</span> <span class="kd">class</span> <span class="nc">ImageFilterService</span>
+<span class="o">{</span>
+    <span class="kd">public</span> <span class="kt">byte</span><span class="o">[]</span> <span class="nf">applyFilter</span><span class="o">(</span><span class="kt">byte</span><span class="o">[]</span> <span class="n">inputImage</span><span class="o">,</span> <span class="nc">FilterParams</span> <span class="n">params</span><span class="o">)</span> <span class="kd">throws</span>
+        <span class="nc">Throwable</span> <span class="o">{</span>
+        <span class="k">try</span> <span class="o">(</span><span class="nc">Arena</span> <span class="n">arena</span> <span class="o">=</span> <span class="nc">Arena</span><span class="o">.</span><span class="na">ofConfined</span><span class="o">())</span> <span class="o">{</span>
+            <span class="c1">// Confined: solo questo thread può accedere MemorySegment src =</span>
+                <span class="n">arena</span><span class="o">.</span><span class="na">allocateFrom</span><span class="o">(</span><span class="nc">ValueLayout</span><span class="o">.</span><span class="na">JAVA_BYTE</span><span class="o">,</span> <span class="n">inputImage</span><span class="o">)</span>
+            <span class="o">;</span>
+            <span class="kt">int</span> <span class="n">outputSize</span> <span class="o">=</span> <span class="n">inputImage</span><span class="o">.</span><span class="na">length</span><span class="o">;</span>
+            <span class="c1">// Dimensione output uguale all'input MemorySegment dst =</span>
+                <span class="n">arena</span><span class="o">.</span><span class="na">allocate</span><span class="o">(</span><span class="n">outputSize</span><span class="o">)</span>
+            <span class="o">;</span>
+            <span class="c1">// Chiamo la funzione C del filtro: lavora sui puntatori senza</span>
+                <span class="n">copiare</span> <span class="n">nativeFilterHandle</span><span class="o">.</span><span class="na">invokeExact</span><span class="o">(</span><span class="n">src</span><span class="o">,</span> <span class="n">dst</span><span class="o">,</span>
+                <span class="n">params</span><span class="o">.</span><span class="na">getBrightness</span><span class="o">(),</span> <span class="n">params</span><span class="o">.</span><span class="na">getContrast</span><span class="o">())</span>
+            <span class="o">;</span>
+            <span class="k">return</span> <span class="n">dst</span><span class="o">.</span><span class="na">toArray</span><span class="o">(</span><span class="nc">ValueLayout</span><span class="o">.</span><span class="na">JAVA_BYTE</span><span class="o">);</span>
+            <span class="c1">// Copio solo il risultato finale in Java</span>
+        <span class="o">}</span>
+        <span class="c1">// Qui: src e dst vengono liberati istantaneamente. Nessuna pressione</span>
+            <span class="n">sul</span> <span class="no">GC</span><span class="o">.</span>
+    <span class="o">}</span>
+<span class="o">}</span>
 <span class="cm">/* Caso 2: buffer condiviso tra thread per elaborazione parallela. */</span>
- <span class="nd">@Service</span> <span class="kd">public</span> <span class="kd">class</span> <span class="nc">ParallelProcessingService</span> 
-<span class="o">{</span> <span class="kd">public</span> <span class="kt">void</span> <span class="nf">processChunks</span><span class="o">(</span><span class="kt">byte</span><span class="o">[]</span> <span class="n">data</span><span class="o">,</span> <span class="kt">int</span> <span class="n">chunkCount</span><span class="o">)</span> <span class="kd">throws</span> <span class="nc">Exception</span> 
-<span class="o">{</span> <span class="k">try</span> <span class="o">(</span><span class="nc">Arena</span> <span class="n">sharedArena</span> <span class="o">=</span> <span class="nc">Arena</span><span class="o">.</span><span class="na">ofShared</span><span class="o">())</span> 
-<span class="o">{</span> 
-<span class="c1">// Shared: più thread possono accedere MemorySegment sharedBuffer =</span>
-<span class="c1">// sharedArena.allocateFrom(ValueLayout.JAVA_BYTE, data);</span>
-<span class="c1">// List&lt;CompletableFuture&lt;Void&gt;&gt; futures = new ArrayList&lt;&gt;(); int chunkSize =</span>
-<span class="c1">// data.length / chunkCount; for (int i = 0; i &lt; chunkCount; i++)</span>
-<span class="o">{</span> <span class="kd">final</span> <span class="kt">long</span> <span class="n">offset</span> <span class="o">=</span> <span class="o">(</span><span class="kt">long</span><span class="o">)</span> <span class="n">i</span> <span class="o">*</span> <span class="n">chunkSize</span><span class="o">;</span>
-<span class="n">futures</span><span class="o">.</span><span class="na">add</span><span class="o">(</span><span class="nc">CompletableFuture</span><span class="o">.</span><span class="na">runAsync</span><span class="o">(()</span> <span class="o">-&gt;</span>
-<span class="o">{</span> 
-<span class="c1">// Ogni thread lavora sulla sua slice del buffer condiviso MemorySegment chunk =</span>
-<span class="c1">// sharedBuffer.asSlice(offset, chunkSize); processChunkNative(chunk);</span>
-<span class="c1">// Chiamata nativa sicura: Arena è shared }</span>
-<span class="o">));</span> <span class="o">}</span>
- <span class="nc">CompletableFuture</span><span class="o">.</span><span class="na">allOf</span><span class="o">(</span><span class="n">futures</span><span class="o">.</span><span class="na">toArray</span><span class="o">(</span><span class="k">new</span> <span class="nc">CompletableFuture</span><span class="o">[</span><span class="mi">0</span><span class="o">])).</span><span class="na">join</span><span class="o">();</span> <span class="o">}</span>
- 
-<span class="c1">// Qui: sharedBuffer viene liberato dopo che tutti i thread hanno finito }</span>
- <span class="o">}</span>
- 
+<span class="nd">@Service</span> <span class="kd">public</span> <span class="kd">class</span> <span class="nc">ParallelProcessingService</span> <span class="o">{</span>
+    <span class="kd">public</span> <span class="kt">void</span> <span class="nf">processChunks</span><span class="o">(</span><span class="kt">byte</span><span class="o">[]</span> <span class="n">data</span><span class="o">,</span> <span class="kt">int</span> <span class="n">chunkCount</span><span class="o">)</span> <span class="kd">throws</span> <span class="nc">Exception</span> <span class="o">{</span>
+        <span class="k">try</span> <span class="o">(</span><span class="nc">Arena</span> <span class="n">sharedArena</span> <span class="o">=</span> <span class="nc">Arena</span><span class="o">.</span><span class="na">ofShared</span><span class="o">())</span> <span class="o">{</span>
+            <span class="c1">// Shared: più thread possono accedere MemorySegment sharedBuffer =</span>
+                <span class="n">sharedArena</span><span class="o">.</span><span class="na">allocateFrom</span><span class="o">(</span><span class="nc">ValueLayout</span><span class="o">.</span><span class="na">JAVA_BYTE</span><span class="o">,</span> <span class="n">data</span><span class="o">)</span>
+            <span class="o">;</span>
+            <span class="nc">List</span><span class="o">&lt;</span><span class="nc">CompletableFuture</span><span class="o">&lt;</span><span class="nc">Void</span><span class="o">&gt;&gt;</span> <span class="n">futures</span> <span class="o">=</span> <span class="k">new</span> <span class="nc">ArrayList</span><span class="o">&lt;&gt;();</span>
+            <span class="kt">int</span> <span class="n">chunkSize</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="na">length</span> <span class="o">/</span> <span class="n">chunkCount</span><span class="o">;</span>
+            <span class="k">for</span> <span class="o">(</span><span class="kt">int</span> <span class="n">i</span> <span class="o">=</span> <span class="mi">0</span><span class="o">;</span>
+            <span class="n">i</span> <span class="o">&lt;</span> <span class="n">chunkCount</span><span class="o">;</span>
+            <span class="n">i</span><span class="o">++)</span> <span class="o">{</span>
+                <span class="kd">final</span> <span class="kt">long</span> <span class="n">offset</span> <span class="o">=</span> <span class="o">(</span><span class="kt">long</span><span class="o">)</span> <span class="n">i</span> <span class="o">*</span> <span class="n">chunkSize</span><span class="o">;</span>
+                <span class="n">futures</span><span class="o">.</span><span class="na">add</span><span class="o">(</span><span class="nc">CompletableFuture</span><span class="o">.</span><span class="na">runAsync</span><span class="o">(()</span> <span class="o">-&gt;</span> <span class="o">{</span>
+                    <span class="c1">// Ogni thread lavora sulla sua slice del buffer condiviso</span>
+                        <span class="nc">MemorySegment</span> <span class="n">chunk</span> <span class="o">=</span> <span class="n">sharedBuffer</span><span class="o">.</span><span class="na">asSlice</span><span class="o">(</span><span class="n">offset</span><span class="o">,</span>
+                        <span class="n">chunkSize</span><span class="o">)</span>
+                    <span class="o">;</span>
+                    <span class="n">processChunkNative</span><span class="o">(</span><span class="n">chunk</span><span class="o">);</span>
+                    <span class="c1">// Chiamata nativa sicura: Arena è shared</span>
+                <span class="o">}</span>
+                <span class="o">));</span>
+            <span class="o">}</span>
+            <span class="nc">CompletableFuture</span><span class="o">.</span><span class="na">allOf</span><span class="o">(</span><span class="n">futures</span><span class="o">.</span><span class="na">toArray</span><span class="o">(</span><span class="k">new</span>
+                <span class="nc">CompletableFuture</span><span class="o">[</span><span class="mi">0</span><span class="o">])).</span><span class="na">join</span><span class="o">();</span>
+        <span class="o">}</span>
+        <span class="c1">// Qui: sharedBuffer viene liberato dopo che tutti i thread hanno finito</span>
+    <span class="o">}</span>
+<span class="o">}</span>
 <span class="cm">/* Monitoro i leak di Arena in sviluppo abilitando il tracking: */</span>
- 
-<span class="c1">// java -Djdk.foreign.trackSegmentAsyncCleanup=true -jar app.jar </span>
-<span class="cm">/* Rilevo le Arena non chiuse tramite un test che verifica il cleanup: */</span>
- <span class="nd">@Test</span> <span class="kd">public</span> <span class="kt">void</span> <span class="nf">verifyArenaCleanup</span><span class="o">()</span> <span class="kd">throws</span> <span class="nc">Exception</span> 
-<span class="o">{</span> <span class="kt">long</span> <span class="n">initialNativeMemory</span> <span class="o">=</span> <span class="n">getNativeMemoryUsage</span><span class="o">();</span> <span class="k">for</span> <span class="o">(</span><span class="kt">int</span> <span class="n">i</span> <span class="o">=</span> <span class="mi">0</span><span class="o">;</span> <span class="n">i</span> <span class="o">&lt;</span> <span class="mi">1000</span><span class="o">;</span>
-<span class="n">i</span><span class="o">++)</span>
-<span class="o">{</span> <span class="n">imageFilterService</span><span class="o">.</span><span class="na">applyFilter</span><span class="o">(</span><span class="n">testImage</span><span class="o">,</span> <span class="nc">FilterParams</span><span class="o">.</span><span class="na">defaults</span><span class="o">());</span> <span class="o">}</span>
- <span class="nc">System</span><span class="o">.</span><span class="na">gc</span><span class="o">();</span> <span class="kt">long</span> <span class="n">finalNativeMemory</span> <span class="o">=</span> <span class="n">getNativeMemoryUsage</span><span class="o">();</span> <span class="kt">long</span> <span class="n">leakBytes</span> <span class="o">=</span>
-<span class="n">finalNativeMemory</span> <span class="o">-</span> <span class="n">initialNativeMemory</span><span class="o">;</span> <span class="n">assertTrue</span><span class="o">(</span><span class="n">leakBytes</span> <span class="o">&lt;</span> <span class="mi">1024</span><span class="o">,</span> <span class="s">"Possibile
-leak di Arena: "</span> <span class="o">+</span> <span class="n">leakBytes</span> <span class="o">+</span> <span class="s">" byte non rilasciati"</span><span class="o">);</span> <span class="o">}</span>
+<span class="c1">// java -Djdk.foreign.trackSegmentAsyncCleanup=true -jar app.jar /* Rilevo le</span>
+    <span class="nc">Arena</span> <span class="n">non</span> <span class="n">chiuse</span> <span class="n">tramite</span> <span class="n">un</span> <span class="n">test</span> <span class="n">che</span> <span class="n">verifica</span> <span class="n">il</span> <span class="nl">cleanup:</span> <span class="o">*/</span> <span class="nd">@Test</span> <span class="kd">public</span>
+    <span class="kt">void</span> <span class="nf">verifyArenaCleanup</span><span class="o">()</span> <span class="kd">throws</span> <span class="nc">Exception</span>
+<span class="o">{</span>
+    <span class="kt">long</span> <span class="n">initialNativeMemory</span> <span class="o">=</span> <span class="n">getNativeMemoryUsage</span><span class="o">();</span>
+    <span class="k">for</span> <span class="o">(</span><span class="kt">int</span> <span class="n">i</span> <span class="o">=</span> <span class="mi">0</span><span class="o">;</span>
+    <span class="n">i</span> <span class="o">&lt;</span> <span class="mi">1000</span><span class="o">;</span>
+    <span class="n">i</span><span class="o">++)</span> <span class="o">{</span>
+        <span class="n">imageFilterService</span><span class="o">.</span><span class="na">applyFilter</span><span class="o">(</span><span class="n">testImage</span><span class="o">,</span> <span class="nc">FilterParams</span><span class="o">.</span><span class="na">defaults</span><span class="o">());</span>
+    <span class="o">}</span>
+    <span class="nc">System</span><span class="o">.</span><span class="na">gc</span><span class="o">();</span>
+    <span class="kt">long</span> <span class="n">finalNativeMemory</span> <span class="o">=</span> <span class="n">getNativeMemoryUsage</span><span class="o">();</span>
+    <span class="kt">long</span> <span class="n">leakBytes</span> <span class="o">=</span> <span class="n">finalNativeMemory</span> <span class="o">-</span> <span class="n">initialNativeMemory</span><span class="o">;</span>
+    <span class="n">assertTrue</span><span class="o">(</span><span class="n">leakBytes</span> <span class="o">&lt;</span> <span class="mi">1024</span><span class="o">,</span> <span class="s">"Possibile leak di Arena: "</span> <span class="o">+</span> <span class="n">leakBytes</span> <span class="o">+</span> <span class="s">"
+        byte non rilasciati"</span><span class="o">);</span>
+<span class="o">}</span>
 </pre></td></tr></tbody></table></code></pre></div></div>
 
         </article>

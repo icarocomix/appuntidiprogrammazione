@@ -162,80 +162,132 @@
 71
 72
 73
-</pre></td><td class="rouge-code"><pre><span class="o">*</span> <span class="nx">Definisco</span> <span class="nx">le</span> <span class="dl">"</span><span class="s2">Porte</span><span class="dl">"</span><span class="p">:</span> <span class="nx">interfacce</span> <span class="nx">che</span> <span class="nx">il</span> <span class="nx">dominio</span> <span class="nx">conosce</span><span class="p">.</span> <span class="nx">Il</span> <span class="nx">dominio</span> <span class="nx">non</span> <span class="nx">sa</span>
-<span class="o">*</span> <span class="nx">nulla</span> <span class="nx">di</span> <span class="nx">Postgres</span><span class="p">,</span> <span class="nx">HTTP</span> <span class="nx">o</span> <span class="nx">qualsiasi</span> <span class="nx">infrastruttura</span><span class="p">.</span> <span class="o">*</span><span class="sr">/</span><span class="err">
-</span> <span class="kd">class</span> <span class="nx">UserRepository</span> 
-<span class="p">{</span> <span class="k">async</span> <span class="nx">findById</span><span class="p">(</span><span class="nx">id</span><span class="p">)</span> 
-<span class="p">{</span> <span class="k">throw</span> <span class="k">new</span> <span class="nb">Error</span><span class="p">(</span><span class="dl">'</span><span class="s1">Not implemented</span><span class="dl">'</span><span class="p">);</span> <span class="p">}</span>
- <span class="k">async</span> <span class="nx">save</span><span class="p">(</span><span class="nx">user</span><span class="p">)</span> 
-<span class="p">{</span> <span class="k">throw</span> <span class="k">new</span> <span class="nb">Error</span><span class="p">(</span><span class="dl">'</span><span class="s1">Not implemented</span><span class="dl">'</span><span class="p">);</span> <span class="p">}</span>
- <span class="p">}</span>
- 
-<span class="o">*</span> <span class="nx">Implemento</span> <span class="nx">gli</span> <span class="dl">"</span><span class="s2">Adattatori</span><span class="dl">"</span><span class="p">:</span> <span class="nx">le</span> <span class="nx">versioni</span> <span class="nx">concrete</span> <span class="nx">che</span> <span class="nx">toccano</span>
-<span class="o">*</span> <span class="nx">l</span><span class="dl">'</span><span class="s1">infrastruttura. */
- class PostgresUserRepository extends UserRepository 
-{ constructor(db) 
-{ super(); this.db = db; }
- async findById(id) 
-{ const row = await this.db.query(</span><span class="dl">'</span><span class="nx">SELECT</span> <span class="o">*</span> <span class="nx">FROM</span> <span class="nx">users</span> <span class="nx">WHERE</span> <span class="nx">id</span> <span class="o">=</span> <span class="nx">$1</span><span class="dl">'</span><span class="s1">, [id]);
-return row.rows[0] ? new User(row.rows[0]) : null; }
- async save(user) 
-{ await this.db.query(</span><span class="dl">'</span><span class="nx">INSERT</span> <span class="nx">INTO</span> <span class="nx">users</span><span class="p">(</span><span class="nx">id</span><span class="p">,</span> <span class="nx">name</span><span class="p">,</span> <span class="nx">email</span><span class="p">)</span> <span class="nx">VALUES</span><span class="p">(</span><span class="nx">$1</span><span class="p">,</span><span class="nx">$2</span><span class="p">,</span><span class="nx">$3</span><span class="p">)</span><span class="dl">'</span><span class="s1">,
-[user.id, user.name, user.email]); }
- }
- 
-* Il servizio di dominio riceve la dipendenza tramite costruttore: non importa
-* nulla da fuori. */
- class UserService 
-{ constructor(userRepo, emailService) 
-{ 
-// Inietto le dipendenze: il servizio è completamente ignaro
-// dell</span><span class="dl">'</span><span class="nx">implementazione</span> <span class="k">this</span><span class="p">.</span><span class="nx">userRepo</span> <span class="o">=</span> <span class="nx">userRepo</span><span class="p">;</span> <span class="k">this</span><span class="p">.</span><span class="nx">emailService</span> <span class="o">=</span>
-<span class="c1">// emailService; }</span>
- <span class="k">async</span> <span class="nx">registerUser</span><span class="p">(</span><span class="nx">data</span><span class="p">)</span> 
-<span class="p">{</span> <span class="kd">const</span> <span class="nx">existing</span> <span class="o">=</span> <span class="k">await</span> <span class="k">this</span><span class="p">.</span><span class="nx">userRepo</span><span class="p">.</span><span class="nx">findById</span><span class="p">(</span><span class="nx">data</span><span class="p">.</span><span class="nx">id</span><span class="p">);</span> <span class="k">if</span> <span class="p">(</span><span class="nx">existing</span><span class="p">)</span> <span class="k">throw</span>
-<span class="k">new</span> <span class="nb">Error</span><span class="p">(</span><span class="dl">'</span><span class="s1">Utente già esistente</span><span class="dl">'</span><span class="p">);</span> <span class="kd">const</span> <span class="nx">user</span> <span class="o">=</span> <span class="k">new</span> <span class="nx">User</span><span class="p">(</span><span class="nx">data</span><span class="p">);</span> <span class="k">await</span>
-<span class="k">this</span><span class="p">.</span><span class="nx">userRepo</span><span class="p">.</span><span class="nx">save</span><span class="p">(</span><span class="nx">user</span><span class="p">);</span> <span class="k">await</span> <span class="k">this</span><span class="p">.</span><span class="nx">emailService</span><span class="p">.</span><span class="nx">sendWelcome</span><span class="p">(</span><span class="nx">user</span><span class="p">.</span><span class="nx">email</span><span class="p">);</span>
-<span class="k">return</span> <span class="nx">user</span><span class="p">;</span> <span class="p">}</span>
- <span class="p">}</span>
- 
-<span class="o">*</span> <span class="nx">Il</span> <span class="nx">container</span> <span class="nx">IoC</span> <span class="nx">assembla</span> <span class="nx">le</span> <span class="nx">dipendenze</span> <span class="k">in</span> <span class="nx">un</span> <span class="nx">unico</span> <span class="nx">punto</span> <span class="p">(</span><span class="nx">composition</span> <span class="nx">root</span><span class="p">).</span>
-<span class="o">*</span> <span class="o">*</span><span class="sr">/</span><span class="err">
-</span> <span class="kd">function</span> <span class="nx">createContainer</span><span class="p">(</span><span class="nx">config</span><span class="p">)</span> 
-<span class="p">{</span> <span class="kd">const</span> <span class="nx">db</span> <span class="o">=</span> <span class="k">new</span> <span class="nx">PgPool</span><span class="p">(</span><span class="nx">config</span><span class="p">.</span><span class="nx">database</span><span class="p">);</span> <span class="kd">const</span> <span class="nx">userRepo</span> <span class="o">=</span> <span class="k">new</span>
-<span class="nx">PostgresUserRepository</span><span class="p">(</span><span class="nx">db</span><span class="p">);</span> <span class="kd">const</span> <span class="nx">emailService</span> <span class="o">=</span> <span class="k">new</span>
-<span class="nx">SmtpEmailService</span><span class="p">(</span><span class="nx">config</span><span class="p">.</span><span class="nx">smtp</span><span class="p">);</span> <span class="kd">const</span> <span class="nx">userService</span> <span class="o">=</span> <span class="k">new</span> <span class="nx">UserService</span><span class="p">(</span><span class="nx">userRepo</span><span class="p">,</span>
-<span class="nx">emailService</span><span class="p">);</span> <span class="k">return</span>
-<span class="p">{</span> <span class="nx">userService</span><span class="p">,</span> <span class="nx">userRepo</span><span class="p">,</span> <span class="nx">emailService</span> <span class="p">}</span>
-<span class="p">;</span> <span class="p">}</span>
- 
-<span class="cm">/* In production: */</span>
- <span class="kd">const</span> <span class="nx">container</span> <span class="o">=</span> <span class="nx">createContainer</span><span class="p">(</span><span class="nx">process</span><span class="p">.</span><span class="nx">env</span><span class="p">);</span> <span class="kd">const</span> <span class="nx">app</span> <span class="o">=</span> <span class="nx">express</span><span class="p">();</span>
-<span class="nx">app</span><span class="p">.</span><span class="nx">post</span><span class="p">(</span><span class="dl">'</span><span class="s1">/users</span><span class="dl">'</span><span class="p">,</span> <span class="k">async</span> <span class="p">(</span><span class="nx">req</span><span class="p">,</span> <span class="nx">res</span><span class="p">)</span> <span class="o">=&gt;</span>
-<span class="p">{</span> <span class="kd">const</span> <span class="nx">user</span> <span class="o">=</span> <span class="k">await</span> <span class="nx">container</span><span class="p">.</span><span class="nx">userService</span><span class="p">.</span><span class="nx">registerUser</span><span class="p">(</span><span class="nx">req</span><span class="p">.</span><span class="nx">body</span><span class="p">);</span>
-<span class="nx">res</span><span class="p">.</span><span class="nx">json</span><span class="p">(</span><span class="nx">user</span><span class="p">);</span> <span class="p">}</span>
-<span class="p">);</span> 
-<span class="cm">/* In test: sostituisco gli adattatori con mock senza toccare il dominio. */</span>
- <span class="kd">class</span> <span class="nx">InMemoryUserRepository</span> <span class="kd">extends</span> <span class="nx">UserRepository</span> 
-<span class="p">{</span> <span class="kd">constructor</span><span class="p">()</span> 
-<span class="p">{</span> <span class="k">super</span><span class="p">();</span> <span class="k">this</span><span class="p">.</span><span class="nx">store</span> <span class="o">=</span> <span class="k">new</span> <span class="nb">Map</span><span class="p">();</span> <span class="p">}</span>
- <span class="k">async</span> <span class="nx">findById</span><span class="p">(</span><span class="nx">id</span><span class="p">)</span> 
-<span class="p">{</span> <span class="k">return</span> <span class="k">this</span><span class="p">.</span><span class="nx">store</span><span class="p">.</span><span class="kd">get</span><span class="p">(</span><span class="nx">id</span><span class="p">)</span> <span class="o">??</span> <span class="kc">null</span><span class="p">;</span> <span class="p">}</span>
- <span class="k">async</span> <span class="nx">save</span><span class="p">(</span><span class="nx">user</span><span class="p">)</span> 
-<span class="p">{</span> <span class="k">this</span><span class="p">.</span><span class="nx">store</span><span class="p">.</span><span class="kd">set</span><span class="p">(</span><span class="nx">user</span><span class="p">.</span><span class="nx">id</span><span class="p">,</span> <span class="nx">user</span><span class="p">);</span> <span class="p">}</span>
- <span class="p">}</span>
- <span class="nx">describe</span><span class="p">(</span><span class="dl">'</span><span class="s1">UserService</span><span class="dl">'</span><span class="p">,</span> <span class="p">()</span> <span class="o">=&gt;</span> 
-<span class="p">{</span> <span class="nx">it</span><span class="p">(</span><span class="dl">'</span><span class="s1">dovrebbe registrare un nuovo utente</span><span class="dl">'</span><span class="p">,</span> <span class="k">async</span> <span class="p">()</span> <span class="o">=&gt;</span> 
-<span class="p">{</span> <span class="kd">const</span> <span class="nx">repo</span> <span class="o">=</span> <span class="k">new</span> <span class="nx">InMemoryUserRepository</span><span class="p">();</span> 
-<span class="c1">// Zero database reale const emailSpy = </span>
-<span class="p">{</span> <span class="na">sendWelcome</span><span class="p">:</span> <span class="nx">jest</span><span class="p">.</span><span class="nx">fn</span><span class="p">()</span> <span class="p">}</span>
-<span class="p">;</span> <span class="kd">const</span> <span class="nx">service</span> <span class="o">=</span> <span class="k">new</span> <span class="nx">UserService</span><span class="p">(</span><span class="nx">repo</span><span class="p">,</span> <span class="nx">emailSpy</span><span class="p">);</span> <span class="k">await</span> <span class="nx">service</span><span class="p">.</span><span class="nx">registerUser</span><span class="p">(</span>
-<span class="p">{</span> <span class="na">id</span><span class="p">:</span> <span class="dl">'</span><span class="s1">1</span><span class="dl">'</span><span class="p">,</span> <span class="na">name</span><span class="p">:</span> <span class="dl">'</span><span class="s1">Alice</span><span class="dl">'</span><span class="p">,</span> <span class="na">email</span><span class="p">:</span> <span class="dl">'</span><span class="s1">alice@example.com</span><span class="dl">'</span> <span class="p">}</span>
-<span class="p">);</span> <span class="nx">expect</span><span class="p">(</span><span class="k">await</span> <span class="nx">repo</span><span class="p">.</span><span class="nx">findById</span><span class="p">(</span><span class="dl">'</span><span class="s1">1</span><span class="dl">'</span><span class="p">)).</span><span class="nx">toBeDefined</span><span class="p">();</span>
-<span class="nx">expect</span><span class="p">(</span><span class="nx">emailSpy</span><span class="p">.</span><span class="nx">sendWelcome</span><span class="p">).</span><span class="nx">toHaveBeenCalledWith</span><span class="p">(</span><span class="dl">'</span><span class="s1">alice@example.com</span><span class="dl">'</span><span class="p">);</span> <span class="p">}</span>
-<span class="p">);</span> <span class="p">}</span>
-<span class="p">);</span>
-</pre></td></tr></tbody></table></code></pre></div></div>
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+</pre></td><td class="rouge-code"><pre><span class="cm">/* Definisco le "Porte": interfacce che il dominio conosce. Il dominio non sa
+    nulla di Postgres, HTTP o qualsiasi infrastruttura. */</span>
+<span class="kd">class</span> <span class="nx">UserRepository</span> <span class="p">{</span>
+    <span class="k">async</span> <span class="nx">findById</span><span class="p">(</span><span class="nx">id</span><span class="p">)</span> <span class="p">{</span>
+        <span class="k">throw</span> <span class="k">new</span> <span class="nb">Error</span><span class="p">(</span><span class="dl">'</span><span class="s1">Not implemented</span><span class="dl">'</span><span class="p">);</span>
+    <span class="p">}</span>
+    <span class="k">async</span> <span class="nx">save</span><span class="p">(</span><span class="nx">user</span><span class="p">)</span> <span class="p">{</span>
+        <span class="k">throw</span> <span class="k">new</span> <span class="nb">Error</span><span class="p">(</span><span class="dl">'</span><span class="s1">Not implemented</span><span class="dl">'</span><span class="p">);</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+<span class="cm">/* Implemento gli "Adattatori": le versioni concrete che toccano
+    l'infrastruttura. */</span>
+<span class="kd">class</span> <span class="nx">PostgresUserRepository</span> <span class="kd">extends</span> <span class="nx">UserRepository</span> <span class="p">{</span>
+    <span class="kd">constructor</span><span class="p">(</span><span class="nx">db</span><span class="p">)</span> <span class="p">{</span>
+        <span class="k">super</span><span class="p">();</span>
+        <span class="k">this</span><span class="p">.</span><span class="nx">db</span> <span class="o">=</span> <span class="nx">db</span><span class="p">;</span>
+    <span class="p">}</span>
+    <span class="k">async</span> <span class="nx">findById</span><span class="p">(</span><span class="nx">id</span><span class="p">)</span> <span class="p">{</span>
+        <span class="kd">const</span> <span class="nx">row</span> <span class="o">=</span> <span class="k">await</span> <span class="k">this</span><span class="p">.</span><span class="nx">db</span><span class="p">.</span><span class="nx">query</span><span class="p">(</span><span class="dl">'</span><span class="s1">SELECT * FROM users WHERE id = $1</span><span class="dl">'</span><span class="p">,</span>
+            <span class="p">[</span><span class="nx">id</span><span class="p">]);</span>
+        <span class="k">return</span> <span class="nx">row</span><span class="p">.</span><span class="nx">rows</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="p">?</span> <span class="k">new</span> <span class="nx">User</span><span class="p">(</span><span class="nx">row</span><span class="p">.</span><span class="nx">rows</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span> <span class="p">:</span> <span class="kc">null</span><span class="p">;</span>
+    <span class="p">}</span>
+    <span class="k">async</span> <span class="nx">save</span><span class="p">(</span><span class="nx">user</span><span class="p">)</span> <span class="p">{</span>
+        <span class="k">await</span> <span class="k">this</span><span class="p">.</span><span class="nx">db</span><span class="p">.</span><span class="nx">query</span><span class="p">(</span><span class="dl">'</span><span class="s1">INSERT INTO users(id, name, email)
+            VALUES($1,$2,$3)</span><span class="dl">'</span><span class="p">,</span> <span class="p">[</span><span class="nx">user</span><span class="p">.</span><span class="nx">id</span><span class="p">,</span> <span class="nx">user</span><span class="p">.</span><span class="nx">name</span><span class="p">,</span> <span class="nx">user</span><span class="p">.</span><span class="nx">email</span><span class="p">]);</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+<span class="cm">/* Il servizio di dominio riceve la dipendenza tramite costruttore: non importa
+    nulla da fuori. */</span>
+<span class="kd">class</span> <span class="nx">UserService</span> <span class="p">{</span>
+    <span class="kd">constructor</span><span class="p">(</span><span class="nx">userRepo</span><span class="p">,</span> <span class="nx">emailService</span><span class="p">)</span> <span class="p">{</span>
+        <span class="c1">// Inietto le dipendenze: il servizio è completamente ignaro</span>
+            <span class="nx">dell</span><span class="dl">'</span><span class="s1">implementazione this.userRepo = userRepo
+        ;
+        this.emailService = emailService;
+    }
+    async registerUser(data) {
+        const existing = await this.userRepo.findById(data.id);
+        if (existing) throw new Error(</span><span class="dl">'</span><span class="nx">Utente</span> <span class="nx">già</span> <span class="nx">esistente</span><span class="dl">'</span><span class="s1">);
+        const user = new User(data);
+        await this.userRepo.save(user);
+        await this.emailService.sendWelcome(user.email);
+        return user;
+    }
+}
+/* Il container IoC assembla le dipendenze in un unico punto (composition root).
+    */
+function createContainer(config) {
+    const db = new PgPool(config.database);
+    const userRepo = new PostgresUserRepository(db);
+    const emailService = new SmtpEmailService(config.smtp);
+    const userService = new UserService(userRepo, emailService);
+    return {
+        userService, userRepo, emailService
+    }
+    ;
+}
+/* In production: */
+const container = createContainer(process.env);
+const app = express();
+app.post(</span><span class="dl">'</span><span class="o">/</span><span class="nx">users</span><span class="dl">'</span><span class="s1">, async (req, res) =&gt; {
+    const user = await container.userService.registerUser(req.body);
+    res.json(user);
+}
+);
+/* In test: sostituisco gli adattatori con mock senza toccare il dominio. */
+class InMemoryUserRepository extends UserRepository {
+    constructor() {
+        super();
+        this.store = new Map();
+    }
+    async findById(id) {
+        return this.store.get(id) ?? null;
+    }
+    async save(user) {
+        this.store.set(user.id, user);
+    }
+}
+describe(</span><span class="dl">'</span><span class="nx">UserService</span><span class="dl">'</span><span class="s1">, () =&gt; {
+    it(</span><span class="dl">'</span><span class="nx">dovrebbe</span> <span class="nx">registrare</span> <span class="nx">un</span> <span class="nx">nuovo</span> <span class="nx">utente</span><span class="dl">'</span><span class="s1">, async () =&gt; {
+        const repo = new InMemoryUserRepository();
+        // Zero database reale const emailSpy =
+        {
+            sendWelcome: jest.fn()
+        }
+        ;
+        const service = new UserService(repo, emailSpy);
+        await service.registerUser({
+            id: </span><span class="dl">'</span><span class="mi">1</span><span class="dl">'</span><span class="s1">, name: </span><span class="dl">'</span><span class="nx">Alice</span><span class="dl">'</span><span class="s1">, email: </span><span class="dl">'</span><span class="nx">alice</span>
+            <span class="p">@</span><span class="nd">example</span><span class="p">.</span><span class="nx">com</span><span class="dl">'</span><span class="s1">
+        }
+        );
+        expect(await repo.findById(</span><span class="dl">'</span><span class="mi">1</span><span class="dl">'</span><span class="s1">)).toBeDefined();
+        expect(emailSpy.sendWelcome).toHaveBeenCalledWith(</span><span class="dl">'</span><span class="nx">alice</span>
+        <span class="p">@</span><span class="nd">example</span><span class="p">.</span><span class="nx">com</span><span class="dl">'</span><span class="s1">);
+    }
+    );
+}
+);
+</span></pre></td></tr></tbody></table></code></pre></div></div>
 
         </article>
 

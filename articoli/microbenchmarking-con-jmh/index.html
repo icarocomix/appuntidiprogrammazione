@@ -175,92 +175,102 @@
 84
 85
 86
-</pre></td><td class="rouge-code"><pre><span class="o">*</span> <span class="nc">Configurazione</span> <span class="nc">Maven</span> <span class="n">per</span> <span class="nl">JMH:</span> <span class="n">aggiungo</span> <span class="n">le</span> <span class="n">dipendenze</span> <span class="n">e</span> <span class="n">il</span> <span class="n">plugin</span> <span class="n">per</span> <span class="n">generare</span>
-<span class="o">*</span> <span class="n">il</span> <span class="no">JAR</span> <span class="n">eseguibile</span><span class="o">.</span> <span class="o">*/</span>
- 
-<span class="c1">// &lt;dependency&gt; </span>
-<span class="c1">// &lt;groupId&gt;org.openjdk.jmh&lt;/groupId&gt; </span>
-<span class="c1">// &lt;artifactId&gt;jmh-core&lt;/artifactId&gt; </span>
-<span class="c1">// &lt;version&gt;1.37&lt;/version&gt; </span>
-<span class="c1">// &lt;/dependency&gt; </span>
-<span class="c1">// &lt;dependency&gt; </span>
-<span class="c1">// &lt;groupId&gt;org.openjdk.jmh&lt;/groupId&gt; </span>
-<span class="c1">// &lt;artifactId&gt;jmh-generator-annprocess&lt;/artifactId&gt; </span>
-<span class="c1">// &lt;version&gt;1.37&lt;/version&gt; </span>
-<span class="c1">// &lt;scope&gt;provided&lt;/scope&gt; </span>
-<span class="c1">// &lt;/dependency&gt; </span>
-<span class="o">*</span> <span class="nc">Implemento</span> <span class="n">un</span> <span class="n">benchmark</span> <span class="n">completo</span> <span class="n">che</span> <span class="n">confronta</span> <span class="n">due</span> <span class="n">strategie</span> <span class="n">di</span> <span class="n">concatenazione</span>
-<span class="o">*</span> <span class="nl">stringhe:</span> <span class="o">*/</span>
- <span class="nd">@BenchmarkMode</span><span class="o">(</span>
-<span class="o">{</span><span class="nc">Mode</span><span class="o">.</span><span class="na">Throughput</span><span class="o">,</span> <span class="nc">Mode</span><span class="o">.</span><span class="na">AverageTime</span><span class="o">}</span>
-<span class="o">)</span> <span class="nd">@OutputTimeUnit</span><span class="o">(</span><span class="nc">TimeUnit</span><span class="o">.</span><span class="na">MICROSECONDS</span><span class="o">)</span> <span class="nd">@State</span><span class="o">(</span><span class="nc">Scope</span><span class="o">.</span><span class="na">Thread</span><span class="o">)</span> 
+87
+88
+89
+90
+91
+</pre></td><td class="rouge-code"><pre><span class="cm">/* Configurazione Maven per JMH: aggiungo le dipendenze e il plugin per generare
+    il JAR eseguibile. */</span>
+<span class="c1">// &lt;dependency&gt; // &lt;groupId&gt;org.openjdk.jmh&lt;/groupId&gt; //</span>
+    <span class="o">&lt;</span><span class="n">artifactId</span><span class="o">&gt;</span><span class="n">jmh</span><span class="o">-</span><span class="n">core</span><span class="o">&lt;/</span><span class="n">artifactId</span><span class="o">&gt;</span> <span class="c1">// &lt;version&gt;1.37&lt;/version&gt; //</span>
+    <span class="o">&lt;/</span><span class="n">dependency</span><span class="o">&gt;</span> <span class="c1">// &lt;dependency&gt; // &lt;groupId&gt;org.openjdk.jmh&lt;/groupId&gt; //</span>
+    <span class="o">&lt;</span><span class="n">artifactId</span><span class="o">&gt;</span><span class="n">jmh</span><span class="o">-</span><span class="n">generator</span><span class="o">-</span><span class="n">annprocess</span><span class="o">&lt;/</span><span class="n">artifactId</span><span class="o">&gt;</span> <span class="c1">// &lt;version&gt;1.37&lt;/version&gt;</span>
+    <span class="c1">// &lt;scope&gt;provided&lt;/scope&gt; // &lt;/dependency&gt; /* Implemento un benchmark</span>
+    <span class="n">completo</span> <span class="n">che</span> <span class="n">confronta</span> <span class="n">due</span> <span class="n">strategie</span> <span class="n">di</span> <span class="n">concatenazione</span> <span class="nl">stringhe:</span> <span class="o">*/</span>
+    <span class="nd">@BenchmarkMode</span><span class="o">(</span>
+<span class="o">{</span>
+    <span class="nc">Mode</span><span class="o">.</span><span class="na">Throughput</span><span class="o">,</span> <span class="nc">Mode</span><span class="o">.</span><span class="na">AverageTime</span>
+<span class="o">}</span>
+<span class="o">)</span>
+<span class="nd">@OutputTimeUnit</span><span class="o">(</span><span class="nc">TimeUnit</span><span class="o">.</span><span class="na">MICROSECONDS</span><span class="o">)</span>
+<span class="nd">@State</span><span class="o">(</span><span class="nc">Scope</span><span class="o">.</span><span class="na">Thread</span><span class="o">)</span>
 <span class="c1">// Ogni thread ha la sua istanza dello State @Warmup(iterations = 5, time = 1,</span>
-<span class="c1">// timeUnit = TimeUnit.SECONDS)</span>
-<span class="c1">// 5s di warmup JIT @Measurement(iterations = 10, time = 2, timeUnit =</span>
-<span class="c1">// TimeUnit.SECONDS) @Fork(2)</span>
-<span class="c1">// Eseguo in 2 JVM separate per eliminare il rumore public class</span>
-<span class="c1">// StringConcatBenchmark</span>
-<span class="o">{</span> <span class="nd">@Param</span><span class="o">(</span>
-<span class="o">{</span><span class="s">"10"</span><span class="o">,</span> <span class="s">"100"</span><span class="o">,</span> <span class="s">"1000"</span><span class="o">}</span>
-<span class="o">)</span> 
-<span class="c1">// JMH esegue il benchmark per ogni valore del param private int iterations;</span>
-<span class="c1">// @Benchmark public String withStringConcat()</span>
-<span class="o">{</span> <span class="nc">String</span> <span class="n">result</span> <span class="o">=</span> <span class="s">""</span><span class="o">;</span> <span class="k">for</span> <span class="o">(</span><span class="kt">int</span> <span class="n">i</span> <span class="o">=</span> <span class="mi">0</span><span class="o">;</span> <span class="n">i</span> <span class="o">&lt;</span> <span class="n">iterations</span><span class="o">;</span> <span class="n">i</span><span class="o">++)</span> 
-<span class="o">{</span> <span class="n">result</span> <span class="o">+=</span> <span class="s">"item"</span> <span class="o">+</span> <span class="n">i</span><span class="o">;</span> 
-<span class="c1">// Alloca una nuova String ad ogni iterazione }</span>
- <span class="k">return</span> <span class="n">result</span><span class="o">;</span> 
-<span class="c1">// Ritorno il risultato: JMH lo usa per evitare la Dead Code Elimination }</span>
- <span class="nd">@Benchmark</span> <span class="kd">public</span> <span class="nc">String</span> <span class="nf">withStringBuilder</span><span class="o">()</span> 
-<span class="o">{</span> <span class="nc">StringBuilder</span> <span class="n">sb</span> <span class="o">=</span> <span class="k">new</span> <span class="nc">StringBuilder</span><span class="o">(</span><span class="n">iterations</span> <span class="o">*</span> <span class="mi">8</span><span class="o">);</span> <span class="k">for</span> <span class="o">(</span><span class="kt">int</span> <span class="n">i</span> <span class="o">=</span> <span class="mi">0</span><span class="o">;</span> <span class="n">i</span> <span class="o">&lt;</span>
-<span class="n">iterations</span><span class="o">;</span> <span class="n">i</span><span class="o">++)</span>
-<span class="o">{</span> <span class="n">sb</span><span class="o">.</span><span class="na">append</span><span class="o">(</span><span class="s">"item"</span><span class="o">).</span><span class="na">append</span><span class="o">(</span><span class="n">i</span><span class="o">);</span> <span class="o">}</span>
- <span class="k">return</span> <span class="n">sb</span><span class="o">.</span><span class="na">toString</span><span class="o">();</span> 
-<span class="c1">// Ritorno il risultato: essenziale per evitare che JIT elimini il codice }</span>
- 
-<span class="cm">/* @Benchmark public String withStringJoin() 
-{ 
-// JMH gestisce automaticamente il warmup del JIT per questo metodo return
-// String.join("", IntStream.range(0, iterations) .mapToObj(i -&gt; "item" + i)
-// .toArray(String[]::new)); }
- */</span>
- <span class="o">}</span>
- 
+    <span class="n">timeUnit</span> <span class="o">=</span> <span class="nc">TimeUnit</span><span class="o">.</span><span class="na">SECONDS</span><span class="o">)</span> <span class="c1">// 5s di warmup JIT @Measurement(iterations =</span>
+    <span class="mi">10</span><span class="o">,</span> <span class="n">time</span> <span class="o">=</span> <span class="mi">2</span><span class="o">,</span> <span class="n">timeUnit</span> <span class="o">=</span> <span class="nc">TimeUnit</span><span class="o">.</span><span class="na">SECONDS</span><span class="o">)</span> <span class="nd">@Fork</span><span class="o">(</span><span class="mi">2</span><span class="o">)</span> <span class="c1">// Eseguo in 2 JVM</span>
+    <span class="n">separate</span> <span class="n">per</span> <span class="n">eliminare</span> <span class="n">il</span> <span class="n">rumore</span> <span class="kd">public</span> <span class="kd">class</span> <span class="nc">StringConcatBenchmark</span>
+<span class="o">{</span>
+    <span class="nd">@Param</span><span class="o">({</span>
+        <span class="s">"10"</span><span class="o">,</span> <span class="s">"100"</span><span class="o">,</span> <span class="s">"1000"</span>
+    <span class="o">}</span>
+    <span class="o">)</span>
+    <span class="c1">// JMH esegue il benchmark per ogni valore del param private int iterations</span>
+    <span class="o">;</span>
+    <span class="nd">@Benchmark</span> <span class="kd">public</span> <span class="nc">String</span> <span class="nf">withStringConcat</span><span class="o">()</span> <span class="o">{</span>
+        <span class="nc">String</span> <span class="n">result</span> <span class="o">=</span> <span class="s">""</span><span class="o">;</span>
+        <span class="k">for</span> <span class="o">(</span><span class="kt">int</span> <span class="n">i</span> <span class="o">=</span> <span class="mi">0</span><span class="o">;</span>
+        <span class="n">i</span> <span class="o">&lt;</span> <span class="n">iterations</span><span class="o">;</span>
+        <span class="n">i</span><span class="o">++)</span> <span class="o">{</span>
+            <span class="n">result</span> <span class="o">+=</span> <span class="s">"item"</span> <span class="o">+</span> <span class="n">i</span><span class="o">;</span>
+            <span class="c1">// Alloca una nuova String ad ogni iterazione</span>
+        <span class="o">}</span>
+        <span class="k">return</span> <span class="n">result</span><span class="o">;</span>
+        <span class="c1">// Ritorno il risultato: JMH lo usa per evitare la Dead Code Elimination</span>
+    <span class="o">}</span>
+    <span class="nd">@Benchmark</span> <span class="kd">public</span> <span class="nc">String</span> <span class="nf">withStringBuilder</span><span class="o">()</span> <span class="o">{</span>
+        <span class="nc">StringBuilder</span> <span class="n">sb</span> <span class="o">=</span> <span class="k">new</span> <span class="nc">StringBuilder</span><span class="o">(</span><span class="n">iterations</span> <span class="o">*</span> <span class="mi">8</span><span class="o">);</span>
+        <span class="k">for</span> <span class="o">(</span><span class="kt">int</span> <span class="n">i</span> <span class="o">=</span> <span class="mi">0</span><span class="o">;</span>
+        <span class="n">i</span> <span class="o">&lt;</span> <span class="n">iterations</span><span class="o">;</span>
+        <span class="n">i</span><span class="o">++)</span> <span class="o">{</span>
+            <span class="n">sb</span><span class="o">.</span><span class="na">append</span><span class="o">(</span><span class="s">"item"</span><span class="o">).</span><span class="na">append</span><span class="o">(</span><span class="n">i</span><span class="o">);</span>
+        <span class="o">}</span>
+        <span class="k">return</span> <span class="n">sb</span><span class="o">.</span><span class="na">toString</span><span class="o">();</span>
+        <span class="c1">// Ritorno il risultato: essenziale per evitare che JIT elimini il</span>
+            <span class="n">codice</span>
+    <span class="o">}</span>
+    <span class="cm">/* @Benchmark public String withStringJoin() { // JMH gestisce
+        automaticamente il warmup del JIT per questo metodo return
+        String.join("", IntStream.range(0, iterations) .mapToObj(i -&gt; "item" +
+        i) .toArray(String[]::new)); } */</span>
+<span class="o">}</span>
 <span class="cm">/* Eseguo il benchmark e leggo i risultati: */</span>
- 
 <span class="c1">// java -jar target/benchmarks.jar StringConcatBenchmark -rf json -rff</span>
-<span class="c1">// results.json</span>
-<span class="c1">// Output: </span>
-<span class="c1">// Benchmark Mode Cnt Score Error Units </span>
-<span class="c1">// withStringConcat thrpt 20 12.345 ± 0.123 ops/us </span>
-<span class="c1">// withStringBuilder thrpt 20 987.654 ± 9.876 ops/us </span>
-<span class="cm">/* Errori comuni che JMH evita automaticamente: */</span>
- 
-<span class="c1">// 1. Dead Code Elimination: JIT elimina codice il cui risultato non è usato </span>
-<span class="c1">// --&gt; JMH usa Blackhole per "consumare" i risultati senza influire sul timing</span>
-<span class="c1">// @Benchmark public void withBlackhole(Blackhole bh)</span>
-<span class="o">{</span> <span class="nc">String</span> <span class="n">result</span> <span class="o">=</span> <span class="n">expensiveOperation</span><span class="o">();</span> <span class="n">bh</span><span class="o">.</span><span class="na">consume</span><span class="o">(</span><span class="n">result</span><span class="o">);</span> 
-<span class="c1">// Segnala alla JVM che il risultato è usato }</span>
- 
-<span class="c1">// 2. Constant Folding: JIT pre-calcola espressioni costanti </span>
-<span class="c1">// --&gt; @State garantisce che i valori siano letti a runtime, non pre-calcolati</span>
-<span class="c1">// @State(Scope.Benchmark) public static class BenchmarkState</span>
-<span class="o">{</span> <span class="kd">public</span> <span class="kt">int</span> <span class="n">value</span> <span class="o">=</span> <span class="nc">Integer</span><span class="o">.</span><span class="na">parseInt</span><span class="o">(</span><span class="s">"42"</span><span class="o">);</span> 
-<span class="c1">// Impedisce il constant folding }</span>
- 
-<span class="o">*</span> <span class="nc">In</span> <span class="nc">Spring</span> <span class="nc">Boot</span><span class="o">,</span> <span class="n">integro</span> <span class="no">JMH</span> <span class="n">come</span> <span class="n">test</span> <span class="n">separato</span> <span class="n">nella</span> <span class="no">CI</span> <span class="n">per</span> <span class="n">regressionare</span> <span class="n">le</span>
-<span class="o">*</span> <span class="nl">performance:</span> <span class="o">*/</span>
- <span class="nd">@Test</span> <span class="kd">public</span> <span class="kt">void</span> <span class="nf">runJmhBenchmarks</span><span class="o">()</span> <span class="kd">throws</span> <span class="nc">Exception</span> 
-<span class="o">{</span> <span class="nc">Options</span> <span class="n">opt</span> <span class="o">=</span> <span class="k">new</span> <span class="nc">OptionsBuilder</span><span class="o">()</span>
-<span class="o">.</span><span class="na">include</span><span class="o">(</span><span class="nc">StringConcatBenchmark</span><span class="o">.</span><span class="na">class</span><span class="o">.</span><span class="na">getSimpleName</span><span class="o">())</span> <span class="o">.</span><span class="na">warmupIterations</span><span class="o">(</span><span class="mi">3</span><span class="o">)</span>
-<span class="o">.</span><span class="na">measurementIterations</span><span class="o">(</span><span class="mi">5</span><span class="o">)</span> <span class="o">.</span><span class="na">forks</span><span class="o">(</span><span class="mi">1</span><span class="o">)</span> <span class="o">.</span><span class="na">resultFormat</span><span class="o">(</span><span class="nc">ResultFormatType</span><span class="o">.</span><span class="na">JSON</span><span class="o">)</span>
-<span class="o">.</span><span class="na">result</span><span class="o">(</span><span class="s">"target/jmh-results.json"</span><span class="o">)</span> <span class="o">.</span><span class="na">build</span><span class="o">();</span> <span class="nc">Collection</span><span class="o">&lt;</span><span class="nc">RunResult</span><span class="o">&gt;</span> <span class="n">results</span> <span class="o">=</span> <span class="k">new</span>
-<span class="nc">Runner</span><span class="o">(</span><span class="n">opt</span><span class="o">).</span><span class="na">run</span><span class="o">();</span> <span class="k">for</span> <span class="o">(</span><span class="nc">RunResult</span> <span class="n">result</span> <span class="o">:</span> <span class="n">results</span><span class="o">)</span>
-<span class="o">{</span> <span class="kt">double</span> <span class="n">score</span> <span class="o">=</span> <span class="n">result</span><span class="o">.</span><span class="na">getPrimaryResult</span><span class="o">().</span><span class="na">getScore</span><span class="o">();</span> <span class="nc">String</span> <span class="n">name</span> <span class="o">=</span>
-<span class="n">result</span><span class="o">.</span><span class="na">getParams</span><span class="o">().</span><span class="na">getBenchmark</span><span class="o">();</span>
-<span class="c1">// Fallisco il test se le performance regrediscono oltre il 10% rispetto alla</span>
-<span class="c1">// baseline assertTrue(score &gt; getBaseline(name) * 0.9, "Regressione di</span>
-<span class="c1">// performance su: " + name); }</span>
- <span class="o">}</span>
+    <span class="n">results</span><span class="o">.</span><span class="na">json</span> <span class="c1">// Output: // Benchmark Mode Cnt Score Error Units //</span>
+    <span class="n">withStringConcat</span> <span class="n">thrpt</span> <span class="mi">20</span> <span class="mf">12.345</span> <span class="err">±</span> <span class="mf">0.123</span> <span class="n">ops</span><span class="o">/</span><span class="n">us</span> <span class="c1">// withStringBuilder thrpt</span>
+    <span class="mi">20</span> <span class="mf">987.654</span> <span class="err">±</span> <span class="mf">9.876</span> <span class="n">ops</span><span class="o">/</span><span class="n">us</span> <span class="cm">/* Errori comuni che JMH evita automaticamente: */</span>
+    <span class="c1">// 1. Dead Code Elimination: JIT elimina codice il cui risultato non è usato</span>
+    <span class="c1">// --&gt; JMH usa Blackhole per "consumare" i risultati senza influire sul</span>
+    <span class="n">timing</span> <span class="nd">@Benchmark</span> <span class="kd">public</span> <span class="kt">void</span> <span class="nf">withBlackhole</span><span class="o">(</span><span class="nc">Blackhole</span> <span class="n">bh</span><span class="o">)</span>
+<span class="o">{</span>
+    <span class="nc">String</span> <span class="n">result</span> <span class="o">=</span> <span class="n">expensiveOperation</span><span class="o">();</span>
+    <span class="n">bh</span><span class="o">.</span><span class="na">consume</span><span class="o">(</span><span class="n">result</span><span class="o">);</span>
+    <span class="c1">// Segnala alla JVM che il risultato è usato</span>
+<span class="o">}</span>
+<span class="c1">// 2. Constant Folding: JIT pre-calcola espressioni costanti // --&gt; @State</span>
+    <span class="n">garantisce</span> <span class="n">che</span> <span class="n">i</span> <span class="n">valori</span> <span class="n">siano</span> <span class="n">letti</span> <span class="n">a</span> <span class="n">runtime</span><span class="o">,</span> <span class="n">non</span> <span class="n">pre</span><span class="o">-</span><span class="n">calcolati</span>
+    <span class="nd">@State</span><span class="o">(</span><span class="nc">Scope</span><span class="o">.</span><span class="na">Benchmark</span><span class="o">)</span> <span class="kd">public</span> <span class="kd">static</span> <span class="kd">class</span> <span class="nc">BenchmarkState</span>
+<span class="o">{</span>
+    <span class="kd">public</span> <span class="kt">int</span> <span class="n">value</span> <span class="o">=</span> <span class="nc">Integer</span><span class="o">.</span><span class="na">parseInt</span><span class="o">(</span><span class="s">"42"</span><span class="o">);</span>
+    <span class="c1">// Impedisce il constant folding</span>
+<span class="o">}</span>
+<span class="cm">/* In Spring Boot, integro JMH come test separato nella CI per regressionare le
+    performance: */</span>
+<span class="nd">@Test</span> <span class="kd">public</span> <span class="kt">void</span> <span class="nf">runJmhBenchmarks</span><span class="o">()</span> <span class="kd">throws</span> <span class="nc">Exception</span> <span class="o">{</span>
+    <span class="nc">Options</span> <span class="n">opt</span> <span class="o">=</span> <span class="k">new</span> <span class="nc">OptionsBuilder</span><span class="o">()</span>
+        <span class="o">.</span><span class="na">include</span><span class="o">(</span><span class="nc">StringConcatBenchmark</span><span class="o">.</span><span class="na">class</span><span class="o">.</span><span class="na">getSimpleName</span><span class="o">())</span>
+        <span class="o">.</span><span class="na">warmupIterations</span><span class="o">(</span><span class="mi">3</span><span class="o">)</span> <span class="o">.</span><span class="na">measurementIterations</span><span class="o">(</span><span class="mi">5</span><span class="o">)</span> <span class="o">.</span><span class="na">forks</span><span class="o">(</span><span class="mi">1</span><span class="o">)</span>
+        <span class="o">.</span><span class="na">resultFormat</span><span class="o">(</span><span class="nc">ResultFormatType</span><span class="o">.</span><span class="na">JSON</span><span class="o">)</span> <span class="o">.</span><span class="na">result</span><span class="o">(</span><span class="s">"target/jmh-results.json"</span><span class="o">)</span>
+        <span class="o">.</span><span class="na">build</span><span class="o">();</span>
+    <span class="nc">Collection</span><span class="o">&lt;</span><span class="nc">RunResult</span><span class="o">&gt;</span> <span class="n">results</span> <span class="o">=</span> <span class="k">new</span> <span class="nc">Runner</span><span class="o">(</span><span class="n">opt</span><span class="o">).</span><span class="na">run</span><span class="o">();</span>
+    <span class="k">for</span> <span class="o">(</span><span class="nc">RunResult</span> <span class="n">result</span> <span class="o">:</span> <span class="n">results</span><span class="o">)</span> <span class="o">{</span>
+        <span class="kt">double</span> <span class="n">score</span> <span class="o">=</span> <span class="n">result</span><span class="o">.</span><span class="na">getPrimaryResult</span><span class="o">().</span><span class="na">getScore</span><span class="o">();</span>
+        <span class="nc">String</span> <span class="n">name</span> <span class="o">=</span> <span class="n">result</span><span class="o">.</span><span class="na">getParams</span><span class="o">().</span><span class="na">getBenchmark</span><span class="o">();</span>
+        <span class="c1">// Fallisco il test se le performance regrediscono oltre il 10% rispetto</span>
+            <span class="n">alla</span> <span class="n">baseline</span> <span class="nf">assertTrue</span><span class="o">(</span><span class="n">score</span> <span class="o">&gt;</span> <span class="n">getBaseline</span><span class="o">(</span><span class="n">name</span><span class="o">)</span> <span class="o">*</span> <span class="mf">0.9</span><span class="o">,</span>
+            <span class="s">"Regressione di performance su: "</span> <span class="o">+</span> <span class="n">name</span><span class="o">)</span>
+        <span class="o">;</span>
+    <span class="o">}</span>
+<span class="o">}</span>
 </pre></td></tr></tbody></table></code></pre></div></div>
 
         </article>

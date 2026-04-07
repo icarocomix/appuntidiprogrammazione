@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Fillfactor e HOT Updates — DevLog</title>
-    <meta name="description" content="PostgreSQL permette di fare update 'in riga' (Heap Only Tuple) se c'è spazio sufficiente nella stessa pagina disco e se non vengono cambiate colonne indicizzate. Gli HOT updates sono incredibilmente veloci perché non richiedono l'aggiornamento degli 
+    <meta name="description" content="PostgreSQL permette di fare update "in riga" (Heap Only Tuple) se c'è spazio sufficiente nella stessa pagina disco e se non vengono cambiate colonne indicizzate. Gli HOT updates sono incredibilmente veloci perché non richiedono l'aggiornamento degli 
 ">
     <link rel="stylesheet" href="/appuntidiprogrammazione/assets/css/style.css">
 
@@ -102,25 +102,19 @@
 11
 12
 13
-14
-15
-16
-</pre></td><td class="rouge-code"><pre><span class="cm">/* Imposto il fillfactor al 90% per lasciare spazio agli HOT update */</span>
- <span class="k">ALTER</span> <span class="k">TABLE</span> <span class="n">counters</span> <span class="k">SET</span> <span class="p">(</span><span class="n">fillfactor</span> <span class="o">=</span> <span class="mi">90</span><span class="p">);</span> 
-<span class="o">*</span> <span class="n">La</span> <span class="n">modifica</span> <span class="n">diventa</span> <span class="n">effettiva</span> <span class="n">solo</span> <span class="n">dopo</span> <span class="n">una</span> <span class="n">riscrittura</span><span class="p">:</span> <span class="n">eseguo</span> <span class="k">VACUUM</span> <span class="k">FULL</span> <span class="n">o</span>
-<span class="o">*</span> <span class="n">pg_repack</span> <span class="o">*/</span>
- <span class="k">VACUUM</span> <span class="k">FULL</span> <span class="n">counters</span><span class="p">;</span> 
-<span class="o">*</span> <span class="n">Verifico</span> <span class="n">il</span> <span class="n">rapporto</span> <span class="n">tra</span> <span class="k">update</span> <span class="n">normali</span> <span class="n">e</span> <span class="n">HOT</span> <span class="k">update</span><span class="p">:</span> <span class="n">pi</span><span class="err">ù</span> <span class="n">n_tup_hot_upd</span> <span class="n">si</span>
-<span class="o">*</span> <span class="n">avvicina</span> <span class="n">a</span> <span class="n">n_tup_upd</span><span class="p">,</span> <span class="n">meglio</span> <span class="err">è</span> <span class="o">*/</span>
- <span class="k">SELECT</span> <span class="n">relname</span><span class="p">,</span> <span class="n">n_tup_upd</span><span class="p">,</span> <span class="n">n_tup_hot_upd</span><span class="p">,</span> <span class="n">round</span><span class="p">(</span><span class="n">n_tup_hot_upd</span><span class="p">::</span><span class="nb">numeric</span> <span class="o">/</span>
-<span class="k">NULLIF</span><span class="p">(</span><span class="n">n_tup_upd</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span> <span class="o">*</span> <span class="mi">100</span><span class="p">,</span> <span class="mi">2</span><span class="p">)</span> <span class="k">AS</span> <span class="n">hot_pct</span> <span class="k">FROM</span> <span class="n">pg_stat_user_tables</span> <span class="k">WHERE</span> <span class="n">relname</span>
-<span class="o">=</span> <span class="s1">'counters'</span><span class="p">;</span>
-<span class="o">*</span> <span class="n">Se</span> <span class="n">hot_pct</span> <span class="o">&lt;</span> <span class="mi">50</span><span class="o">%</span><span class="p">,</span> <span class="n">verifico</span> <span class="n">che</span> <span class="n">le</span> <span class="n">colonne</span> <span class="n">aggiornate</span> <span class="n">non</span> <span class="n">siano</span> <span class="n">indicizzate</span><span class="p">:</span>
-<span class="o">*</span> <span class="n">gli</span> <span class="n">HOT</span> <span class="k">update</span> <span class="n">sono</span> <span class="n">impossibili</span> <span class="n">su</span> <span class="n">colonne</span> <span class="n">con</span> <span class="n">indice</span> <span class="o">*/</span>
- <span class="k">SELECT</span> <span class="n">indexname</span><span class="p">,</span> <span class="n">indexdef</span> <span class="k">FROM</span> <span class="n">pg_indexes</span> <span class="k">WHERE</span> <span class="n">tablename</span> <span class="o">=</span> <span class="s1">'counters'</span><span class="p">;</span> 
-<span class="o">*</span> <span class="n">Esempio</span> <span class="n">di</span> <span class="k">update</span> <span class="n">che</span> <span class="n">genera</span> <span class="n">HOT</span><span class="p">:</span> <span class="n">aggiorno</span> <span class="n">solo</span> <span class="s1">'valore'</span><span class="p">,</span> <span class="n">colonna</span> <span class="n">non</span>
-<span class="o">*</span> <span class="n">indicizzata</span> <span class="o">*/</span>
- <span class="k">UPDATE</span> <span class="n">counters</span> <span class="k">SET</span> <span class="n">valore</span> <span class="o">=</span> <span class="n">valore</span> <span class="o">+</span> <span class="mi">1</span> <span class="k">WHERE</span> <span class="n">id</span> <span class="o">=</span> <span class="mi">42</span><span class="p">;</span>
+</pre></td><td class="rouge-code"><pre>    <span class="cm">/* Imposto il fillfactor al 90% per lasciare spazio agli HOT update */</span> <span class="k">ALTER</span>
+        <span class="k">TABLE</span> <span class="n">counters</span> <span class="k">SET</span> <span class="p">(</span><span class="n">fillfactor</span> <span class="o">=</span> <span class="mi">90</span><span class="p">);</span> <span class="cm">/* La modifica diventa effettiva
+        solo dopo una riscrittura: eseguo VACUUM FULL o pg_repack */</span> <span class="k">VACUUM</span> <span class="k">FULL</span>
+        <span class="n">counters</span><span class="p">;</span> <span class="cm">/* Verifico il rapporto tra update normali e HOT update: più
+        n_tup_hot_upd si avvicina a n_tup_upd, meglio è */</span> <span class="k">SELECT</span> <span class="n">relname</span><span class="p">,</span>
+        <span class="n">n_tup_upd</span><span class="p">,</span> <span class="n">n_tup_hot_upd</span><span class="p">,</span> <span class="n">round</span><span class="p">(</span><span class="n">n_tup_hot_upd</span><span class="p">::</span><span class="nb">numeric</span> <span class="o">/</span>
+        <span class="k">NULLIF</span><span class="p">(</span><span class="n">n_tup_upd</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span> <span class="o">*</span> <span class="mi">100</span><span class="p">,</span> <span class="mi">2</span><span class="p">)</span> <span class="k">AS</span> <span class="n">hot_pct</span> <span class="k">FROM</span> <span class="n">pg_stat_user_tables</span> <span class="k">WHERE</span>
+        <span class="n">relname</span> <span class="o">=</span> <span class="s1">'counters'</span><span class="p">;</span> <span class="cm">/* Se hot_pct &lt; 50%, verifico che le colonne
+        aggiornate non siano indicizzate: gli HOT update sono impossibili su
+        colonne con indice */</span> <span class="k">SELECT</span> <span class="n">indexname</span><span class="p">,</span> <span class="n">indexdef</span> <span class="k">FROM</span> <span class="n">pg_indexes</span> <span class="k">WHERE</span>
+        <span class="n">tablename</span> <span class="o">=</span> <span class="s1">'counters'</span><span class="p">;</span> <span class="cm">/* Esempio di update che genera HOT: aggiorno
+        solo 'valore', colonna non indicizzata */</span> <span class="k">UPDATE</span> <span class="n">counters</span> <span class="k">SET</span> <span class="n">valore</span> <span class="o">=</span>
+        <span class="n">valore</span> <span class="o">+</span> <span class="mi">1</span> <span class="k">WHERE</span> <span class="n">id</span> <span class="o">=</span> <span class="mi">42</span><span class="p">;</span>
 </pre></td></tr></tbody></table></code></pre></div></div>
 
         </article>

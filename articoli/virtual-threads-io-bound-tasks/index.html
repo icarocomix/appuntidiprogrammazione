@@ -143,60 +143,74 @@
 52
 53
 54
-</pre></td><td class="rouge-code"><pre><span class="o">*</span> <span class="nc">Configuro</span> <span class="n">un</span> <span class="n">executor</span> <span class="n">che</span> <span class="n">crea</span> <span class="n">un</span> <span class="n">virtual</span> <span class="n">thread</span> <span class="n">per</span> <span class="n">ogni</span> <span class="n">richiesta</span><span class="o">.</span> <span class="no">I</span> <span class="n">virtual</span>
-<span class="o">*</span> <span class="n">thread</span> <span class="n">sono</span> <span class="n">smontati</span> <span class="n">dal</span> <span class="n">carrier</span> <span class="n">thread</span> <span class="n">durante</span> <span class="n">le</span> <span class="n">operazioni</span> <span class="nf">bloccanti</span> <span class="o">(</span><span class="no">I</span><span class="o">/</span><span class="no">O</span><span class="o">,</span>
-<span class="o">*</span> <span class="n">sleep</span><span class="o">,</span> <span class="no">JDBC</span><span class="o">)</span> <span class="n">e</span> <span class="n">rimontati</span> <span class="n">quando</span> <span class="n">sono</span> <span class="nl">pronti:</span> <span class="n">zero</span> <span class="n">spreco</span> <span class="n">di</span> <span class="n">thread</span> <span class="no">OS</span><span class="o">.</span> <span class="o">*/</span>
- <span class="k">try</span> <span class="o">(</span><span class="kt">var</span> <span class="n">executor</span> <span class="o">=</span> <span class="nc">Executors</span><span class="o">.</span><span class="na">newVirtualThreadPerTaskExecutor</span><span class="o">())</span> 
-<span class="o">{</span> <span class="nc">List</span><span class="o">&lt;</span><span class="nc">Future</span><span class="o">&lt;</span><span class="nc">String</span><span class="o">&gt;&gt;</span> <span class="n">futures</span> <span class="o">=</span> <span class="nc">IntStream</span><span class="o">.</span><span class="na">range</span><span class="o">(</span><span class="mi">0</span><span class="o">,</span> <span class="mi">10_000</span><span class="o">)</span> <span class="o">.</span><span class="na">mapToObj</span><span class="o">(</span><span class="n">i</span> <span class="o">-&gt;</span>
-<span class="n">executor</span><span class="o">.</span><span class="na">submit</span><span class="o">(()</span> <span class="o">-&gt;</span>
-<span class="o">{</span> 
-<span class="c1">// Questa sleep non blocca nessun thread OS: il virtual thread viene</span>
-<span class="c1">// "parcheggiato" Thread.sleep(Duration.ofMillis(500)); return</span>
-<span class="c1">// fetchFromExternalService(i);</span>
-<span class="c1">// Chiamata HTTP bloccante, gestita dalla JVM }</span>
-<span class="o">))</span> <span class="o">.</span><span class="na">toList</span><span class="o">();</span> <span class="k">for</span> <span class="o">(</span><span class="nc">Future</span><span class="o">&lt;</span><span class="nc">String</span><span class="o">&gt;</span> <span class="n">f</span> <span class="o">:</span> <span class="n">futures</span><span class="o">)</span> 
-<span class="o">{</span> <span class="nc">System</span><span class="o">.</span><span class="na">out</span><span class="o">.</span><span class="na">println</span><span class="o">(</span><span class="n">f</span><span class="o">.</span><span class="na">get</span><span class="o">());</span> <span class="o">}</span>
- <span class="o">}</span>
- 
-<span class="o">*</span> <span class="nc">Configurazione</span> <span class="n">in</span> <span class="nc">Spring</span> <span class="nc">Boot</span> <span class="mf">3.2</span><span class="o">+:</span> <span class="n">abilito</span> <span class="n">i</span> <span class="n">virtual</span> <span class="n">thread</span> <span class="n">per</span> <span class="nc">Tomcat</span> <span class="n">in</span>
-<span class="o">*</span> <span class="n">application</span><span class="o">.</span><span class="na">properties</span><span class="o">.</span> <span class="n">spring</span><span class="o">.</span><span class="na">threads</span><span class="o">.</span><span class="na">virtual</span><span class="o">.</span><span class="na">enabled</span><span class="o">=</span><span class="kc">true</span> <span class="nc">Questo</span> <span class="n">fa</span> <span class="n">sì</span> <span class="n">che</span>
-<span class="o">*</span> <span class="n">ogni</span> <span class="n">richiesta</span> <span class="no">HTTP</span> <span class="n">venga</span> <span class="n">gestita</span> <span class="n">su</span> <span class="n">un</span> <span class="n">virtual</span> <span class="n">thread</span> <span class="n">invece</span> <span class="n">che</span> <span class="n">su</span> <span class="n">un</span> <span class="n">thread</span>
-<span class="o">*</span> <span class="n">del</span> <span class="n">pool</span> <span class="nc">Tomcat</span><span class="o">.</span> <span class="o">*/</span>
- 
-<span class="o">*</span> <span class="nc">Per</span> <span class="no">JDBC</span> <span class="n">con</span> <span class="nc">HikariCP</span><span class="o">,</span> <span class="n">i</span> <span class="n">virtual</span> <span class="n">thread</span> <span class="n">funzionano</span> <span class="n">bene</span> <span class="n">perché</span> <span class="n">il</span> <span class="n">pool</span> <span class="n">di</span>
-<span class="o">*</span> <span class="n">connessioni</span> <span class="n">è</span> <span class="n">già</span> <span class="n">il</span> <span class="n">collo</span> <span class="n">di</span> <span class="n">bottiglia</span> <span class="nl">reale:</span> <span class="n">il</span> <span class="n">virtual</span> <span class="n">thread</span> <span class="n">aspetta</span> <span class="n">una</span>
-<span class="o">*</span> <span class="n">connessione</span> <span class="n">disponibile</span> <span class="n">senza</span> <span class="n">bloccare</span> <span class="n">thread</span> <span class="no">OS</span><span class="o">.</span> <span class="o">*/</span>
- <span class="nd">@Service</span> <span class="kd">public</span> <span class="kd">class</span> <span class="nc">GatewayService</span> 
-<span class="o">{</span> <span class="kd">private</span> <span class="kd">final</span> <span class="nc">RestClient</span> <span class="n">restClient</span><span class="o">;</span> <span class="kd">public</span> <span class="nf">GatewayService</span><span class="o">(</span><span class="nc">RestClient</span><span class="o">.</span><span class="na">Builder</span>
-<span class="n">builder</span><span class="o">)</span>
-<span class="o">{</span> 
-<span class="c1">// RestClient è sincrono ma va benissimo con i virtual thread this.restClient =</span>
-<span class="c1">// builder.baseUrl("https:</span>
-<span class="c1">//api.external.com").build(); }</span>
- <span class="kd">public</span> <span class="nc">String</span> <span class="nf">callExternalService</span><span class="o">(</span><span class="nc">String</span> <span class="n">id</span><span class="o">)</span> 
-<span class="o">{</span> 
-<span class="c1">// Questa chiamata bloccante non satura più il pool Tomcat return</span>
-<span class="c1">// restClient.get().uri("/resource/</span>
-<span class="o">{</span><span class="n">id</span><span class="o">}</span>
-<span class="s">", id) .retrieve().body(String.class); }
- }
- 
-* PINNING: il caso da evitare. Se uso synchronized attorno a operazioni I/O, il
-* virtual thread rimane "</span><span class="n">pinned</span><span class="s">" al carrier thread OS, annullando il vantaggio.
-* */
- 
-// SBAGLIATO: synchronized blocca il carrier thread durante l'I/O public
-// synchronized String badMethod()
-{ return restClient.get().uri("</span><span class="o">/</span><span class="n">slow</span><span class="s">").retrieve().body(String.class); }
- 
-// CORRETTO: uso ReentrantLock che supporta il parking dei virtual thread
-// private final ReentrantLock vtLock = new ReentrantLock(); public String
-// goodMethod()
-{ vtLock.lock(); try 
-{ return restClient.get().uri("</span><span class="o">/</span><span class="n">slow</span><span class="err">"</span><span class="o">).</span><span class="na">retrieve</span><span class="o">().</span><span class="na">body</span><span class="o">(</span><span class="nc">String</span><span class="o">.</span><span class="na">class</span><span class="o">);</span> <span class="o">}</span>
- <span class="k">finally</span> 
-<span class="o">{</span> <span class="n">vtLock</span><span class="o">.</span><span class="na">unlock</span><span class="o">();</span> <span class="o">}</span>
- <span class="o">}</span>
+55
+56
+57
+58
+59
+60
+61
+</pre></td><td class="rouge-code"><pre><span class="cm">/* Configuro un executor che crea un virtual thread per ogni richiesta. I
+    virtual thread sono smontati dal carrier thread durante le operazioni
+    bloccanti (I/O, sleep, JDBC) e rimontati quando sono pronti: zero spreco di
+    thread OS. */</span>
+<span class="k">try</span> <span class="o">(</span><span class="kt">var</span> <span class="n">executor</span> <span class="o">=</span> <span class="nc">Executors</span><span class="o">.</span><span class="na">newVirtualThreadPerTaskExecutor</span><span class="o">())</span> <span class="o">{</span>
+    <span class="nc">List</span><span class="o">&lt;</span><span class="nc">Future</span><span class="o">&lt;</span><span class="nc">String</span><span class="o">&gt;&gt;</span> <span class="n">futures</span> <span class="o">=</span> <span class="nc">IntStream</span><span class="o">.</span><span class="na">range</span><span class="o">(</span><span class="mi">0</span><span class="o">,</span> <span class="mi">10_000</span><span class="o">)</span> <span class="o">.</span><span class="na">mapToObj</span><span class="o">(</span><span class="n">i</span> <span class="o">-&gt;</span>
+        <span class="n">executor</span><span class="o">.</span><span class="na">submit</span><span class="o">(()</span> <span class="o">-&gt;</span> <span class="o">{</span>
+        <span class="c1">// Questa sleep non blocca nessun thread OS: il virtual thread viene</span>
+            <span class="s">"parcheggiato"</span> <span class="nc">Thread</span><span class="o">.</span><span class="na">sleep</span><span class="o">(</span><span class="nc">Duration</span><span class="o">.</span><span class="na">ofMillis</span><span class="o">(</span><span class="mi">500</span><span class="o">))</span>
+        <span class="o">;</span>
+        <span class="k">return</span> <span class="nf">fetchFromExternalService</span><span class="o">(</span><span class="n">i</span><span class="o">);</span>
+        <span class="c1">// Chiamata HTTP bloccante, gestita dalla JVM</span>
+    <span class="o">}</span>
+    <span class="o">))</span> <span class="o">.</span><span class="na">toList</span><span class="o">();</span>
+    <span class="k">for</span> <span class="o">(</span><span class="nc">Future</span><span class="o">&lt;</span><span class="nc">String</span><span class="o">&gt;</span> <span class="n">f</span> <span class="o">:</span> <span class="n">futures</span><span class="o">)</span> <span class="o">{</span>
+        <span class="nc">System</span><span class="o">.</span><span class="na">out</span><span class="o">.</span><span class="na">println</span><span class="o">(</span><span class="n">f</span><span class="o">.</span><span class="na">get</span><span class="o">());</span>
+    <span class="o">}</span>
+<span class="o">}</span>
+<span class="cm">/* Configurazione in Spring Boot 3.2+: abilito i virtual thread per Tomcat in
+    application.properties. spring.threads.virtual.enabled=true Questo fa sì che
+    ogni richiesta HTTP venga gestita su un virtual thread invece che su un
+    thread del pool Tomcat. */</span>
+<span class="cm">/* Per JDBC con HikariCP, i virtual thread funzionano bene perché il pool di
+    connessioni è già il collo di bottiglia reale: il virtual thread aspetta una
+    connessione disponibile senza bloccare thread OS. */</span>
+<span class="nd">@Service</span> <span class="kd">public</span> <span class="kd">class</span> <span class="nc">GatewayService</span> <span class="o">{</span>
+    <span class="kd">private</span> <span class="kd">final</span> <span class="nc">RestClient</span> <span class="n">restClient</span><span class="o">;</span>
+    <span class="kd">public</span> <span class="nf">GatewayService</span><span class="o">(</span><span class="nc">RestClient</span><span class="o">.</span><span class="na">Builder</span> <span class="n">builder</span><span class="o">)</span> <span class="o">{</span>
+        <span class="c1">// RestClient è sincrono ma va benissimo con i virtual thread</span>
+            <span class="k">this</span><span class="o">.</span><span class="na">restClient</span> <span class="o">=</span>
+            <span class="n">builder</span><span class="o">.</span><span class="na">baseUrl</span><span class="o">(</span><span class="s">"https://api.external.com"</span><span class="o">).</span><span class="na">build</span><span class="o">()</span>
+        <span class="o">;</span>
+    <span class="o">}</span>
+    <span class="kd">public</span> <span class="nc">String</span> <span class="nf">callExternalService</span><span class="o">(</span><span class="nc">String</span> <span class="n">id</span><span class="o">)</span> <span class="o">{</span>
+        <span class="c1">// Questa chiamata bloccante non satura più il pool Tomcat</span>
+        <span class="k">return</span> <span class="n">restClient</span><span class="o">.</span><span class="na">get</span><span class="o">().</span><span class="na">uri</span><span class="o">(</span><span class="s">"/resource/{
+            id
+        }
+        "</span><span class="o">,</span> <span class="n">id</span><span class="o">)</span> <span class="o">.</span><span class="na">retrieve</span><span class="o">().</span><span class="na">body</span><span class="o">(</span><span class="nc">String</span><span class="o">.</span><span class="na">class</span><span class="o">);</span>
+    <span class="o">}</span>
+<span class="o">}</span>
+<span class="cm">/* PINNING: il caso da evitare. Se uso synchronized attorno a operazioni I/O, il
+    virtual thread rimane "pinned" al carrier thread OS, annullando il
+    vantaggio. */</span>
+<span class="c1">// SBAGLIATO: synchronized blocca il carrier thread durante l'I/O public</span>
+    <span class="kd">synchronized</span> <span class="nc">String</span> <span class="nf">badMethod</span><span class="o">()</span>
+<span class="o">{</span>
+    <span class="k">return</span> <span class="n">restClient</span><span class="o">.</span><span class="na">get</span><span class="o">().</span><span class="na">uri</span><span class="o">(</span><span class="s">"/slow"</span><span class="o">).</span><span class="na">retrieve</span><span class="o">().</span><span class="na">body</span><span class="o">(</span><span class="nc">String</span><span class="o">.</span><span class="na">class</span><span class="o">);</span>
+<span class="o">}</span>
+<span class="c1">// CORRETTO: uso ReentrantLock che supporta il parking dei virtual thread</span>
+    <span class="kd">private</span> <span class="kd">final</span> <span class="nc">ReentrantLock</span> <span class="n">vtLock</span> <span class="o">=</span> <span class="k">new</span> <span class="nc">ReentrantLock</span><span class="o">()</span>
+<span class="o">;</span>
+<span class="kd">public</span> <span class="nc">String</span> <span class="nf">goodMethod</span><span class="o">()</span> <span class="o">{</span>
+    <span class="n">vtLock</span><span class="o">.</span><span class="na">lock</span><span class="o">();</span>
+    <span class="k">try</span> <span class="o">{</span>
+        <span class="k">return</span> <span class="n">restClient</span><span class="o">.</span><span class="na">get</span><span class="o">().</span><span class="na">uri</span><span class="o">(</span><span class="s">"/slow"</span><span class="o">).</span><span class="na">retrieve</span><span class="o">().</span><span class="na">body</span><span class="o">(</span><span class="nc">String</span><span class="o">.</span><span class="na">class</span><span class="o">);</span>
+    <span class="o">}</span>
+    <span class="k">finally</span> <span class="o">{</span>
+        <span class="n">vtLock</span><span class="o">.</span><span class="na">unlock</span><span class="o">();</span>
+    <span class="o">}</span>
+<span class="o">}</span>
 </pre></td></tr></tbody></table></code></pre></div></div>
 
         </article>

@@ -136,69 +136,53 @@
 45
 46
 47
-48
-49
-50
-51
-52
-53
-54
-55
-</pre></td><td class="rouge-code"><pre><span class="o">*</span> <span class="n">Analizzo</span> <span class="n">le</span> <span class="n">statistiche</span> <span class="n">del</span> <span class="n">bgwriter</span> <span class="n">per</span> <span class="n">capire</span> <span class="n">dove</span> <span class="n">si</span> <span class="n">trova</span> <span class="n">il</span> <span class="n">collo</span> <span class="n">di</span>
-<span class="o">*</span> <span class="n">bottiglia</span><span class="p">.</span> <span class="n">Il</span> <span class="k">reset</span> <span class="n">delle</span> <span class="n">statistiche</span> <span class="k">all</span><span class="s1">'inizio mi dà una baseline pulita per
-* il confronto. */
- SELECT pg_stat_reset_shared('</span><span class="n">bgwriter</span><span class="s1">'); -- Resetto le statistiche (solo in
-sessione di analisi)
-/* Dopo un periodo di carico rappresentativo, leggo le metriche: */
- SELECT buffers_checkpoint, -- Pagine scritte durante i checkpoint (normale)
-buffers_clean, -- Pagine scritte dal bgwriter in background (ottimale)
-buffers_backend, -- Pagine scritte direttamente dai processi utente (problema!)
-buffers_backend_fsync, -- fsync eseguiti dai backend (critico: indica
-saturazione I/O) maxwritten_clean, -- Volte che il bgwriter ha raggiunto il
-limite e si è fermato checkpoint_write_time, checkpoint_sync_time, -- Tempo
-speso nei checkpoint: se alto, i checkpoint sono troppo pesanti now() -
-stats_reset AS stats_age FROM pg_stat_bgwriter;
-* Interpretazione: buffers_backend alto -&gt; il bgwriter è troppo lento, aumentare
-* bgwriter_lru_maxpages maxwritten_clean alto -&gt; il bgwriter raggiunge il limite
-* e si ferma, aumentare bgwriter_lru_maxpages checkpoint_sync_time alto -&gt; i
-* checkpoint sono bloccanti, aumentare max_wal_size per diradarli */
- 
-* Calibro i parametri nel postgresql.conf per rendere il bgwriter più
-* aggressivo: bgwriter_delay = 50ms -- Default 200ms: sveglia il bgwriter più
-* spesso bgwriter_lru_maxpages = 200 -- Default 100: scrive più pagine per ciclo
-* bgwriter_lru_multiplier = 4.0 -- Default 2.0: più buffer preallocati per le
-* richieste future */
- 
-/* Monitoro anche i checkpoint per capire se sono troppo frequenti: */
- SELECT checkpoints_timed, -- Checkpoint pianificati (normale) checkpoints_req,
--- Checkpoint forzati dal volume di WAL (problema se alto) checkpoint_write_time
-/ nullif(checkpoints_timed + checkpoints_req, 0) AS avg_write_ms,
-checkpoint_sync_time / nullif(checkpoints_timed + checkpoints_req, 0) AS
-avg_sync_ms FROM pg_stat_bgwriter;
-* Se checkpoints_req è alto rispetto a checkpoints_timed, aumento max_wal_size
-* per diradare i checkpoint forzati: max_wal_size = 4GB -- Default 1GB: consente
-* WAL più grandi prima del checkpoint checkpoint_completion_target = 0.9 --
-* Spalma la scrittura su 90% dell'</span><span class="n">intervallo</span> <span class="n">tra</span> <span class="k">checkpoint</span> <span class="o">*/</span>
- 
-<span class="o">*</span> <span class="n">Verifico</span> <span class="n">il</span> <span class="n">tasso</span> <span class="n">di</span> <span class="n">hit</span> <span class="n">della</span> <span class="n">shared_buffers</span> <span class="n">per</span> <span class="n">capire</span> <span class="n">se</span> <span class="n">la</span> <span class="k">cache</span> <span class="err">è</span>
-<span class="o">*</span> <span class="n">sufficiente</span><span class="p">:</span> <span class="o">*/</span>
- <span class="k">SELECT</span> <span class="k">sum</span><span class="p">(</span><span class="n">heap_blks_hit</span><span class="p">)</span> <span class="k">AS</span> <span class="n">cache_hits</span><span class="p">,</span> <span class="k">sum</span><span class="p">(</span><span class="n">heap_blks_read</span><span class="p">)</span> <span class="k">AS</span> <span class="n">disk_reads</span><span class="p">,</span>
-<span class="n">round</span><span class="p">(</span><span class="mi">100</span><span class="p">.</span><span class="mi">0</span> <span class="o">*</span> <span class="k">sum</span><span class="p">(</span><span class="n">heap_blks_hit</span><span class="p">)</span> <span class="o">/</span> <span class="k">nullif</span><span class="p">(</span><span class="k">sum</span><span class="p">(</span><span class="n">heap_blks_hit</span><span class="p">)</span> <span class="o">+</span>
-<span class="k">sum</span><span class="p">(</span><span class="n">heap_blks_read</span><span class="p">),</span> <span class="mi">0</span><span class="p">),</span> <span class="mi">2</span><span class="p">)</span> <span class="k">AS</span> <span class="n">cache_hit_pct</span> <span class="k">FROM</span> <span class="n">pg_statio_user_tables</span><span class="p">;</span>
-<span class="o">*</span> <span class="n">Un</span> <span class="n">cache_hit_pct</span> <span class="o">&lt;</span> <span class="mi">95</span><span class="o">%</span> <span class="n">su</span> <span class="n">workload</span> <span class="n">OLTP</span> <span class="n">indica</span> <span class="n">che</span> <span class="n">shared_buffers</span> <span class="err">è</span> <span class="n">troppo</span>
-<span class="o">*</span> <span class="n">piccola</span><span class="p">:</span> <span class="n">il</span> <span class="n">valore</span> <span class="n">raccomandato</span> <span class="err">è</span> <span class="n">il</span> <span class="mi">25</span><span class="o">%</span> <span class="n">della</span> <span class="n">RAM</span> <span class="n">disponibile</span><span class="p">.</span> <span class="o">*/</span>
- 
-<span class="o">*</span> <span class="k">In</span> <span class="n">Spring</span> <span class="n">Boot</span><span class="p">,</span> <span class="n">monitoro</span> <span class="n">buffers_backend</span> <span class="n">tramite</span> <span class="n">un</span> <span class="n">Micrometer</span> <span class="n">gauge</span> <span class="n">esposto</span>
-<span class="o">*</span> <span class="n">su</span> <span class="n">Actuator</span> <span class="n">per</span> <span class="n">rilevare</span> <span class="k">in</span> <span class="n">tempo</span> <span class="n">reale</span> <span class="n">i</span> <span class="n">picchi</span> <span class="n">di</span> <span class="n">I</span><span class="o">/</span><span class="n">O</span> <span class="n">diretto</span> <span class="n">dai</span> <span class="n">backend</span><span class="p">:</span>
-<span class="o">*</span> <span class="o">*/</span>
- <span class="o">@</span><span class="n">Bean</span> <span class="k">public</span> <span class="n">MeterBinder</span> <span class="n">bgwriterMetrics</span><span class="p">(</span><span class="n">JdbcTemplate</span> <span class="n">jdbcTemplate</span><span class="p">)</span> 
-<span class="p">{</span> <span class="k">return</span> <span class="n">registry</span> <span class="o">-&gt;</span> 
-<span class="p">{</span> <span class="n">Gauge</span><span class="p">.</span><span class="n">builder</span><span class="p">(</span><span class="nv">"postgres.bgwriter.buffers_backend"</span><span class="p">,</span> <span class="n">jdbcTemplate</span><span class="p">,</span> <span class="n">jt</span> <span class="o">-&gt;</span> 
-<span class="p">{</span> <span class="k">Map</span><span class="o">&lt;</span><span class="n">String</span><span class="p">,</span> <span class="k">Object</span><span class="o">&gt;</span> <span class="k">row</span> <span class="o">=</span> <span class="n">jt</span><span class="p">.</span><span class="n">queryForMap</span><span class="p">(</span> <span class="nv">"SELECT buffers_backend FROM
-pg_stat_bgwriter"</span><span class="p">);</span> <span class="k">return</span> <span class="p">((</span><span class="n">Number</span><span class="p">)</span> <span class="k">row</span><span class="p">.</span><span class="k">get</span><span class="p">(</span><span class="nv">"buffers_backend"</span><span class="p">)).</span><span class="n">doubleValue</span><span class="p">();</span>
-<span class="p">}</span>
-<span class="p">).</span><span class="n">register</span><span class="p">(</span><span class="n">registry</span><span class="p">);</span> <span class="p">}</span>
-<span class="p">;</span> <span class="p">}</span>
+</pre></td><td class="rouge-code"><pre>    <span class="cm">/* Analizzo le statistiche del bgwriter per capire dove si trova il collo di
+        bottiglia. Il reset delle statistiche all'inizio mi dà una baseline
+        pulita per il confronto. */</span> <span class="k">SELECT</span> <span class="n">pg_stat_reset_shared</span><span class="p">(</span><span class="s1">'bgwriter'</span><span class="p">);</span> <span class="c1">--</span>
+        <span class="n">Resetto</span> <span class="n">le</span> <span class="n">statistiche</span> <span class="p">(</span><span class="n">solo</span> <span class="k">in</span> <span class="n">sessione</span> <span class="n">di</span> <span class="n">analisi</span><span class="p">)</span> <span class="cm">/* Dopo un periodo
+        di carico rappresentativo, leggo le metriche: */</span> <span class="k">SELECT</span>
+        <span class="n">buffers_checkpoint</span><span class="p">,</span> <span class="c1">-- Pagine scritte durante i checkpoint (normale)</span>
+        <span class="n">buffers_clean</span><span class="p">,</span> <span class="c1">-- Pagine scritte dal bgwriter in background (ottimale)</span>
+        <span class="n">buffers_backend</span><span class="p">,</span> <span class="c1">-- Pagine scritte direttamente dai processi utente</span>
+        <span class="p">(</span><span class="n">problema</span><span class="o">!</span><span class="p">)</span> <span class="n">buffers_backend_fsync</span><span class="p">,</span> <span class="c1">-- fsync eseguiti dai backend</span>
+        <span class="p">(</span><span class="n">critico</span><span class="p">:</span> <span class="n">indica</span> <span class="n">saturazione</span> <span class="n">I</span><span class="o">/</span><span class="n">O</span><span class="p">)</span> <span class="n">maxwritten_clean</span><span class="p">,</span> <span class="c1">-- Volte che il</span>
+        <span class="n">bgwriter</span> <span class="n">ha</span> <span class="n">raggiunto</span> <span class="n">il</span> <span class="n">limite</span> <span class="n">e</span> <span class="n">si</span> <span class="err">è</span> <span class="n">fermato</span> <span class="n">checkpoint_write_time</span><span class="p">,</span>
+        <span class="n">checkpoint_sync_time</span><span class="p">,</span> <span class="c1">-- Tempo speso nei checkpoint: se alto, i</span>
+        <span class="k">checkpoint</span> <span class="n">sono</span> <span class="n">troppo</span> <span class="n">pesanti</span> <span class="n">now</span><span class="p">()</span> <span class="o">-</span> <span class="n">stats_reset</span> <span class="k">AS</span> <span class="n">stats_age</span> <span class="k">FROM</span>
+        <span class="n">pg_stat_bgwriter</span><span class="p">;</span> <span class="cm">/* Interpretazione: buffers_backend alto -&gt; il
+        bgwriter è troppo lento, aumentare bgwriter_lru_maxpages
+        maxwritten_clean alto -&gt; il bgwriter raggiunge il limite e si ferma,
+        aumentare bgwriter_lru_maxpages checkpoint_sync_time alto -&gt; i
+        checkpoint sono bloccanti, aumentare max_wal_size per diradarli */</span> <span class="cm">/*
+        Calibro i parametri nel postgresql.conf per rendere il bgwriter più
+        aggressivo: bgwriter_delay = 50ms -- Default 200ms: sveglia il bgwriter
+        più spesso bgwriter_lru_maxpages = 200 -- Default 100: scrive più pagine
+        per ciclo bgwriter_lru_multiplier = 4.0 -- Default 2.0: più buffer
+        preallocati per le richieste future */</span> <span class="cm">/* Monitoro anche i checkpoint
+        per capire se sono troppo frequenti: */</span> <span class="k">SELECT</span> <span class="n">checkpoints_timed</span><span class="p">,</span> <span class="c1">--</span>
+        <span class="k">Checkpoint</span> <span class="n">pianificati</span> <span class="p">(</span><span class="n">normale</span><span class="p">)</span> <span class="n">checkpoints_req</span><span class="p">,</span> <span class="c1">-- Checkpoint forzati</span>
+        <span class="n">dal</span> <span class="n">volume</span> <span class="n">di</span> <span class="n">WAL</span> <span class="p">(</span><span class="n">problema</span> <span class="n">se</span> <span class="n">alto</span><span class="p">)</span> <span class="n">checkpoint_write_time</span> <span class="o">/</span>
+        <span class="k">nullif</span><span class="p">(</span><span class="n">checkpoints_timed</span> <span class="o">+</span> <span class="n">checkpoints_req</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span> <span class="k">AS</span> <span class="n">avg_write_ms</span><span class="p">,</span>
+        <span class="n">checkpoint_sync_time</span> <span class="o">/</span> <span class="k">nullif</span><span class="p">(</span><span class="n">checkpoints_timed</span> <span class="o">+</span> <span class="n">checkpoints_req</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span> <span class="k">AS</span>
+        <span class="n">avg_sync_ms</span> <span class="k">FROM</span> <span class="n">pg_stat_bgwriter</span><span class="p">;</span> <span class="cm">/* Se checkpoints_req è alto rispetto
+        a checkpoints_timed, aumento max_wal_size per diradare i checkpoint
+        forzati: max_wal_size = 4GB -- Default 1GB: consente WAL più grandi
+        prima del checkpoint checkpoint_completion_target = 0.9 -- Spalma la
+        scrittura su 90% dell'intervallo tra checkpoint */</span> <span class="cm">/* Verifico il tasso
+        di hit della shared_buffers per capire se la cache è sufficiente: */</span>
+        <span class="k">SELECT</span> <span class="k">sum</span><span class="p">(</span><span class="n">heap_blks_hit</span><span class="p">)</span> <span class="k">AS</span> <span class="n">cache_hits</span><span class="p">,</span> <span class="k">sum</span><span class="p">(</span><span class="n">heap_blks_read</span><span class="p">)</span> <span class="k">AS</span>
+        <span class="n">disk_reads</span><span class="p">,</span> <span class="n">round</span><span class="p">(</span><span class="mi">100</span><span class="p">.</span><span class="mi">0</span> <span class="o">*</span> <span class="k">sum</span><span class="p">(</span><span class="n">heap_blks_hit</span><span class="p">)</span> <span class="o">/</span> <span class="k">nullif</span><span class="p">(</span><span class="k">sum</span><span class="p">(</span><span class="n">heap_blks_hit</span><span class="p">)</span>
+        <span class="o">+</span> <span class="k">sum</span><span class="p">(</span><span class="n">heap_blks_read</span><span class="p">),</span> <span class="mi">0</span><span class="p">),</span> <span class="mi">2</span><span class="p">)</span> <span class="k">AS</span> <span class="n">cache_hit_pct</span> <span class="k">FROM</span>
+        <span class="n">pg_statio_user_tables</span><span class="p">;</span> <span class="cm">/* Un cache_hit_pct &lt; 95% su workload OLTP indica
+        che shared_buffers è troppo piccola: il valore raccomandato è il 25%
+        della RAM disponibile. */</span> <span class="cm">/* In Spring Boot, monitoro buffers_backend
+        tramite un Micrometer gauge esposto su Actuator per rilevare in tempo
+        reale i picchi di I/O diretto dai backend: */</span> <span class="o">@</span><span class="n">Bean</span> <span class="k">public</span> <span class="n">MeterBinder</span>
+        <span class="n">bgwriterMetrics</span><span class="p">(</span><span class="n">JdbcTemplate</span> <span class="n">jdbcTemplate</span><span class="p">)</span> <span class="p">{</span> <span class="k">return</span> <span class="n">registry</span> <span class="o">-&gt;</span> <span class="p">{</span>
+        <span class="n">Gauge</span><span class="p">.</span><span class="n">builder</span><span class="p">(</span><span class="nv">"postgres.bgwriter.buffers_backend"</span><span class="p">,</span> <span class="n">jdbcTemplate</span><span class="p">,</span> <span class="n">jt</span> <span class="o">-&gt;</span> <span class="p">{</span>
+        <span class="k">Map</span><span class="o">&lt;</span><span class="n">String</span><span class="p">,</span> <span class="k">Object</span><span class="o">&gt;</span> <span class="k">row</span> <span class="o">=</span> <span class="n">jt</span><span class="p">.</span><span class="n">queryForMap</span><span class="p">(</span> <span class="nv">"SELECT buffers_backend FROM
+        pg_stat_bgwriter"</span><span class="p">);</span> <span class="k">return</span> <span class="p">((</span><span class="n">Number</span><span class="p">)</span>
+        <span class="k">row</span><span class="p">.</span><span class="k">get</span><span class="p">(</span><span class="nv">"buffers_backend"</span><span class="p">)).</span><span class="n">doubleValue</span><span class="p">();</span> <span class="p">}).</span><span class="n">register</span><span class="p">(</span><span class="n">registry</span><span class="p">);</span> <span class="p">};</span> <span class="p">}</span>
 </pre></td></tr></tbody></table></code></pre></div></div>
 
         </article>

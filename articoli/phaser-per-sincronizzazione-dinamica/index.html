@@ -171,88 +171,144 @@
 80
 81
 82
-</pre></td><td class="rouge-code"><pre><span class="o">*</span> <span class="nc">Creo</span> <span class="n">un</span> <span class="nc">Phaser</span> <span class="n">con</span> <span class="mi">1</span> <span class="n">partecipante</span> <span class="nl">iniziale:</span> <span class="n">il</span> <span class="n">thread</span> <span class="n">master</span> <span class="n">che</span> <span class="n">coordina</span> <span class="n">la</span>
-<span class="o">*</span> <span class="n">migrazione</span><span class="o">.</span> <span class="no">I</span> <span class="n">worker</span> <span class="n">si</span> <span class="n">registrano</span> <span class="n">dinamicamente</span> <span class="n">man</span> <span class="n">mano</span> <span class="n">che</span> <span class="n">vengono</span> <span class="n">scoperti</span>
-<span class="o">*</span> <span class="n">i</span> <span class="n">chunk</span> <span class="n">da</span> <span class="n">processare</span><span class="o">.</span> <span class="o">*/</span>
- <span class="kd">public</span> <span class="kd">class</span> <span class="nc">DataMigrationOrchestrator</span> 
-<span class="o">{</span> <span class="kd">private</span> <span class="kd">final</span> <span class="nc">ExecutorService</span> <span class="n">executor</span> <span class="o">=</span>
-<span class="nc">Executors</span><span class="o">.</span><span class="na">newVirtualThreadPerTaskExecutor</span><span class="o">();</span> <span class="kd">public</span> <span class="kt">void</span> <span class="nf">migrate</span><span class="o">(</span><span class="nc">DataSource</span>
-<span class="n">source</span><span class="o">)</span> <span class="kd">throws</span> <span class="nc">InterruptedException</span>
-<span class="o">{</span> <span class="nc">Phaser</span> <span class="n">phaser</span> <span class="o">=</span> <span class="k">new</span> <span class="nc">Phaser</span><span class="o">(</span><span class="mi">1</span><span class="o">)</span> 
-<span class="o">{</span> 
-<span class="c1">// Overrido onAdvance per eseguire logica tra le fasi @Override protected</span>
-<span class="c1">// boolean onAdvance(int phase, int registeredParties)</span>
-<span class="o">{</span> <span class="n">log</span><span class="o">.</span><span class="na">info</span><span class="o">(</span><span class="s">"Fase 
-{}
- completata. Partecipanti rimasti: 
-{}
-"</span><span class="o">,</span> <span class="n">phase</span><span class="o">,</span> <span class="n">registeredParties</span><span class="o">);</span> <span class="k">return</span> <span class="n">registeredParties</span> <span class="o">==</span> <span class="mi">0</span><span class="o">;</span> 
-<span class="c1">// true = phaser terminato }</span>
- <span class="o">}</span>
-<span class="o">;</span> 
-<span class="c1">// FASE 1: scoperta dei chunk (il numero è sconosciuto a priori) List&lt;DataChunk&gt;</span>
-<span class="c1">// chunks = source.discoverChunks(); log.info("Scoperti</span>
-<span class="o">{}</span>
- <span class="n">chunk</span> <span class="n">da</span> <span class="n">processare</span><span class="s">", chunks.size()); 
-// Registro e avvio un worker per ogni chunk scoperto for (DataChunk chunk :
-// chunks)
-{ phaser.register(); 
-// Aggiungo dinamicamente un partecipante executor.submit(() -&gt; 
-{ try 
-{ 
-// FASE 1: validazione del chunk validateChunk(chunk);
-// phaser.arriveAndAwaitAdvance();
-// Aspetto che TUTTI i chunk siano validati 
-// FASE 2: trasformazione (eseguita solo dopo che tutti sono stati validati)
-// transformChunk(chunk); phaser.arriveAndAwaitAdvance();
-// Aspetto che TUTTI siano trasformati 
-// FASE 3: scrittura sul DB di destinazione writeChunk(chunk); }
- catch (Exception e) 
-{ log.error("</span><span class="nc">Errore</span> <span class="n">nel</span> <span class="n">chunk</span> 
-<span class="o">{}</span>
-<span class="s">", chunk.getId(), e); }
- finally 
-{ phaser.arriveAndDeregister(); 
-// Mi deregistro: non partecipo alle fasi successive }
- }
-); }
- 
-// Il master arriva alla prima barriera e aspetta i worker
-// phaser.arriveAndAwaitAdvance();
-// Fine fase 1: tutti i chunk validati log.info("</span><span class="nc">Tutti</span> <span class="n">i</span> <span class="n">chunk</span> <span class="n">validati</span><span class="o">.</span> <span class="nc">Avvio</span>
-<span class="c1">// trasformazione..."); phaser.arriveAndAwaitAdvance();</span>
-<span class="c1">// Fine fase 2: tutti i chunk trasformati log.info("Tutti i chunk trasformati.</span>
-<span class="c1">// Avvio scrittura..."); phaser.arriveAndDeregister();</span>
-<span class="c1">// Il master esce: la fase 3 è gestita solo dai worker log.info("Migrazione</span>
-<span class="c1">// completata"); }</span>
- <span class="o">}</span>
- 
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+106
+107
+108
+109
+110
+</pre></td><td class="rouge-code"><pre><span class="cm">/* Creo un Phaser con 1 partecipante iniziale: il thread master che coordina la
+    migrazione. I worker si registrano dinamicamente man mano che vengono
+    scoperti i chunk da processare. */</span>
+<span class="kd">public</span> <span class="kd">class</span> <span class="nc">DataMigrationOrchestrator</span> <span class="o">{</span>
+    <span class="kd">private</span> <span class="kd">final</span> <span class="nc">ExecutorService</span> <span class="n">executor</span> <span class="o">=</span>
+        <span class="nc">Executors</span><span class="o">.</span><span class="na">newVirtualThreadPerTaskExecutor</span><span class="o">();</span>
+    <span class="kd">public</span> <span class="kt">void</span> <span class="nf">migrate</span><span class="o">(</span><span class="nc">DataSource</span> <span class="n">source</span><span class="o">)</span> <span class="kd">throws</span> <span class="nc">InterruptedException</span> <span class="o">{</span>
+        <span class="nc">Phaser</span> <span class="n">phaser</span> <span class="o">=</span> <span class="k">new</span> <span class="nc">Phaser</span><span class="o">(</span><span class="mi">1</span><span class="o">)</span> <span class="o">{</span>
+            <span class="c1">// Overrido onAdvance per eseguire logica tra le fasi @Override</span>
+                <span class="kd">protected</span> <span class="kt">boolean</span> <span class="nf">onAdvance</span><span class="o">(</span><span class="kt">int</span> <span class="n">phase</span><span class="o">,</span> <span class="kt">int</span> <span class="n">registeredParties</span><span class="o">)</span>
+            <span class="o">{</span>
+                <span class="n">log</span><span class="o">.</span><span class="na">info</span><span class="o">(</span><span class="s">"Fase {
+                }
+                completata. Partecipanti rimasti: {
+                }
+                "</span><span class="o">,</span> <span class="n">phase</span><span class="o">,</span> <span class="n">registeredParties</span><span class="o">);</span>
+                <span class="k">return</span> <span class="n">registeredParties</span> <span class="o">==</span> <span class="mi">0</span><span class="o">;</span>
+                <span class="c1">// true = phaser terminato</span>
+            <span class="o">}</span>
+        <span class="o">}</span>
+        <span class="o">;</span>
+        <span class="c1">// FASE 1: scoperta dei chunk (il numero è sconosciuto a priori)</span>
+            <span class="nc">List</span><span class="o">&lt;</span><span class="nc">DataChunk</span><span class="o">&gt;</span> <span class="n">chunks</span> <span class="o">=</span> <span class="n">source</span><span class="o">.</span><span class="na">discoverChunks</span><span class="o">()</span>
+        <span class="o">;</span>
+        <span class="n">log</span><span class="o">.</span><span class="na">info</span><span class="o">(</span><span class="s">"Scoperti {
+        }
+        chunk da processare"</span><span class="o">,</span> <span class="n">chunks</span><span class="o">.</span><span class="na">size</span><span class="o">());</span>
+        <span class="c1">// Registro e avvio un worker per ogni chunk scoperto for (DataChunk</span>
+            <span class="n">chunk</span> <span class="o">:</span> <span class="n">chunks</span><span class="o">)</span>
+        <span class="o">{</span>
+            <span class="n">phaser</span><span class="o">.</span><span class="na">register</span><span class="o">();</span>
+            <span class="c1">// Aggiungo dinamicamente un partecipante executor.submit(() -&gt;</span>
+            <span class="o">{</span>
+                <span class="k">try</span> <span class="o">{</span>
+                    <span class="c1">// FASE 1: validazione del chunk validateChunk(chunk)</span>
+                    <span class="o">;</span>
+                    <span class="n">phaser</span><span class="o">.</span><span class="na">arriveAndAwaitAdvance</span><span class="o">();</span>
+                    <span class="c1">// Aspetto che TUTTI i chunk siano validati // FASE 2:</span>
+                        <span class="n">trasformazione</span> <span class="o">(</span><span class="n">eseguita</span> <span class="n">solo</span> <span class="n">dopo</span> <span class="n">che</span> <span class="n">tutti</span> <span class="n">sono</span> <span class="n">stati</span>
+                        <span class="n">validati</span><span class="o">)</span> <span class="n">transformChunk</span><span class="o">(</span><span class="n">chunk</span><span class="o">)</span>
+                    <span class="o">;</span>
+                    <span class="n">phaser</span><span class="o">.</span><span class="na">arriveAndAwaitAdvance</span><span class="o">();</span>
+                    <span class="c1">// Aspetto che TUTTI siano trasformati // FASE 3: scrittura</span>
+                        <span class="n">sul</span> <span class="no">DB</span> <span class="n">di</span> <span class="n">destinazione</span> <span class="nf">writeChunk</span><span class="o">(</span><span class="n">chunk</span><span class="o">)</span>
+                    <span class="o">;</span>
+                <span class="o">}</span>
+                <span class="k">catch</span> <span class="o">(</span><span class="nc">Exception</span> <span class="n">e</span><span class="o">)</span> <span class="o">{</span>
+                    <span class="n">log</span><span class="o">.</span><span class="na">error</span><span class="o">(</span><span class="s">"Errore nel chunk {
+                    }
+                    "</span><span class="o">,</span> <span class="n">chunk</span><span class="o">.</span><span class="na">getId</span><span class="o">(),</span> <span class="n">e</span><span class="o">);</span>
+                <span class="o">}</span>
+                <span class="k">finally</span> <span class="o">{</span>
+                    <span class="n">phaser</span><span class="o">.</span><span class="na">arriveAndDeregister</span><span class="o">();</span>
+                    <span class="c1">// Mi deregistro: non partecipo alle fasi successive</span>
+                <span class="o">}</span>
+            <span class="o">}</span>
+            <span class="o">);</span>
+        <span class="o">}</span>
+        <span class="c1">// Il master arriva alla prima barriera e aspetta i worker</span>
+            <span class="n">phaser</span><span class="o">.</span><span class="na">arriveAndAwaitAdvance</span><span class="o">()</span>
+        <span class="o">;</span>
+        <span class="c1">// Fine fase 1: tutti i chunk validati log.info("Tutti i chunk validati.</span>
+            <span class="nc">Avvio</span> <span class="n">trasformazione</span><span class="o">...</span><span class="s">")
+        ;
+        phaser.arriveAndAwaitAdvance();
+        // Fine fase 2: tutti i chunk trasformati log.info("</span><span class="nc">Tutti</span> <span class="n">i</span> <span class="n">chunk</span>
+            <span class="n">trasformati</span><span class="o">.</span> <span class="nc">Avvio</span> <span class="n">scrittura</span><span class="o">...</span><span class="s">")
+        ;
+        phaser.arriveAndDeregister();
+        // Il master esce: la fase 3 è gestita solo dai worker
+            log.info("</span><span class="nc">Migrazione</span> <span class="n">completata</span><span class="err">"</span><span class="o">)</span>
+        <span class="o">;</span>
+    <span class="o">}</span>
+<span class="o">}</span>
 <span class="cm">/* Confronto con CyclicBarrier per evidenziare il vantaggio di Phaser: */</span>
- 
 <span class="c1">// CyclicBarrier: numero fisso di partecipanti, non modificabile CyclicBarrier</span>
-<span class="c1">// barrier = new CyclicBarrier(10);</span>
-<span class="c1">// Deve sapere 10 in anticipo </span>
-<span class="c1">// Phaser: numero variabile, registration/deregistration a runtime Phaser phaser</span>
-<span class="c1">// = new Phaser(1); phaser.register();</span>
-<span class="c1">// Aggiungo uno phaser.register(); </span>
-<span class="c1">// Ne aggiungo un altro </span>
-<span class="o">*</span> <span class="nc">In</span> <span class="nc">Spring</span> <span class="nc">Boot</span><span class="o">,</span> <span class="n">uso</span> <span class="nc">Phaser</span> <span class="n">per</span> <span class="n">coordinare</span> <span class="n">job</span> <span class="n">batch</span> <span class="n">con</span> <span class="n">partizionamento</span>
-<span class="o">*</span> <span class="nl">dinamico:</span> <span class="o">*/</span>
- <span class="nd">@Component</span> <span class="kd">public</span> <span class="kd">class</span> <span class="nc">BatchJobCoordinator</span> 
-<span class="o">{</span> <span class="kd">public</span> <span class="kt">void</span> <span class="nf">runBatchJob</span><span class="o">(</span><span class="nc">List</span><span class="o">&lt;</span><span class="nc">String</span><span class="o">&gt;</span> <span class="n">tableNames</span><span class="o">)</span> 
-<span class="o">{</span> <span class="nc">Phaser</span> <span class="n">phaser</span> <span class="o">=</span> <span class="k">new</span> <span class="nc">Phaser</span><span class="o">(</span><span class="mi">1</span><span class="o">);</span> <span class="k">for</span> <span class="o">(</span><span class="nc">String</span> <span class="n">table</span> <span class="o">:</span> <span class="n">tableNames</span><span class="o">)</span> 
-<span class="o">{</span> <span class="n">phaser</span><span class="o">.</span><span class="na">register</span><span class="o">();</span> <span class="n">virtualThreadExecutor</span><span class="o">.</span><span class="na">submit</span><span class="o">(()</span> <span class="o">-&gt;</span> 
-<span class="o">{</span> <span class="k">try</span> 
-<span class="o">{</span> <span class="n">backupTable</span><span class="o">(</span><span class="n">table</span><span class="o">);</span> <span class="n">phaser</span><span class="o">.</span><span class="na">arriveAndAwaitAdvance</span><span class="o">();</span> 
-<span class="c1">// Aspetto che tutti i backup siano pronti verifyTable(table); </span>
-<span class="c1">// Poi verifico }</span>
- <span class="k">finally</span> 
-<span class="o">{</span> <span class="n">phaser</span><span class="o">.</span><span class="na">arriveAndDeregister</span><span class="o">();</span> <span class="o">}</span>
- <span class="o">}</span>
-<span class="o">);</span> <span class="o">}</span>
- <span class="n">phaser</span><span class="o">.</span><span class="na">arriveAndDeregister</span><span class="o">();</span> 
-<span class="c1">// Il coordinator esce dalla fase }</span>
- <span class="o">}</span>
+    <span class="n">barrier</span> <span class="o">=</span> <span class="k">new</span> <span class="nc">CyclicBarrier</span><span class="o">(</span><span class="mi">10</span><span class="o">)</span>
+<span class="o">;</span>
+<span class="c1">// Deve sapere 10 in anticipo // Phaser: numero variabile,</span>
+    <span class="n">registration</span><span class="o">/</span><span class="n">deregistration</span> <span class="n">a</span> <span class="n">runtime</span> <span class="nc">Phaser</span> <span class="n">phaser</span> <span class="o">=</span> <span class="k">new</span> <span class="nc">Phaser</span><span class="o">(</span><span class="mi">1</span><span class="o">)</span>
+<span class="o">;</span>
+<span class="n">phaser</span><span class="o">.</span><span class="na">register</span><span class="o">();</span>
+<span class="c1">// Aggiungo uno phaser.register()</span>
+<span class="o">;</span>
+<span class="c1">// Ne aggiungo un altro /* In Spring Boot, uso Phaser per coordinare job batch</span>
+    <span class="n">con</span> <span class="n">partizionamento</span> <span class="nl">dinamico:</span> <span class="o">*/</span> <span class="nd">@Component</span> <span class="kd">public</span> <span class="kd">class</span> <span class="nc">BatchJobCoordinator</span>
+<span class="o">{</span>
+    <span class="kd">public</span> <span class="kt">void</span> <span class="nf">runBatchJob</span><span class="o">(</span><span class="nc">List</span><span class="o">&lt;</span><span class="nc">String</span><span class="o">&gt;</span> <span class="n">tableNames</span><span class="o">)</span> <span class="o">{</span>
+        <span class="nc">Phaser</span> <span class="n">phaser</span> <span class="o">=</span> <span class="k">new</span> <span class="nc">Phaser</span><span class="o">(</span><span class="mi">1</span><span class="o">);</span>
+        <span class="k">for</span> <span class="o">(</span><span class="nc">String</span> <span class="n">table</span> <span class="o">:</span> <span class="n">tableNames</span><span class="o">)</span> <span class="o">{</span>
+            <span class="n">phaser</span><span class="o">.</span><span class="na">register</span><span class="o">();</span>
+            <span class="n">virtualThreadExecutor</span><span class="o">.</span><span class="na">submit</span><span class="o">(()</span> <span class="o">-&gt;</span> <span class="o">{</span>
+                <span class="k">try</span> <span class="o">{</span>
+                    <span class="n">backupTable</span><span class="o">(</span><span class="n">table</span><span class="o">);</span>
+                    <span class="n">phaser</span><span class="o">.</span><span class="na">arriveAndAwaitAdvance</span><span class="o">();</span>
+                    <span class="c1">// Aspetto che tutti i backup siano pronti</span>
+                        <span class="n">verifyTable</span><span class="o">(</span><span class="n">table</span><span class="o">)</span>
+                    <span class="o">;</span>
+                    <span class="c1">// Poi verifico</span>
+                <span class="o">}</span>
+                <span class="k">finally</span> <span class="o">{</span>
+                    <span class="n">phaser</span><span class="o">.</span><span class="na">arriveAndDeregister</span><span class="o">();</span>
+                <span class="o">}</span>
+            <span class="o">}</span>
+            <span class="o">);</span>
+        <span class="o">}</span>
+        <span class="n">phaser</span><span class="o">.</span><span class="na">arriveAndDeregister</span><span class="o">();</span>
+        <span class="c1">// Il coordinator esce dalla fase</span>
+    <span class="o">}</span>
+<span class="o">}</span>
 </pre></td></tr></tbody></table></code></pre></div></div>
 
         </article>

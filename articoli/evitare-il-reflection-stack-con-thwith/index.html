@@ -90,183 +90,89 @@
 <h2 id="esempio-implementativo">Esempio Implementativo</h2>
 
 <pre><code class="language-thymeleaf">&lt;!-- PATTERN DA EVITARE: ogni espressione SpEL viene rivalutata per ogni colonna
-della riga. Con 1000 righe, hasRole() viene chiamato 3000 volte invece di 1000.
---&gt;
-&lt;tr
-    th:each="user : $
-{users}
-"
-&gt;
-    &lt;td
-        th:text="$
-{user.name}
-"
-    &gt;
+    della riga. Con 1000 righe, hasRole() viene chiamato 3000 volte invece di
+    1000. --&gt;
+&lt;tr th:each="user : ${users}"&gt;
+    &lt;td th:text="${user.name}"&gt;
         Nome
     &lt;/td&gt;
     &lt;!-- hasRole() rivalutato per ogni td --&gt;
-    &lt;td
-        th:class="$
-{user.hasRole('ADMIN')}
- ? 'badge-danger' : 'badge-secondary'"
-        th:text="$
-{user.hasRole('ADMIN')}
- ? 'Admin' : 'User'"
-    &gt;
+    &lt;td th:class="${user.hasRole('ADMIN')} ? 'badge-danger' : 'badge-secondary'"
+        th:text="${user.hasRole('ADMIN')} ? 'Admin' : 'User'"&gt;
         Ruolo
     &lt;/td&gt;
     &lt;!-- formatCurrency rivalutato due volte per riga --&gt;
-    &lt;td
-        th:text="$
-{#finance.formatCurrency(user.totalSpent, 'EUR')}
-"
-    &gt;
+    &lt;td th:text="${#finance.formatCurrency(user.totalSpent, 'EUR')}"&gt;
         € 0
     &lt;/td&gt;
     &lt;td
-        th:class="$
-{user.totalSpent.compareTo(T(java.math.BigDecimal).valueOf(1000)) &gt; 0}
- ? 'text-gold' : ''"
-        th:text="$
-{user.totalSpent.compareTo(T(java.math.BigDecimal).valueOf(1000)) &gt; 0}
- ? 'VIP' : 'Standard'"
-    &gt;
-        Tier
+        th:class="${user.totalSpent.compareTo(T(java.math.BigDecimal).valueOf(10
+        00)) &gt;
+        0} ? 'text-gold' : ''"
+            th:text="${user.totalSpent.compareTo(T(java.math.BigDecimal).valueOf
+            (1000)) &gt; 0} ? 'VIP' : 'Standard'"&gt;Tier
     &lt;/td&gt;
 &lt;/tr&gt;
 &lt;!-- PATTERN CORRETTO: th:with calcola ogni valore una sola volta per
-iterazione. Con 1000 righe: hasRole() chiamato 1000 volte, formatCurrency 1000
-volte. --&gt;
-&lt;tr
-    th:each="user : $
-{users}
-"
-    th:with=" isAdmin=$
-{user.hasRole('ADMIN')}
-, formattedSpent=$
-{#finance.formatCurrency(user.totalSpent, 'EUR')}
-, isVip=$
-{user.totalSpent.compareTo(T(java.math.BigDecimal).valueOf(1000)) &gt; 0}
-, rowCssClass=$
-{user.active ? '' : 'table-secondary'}
-"
-    th:class="$
-{rowCssClass}
-"
-&gt;
-    &lt;td
-        th:text="$
-{user.name}
-"
-    &gt;
+    iterazione. Con 1000 righe: hasRole() chiamato 1000 volte, formatCurrency
+    1000 volte. --&gt;
+&lt;tr th:each="user : ${users}" th:with=" isAdmin=${user.hasRole('ADMIN')},
+    formattedSpent=${#finance.formatCurrency(user.totalSpent, 'EUR')},
+    isVip=${user.totalSpent.compareTo(T(java.math.BigDecimal).valueOf(1000)) &gt;
+    0}, rowCssClass=${user.active ? '' : 'table-secondary'}"
+        th:class="${rowCssClass}"&gt;
+    &lt;td th:text="${user.name}"&gt;
         Nome
     &lt;/td&gt;
     &lt;!-- Uso la variabile locale: zero reflection aggiuntiva --&gt;
-    &lt;td
-        th:class="$
-{isAdmin}
- ? 'badge-danger' : 'badge-secondary'"
-        th:text="$
-{isAdmin}
- ? 'Admin' : 'User'"
-    &gt;
+    &lt;td th:class="${isAdmin} ? 'badge-danger' : 'badge-secondary'"
+        th:text="${isAdmin} ? 'Admin' : 'User'"&gt;
         Ruolo
     &lt;/td&gt;
-    &lt;td
-        th:text="$
-{formattedSpent}
-"
-    &gt;
+    &lt;td th:text="${formattedSpent}"&gt;
         € 0
     &lt;/td&gt;
-    &lt;td
-        th:class="$
-{isVip}
- ? 'text-gold' : ''"
-        th:text="$
-{isVip}
- ? 'VIP' : 'Standard'"
-    &gt;
+    &lt;td th:class="${isVip} ? 'text-gold' : ''" th:text="${isVip} ? 'VIP' :
+        'Standard'"&gt;
         Tier
     &lt;/td&gt;
 &lt;/tr&gt;
 &lt;!-- th:with annidato per logiche più complesse: calcolo il subtotale e il
-discount una sola volta. --&gt;
-&lt;tbody
-    th:each="order : $
-{orders}
-"
-    th:with=" subtotal=$
-{order.items.stream().mapToDouble(i -&gt; i.price * i.quantity).sum()}
-, hasDiscount=$
-{order.coupon != null and order.coupon.active}
-, discountAmount=$
-{order.coupon != null}
- ? $
-{subtotal * order.coupon.rate}
- : 0, finalTotal=$
-{subtotal - discountAmount}
-"
-&gt;
+    discount una sola volta. --&gt;
+&lt;tbody th:each="order : ${orders}" th:with="
+    subtotal=${order.items.stream().mapToDouble(i -&gt;
+    i.price * i.quantity).sum()}, hasDiscount=${order.coupon != null and
+        order.coupon.active}, discountAmount=${order.coupon != null} ?
+        ${subtotal * order.coupon.rate} : 0, finalTotal=${subtotal -
+        discountAmount}"&gt;
     &lt;tr&gt;
-        &lt;td
-            th:text="$
-{order.id}
-"
-        &gt;
+        &lt;td th:text="${order.id}"&gt;
             ID
         &lt;/td&gt;
-        &lt;td
-            th:text="$
-{#finance.formatCurrency(subtotal, 'EUR')}
-"
-        &gt;
+        &lt;td th:text="${#finance.formatCurrency(subtotal, 'EUR')}"&gt;
             Subtotale
         &lt;/td&gt;
-        &lt;td
-            th:if="$
-{hasDiscount}
-"
-            th:text="'-' + $
-{#finance.formatCurrency(discountAmount, 'EUR')}
-"
-        &gt;
+        &lt;td th:if="${hasDiscount}" th:text="'-' +
+            ${#finance.formatCurrency(discountAmount, 'EUR')}"&gt;
             Sconto
         &lt;/td&gt;
-        &lt;td
-            th:text="$
-{#finance.formatCurrency(finalTotal, 'EUR')}
-"
-        &gt;
+        &lt;td th:text="${#finance.formatCurrency(finalTotal, 'EUR')}"&gt;
             Totale
         &lt;/td&gt;
     &lt;/tr&gt;
 &lt;/tbody&gt;
 &lt;!-- th:with può essere usato anche fuori dai loop per evitare chiamate ripetute
-a bean Spring: --&gt;
-&lt;div
-    th:with="config=$
-{@appConfigBean.getDisplayConfig()}
-"
-&gt;
-    &lt;span
-        th:text="$
-{config.maxItems}
-"
-        &gt;10&lt;/span
-    &gt;
-    &lt;span
-        th:text="$
-{config.dateFormat}
-"
-        &gt;dd/MM/yyyy&lt;/span
-    &gt;
-    &lt;span
-        th:text="$
-{config.currency}
-"
-        &gt;EUR&lt;/span
-    &gt;
+    a bean Spring: --&gt;
+&lt;div th:with="config=${@appConfigBean.getDisplayConfig()}"&gt;
+    &lt;span th:text="${config.maxItems}"&gt;
+        10
+    &lt;/span&gt;
+    &lt;span th:text="${config.dateFormat}"&gt;
+        dd/MM/yyyy
+    &lt;/span&gt;
+    &lt;span th:text="${config.currency}"&gt;
+        EUR
+    &lt;/span&gt;
 &lt;/div&gt;
 </code></pre>
 

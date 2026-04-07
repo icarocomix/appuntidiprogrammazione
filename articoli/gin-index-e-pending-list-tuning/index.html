@@ -117,45 +117,35 @@
 26
 27
 28
-29
-30
-31
-32
-33
-</pre></td><td class="rouge-code"><pre><span class="o">*</span> <span class="n">Creo</span> <span class="n">l</span><span class="s1">'indice GIN con fastupdate abilitato e una pending list generosa per
-* ingestione massiva di log JSONB. */
- CREATE INDEX CONCURRENTLY idx_app_logs_gin ON app_logs USING GIN (payload
-jsonb_path_ops) WITH (fastupdate = on, gin_pending_list_limit = 16384); -- 16MB
-/* Modifico il limite sulla tabella esistente senza ricreare l'</span><span class="n">indice</span><span class="p">:</span> <span class="o">*/</span>
- <span class="k">ALTER</span> <span class="k">TABLE</span> <span class="n">app_logs</span> <span class="k">SET</span> <span class="p">(</span><span class="n">gin_pending_list_limit</span> <span class="o">=</span> <span class="mi">16384</span><span class="p">);</span> <span class="k">ANALYZE</span> <span class="n">app_logs</span><span class="p">;</span> 
-<span class="o">*</span> <span class="n">Verifico</span> <span class="n">la</span> <span class="n">dimensione</span> <span class="n">attuale</span> <span class="n">della</span> <span class="n">pending</span> <span class="n">list</span> <span class="n">e</span> <span class="n">la</span> <span class="n">dimensione</span> <span class="n">totale</span>
-<span class="o">*</span> <span class="n">dell</span><span class="s1">'indice: */
- SELECT indexrelname, pg_size_pretty(pg_relation_size(indexrelid)) AS index_size
-FROM pg_stat_user_indexes WHERE relname = '</span><span class="n">app_logs</span><span class="s1">' AND indexrelname =
-'</span><span class="n">idx_app_logs_gin</span><span class="s1">';
-* Forzo manualmente il merge della pending list nell'</span><span class="n">indice</span> <span class="n">principale</span> <span class="p">(</span><span class="n">utile</span>
-<span class="o">*</span> <span class="n">dopo</span> <span class="n">un</span> <span class="n">bulk</span> <span class="k">insert</span><span class="p">):</span> <span class="o">*/</span>
- <span class="k">SELECT</span> <span class="n">gin_clean_pending_list</span><span class="p">(</span><span class="s1">'idx_app_logs_gin'</span><span class="p">::</span><span class="n">regclass</span><span class="p">);</span> 
-<span class="o">*</span> <span class="n">Confronto</span> <span class="n">il</span> <span class="n">comportamento</span> <span class="n">di</span> <span class="n">scrittura</span> <span class="n">con</span> <span class="n">fastupdate</span> <span class="k">on</span> <span class="n">vs</span> <span class="k">off</span> <span class="n">su</span> <span class="n">un</span> <span class="n">batch</span>
-<span class="o">*</span> <span class="n">di</span> <span class="mi">10</span><span class="p">.</span><span class="mi">000</span> <span class="n">inserimenti</span><span class="p">:</span> <span class="o">*/</span>
- <span class="c1">-- Con fastupdate = on: ogni INSERT scrive solo nella lista pendente (veloce)</span>
-<span class="c1">-- Con fastupdate = off: ogni INSERT aggiorna direttamente l'albero GIN (lento</span>
-<span class="n">ma</span> <span class="n">ricerche</span> <span class="n">sempre</span> <span class="n">coerenti</span><span class="p">)</span>
-<span class="o">*</span> <span class="n">Per</span> <span class="n">bulk</span> <span class="n">import</span><span class="p">,</span> <span class="n">disabilito</span> <span class="n">temporaneamente</span> <span class="n">fastupdate</span> <span class="n">per</span> <span class="n">evitare</span> <span class="n">che</span> <span class="n">la</span>
-<span class="o">*</span> <span class="n">pending</span> <span class="n">list</span> <span class="n">esploda</span> <span class="n">e</span> <span class="n">produca</span> <span class="n">un</span> <span class="n">merge</span> <span class="n">gigante</span> <span class="n">a</span> <span class="n">fine</span> <span class="n">operazione</span><span class="p">:</span> <span class="o">*/</span>
- <span class="k">ALTER</span> <span class="k">INDEX</span> <span class="n">idx_app_logs_gin</span> <span class="k">SET</span> <span class="p">(</span><span class="n">fastupdate</span> <span class="o">=</span> <span class="k">off</span><span class="p">);</span> <span class="c1">-- Eseguo il bulk insert</span>
-<span class="k">COPY</span> <span class="n">app_logs</span> <span class="k">FROM</span> <span class="s1">'/data/logs_import.csv'</span> <span class="k">WITH</span> <span class="p">(</span><span class="n">FORMAT</span> <span class="n">csv</span><span class="p">);</span> <span class="k">ALTER</span> <span class="k">INDEX</span>
-<span class="n">idx_app_logs_gin</span> <span class="k">SET</span> <span class="p">(</span><span class="n">fastupdate</span> <span class="o">=</span> <span class="k">on</span><span class="p">);</span> <span class="k">REINDEX</span> <span class="k">INDEX</span> <span class="n">CONCURRENTLY</span>
-<span class="n">idx_app_logs_gin</span><span class="p">;</span>
-<span class="o">*</span> <span class="k">In</span> <span class="n">Spring</span> <span class="n">Boot</span><span class="p">,</span> <span class="n">per</span> <span class="n">l</span><span class="s1">'ingestione continua di log uso un buffer applicativo che
-* accumula 500 record prima di fare un INSERT batch, riducendo ulteriormente la
-* pressione sulla pending list: @Transactional public void
-* flushLogBuffer(List&lt;AppLog&gt; buffer)
-{ if (buffer.size() &gt;= 500) 
-{ logRepository.saveAll(buffer); buffer.clear(); }
- }
- */
-</span></pre></td></tr></tbody></table></code></pre></div></div>
+</pre></td><td class="rouge-code"><pre>    <span class="cm">/* Creo l'indice GIN con fastupdate abilitato e una pending list generosa
+        per ingestione massiva di log JSONB. */</span> <span class="k">CREATE</span> <span class="k">INDEX</span> <span class="n">CONCURRENTLY</span>
+        <span class="n">idx_app_logs_gin</span> <span class="k">ON</span> <span class="n">app_logs</span> <span class="k">USING</span> <span class="n">GIN</span> <span class="p">(</span><span class="n">payload</span> <span class="n">jsonb_path_ops</span><span class="p">)</span> <span class="k">WITH</span>
+        <span class="p">(</span><span class="n">fastupdate</span> <span class="o">=</span> <span class="k">on</span><span class="p">,</span> <span class="n">gin_pending_list_limit</span> <span class="o">=</span> <span class="mi">16384</span><span class="p">);</span> <span class="c1">-- 16MB /* Modifico</span>
+        <span class="n">il</span> <span class="n">limite</span> <span class="n">sulla</span> <span class="n">tabella</span> <span class="n">esistente</span> <span class="n">senza</span> <span class="n">ricreare</span> <span class="n">l</span><span class="s1">'indice: */ ALTER
+        TABLE app_logs SET (gin_pending_list_limit = 16384); ANALYZE app_logs;
+        /* Verifico la dimensione attuale della pending list e la dimensione
+        totale dell'</span><span class="n">indice</span><span class="p">:</span> <span class="o">*/</span> <span class="k">SELECT</span> <span class="n">indexrelname</span><span class="p">,</span>
+        <span class="n">pg_size_pretty</span><span class="p">(</span><span class="n">pg_relation_size</span><span class="p">(</span><span class="n">indexrelid</span><span class="p">))</span> <span class="k">AS</span> <span class="n">index_size</span> <span class="k">FROM</span>
+        <span class="n">pg_stat_user_indexes</span> <span class="k">WHERE</span> <span class="n">relname</span> <span class="o">=</span> <span class="s1">'app_logs'</span> <span class="k">AND</span> <span class="n">indexrelname</span> <span class="o">=</span>
+        <span class="s1">'idx_app_logs_gin'</span><span class="p">;</span> <span class="cm">/* Forzo manualmente il merge della pending list
+        nell'indice principale (utile dopo un bulk insert): */</span> <span class="k">SELECT</span>
+        <span class="n">gin_clean_pending_list</span><span class="p">(</span><span class="s1">'idx_app_logs_gin'</span><span class="p">::</span><span class="n">regclass</span><span class="p">);</span> <span class="cm">/* Confronto il
+        comportamento di scrittura con fastupdate on vs off su un batch di
+        10.000 inserimenti: */</span> <span class="c1">-- Con fastupdate = on: ogni INSERT scrive solo</span>
+        <span class="n">nella</span> <span class="n">lista</span> <span class="n">pendente</span> <span class="p">(</span><span class="n">veloce</span><span class="p">)</span> <span class="c1">-- Con fastupdate = off: ogni INSERT</span>
+        <span class="n">aggiorna</span> <span class="n">direttamente</span> <span class="n">l</span><span class="s1">'albero GIN (lento ma ricerche sempre coerenti)
+        /* Per bulk import, disabilito temporaneamente fastupdate per evitare
+        che la pending list esploda e produca un merge gigante a fine
+        operazione: */ ALTER INDEX idx_app_logs_gin SET (fastupdate = off); --
+        Eseguo il bulk insert COPY app_logs FROM '</span><span class="o">/</span><span class="k">data</span><span class="o">/</span><span class="n">logs_import</span><span class="p">.</span><span class="n">csv</span><span class="s1">' WITH
+        (FORMAT csv); ALTER INDEX idx_app_logs_gin SET (fastupdate = on);
+        REINDEX INDEX CONCURRENTLY idx_app_logs_gin; /* In Spring Boot, per
+        l'</span><span class="n">ingestione</span> <span class="n">continua</span> <span class="n">di</span> <span class="n">log</span> <span class="n">uso</span> <span class="n">un</span> <span class="n">buffer</span> <span class="n">applicativo</span> <span class="n">che</span> <span class="n">accumula</span> <span class="mi">500</span>
+        <span class="n">record</span> <span class="n">prima</span> <span class="n">di</span> <span class="n">fare</span> <span class="n">un</span> <span class="k">INSERT</span> <span class="n">batch</span><span class="p">,</span> <span class="n">riducendo</span> <span class="n">ulteriormente</span> <span class="n">la</span>
+        <span class="n">pressione</span> <span class="n">sulla</span> <span class="n">pending</span> <span class="n">list</span><span class="p">:</span> <span class="o">@</span><span class="n">Transactional</span> <span class="k">public</span> <span class="n">void</span>
+        <span class="n">flushLogBuffer</span><span class="p">(</span><span class="n">List</span><span class="o">&lt;</span><span class="n">AppLog</span><span class="o">&gt;</span> <span class="n">buffer</span><span class="p">)</span> <span class="p">{</span> <span class="n">if</span> <span class="p">(</span><span class="n">buffer</span><span class="p">.</span><span class="k">size</span><span class="p">()</span> <span class="o">&gt;=</span> <span class="mi">500</span><span class="p">)</span> <span class="p">{</span>
+        <span class="n">logRepository</span><span class="p">.</span><span class="n">saveAll</span><span class="p">(</span><span class="n">buffer</span><span class="p">);</span> <span class="n">buffer</span><span class="p">.</span><span class="n">clear</span><span class="p">();</span> <span class="p">}</span> <span class="p">}</span> <span class="o">*/</span>
+</pre></td></tr></tbody></table></code></pre></div></div>
 
         </article>
 

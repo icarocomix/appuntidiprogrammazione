@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Event Sourcing e State Reconstitution — DevLog</title>
-    <meta name="description" content="Gestire lo stato attuale non permette di capire come ci si è arrivati (audit log). L'Event Sourcing non salva lo stato, ma una sequenza immutabile di eventi (append-only). Lo stato attuale viene ricostruito ('proiezione') riducendo (folding) l'array 
+    <meta name="description" content="Gestire lo stato attuale non permette di capire come ci si è arrivati (audit log). L'Event Sourcing non salva lo stato, ma una sequenza immutabile di eventi (append-only). Lo stato attuale viene ricostruito ("proiezione") riducendo (folding) l'array 
 ">
     <link rel="stylesheet" href="/appuntidiprogrammazione/assets/css/style.css">
 
@@ -183,100 +183,186 @@
 92
 93
 94
-</pre></td><td class="rouge-code"><pre><span class="o">*</span> <span class="nx">Definisco</span> <span class="nx">i</span> <span class="nx">tipi</span> <span class="nx">di</span> <span class="nx">evento</span> <span class="nx">del</span> <span class="nx">dominio</span><span class="p">.</span> <span class="nx">Gli</span> <span class="nx">eventi</span> <span class="nx">sono</span> <span class="nx">immutabili</span> <span class="nx">e</span>
-<span class="o">*</span> <span class="nx">descrivono</span> <span class="nx">COSA</span> <span class="nx">è</span> <span class="nx">successo</span><span class="p">,</span> <span class="nx">non</span> <span class="nx">COME</span><span class="p">.</span> <span class="o">*</span><span class="sr">/</span><span class="err">
-</span> <span class="kd">const</span> <span class="nx">EventTypes</span> <span class="o">=</span> <span class="nb">Object</span><span class="p">.</span><span class="nx">freeze</span><span class="p">(</span>
-<span class="p">{</span> <span class="na">ITEM_ADDED</span><span class="p">:</span> <span class="dl">'</span><span class="s1">ITEM_ADDED</span><span class="dl">'</span><span class="p">,</span> <span class="na">ITEM_REMOVED</span><span class="p">:</span> <span class="dl">'</span><span class="s1">ITEM_REMOVED</span><span class="dl">'</span><span class="p">,</span> <span class="na">QUANTITY_CHANGED</span><span class="p">:</span>
-<span class="dl">'</span><span class="s1">QUANTITY_CHANGED</span><span class="dl">'</span><span class="p">,</span> <span class="na">CART_CLEARED</span><span class="p">:</span> <span class="dl">'</span><span class="s1">CART_CLEARED</span><span class="dl">'</span><span class="p">,</span> <span class="na">COUPON_APPLIED</span><span class="p">:</span>
-<span class="dl">'</span><span class="s1">COUPON_APPLIED</span><span class="dl">'</span> <span class="p">}</span>
-<span class="p">);</span> 
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+106
+107
+108
+109
+110
+111
+112
+113
+114
+115
+116
+117
+118
+119
+120
+121
+122
+123
+124
+125
+126
+127
+128
+129
+130
+131
+132
+133
+134
+135
+136
+137
+</pre></td><td class="rouge-code"><pre><span class="cm">/* Definisco i tipi di evento del dominio. Gli eventi sono immutabili e
+    descrivono COSA è successo, non COME. */</span>
+<span class="kd">const</span> <span class="nx">EventTypes</span> <span class="o">=</span> <span class="nb">Object</span><span class="p">.</span><span class="nx">freeze</span><span class="p">({</span>
+    <span class="na">ITEM_ADDED</span><span class="p">:</span> <span class="dl">'</span><span class="s1">ITEM_ADDED</span><span class="dl">'</span><span class="p">,</span> <span class="na">ITEM_REMOVED</span><span class="p">:</span> <span class="dl">'</span><span class="s1">ITEM_REMOVED</span><span class="dl">'</span><span class="p">,</span> <span class="na">QUANTITY_CHANGED</span><span class="p">:</span>
+        <span class="dl">'</span><span class="s1">QUANTITY_CHANGED</span><span class="dl">'</span><span class="p">,</span> <span class="na">CART_CLEARED</span><span class="p">:</span> <span class="dl">'</span><span class="s1">CART_CLEARED</span><span class="dl">'</span><span class="p">,</span> <span class="na">COUPON_APPLIED</span><span class="p">:</span>
+        <span class="dl">'</span><span class="s1">COUPON_APPLIED</span><span class="dl">'</span>
+<span class="p">}</span>
+<span class="p">);</span>
 <span class="cm">/* Il reducer è una funzione pura che applica un evento allo stato corrente. */</span>
- <span class="kd">function</span> <span class="nx">cartReducer</span><span class="p">(</span><span class="nx">state</span><span class="p">,</span> <span class="nx">event</span><span class="p">)</span> 
-<span class="p">{</span> <span class="k">switch</span> <span class="p">(</span><span class="nx">event</span><span class="p">.</span><span class="nx">type</span><span class="p">)</span> 
-<span class="p">{</span> <span class="k">case</span> <span class="nx">EventTypes</span><span class="p">.</span><span class="nx">ITEM_ADDED</span><span class="p">:</span> <span class="k">return</span> 
-<span class="p">{</span> <span class="p">...</span><span class="nx">state</span><span class="p">,</span> <span class="na">items</span><span class="p">:</span> <span class="p">[...</span><span class="nx">state</span><span class="p">.</span><span class="nx">items</span><span class="p">,</span> 
-<span class="p">{</span> <span class="na">id</span><span class="p">:</span> <span class="nx">event</span><span class="p">.</span><span class="nx">itemId</span><span class="p">,</span> <span class="na">quantity</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span> <span class="na">price</span><span class="p">:</span> <span class="nx">event</span><span class="p">.</span><span class="nx">price</span><span class="p">,</span> <span class="na">name</span><span class="p">:</span> <span class="nx">event</span><span class="p">.</span><span class="nx">name</span> <span class="p">}</span>
-<span class="p">]</span> <span class="p">}</span>
-<span class="p">;</span> <span class="k">case</span> <span class="nx">EventTypes</span><span class="p">.</span><span class="nx">ITEM_REMOVED</span><span class="p">:</span> <span class="k">return</span> 
-<span class="p">{</span> <span class="p">...</span><span class="nx">state</span><span class="p">,</span> <span class="na">items</span><span class="p">:</span> <span class="nx">state</span><span class="p">.</span><span class="nx">items</span><span class="p">.</span><span class="nx">filter</span><span class="p">(</span><span class="nx">item</span> <span class="o">=&gt;</span> <span class="nx">item</span><span class="p">.</span><span class="nx">id</span> <span class="o">!==</span> <span class="nx">event</span><span class="p">.</span><span class="nx">itemId</span><span class="p">)</span> <span class="p">}</span>
-<span class="p">;</span> <span class="k">case</span> <span class="nx">EventTypes</span><span class="p">.</span><span class="nx">QUANTITY_CHANGED</span><span class="p">:</span> <span class="k">return</span> 
-<span class="p">{</span> <span class="p">...</span><span class="nx">state</span><span class="p">,</span> <span class="na">items</span><span class="p">:</span> <span class="nx">state</span><span class="p">.</span><span class="nx">items</span><span class="p">.</span><span class="nx">map</span><span class="p">(</span><span class="nx">item</span> <span class="o">=&gt;</span> <span class="nx">item</span><span class="p">.</span><span class="nx">id</span> <span class="o">===</span> <span class="nx">event</span><span class="p">.</span><span class="nx">itemId</span> <span class="p">?</span> 
-<span class="p">{</span> <span class="p">...</span><span class="nx">item</span><span class="p">,</span> <span class="na">quantity</span><span class="p">:</span> <span class="nx">event</span><span class="p">.</span><span class="nx">quantity</span> <span class="p">}</span>
- <span class="p">:</span> <span class="nx">item</span> <span class="p">)</span> <span class="p">}</span>
-<span class="p">;</span> <span class="k">case</span> <span class="nx">EventTypes</span><span class="p">.</span><span class="nx">CART_CLEARED</span><span class="p">:</span> <span class="k">return</span> 
-<span class="p">{</span> <span class="p">...</span><span class="nx">state</span><span class="p">,</span> <span class="na">items</span><span class="p">:</span> <span class="p">[],</span> <span class="na">coupon</span><span class="p">:</span> <span class="kc">null</span> <span class="p">}</span>
-<span class="p">;</span> <span class="k">case</span> <span class="nx">EventTypes</span><span class="p">.</span><span class="nx">COUPON_APPLIED</span><span class="p">:</span> <span class="k">return</span> 
-<span class="p">{</span> <span class="p">...</span><span class="nx">state</span><span class="p">,</span> <span class="na">coupon</span><span class="p">:</span> 
-<span class="p">{</span> <span class="na">code</span><span class="p">:</span> <span class="nx">event</span><span class="p">.</span><span class="nx">code</span><span class="p">,</span> <span class="na">discount</span><span class="p">:</span> <span class="nx">event</span><span class="p">.</span><span class="nx">discount</span> <span class="p">}</span>
- <span class="p">}</span>
-<span class="p">;</span> <span class="nl">default</span><span class="p">:</span> <span class="k">return</span> <span class="nx">state</span><span class="p">;</span> <span class="p">}</span>
- <span class="p">}</span>
- 
-<span class="o">*</span> <span class="nx">Ricostruisco</span> <span class="nx">lo</span> <span class="nx">stato</span> <span class="nx">attuale</span> <span class="nx">riducendo</span> <span class="nx">l</span><span class="dl">'</span><span class="s1">intera sequenza di eventi: "fold" o
-* "replay". */
- function reconstitute(events, initialState = 
-{ items: [], coupon: null }
-) 
-{ return events.reduce(cartReducer, initialState); }
- 
-/* Implemento il carrello come Event Store con replay e time travel. */
- class ShoppingCart 
-{ constructor(cartId) 
-{ this.cartId = cartId; this.events = []; 
-// Log immutabile degli eventi this._state = 
-{ items: [], coupon: null }
-; 
-// Stato proiettato }
- 
-// Ogni "comando" genera un evento e aggiorna lo stato addItem(itemId, name,
-// price)
-{ const event = 
-{ type: EventTypes.ITEM_ADDED, itemId, name, price, timestamp: Date.now(),
-version: this.events.length + 1 }
-; this.events.push(event); this._state = cartReducer(this._state, event); return
-this; }
- removeItem(itemId) 
-{ const event = 
-{ type: EventTypes.ITEM_REMOVED, itemId, timestamp: Date.now(), version:
-this.events.length + 1 }
-; this.events.push(event); this._state = cartReducer(this._state, event); return
-this; }
- 
-// Time Travel: ricostruisco lo stato a un istante preciso nel passato
-// getStateAt(timestamp)
-{ const eventsUpTo = this.events.filter(e =&gt; e.timestamp &lt;= timestamp); return
-reconstitute(eventsUpTo); }
- 
-// Snapshot: ottimizzazione per non rifare il replay dall</span><span class="dl">'</span><span class="nx">inizio</span> <span class="nx">ogni</span> <span class="nx">volta</span>
-<span class="c1">// createSnapshot()</span>
-<span class="p">{</span> <span class="k">return</span> 
-<span class="p">{</span> <span class="na">state</span><span class="p">:</span> <span class="k">this</span><span class="p">.</span><span class="nx">_state</span><span class="p">,</span> <span class="na">version</span><span class="p">:</span> <span class="k">this</span><span class="p">.</span><span class="nx">events</span><span class="p">.</span><span class="nx">length</span><span class="p">,</span> <span class="na">timestamp</span><span class="p">:</span> <span class="nb">Date</span><span class="p">.</span><span class="nx">now</span><span class="p">()</span> <span class="p">}</span>
-<span class="p">;</span> <span class="p">}</span>
- 
-<span class="c1">// Restore da snapshot + eventi successivi restoreFromSnapshot(snapshot,</span>
-<span class="c1">// laterEvents)</span>
-<span class="p">{</span> <span class="kd">const</span> <span class="nx">baseState</span> <span class="o">=</span> <span class="nx">snapshot</span><span class="p">.</span><span class="nx">state</span><span class="p">;</span> <span class="kd">const</span> <span class="nx">newEvents</span> <span class="o">=</span> <span class="nx">laterEvents</span><span class="p">.</span><span class="nx">filter</span><span class="p">(</span><span class="nx">e</span> <span class="o">=&gt;</span>
-<span class="nx">e</span><span class="p">.</span><span class="nx">version</span> <span class="o">&gt;</span> <span class="nx">snapshot</span><span class="p">.</span><span class="nx">version</span><span class="p">);</span> <span class="k">this</span><span class="p">.</span><span class="nx">_state</span> <span class="o">=</span> <span class="nx">reconstitute</span><span class="p">(</span><span class="nx">newEvents</span><span class="p">,</span> <span class="nx">baseState</span><span class="p">);</span>
-<span class="k">this</span><span class="p">.</span><span class="nx">events</span> <span class="o">=</span> <span class="nx">laterEvents</span><span class="p">;</span> <span class="p">}</span>
- <span class="kd">get</span> <span class="nx">state</span><span class="p">()</span> 
-<span class="p">{</span> <span class="k">return</span> <span class="k">this</span><span class="p">.</span><span class="nx">_state</span><span class="p">;</span> <span class="p">}</span>
- <span class="kd">get</span> <span class="nx">total</span><span class="p">()</span> 
-<span class="p">{</span> <span class="kd">const</span> <span class="nx">subtotal</span> <span class="o">=</span> <span class="k">this</span><span class="p">.</span><span class="nx">_state</span><span class="p">.</span><span class="nx">items</span><span class="p">.</span><span class="nx">reduce</span><span class="p">((</span><span class="nx">sum</span><span class="p">,</span> <span class="nx">item</span><span class="p">)</span> <span class="o">=&gt;</span> <span class="nx">sum</span> <span class="o">+</span> <span class="nx">item</span><span class="p">.</span><span class="nx">price</span> <span class="o">*</span>
-<span class="nx">item</span><span class="p">.</span><span class="nx">quantity</span><span class="p">,</span> <span class="mi">0</span><span class="p">);</span> <span class="kd">const</span> <span class="nx">discount</span> <span class="o">=</span> <span class="k">this</span><span class="p">.</span><span class="nx">_state</span><span class="p">.</span><span class="nx">coupon</span> <span class="p">?</span> <span class="nx">subtotal</span> <span class="o">*</span>
-<span class="k">this</span><span class="p">.</span><span class="nx">_state</span><span class="p">.</span><span class="nx">coupon</span><span class="p">.</span><span class="nx">discount</span> <span class="p">:</span> <span class="mi">0</span><span class="p">;</span> <span class="k">return</span> <span class="nx">subtotal</span> <span class="o">-</span> <span class="nx">discount</span><span class="p">;</span> <span class="p">}</span>
- <span class="p">}</span>
- 
-<span class="o">*</span> <span class="nx">Sincronizzazione</span> <span class="nx">offline</span><span class="p">:</span> <span class="nx">invio</span> <span class="nx">solo</span> <span class="nx">i</span> <span class="nx">delta</span> <span class="nx">di</span> <span class="nx">eventi</span> <span class="nx">al</span> <span class="nx">server</span><span class="p">,</span> <span class="nx">non</span> <span class="nx">lo</span> <span class="nx">stato</span>
-<span class="o">*</span> <span class="nx">completo</span><span class="p">.</span> <span class="o">*</span><span class="sr">/</span><span class="err">
-</span> <span class="k">async</span> <span class="kd">function</span> <span class="nx">syncCartWithServer</span><span class="p">(</span><span class="nx">cart</span><span class="p">,</span> <span class="nx">lastSyncedVersion</span><span class="p">)</span> 
-<span class="p">{</span> <span class="kd">const</span> <span class="nx">newEvents</span> <span class="o">=</span> <span class="nx">cart</span><span class="p">.</span><span class="nx">events</span><span class="p">.</span><span class="nx">filter</span><span class="p">(</span><span class="nx">e</span> <span class="o">=&gt;</span> <span class="nx">e</span><span class="p">.</span><span class="nx">version</span> <span class="o">&gt;</span> <span class="nx">lastSyncedVersion</span><span class="p">);</span> <span class="k">if</span>
-<span class="p">(</span><span class="nx">newEvents</span><span class="p">.</span><span class="nx">length</span> <span class="o">===</span> <span class="mi">0</span><span class="p">)</span> <span class="k">return</span><span class="p">;</span> <span class="k">await</span> <span class="nx">fetch</span><span class="p">(</span><span class="dl">'</span><span class="s1">/api/cart/events</span><span class="dl">'</span><span class="p">,</span>
-<span class="p">{</span> <span class="na">method</span><span class="p">:</span> <span class="dl">'</span><span class="s1">POST</span><span class="dl">'</span><span class="p">,</span> <span class="na">headers</span><span class="p">:</span> 
-<span class="p">{</span> <span class="dl">'</span><span class="s1">Content-Type</span><span class="dl">'</span><span class="p">:</span> <span class="dl">'</span><span class="s1">application/json</span><span class="dl">'</span> <span class="p">}</span>
-<span class="p">,</span> <span class="na">body</span><span class="p">:</span> <span class="nx">JSON</span><span class="p">.</span><span class="nx">stringify</span><span class="p">(</span>
-<span class="p">{</span> <span class="na">cartId</span><span class="p">:</span> <span class="nx">cart</span><span class="p">.</span><span class="nx">cartId</span><span class="p">,</span> <span class="na">events</span><span class="p">:</span> <span class="nx">newEvents</span> <span class="p">}</span>
-<span class="p">)</span> <span class="p">}</span>
-<span class="p">);</span> <span class="p">}</span>
+<span class="kd">function</span> <span class="nx">cartReducer</span><span class="p">(</span><span class="nx">state</span><span class="p">,</span> <span class="nx">event</span><span class="p">)</span> <span class="p">{</span>
+    <span class="k">switch</span> <span class="p">(</span><span class="nx">event</span><span class="p">.</span><span class="nx">type</span><span class="p">)</span> <span class="p">{</span>
+        <span class="k">case</span> <span class="nx">EventTypes</span><span class="p">.</span><span class="nx">ITEM_ADDED</span><span class="p">:</span> <span class="k">return</span> <span class="p">{</span>
+            <span class="p">...</span><span class="nx">state</span><span class="p">,</span> <span class="na">items</span><span class="p">:</span> <span class="p">[...</span><span class="nx">state</span><span class="p">.</span><span class="nx">items</span><span class="p">,</span> <span class="p">{</span>
+                <span class="na">id</span><span class="p">:</span> <span class="nx">event</span><span class="p">.</span><span class="nx">itemId</span><span class="p">,</span> <span class="na">quantity</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span> <span class="na">price</span><span class="p">:</span> <span class="nx">event</span><span class="p">.</span><span class="nx">price</span><span class="p">,</span> <span class="na">name</span><span class="p">:</span>
+                    <span class="nx">event</span><span class="p">.</span><span class="nx">name</span>
+            <span class="p">}</span>
+            <span class="p">]</span>
+        <span class="p">}</span>
+        <span class="p">;</span>
+        <span class="k">case</span> <span class="nx">EventTypes</span><span class="p">.</span><span class="nx">ITEM_REMOVED</span><span class="p">:</span> <span class="k">return</span> <span class="p">{</span>
+            <span class="p">...</span><span class="nx">state</span><span class="p">,</span> <span class="na">items</span><span class="p">:</span> <span class="nx">state</span><span class="p">.</span><span class="nx">items</span><span class="p">.</span><span class="nx">filter</span><span class="p">(</span><span class="nx">item</span> <span class="o">=&gt;</span> <span class="nx">item</span><span class="p">.</span><span class="nx">id</span> <span class="o">!==</span>
+                <span class="nx">event</span><span class="p">.</span><span class="nx">itemId</span><span class="p">)</span>
+        <span class="p">}</span>
+        <span class="p">;</span>
+        <span class="k">case</span> <span class="nx">EventTypes</span><span class="p">.</span><span class="nx">QUANTITY_CHANGED</span><span class="p">:</span> <span class="k">return</span> <span class="p">{</span>
+            <span class="p">...</span><span class="nx">state</span><span class="p">,</span> <span class="na">items</span><span class="p">:</span> <span class="nx">state</span><span class="p">.</span><span class="nx">items</span><span class="p">.</span><span class="nx">map</span><span class="p">(</span><span class="nx">item</span> <span class="o">=&gt;</span> <span class="nx">item</span><span class="p">.</span><span class="nx">id</span> <span class="o">===</span> <span class="nx">event</span><span class="p">.</span><span class="nx">itemId</span> <span class="p">?</span>
+                <span class="p">{</span>
+                <span class="p">...</span><span class="nx">item</span><span class="p">,</span> <span class="na">quantity</span><span class="p">:</span> <span class="nx">event</span><span class="p">.</span><span class="nx">quantity</span>
+            <span class="p">}</span>
+            <span class="p">:</span> <span class="nx">item</span> <span class="p">)</span>
+        <span class="p">}</span>
+        <span class="p">;</span>
+        <span class="k">case</span> <span class="nx">EventTypes</span><span class="p">.</span><span class="nx">CART_CLEARED</span><span class="p">:</span> <span class="k">return</span> <span class="p">{</span>
+            <span class="p">...</span><span class="nx">state</span><span class="p">,</span> <span class="na">items</span><span class="p">:</span> <span class="p">[],</span> <span class="na">coupon</span><span class="p">:</span> <span class="kc">null</span>
+        <span class="p">}</span>
+        <span class="p">;</span>
+        <span class="k">case</span> <span class="nx">EventTypes</span><span class="p">.</span><span class="nx">COUPON_APPLIED</span><span class="p">:</span> <span class="k">return</span> <span class="p">{</span>
+            <span class="p">...</span><span class="nx">state</span><span class="p">,</span> <span class="na">coupon</span><span class="p">:</span> <span class="p">{</span>
+                <span class="na">code</span><span class="p">:</span> <span class="nx">event</span><span class="p">.</span><span class="nx">code</span><span class="p">,</span> <span class="na">discount</span><span class="p">:</span> <span class="nx">event</span><span class="p">.</span><span class="nx">discount</span>
+            <span class="p">}</span>
+        <span class="p">}</span>
+        <span class="p">;</span>
+        <span class="nl">default</span><span class="p">:</span> <span class="k">return</span> <span class="nx">state</span><span class="p">;</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+<span class="cm">/* Ricostruisco lo stato attuale riducendo l'intera sequenza di eventi: "fold" o
+    "replay". */</span>
+<span class="kd">function</span> <span class="nx">reconstitute</span><span class="p">(</span><span class="nx">events</span><span class="p">,</span> <span class="nx">initialState</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="na">items</span><span class="p">:</span> <span class="p">[],</span> <span class="na">coupon</span><span class="p">:</span> <span class="kc">null</span>
+<span class="p">}</span>
+<span class="p">)</span> <span class="p">{</span>
+    <span class="k">return</span> <span class="nx">events</span><span class="p">.</span><span class="nx">reduce</span><span class="p">(</span><span class="nx">cartReducer</span><span class="p">,</span> <span class="nx">initialState</span><span class="p">);</span>
+<span class="p">}</span>
+<span class="cm">/* Implemento il carrello come Event Store con replay e time travel. */</span>
+<span class="kd">class</span> <span class="nx">ShoppingCart</span> <span class="p">{</span>
+    <span class="kd">constructor</span><span class="p">(</span><span class="nx">cartId</span><span class="p">)</span> <span class="p">{</span>
+        <span class="k">this</span><span class="p">.</span><span class="nx">cartId</span> <span class="o">=</span> <span class="nx">cartId</span><span class="p">;</span>
+        <span class="k">this</span><span class="p">.</span><span class="nx">events</span> <span class="o">=</span> <span class="p">[];</span>
+        <span class="c1">// Log immutabile degli eventi this._state =</span>
+        <span class="p">{</span>
+            <span class="na">items</span><span class="p">:</span> <span class="p">[],</span> <span class="na">coupon</span><span class="p">:</span> <span class="kc">null</span>
+        <span class="p">}</span>
+        <span class="p">;</span>
+        <span class="c1">// Stato proiettato</span>
+    <span class="p">}</span>
+    <span class="c1">// Ogni "comando" genera un evento e aggiorna lo stato addItem(itemId, name,</span>
+        <span class="nx">price</span><span class="p">)</span>
+    <span class="p">{</span>
+        <span class="kd">const</span> <span class="nx">event</span> <span class="o">=</span> <span class="p">{</span>
+            <span class="na">type</span><span class="p">:</span> <span class="nx">EventTypes</span><span class="p">.</span><span class="nx">ITEM_ADDED</span><span class="p">,</span> <span class="nx">itemId</span><span class="p">,</span> <span class="nx">name</span><span class="p">,</span> <span class="nx">price</span><span class="p">,</span> <span class="na">timestamp</span><span class="p">:</span>
+                <span class="nb">Date</span><span class="p">.</span><span class="nx">now</span><span class="p">(),</span> <span class="na">version</span><span class="p">:</span> <span class="k">this</span><span class="p">.</span><span class="nx">events</span><span class="p">.</span><span class="nx">length</span> <span class="o">+</span> <span class="mi">1</span>
+        <span class="p">}</span>
+        <span class="p">;</span>
+        <span class="k">this</span><span class="p">.</span><span class="nx">events</span><span class="p">.</span><span class="nx">push</span><span class="p">(</span><span class="nx">event</span><span class="p">);</span>
+        <span class="k">this</span><span class="p">.</span><span class="nx">_state</span> <span class="o">=</span> <span class="nx">cartReducer</span><span class="p">(</span><span class="k">this</span><span class="p">.</span><span class="nx">_state</span><span class="p">,</span> <span class="nx">event</span><span class="p">);</span>
+        <span class="k">return</span> <span class="k">this</span><span class="p">;</span>
+    <span class="p">}</span>
+    <span class="nx">removeItem</span><span class="p">(</span><span class="nx">itemId</span><span class="p">)</span> <span class="p">{</span>
+        <span class="kd">const</span> <span class="nx">event</span> <span class="o">=</span> <span class="p">{</span>
+            <span class="na">type</span><span class="p">:</span> <span class="nx">EventTypes</span><span class="p">.</span><span class="nx">ITEM_REMOVED</span><span class="p">,</span> <span class="nx">itemId</span><span class="p">,</span> <span class="na">timestamp</span><span class="p">:</span> <span class="nb">Date</span><span class="p">.</span><span class="nx">now</span><span class="p">(),</span>
+                <span class="na">version</span><span class="p">:</span> <span class="k">this</span><span class="p">.</span><span class="nx">events</span><span class="p">.</span><span class="nx">length</span> <span class="o">+</span> <span class="mi">1</span>
+        <span class="p">}</span>
+        <span class="p">;</span>
+        <span class="k">this</span><span class="p">.</span><span class="nx">events</span><span class="p">.</span><span class="nx">push</span><span class="p">(</span><span class="nx">event</span><span class="p">);</span>
+        <span class="k">this</span><span class="p">.</span><span class="nx">_state</span> <span class="o">=</span> <span class="nx">cartReducer</span><span class="p">(</span><span class="k">this</span><span class="p">.</span><span class="nx">_state</span><span class="p">,</span> <span class="nx">event</span><span class="p">);</span>
+        <span class="k">return</span> <span class="k">this</span><span class="p">;</span>
+    <span class="p">}</span>
+    <span class="c1">// Time Travel: ricostruisco lo stato a un istante preciso nel passato</span>
+        <span class="nx">getStateAt</span><span class="p">(</span><span class="nx">timestamp</span><span class="p">)</span>
+    <span class="p">{</span>
+        <span class="kd">const</span> <span class="nx">eventsUpTo</span> <span class="o">=</span> <span class="k">this</span><span class="p">.</span><span class="nx">events</span><span class="p">.</span><span class="nx">filter</span><span class="p">(</span><span class="nx">e</span> <span class="o">=&gt;</span> <span class="nx">e</span><span class="p">.</span><span class="nx">timestamp</span> <span class="o">&lt;=</span> <span class="nx">timestamp</span><span class="p">);</span>
+        <span class="k">return</span> <span class="nx">reconstitute</span><span class="p">(</span><span class="nx">eventsUpTo</span><span class="p">);</span>
+    <span class="p">}</span>
+    <span class="c1">// Snapshot: ottimizzazione per non rifare il replay dall'inizio ogni volta</span>
+        <span class="nx">createSnapshot</span><span class="p">()</span>
+    <span class="p">{</span>
+        <span class="k">return</span> <span class="p">{</span>
+            <span class="na">state</span><span class="p">:</span> <span class="k">this</span><span class="p">.</span><span class="nx">_state</span><span class="p">,</span> <span class="na">version</span><span class="p">:</span> <span class="k">this</span><span class="p">.</span><span class="nx">events</span><span class="p">.</span><span class="nx">length</span><span class="p">,</span> <span class="na">timestamp</span><span class="p">:</span>
+                <span class="nb">Date</span><span class="p">.</span><span class="nx">now</span><span class="p">()</span>
+        <span class="p">}</span>
+        <span class="p">;</span>
+    <span class="p">}</span>
+    <span class="c1">// Restore da snapshot + eventi successivi restoreFromSnapshot(snapshot,</span>
+        <span class="nx">laterEvents</span><span class="p">)</span>
+    <span class="p">{</span>
+        <span class="kd">const</span> <span class="nx">baseState</span> <span class="o">=</span> <span class="nx">snapshot</span><span class="p">.</span><span class="nx">state</span><span class="p">;</span>
+        <span class="kd">const</span> <span class="nx">newEvents</span> <span class="o">=</span> <span class="nx">laterEvents</span><span class="p">.</span><span class="nx">filter</span><span class="p">(</span><span class="nx">e</span> <span class="o">=&gt;</span> <span class="nx">e</span><span class="p">.</span><span class="nx">version</span> <span class="o">&gt;</span> <span class="nx">snapshot</span><span class="p">.</span><span class="nx">version</span><span class="p">);</span>
+        <span class="k">this</span><span class="p">.</span><span class="nx">_state</span> <span class="o">=</span> <span class="nx">reconstitute</span><span class="p">(</span><span class="nx">newEvents</span><span class="p">,</span> <span class="nx">baseState</span><span class="p">);</span>
+        <span class="k">this</span><span class="p">.</span><span class="nx">events</span> <span class="o">=</span> <span class="nx">laterEvents</span><span class="p">;</span>
+    <span class="p">}</span>
+    <span class="kd">get</span> <span class="nx">state</span><span class="p">()</span> <span class="p">{</span>
+        <span class="k">return</span> <span class="k">this</span><span class="p">.</span><span class="nx">_state</span><span class="p">;</span>
+    <span class="p">}</span>
+    <span class="kd">get</span> <span class="nx">total</span><span class="p">()</span> <span class="p">{</span>
+        <span class="kd">const</span> <span class="nx">subtotal</span> <span class="o">=</span> <span class="k">this</span><span class="p">.</span><span class="nx">_state</span><span class="p">.</span><span class="nx">items</span><span class="p">.</span><span class="nx">reduce</span><span class="p">((</span><span class="nx">sum</span><span class="p">,</span> <span class="nx">item</span><span class="p">)</span> <span class="o">=&gt;</span> <span class="nx">sum</span> <span class="o">+</span>
+            <span class="nx">item</span><span class="p">.</span><span class="nx">price</span> <span class="o">*</span> <span class="nx">item</span><span class="p">.</span><span class="nx">quantity</span><span class="p">,</span> <span class="mi">0</span><span class="p">);</span>
+        <span class="kd">const</span> <span class="nx">discount</span> <span class="o">=</span> <span class="k">this</span><span class="p">.</span><span class="nx">_state</span><span class="p">.</span><span class="nx">coupon</span> <span class="p">?</span> <span class="nx">subtotal</span> <span class="o">*</span>
+            <span class="k">this</span><span class="p">.</span><span class="nx">_state</span><span class="p">.</span><span class="nx">coupon</span><span class="p">.</span><span class="nx">discount</span> <span class="p">:</span> <span class="mi">0</span><span class="p">;</span>
+        <span class="k">return</span> <span class="nx">subtotal</span> <span class="o">-</span> <span class="nx">discount</span><span class="p">;</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+<span class="cm">/* Sincronizzazione offline: invio solo i delta di eventi al server, non lo
+    stato completo. */</span>
+<span class="k">async</span> <span class="kd">function</span> <span class="nx">syncCartWithServer</span><span class="p">(</span><span class="nx">cart</span><span class="p">,</span> <span class="nx">lastSyncedVersion</span><span class="p">)</span> <span class="p">{</span>
+    <span class="kd">const</span> <span class="nx">newEvents</span> <span class="o">=</span> <span class="nx">cart</span><span class="p">.</span><span class="nx">events</span><span class="p">.</span><span class="nx">filter</span><span class="p">(</span><span class="nx">e</span> <span class="o">=&gt;</span> <span class="nx">e</span><span class="p">.</span><span class="nx">version</span> <span class="o">&gt;</span> <span class="nx">lastSyncedVersion</span><span class="p">);</span>
+    <span class="k">if</span> <span class="p">(</span><span class="nx">newEvents</span><span class="p">.</span><span class="nx">length</span> <span class="o">===</span> <span class="mi">0</span><span class="p">)</span> <span class="k">return</span><span class="p">;</span>
+    <span class="k">await</span> <span class="nx">fetch</span><span class="p">(</span><span class="dl">'</span><span class="s1">/api/cart/events</span><span class="dl">'</span><span class="p">,</span> <span class="p">{</span>
+        <span class="na">method</span><span class="p">:</span> <span class="dl">'</span><span class="s1">POST</span><span class="dl">'</span><span class="p">,</span> <span class="na">headers</span><span class="p">:</span> <span class="p">{</span>
+            <span class="dl">'</span><span class="s1">Content-Type</span><span class="dl">'</span><span class="p">:</span> <span class="dl">'</span><span class="s1">application/json</span><span class="dl">'</span>
+        <span class="p">}</span>
+        <span class="p">,</span> <span class="na">body</span><span class="p">:</span> <span class="nx">JSON</span><span class="p">.</span><span class="nx">stringify</span><span class="p">({</span>
+            <span class="na">cartId</span><span class="p">:</span> <span class="nx">cart</span><span class="p">.</span><span class="nx">cartId</span><span class="p">,</span> <span class="na">events</span><span class="p">:</span> <span class="nx">newEvents</span>
+        <span class="p">}</span>
+        <span class="p">)</span>
+    <span class="p">}</span>
+    <span class="p">);</span>
+<span class="p">}</span>
 </pre></td></tr></tbody></table></code></pre></div></div>
 
         </article>

@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Evitare il Context Switch Overhead — DevLog</title>
-    <meta name="description" content="Passare da Java a Native ha un costo: la JVM deve salvare lo stato dei registri e gestire i safepoint. Chiamate native troppo frequenti a funzioni microscopiche sono controproducenti. La soluzione è 'batchare' il lavoro: meglio passare un intero Memo
+    <meta name="description" content="Passare da Java a Native ha un costo: la JVM deve salvare lo stato dei registri e gestire i safepoint. Chiamate native troppo frequenti a funzioni microscopiche sono controproducenti. La soluzione è "batchare" il lavoro: meglio passare un intero Memo
 ">
     <link rel="stylesheet" href="/appuntidiprogrammazione/assets/css/style.css">
 
@@ -149,66 +149,108 @@
 58
 59
 60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
 </pre></td><td class="rouge-code"><pre><span class="cm">/* Confronto il costo dei due approcci con JMH per renderlo oggettivo. */</span>
- <span class="nd">@Benchmark</span> <span class="kd">public</span> <span class="kt">void</span> <span class="nf">manySmallCalls</span><span class="o">(</span><span class="nc">BenchState</span> <span class="n">state</span><span class="o">)</span> <span class="kd">throws</span> <span class="nc">Throwable</span> 
-<span class="o">{</span> 
-<span class="c1">// SBAGLIATO: chiamo la funzione nativa per ogni campione audio </span>
-<span class="c1">// Ogni chiamata ha un overhead di ~50-100ns per il context switch JVM-&gt;nativo</span>
-<span class="c1">// for (int i = 0; i &lt; state.audioSamples.length; i++)</span>
-<span class="o">{</span> <span class="n">state</span><span class="o">.</span><span class="na">convertSampleHandle</span><span class="o">.</span><span class="na">invokeExact</span><span class="o">(</span><span class="n">state</span><span class="o">.</span><span class="na">nativeSrc</span><span class="o">,</span> <span class="o">(</span><span class="kt">long</span><span class="o">)</span><span class="n">i</span><span class="o">);</span> 
-<span class="c1">// 1M chiamate = 50-100ms di overhead puro }</span>
- <span class="o">}</span>
- <span class="nd">@Benchmark</span> <span class="kd">public</span> <span class="kt">void</span> <span class="nf">oneBigCall</span><span class="o">(</span><span class="nc">BenchState</span> <span class="n">state</span><span class="o">)</span> <span class="kd">throws</span> <span class="nc">Throwable</span> 
-<span class="o">{</span> 
-<span class="c1">// CORRETTO: passo l'intero buffer e lascio che il C iteri internamente </span>
-<span class="c1">// 1 sola chiamata nativa = overhead trascurabile (~100ns totali)</span>
-<span class="c1">// state.convertBufferHandle.invokeExact(state.nativeSrc, state.nativeDst,</span>
-<span class="c1">// state.audioSamples.length); }</span>
- 
+<span class="nd">@Benchmark</span> <span class="kd">public</span> <span class="kt">void</span> <span class="nf">manySmallCalls</span><span class="o">(</span><span class="nc">BenchState</span> <span class="n">state</span><span class="o">)</span> <span class="kd">throws</span> <span class="nc">Throwable</span> <span class="o">{</span>
+    <span class="c1">// SBAGLIATO: chiamo la funzione nativa per ogni campione audio // Ogni</span>
+        <span class="n">chiamata</span> <span class="n">ha</span> <span class="n">un</span> <span class="n">overhead</span> <span class="n">di</span> <span class="o">~</span><span class="mi">50</span><span class="o">-</span><span class="mi">100</span><span class="n">ns</span> <span class="n">per</span> <span class="n">il</span> <span class="n">context</span> <span class="k">switch</span> <span class="no">JVM</span><span class="o">-&gt;</span><span class="n">nativo</span>
+        <span class="nf">for</span> <span class="o">(</span><span class="kt">int</span> <span class="n">i</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="o">;</span>
+    <span class="n">i</span> <span class="o">&lt;</span> <span class="n">state</span><span class="o">.</span><span class="na">audioSamples</span><span class="o">.</span><span class="na">length</span><span class="o">;</span>
+    <span class="n">i</span><span class="o">++)</span> <span class="o">{</span>
+        <span class="n">state</span><span class="o">.</span><span class="na">convertSampleHandle</span><span class="o">.</span><span class="na">invokeExact</span><span class="o">(</span><span class="n">state</span><span class="o">.</span><span class="na">nativeSrc</span><span class="o">,</span> <span class="o">(</span><span class="kt">long</span><span class="o">)</span><span class="n">i</span><span class="o">);</span>
+        <span class="c1">// 1M chiamate = 50-100ms di overhead puro</span>
+    <span class="o">}</span>
+<span class="o">}</span>
+<span class="nd">@Benchmark</span> <span class="kd">public</span> <span class="kt">void</span> <span class="nf">oneBigCall</span><span class="o">(</span><span class="nc">BenchState</span> <span class="n">state</span><span class="o">)</span> <span class="kd">throws</span> <span class="nc">Throwable</span> <span class="o">{</span>
+    <span class="c1">// CORRETTO: passo l'intero buffer e lascio che il C iteri internamente // 1</span>
+        <span class="n">sola</span> <span class="n">chiamata</span> <span class="n">nativa</span> <span class="o">=</span> <span class="n">overhead</span> <span class="nf">trascurabile</span> <span class="o">(~</span><span class="mi">100</span><span class="n">ns</span> <span class="n">totali</span><span class="o">)</span>
+        <span class="n">state</span><span class="o">.</span><span class="na">convertBufferHandle</span><span class="o">.</span><span class="na">invokeExact</span><span class="o">(</span><span class="n">state</span><span class="o">.</span><span class="na">nativeSrc</span><span class="o">,</span> <span class="n">state</span><span class="o">.</span><span class="na">nativeDst</span><span class="o">,</span>
+        <span class="n">state</span><span class="o">.</span><span class="na">audioSamples</span><span class="o">.</span><span class="na">length</span><span class="o">)</span>
+    <span class="o">;</span>
+<span class="o">}</span>
 <span class="cm">/* Implemento il servizio di conversione audio con approccio batch: */</span>
- <span class="nd">@Service</span> <span class="kd">public</span> <span class="kd">class</span> <span class="nc">AudioConversionService</span> 
-<span class="o">{</span> 
-<span class="c1">// Handle per la funzione C che converte un intero buffer PCM-&gt;AAC private final</span>
-<span class="c1">// MethodHandle convertBufferHandle;</span>
-<span class="c1">// Handle per la funzione C che applica un filtro equalizzatore a tutto il</span>
-<span class="c1">// buffer private final MethodHandle applyEqualizerHandle; public byte[]</span>
-<span class="c1">// convertPcmToAac(short[] pcmSamples, AudioFormat format) throws Throwable</span>
-<span class="o">{</span> <span class="k">try</span> <span class="o">(</span><span class="nc">Arena</span> <span class="n">arena</span> <span class="o">=</span> <span class="nc">Arena</span><span class="o">.</span><span class="na">ofConfined</span><span class="o">())</span> 
-<span class="o">{</span> 
-<span class="c1">// Copio l'intero array PCM in memoria nativa in un'unica operazione</span>
-<span class="c1">// MemorySegment src = arena.allocateFrom(ValueLayout.JAVA_SHORT, pcmSamples);</span>
-<span class="c1">// Stimo la dimensione massima AAC int maxAacSize = pcmSamples.length * 2;</span>
-<span class="c1">// MemorySegment dst = arena.allocate(maxAacSize);</span>
-<span class="c1">// 1 SOLA chiamata cross-boundary: il C itera internamente sui campioni int</span>
-<span class="c1">// outputSize = (int) convertBufferHandle.invokeExact( src, dst,</span>
-<span class="c1">// pcmSamples.length, format.getSampleRate(), format.getChannels() );</span>
-<span class="c1">// Applico l'equalizzatore con un'altra singola chiamata batch</span>
-<span class="c1">// applyEqualizerHandle.invokeExact(dst, outputSize,</span>
-<span class="c1">// format.getEqualizerBands()); return dst.asSlice(0,</span>
-<span class="c1">// outputSize).toArray(ValueLayout.JAVA_BYTE); }</span>
- <span class="o">}</span>
- <span class="o">}</span>
- 
-<span class="o">*</span> <span class="nc">Per</span> <span class="n">operazioni</span> <span class="n">dove</span> <span class="n">il</span> <span class="no">C</span> <span class="n">deve</span> <span class="n">notificare</span> <span class="n">il</span> <span class="n">progresso</span> <span class="n">a</span> <span class="nc">Java</span> <span class="n">durante</span>
-<span class="o">*</span> <span class="n">l</span><span class="err">'</span><span class="n">elaborazione</span><span class="o">,</span> <span class="n">uso</span> <span class="n">un</span> <span class="nc">MemorySegment</span> <span class="n">condiviso</span> <span class="n">come</span> <span class="s">"canale di comunicazione"</span>
-<span class="o">*</span> <span class="n">invece</span> <span class="n">di</span> <span class="n">upcall</span> <span class="nl">frequenti:</span> <span class="o">*/</span>
- <span class="nd">@Service</span> <span class="kd">public</span> <span class="kd">class</span> <span class="nc">ProgressTrackingService</span> 
-<span class="o">{</span> <span class="kd">public</span> <span class="kt">byte</span><span class="o">[]</span> <span class="nf">processWithProgress</span><span class="o">(</span><span class="kt">byte</span><span class="o">[]</span> <span class="n">data</span><span class="o">,</span> <span class="nc">ProgressCallback</span> <span class="n">callback</span><span class="o">)</span>
-<span class="kd">throws</span> <span class="nc">Throwable</span>
-<span class="o">{</span> <span class="k">try</span> <span class="o">(</span><span class="nc">Arena</span> <span class="n">arena</span> <span class="o">=</span> <span class="nc">Arena</span><span class="o">.</span><span class="na">ofConfined</span><span class="o">())</span> 
-<span class="o">{</span> <span class="nc">MemorySegment</span> <span class="n">src</span> <span class="o">=</span> <span class="n">arena</span><span class="o">.</span><span class="na">allocateFrom</span><span class="o">(</span><span class="nc">ValueLayout</span><span class="o">.</span><span class="na">JAVA_BYTE</span><span class="o">,</span> <span class="n">data</span><span class="o">);</span>
-<span class="nc">MemorySegment</span> <span class="n">dst</span> <span class="o">=</span> <span class="n">arena</span><span class="o">.</span><span class="na">allocate</span><span class="o">(</span><span class="n">data</span><span class="o">.</span><span class="na">length</span><span class="o">);</span>
-<span class="c1">// Buffer di progresso condiviso: il C scrive la percentuale, Java legge</span>
-<span class="c1">// MemorySegment progressBuffer = arena.allocate(ValueLayout.JAVA_INT);</span>
-<span class="c1">// Il C scrive periodicamente il progresso nel buffer invece di fare upcall</span>
-<span class="c1">// processWithProgressHandle.invokeExact(src, dst, data.length, progressBuffer);</span>
-<span class="c1">// Java legge il progresso senza context switch: accesso diretto alla memoria</span>
-<span class="c1">// while ((int) ValueLayout.JAVA_INT.varHandle().get(progressBuffer, 0L) &lt; 100)</span>
-<span class="o">{</span> <span class="kt">int</span> <span class="n">pct</span> <span class="o">=</span> <span class="o">(</span><span class="kt">int</span><span class="o">)</span> <span class="nc">ValueLayout</span><span class="o">.</span><span class="na">JAVA_INT</span><span class="o">.</span><span class="na">varHandle</span><span class="o">().</span><span class="na">get</span><span class="o">(</span><span class="n">progressBuffer</span><span class="o">,</span> <span class="mi">0L</span><span class="o">);</span>
-<span class="n">callback</span><span class="o">.</span><span class="na">onProgress</span><span class="o">(</span><span class="n">pct</span><span class="o">);</span> <span class="nc">Thread</span><span class="o">.</span><span class="na">sleep</span><span class="o">(</span><span class="mi">10</span><span class="o">);</span> <span class="o">}</span>
- <span class="k">return</span> <span class="n">dst</span><span class="o">.</span><span class="na">toArray</span><span class="o">(</span><span class="nc">ValueLayout</span><span class="o">.</span><span class="na">JAVA_BYTE</span><span class="o">);</span> <span class="o">}</span>
- <span class="o">}</span>
- <span class="o">}</span>
+<span class="nd">@Service</span> <span class="kd">public</span> <span class="kd">class</span> <span class="nc">AudioConversionService</span> <span class="o">{</span>
+    <span class="c1">// Handle per la funzione C che converte un intero buffer PCM-&gt;AAC private</span>
+        <span class="kd">final</span> <span class="nc">MethodHandle</span> <span class="n">convertBufferHandle</span>
+    <span class="o">;</span>
+    <span class="c1">// Handle per la funzione C che applica un filtro equalizzatore a tutto il</span>
+        <span class="n">buffer</span> <span class="kd">private</span> <span class="kd">final</span> <span class="nc">MethodHandle</span> <span class="n">applyEqualizerHandle</span>
+    <span class="o">;</span>
+    <span class="kd">public</span> <span class="kt">byte</span><span class="o">[]</span> <span class="nf">convertPcmToAac</span><span class="o">(</span><span class="kt">short</span><span class="o">[]</span> <span class="n">pcmSamples</span><span class="o">,</span> <span class="nc">AudioFormat</span> <span class="n">format</span><span class="o">)</span> <span class="kd">throws</span>
+        <span class="nc">Throwable</span> <span class="o">{</span>
+        <span class="k">try</span> <span class="o">(</span><span class="nc">Arena</span> <span class="n">arena</span> <span class="o">=</span> <span class="nc">Arena</span><span class="o">.</span><span class="na">ofConfined</span><span class="o">())</span> <span class="o">{</span>
+            <span class="c1">// Copio l'intero array PCM in memoria nativa in un'unica operazione</span>
+                <span class="nc">MemorySegment</span> <span class="n">src</span> <span class="o">=</span> <span class="n">arena</span><span class="o">.</span><span class="na">allocateFrom</span><span class="o">(</span><span class="nc">ValueLayout</span><span class="o">.</span><span class="na">JAVA_SHORT</span><span class="o">,</span>
+                <span class="n">pcmSamples</span><span class="o">)</span>
+            <span class="o">;</span>
+            <span class="c1">// Stimo la dimensione massima AAC int maxAacSize =</span>
+                <span class="n">pcmSamples</span><span class="o">.</span><span class="na">length</span> <span class="o">*</span> <span class="mi">2</span>
+            <span class="o">;</span>
+            <span class="nc">MemorySegment</span> <span class="n">dst</span> <span class="o">=</span> <span class="n">arena</span><span class="o">.</span><span class="na">allocate</span><span class="o">(</span><span class="n">maxAacSize</span><span class="o">);</span>
+            <span class="c1">// 1 SOLA chiamata cross-boundary: il C itera internamente sui</span>
+                <span class="n">campioni</span> <span class="kt">int</span> <span class="n">outputSize</span> <span class="o">=</span> <span class="o">(</span><span class="kt">int</span><span class="o">)</span> <span class="n">convertBufferHandle</span><span class="o">.</span><span class="na">invokeExact</span><span class="o">(</span>
+                <span class="n">src</span><span class="o">,</span> <span class="n">dst</span><span class="o">,</span> <span class="n">pcmSamples</span><span class="o">.</span><span class="na">length</span><span class="o">,</span> <span class="n">format</span><span class="o">.</span><span class="na">getSampleRate</span><span class="o">(),</span>
+                <span class="n">format</span><span class="o">.</span><span class="na">getChannels</span><span class="o">()</span> <span class="o">)</span>
+            <span class="o">;</span>
+            <span class="c1">// Applico l'equalizzatore con un'altra singola chiamata batch</span>
+                <span class="n">applyEqualizerHandle</span><span class="o">.</span><span class="na">invokeExact</span><span class="o">(</span><span class="n">dst</span><span class="o">,</span> <span class="n">outputSize</span><span class="o">,</span>
+                <span class="n">format</span><span class="o">.</span><span class="na">getEqualizerBands</span><span class="o">())</span>
+            <span class="o">;</span>
+            <span class="k">return</span> <span class="n">dst</span><span class="o">.</span><span class="na">asSlice</span><span class="o">(</span><span class="mi">0</span><span class="o">,</span> <span class="n">outputSize</span><span class="o">).</span><span class="na">toArray</span><span class="o">(</span><span class="nc">ValueLayout</span><span class="o">.</span><span class="na">JAVA_BYTE</span><span class="o">);</span>
+        <span class="o">}</span>
+    <span class="o">}</span>
+<span class="o">}</span>
+<span class="cm">/* Per operazioni dove il C deve notificare il progresso a Java durante
+    l'elaborazione, uso un MemorySegment condiviso come "canale di
+    comunicazione" invece di upcall frequenti: */</span>
+<span class="nd">@Service</span> <span class="kd">public</span> <span class="kd">class</span> <span class="nc">ProgressTrackingService</span> <span class="o">{</span>
+    <span class="kd">public</span> <span class="kt">byte</span><span class="o">[]</span> <span class="nf">processWithProgress</span><span class="o">(</span><span class="kt">byte</span><span class="o">[]</span> <span class="n">data</span><span class="o">,</span> <span class="nc">ProgressCallback</span> <span class="n">callback</span><span class="o">)</span>
+        <span class="kd">throws</span> <span class="nc">Throwable</span> <span class="o">{</span>
+        <span class="k">try</span> <span class="o">(</span><span class="nc">Arena</span> <span class="n">arena</span> <span class="o">=</span> <span class="nc">Arena</span><span class="o">.</span><span class="na">ofConfined</span><span class="o">())</span> <span class="o">{</span>
+            <span class="nc">MemorySegment</span> <span class="n">src</span> <span class="o">=</span> <span class="n">arena</span><span class="o">.</span><span class="na">allocateFrom</span><span class="o">(</span><span class="nc">ValueLayout</span><span class="o">.</span><span class="na">JAVA_BYTE</span><span class="o">,</span> <span class="n">data</span><span class="o">);</span>
+            <span class="nc">MemorySegment</span> <span class="n">dst</span> <span class="o">=</span> <span class="n">arena</span><span class="o">.</span><span class="na">allocate</span><span class="o">(</span><span class="n">data</span><span class="o">.</span><span class="na">length</span><span class="o">);</span>
+            <span class="c1">// Buffer di progresso condiviso: il C scrive la percentuale, Java</span>
+                <span class="n">legge</span> <span class="nc">MemorySegment</span> <span class="n">progressBuffer</span> <span class="o">=</span>
+                <span class="n">arena</span><span class="o">.</span><span class="na">allocate</span><span class="o">(</span><span class="nc">ValueLayout</span><span class="o">.</span><span class="na">JAVA_INT</span><span class="o">)</span>
+            <span class="o">;</span>
+            <span class="c1">// Il C scrive periodicamente il progresso nel buffer invece di fare</span>
+                <span class="n">upcall</span> <span class="n">processWithProgressHandle</span><span class="o">.</span><span class="na">invokeExact</span><span class="o">(</span><span class="n">src</span><span class="o">,</span> <span class="n">dst</span><span class="o">,</span>
+                <span class="n">data</span><span class="o">.</span><span class="na">length</span><span class="o">,</span> <span class="n">progressBuffer</span><span class="o">)</span>
+            <span class="o">;</span>
+            <span class="c1">// Java legge il progresso senza context switch: accesso diretto</span>
+                <span class="n">alla</span> <span class="n">memoria</span> <span class="nf">while</span> <span class="o">((</span><span class="kt">int</span><span class="o">)</span>
+                <span class="nc">ValueLayout</span><span class="o">.</span><span class="na">JAVA_INT</span><span class="o">.</span><span class="na">varHandle</span><span class="o">().</span><span class="na">get</span><span class="o">(</span><span class="n">progressBuffer</span><span class="o">,</span> <span class="mi">0L</span><span class="o">)</span> <span class="o">&lt;</span> <span class="mi">100</span><span class="o">)</span>
+            <span class="o">{</span>
+                <span class="kt">int</span> <span class="n">pct</span> <span class="o">=</span> <span class="o">(</span><span class="kt">int</span><span class="o">)</span>
+                    <span class="nc">ValueLayout</span><span class="o">.</span><span class="na">JAVA_INT</span><span class="o">.</span><span class="na">varHandle</span><span class="o">().</span><span class="na">get</span><span class="o">(</span><span class="n">progressBuffer</span><span class="o">,</span> <span class="mi">0L</span><span class="o">);</span>
+                <span class="n">callback</span><span class="o">.</span><span class="na">onProgress</span><span class="o">(</span><span class="n">pct</span><span class="o">);</span>
+                <span class="nc">Thread</span><span class="o">.</span><span class="na">sleep</span><span class="o">(</span><span class="mi">10</span><span class="o">);</span>
+            <span class="o">}</span>
+            <span class="k">return</span> <span class="n">dst</span><span class="o">.</span><span class="na">toArray</span><span class="o">(</span><span class="nc">ValueLayout</span><span class="o">.</span><span class="na">JAVA_BYTE</span><span class="o">);</span>
+        <span class="o">}</span>
+    <span class="o">}</span>
+<span class="o">}</span>
 </pre></td></tr></tbody></table></code></pre></div></div>
 
         </article>

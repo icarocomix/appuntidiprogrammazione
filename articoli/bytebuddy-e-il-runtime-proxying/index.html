@@ -155,72 +155,104 @@
 64
 65
 66
-</pre></td><td class="rouge-code"><pre><span class="o">*</span> <span class="nc">Genero</span> <span class="n">dinamicamente</span> <span class="n">una</span> <span class="n">sottoclasse</span> <span class="n">di</span> <span class="nc">OriginalService</span> <span class="n">che</span> <span class="n">intercetta</span> <span class="n">tutti</span> <span class="n">i</span>
-<span class="o">*</span> <span class="n">metodi</span> <span class="n">pubblici</span> <span class="n">per</span> <span class="n">aggiungere</span> <span class="n">logging</span> <span class="n">automatico</span><span class="o">.</span> <span class="nc">ByteBuddy</span> <span class="n">genera</span> <span class="n">bytecode</span>
-<span class="o">*</span> <span class="nl">reale:</span> <span class="n">nessuna</span> <span class="n">reflection</span> <span class="n">a</span> <span class="n">runtime</span><span class="o">.</span> <span class="o">*/</span>
- <span class="nd">@Configuration</span> <span class="kd">public</span> <span class="kd">class</span> <span class="nc">ByteBuddyProxyConfig</span> 
-<span class="o">{</span> <span class="nd">@Bean</span> <span class="kd">public</span> <span class="nc">OriginalService</span> <span class="nf">loggedService</span><span class="o">()</span> <span class="kd">throws</span> <span class="nc">Exception</span> 
-<span class="o">{</span> <span class="nc">Class</span><span class="o">&lt;?</span> <span class="kd">extends</span> <span class="nc">OriginalService</span><span class="o">&gt;</span> <span class="n">proxyClass</span> <span class="o">=</span> <span class="k">new</span> <span class="nc">ByteBuddy</span><span class="o">()</span>
-<span class="o">.</span><span class="na">subclass</span><span class="o">(</span><span class="nc">OriginalService</span><span class="o">.</span><span class="na">class</span><span class="o">)</span> <span class="o">.</span><span class="na">method</span><span class="o">(</span><span class="nc">ElementMatchers</span><span class="o">.</span><span class="na">isPublic</span><span class="o">()</span>
-<span class="o">.</span><span class="na">and</span><span class="o">(</span><span class="nc">ElementMatchers</span><span class="o">.</span><span class="na">not</span><span class="o">(</span><span class="nc">ElementMatchers</span><span class="o">.</span><span class="na">isStatic</span><span class="o">())))</span>
-<span class="o">.</span><span class="na">intercept</span><span class="o">(</span><span class="nc">MethodDelegation</span><span class="o">.</span><span class="na">to</span><span class="o">(</span><span class="nc">LoggingInterceptor</span><span class="o">.</span><span class="na">class</span><span class="o">))</span> <span class="o">.</span><span class="na">make</span><span class="o">()</span>
-<span class="o">.</span><span class="na">load</span><span class="o">(</span><span class="nc">OriginalService</span><span class="o">.</span><span class="na">class</span><span class="o">.</span><span class="na">getClassLoader</span><span class="o">(),</span>
-<span class="nc">ClassLoadingStrategy</span><span class="o">.</span><span class="na">Default</span><span class="o">.</span><span class="na">WRAPPER</span><span class="o">)</span> <span class="o">.</span><span class="na">getLoaded</span><span class="o">();</span> <span class="k">return</span>
-<span class="n">proxyClass</span><span class="o">.</span><span class="na">getDeclaredConstructor</span><span class="o">().</span><span class="na">newInstance</span><span class="o">();</span> <span class="o">}</span>
- <span class="o">}</span>
- 
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+</pre></td><td class="rouge-code"><pre><span class="cm">/* Genero dinamicamente una sottoclasse di OriginalService che intercetta tutti
+    i metodi pubblici per aggiungere logging automatico. ByteBuddy genera
+    bytecode reale: nessuna reflection a runtime. */</span>
+<span class="nd">@Configuration</span> <span class="kd">public</span> <span class="kd">class</span> <span class="nc">ByteBuddyProxyConfig</span> <span class="o">{</span>
+    <span class="nd">@Bean</span> <span class="kd">public</span> <span class="nc">OriginalService</span> <span class="nf">loggedService</span><span class="o">()</span> <span class="kd">throws</span> <span class="nc">Exception</span> <span class="o">{</span>
+        <span class="nc">Class</span><span class="o">&lt;?</span> <span class="kd">extends</span> <span class="nc">OriginalService</span><span class="o">&gt;</span> <span class="n">proxyClass</span> <span class="o">=</span> <span class="k">new</span> <span class="nc">ByteBuddy</span><span class="o">()</span>
+            <span class="o">.</span><span class="na">subclass</span><span class="o">(</span><span class="nc">OriginalService</span><span class="o">.</span><span class="na">class</span><span class="o">)</span> <span class="o">.</span><span class="na">method</span><span class="o">(</span><span class="nc">ElementMatchers</span><span class="o">.</span><span class="na">isPublic</span><span class="o">()</span>
+            <span class="o">.</span><span class="na">and</span><span class="o">(</span><span class="nc">ElementMatchers</span><span class="o">.</span><span class="na">not</span><span class="o">(</span><span class="nc">ElementMatchers</span><span class="o">.</span><span class="na">isStatic</span><span class="o">())))</span>
+            <span class="o">.</span><span class="na">intercept</span><span class="o">(</span><span class="nc">MethodDelegation</span><span class="o">.</span><span class="na">to</span><span class="o">(</span><span class="nc">LoggingInterceptor</span><span class="o">.</span><span class="na">class</span><span class="o">))</span> <span class="o">.</span><span class="na">make</span><span class="o">()</span>
+            <span class="o">.</span><span class="na">load</span><span class="o">(</span><span class="nc">OriginalService</span><span class="o">.</span><span class="na">class</span><span class="o">.</span><span class="na">getClassLoader</span><span class="o">(),</span>
+            <span class="nc">ClassLoadingStrategy</span><span class="o">.</span><span class="na">Default</span><span class="o">.</span><span class="na">WRAPPER</span><span class="o">)</span> <span class="o">.</span><span class="na">getLoaded</span><span class="o">();</span>
+        <span class="k">return</span> <span class="n">proxyClass</span><span class="o">.</span><span class="na">getDeclaredConstructor</span><span class="o">().</span><span class="na">newInstance</span><span class="o">();</span>
+    <span class="o">}</span>
+<span class="o">}</span>
 <span class="cm">/* Implemento l'interceptor che gestisce la logica trasversale: */</span>
- <span class="kd">public</span> <span class="kd">class</span> <span class="nc">LoggingInterceptor</span> 
-<span class="o">{</span> <span class="nd">@RuntimeType</span> <span class="kd">public</span> <span class="kd">static</span> <span class="nc">Object</span> <span class="nf">intercept</span><span class="o">(</span> <span class="nd">@Origin</span> <span class="nc">Method</span> <span class="n">method</span><span class="o">,</span> 
-<span class="c1">// Il metodo originale chiamato @AllArguments Object[] args, </span>
-<span class="c1">// Gli argomenti della chiamata @SuperCall Callable&lt;?&gt; superCall </span>
-<span class="c1">// La chiamata al metodo originale ) throws Exception </span>
-<span class="o">{</span> <span class="kt">long</span> <span class="n">start</span> <span class="o">=</span> <span class="nc">System</span><span class="o">.</span><span class="na">nanoTime</span><span class="o">();</span> <span class="nc">String</span> <span class="n">methodName</span> <span class="o">=</span>
-<span class="n">method</span><span class="o">.</span><span class="na">getDeclaringClass</span><span class="o">().</span><span class="na">getSimpleName</span><span class="o">()</span> <span class="o">+</span> <span class="s">"."</span> <span class="o">+</span> <span class="n">method</span><span class="o">.</span><span class="na">getName</span><span class="o">();</span>
-<span class="n">log</span><span class="o">.</span><span class="na">info</span><span class="o">(</span><span class="s">"Avvio
-{}
-: args=
-{}
-"</span><span class="o">,</span> <span class="n">methodName</span><span class="o">,</span> <span class="nc">Arrays</span><span class="o">.</span><span class="na">toString</span><span class="o">(</span><span class="n">args</span><span class="o">));</span> <span class="k">try</span> 
-<span class="o">{</span> <span class="nc">Object</span> <span class="n">result</span> <span class="o">=</span> <span class="n">superCall</span><span class="o">.</span><span class="na">call</span><span class="o">();</span> 
-<span class="c1">// Chiamo il metodo originale long elapsedMs = (System.nanoTime() - start) /</span>
-<span class="c1">// 1_000_000; log.info("Completato</span>
-<span class="o">{}</span>
- <span class="n">in</span> 
-<span class="o">{}</span>
-<span class="n">ms</span><span class="s">", methodName, elapsedMs); return result; }
- catch (Exception e) 
-{ log.error("</span><span class="nc">Errore</span> <span class="n">in</span> 
-<span class="o">{}</span>
-<span class="o">:</span> 
-<span class="o">{}</span>
-<span class="s">", methodName, e.getMessage()); throw e; }
- }
- }
- 
-* Per classi final, ByteBuddy non può sottoclassare: uso l'approccio con Java
-* Agent per riscrivere il bytecode al caricamento: */
- public class ByteBuddyAgent 
-{ public static void premain(String args, Instrumentation instrumentation) 
-{ new AgentBuilder.Default()
-.type(ElementMatchers.nameStartsWith("</span><span class="n">com</span><span class="o">.</span><span class="na">myapp</span><span class="o">.</span><span class="na">service</span><span class="s">")) .transform((builder,
-typeDescription, classLoader, module, protectionDomain) -&gt; builder
-.method(ElementMatchers.isPublic())
-.intercept(MethodDelegation.to(LoggingInterceptor.class)) )
-.installOn(instrumentation); }
- }
- 
-/* In Spring Boot, confronto ByteBuddy con CGLIB per la creazione dei proxy: */
- @Test public void compareByteBuddyVsCglib() throws Exception 
-{ long start = System.nanoTime(); for (int i = 0; i &lt; 1000; i++) 
-{ new ByteBuddy().subclass(OriginalService.class) .method(ElementMatchers.any())
-.intercept(MethodDelegation.to(LoggingInterceptor.class))
-.make().load(getClass().getClassLoader()).getLoaded().newInstance(); }
- long byteBuddyTime = System.nanoTime() - start; 
-// ByteBuddy è tipicamente 30-50% più veloce di CGLIB nella generazione dei
-// proxy log.info("</span><span class="nc">ByteBuddy</span> <span class="n">proxy</span> <span class="nl">generation:</span>
-<span class="o">{}</span>
-<span class="n">ms</span><span class="err">"</span><span class="o">,</span> <span class="n">byteBuddyTime</span> <span class="o">/</span> <span class="mi">1_000_000</span><span class="o">);</span> <span class="o">}</span>
+<span class="kd">public</span> <span class="kd">class</span> <span class="nc">LoggingInterceptor</span> <span class="o">{</span>
+    <span class="nd">@RuntimeType</span> <span class="kd">public</span> <span class="kd">static</span> <span class="nc">Object</span> <span class="nf">intercept</span><span class="o">(</span>
+    <span class="nd">@Origin</span> <span class="nc">Method</span> <span class="n">method</span><span class="o">,</span>
+    <span class="c1">// Il metodo originale chiamato @AllArguments Object[] args, // Gli</span>
+        <span class="n">argomenti</span> <span class="n">della</span> <span class="n">chiamata</span> <span class="nd">@SuperCall</span> <span class="nc">Callable</span><span class="o">&lt;?&gt;</span> <span class="n">superCall</span> <span class="c1">// La chiamata</span>
+        <span class="n">al</span> <span class="n">metodo</span> <span class="n">originale</span> <span class="o">)</span> <span class="kd">throws</span> <span class="nc">Exception</span>
+    <span class="o">{</span>
+        <span class="kt">long</span> <span class="n">start</span> <span class="o">=</span> <span class="nc">System</span><span class="o">.</span><span class="na">nanoTime</span><span class="o">();</span>
+        <span class="nc">String</span> <span class="n">methodName</span> <span class="o">=</span> <span class="n">method</span><span class="o">.</span><span class="na">getDeclaringClass</span><span class="o">().</span><span class="na">getSimpleName</span><span class="o">()</span> <span class="o">+</span> <span class="s">"."</span> <span class="o">+</span>
+            <span class="n">method</span><span class="o">.</span><span class="na">getName</span><span class="o">();</span>
+        <span class="n">log</span><span class="o">.</span><span class="na">info</span><span class="o">(</span><span class="s">"Avvio {
+        }
+        : args={
+        }
+        "</span><span class="o">,</span> <span class="n">methodName</span><span class="o">,</span> <span class="nc">Arrays</span><span class="o">.</span><span class="na">toString</span><span class="o">(</span><span class="n">args</span><span class="o">));</span>
+        <span class="k">try</span> <span class="o">{</span>
+            <span class="nc">Object</span> <span class="n">result</span> <span class="o">=</span> <span class="n">superCall</span><span class="o">.</span><span class="na">call</span><span class="o">();</span>
+            <span class="c1">// Chiamo il metodo originale long elapsedMs = (System.nanoTime() -</span>
+                <span class="n">start</span><span class="o">)</span> <span class="o">/</span> <span class="mi">1_000_000</span>
+            <span class="o">;</span>
+            <span class="n">log</span><span class="o">.</span><span class="na">info</span><span class="o">(</span><span class="s">"Completato {
+            }
+            in {
+            }
+            ms"</span><span class="o">,</span> <span class="n">methodName</span><span class="o">,</span> <span class="n">elapsedMs</span><span class="o">);</span>
+            <span class="k">return</span> <span class="n">result</span><span class="o">;</span>
+        <span class="o">}</span>
+        <span class="k">catch</span> <span class="o">(</span><span class="nc">Exception</span> <span class="n">e</span><span class="o">)</span> <span class="o">{</span>
+            <span class="n">log</span><span class="o">.</span><span class="na">error</span><span class="o">(</span><span class="s">"Errore in {
+            }
+            : {
+            }
+            "</span><span class="o">,</span> <span class="n">methodName</span><span class="o">,</span> <span class="n">e</span><span class="o">.</span><span class="na">getMessage</span><span class="o">());</span>
+            <span class="k">throw</span> <span class="n">e</span><span class="o">;</span>
+        <span class="o">}</span>
+    <span class="o">}</span>
+<span class="o">}</span>
+<span class="cm">/* Per classi final, ByteBuddy non può sottoclassare: uso l'approccio con Java
+    Agent per riscrivere il bytecode al caricamento: */</span>
+<span class="kd">public</span> <span class="kd">class</span> <span class="nc">ByteBuddyAgent</span> <span class="o">{</span>
+    <span class="kd">public</span> <span class="kd">static</span> <span class="kt">void</span> <span class="nf">premain</span><span class="o">(</span><span class="nc">String</span> <span class="n">args</span><span class="o">,</span> <span class="nc">Instrumentation</span> <span class="n">instrumentation</span><span class="o">)</span> <span class="o">{</span>
+        <span class="k">new</span> <span class="nc">AgentBuilder</span><span class="o">.</span><span class="na">Default</span><span class="o">()</span>
+            <span class="o">.</span><span class="na">type</span><span class="o">(</span><span class="nc">ElementMatchers</span><span class="o">.</span><span class="na">nameStartsWith</span><span class="o">(</span><span class="s">"com.myapp.service"</span><span class="o">))</span>
+            <span class="o">.</span><span class="na">transform</span><span class="o">((</span><span class="n">builder</span><span class="o">,</span> <span class="n">typeDescription</span><span class="o">,</span> <span class="n">classLoader</span><span class="o">,</span> <span class="n">module</span><span class="o">,</span>
+            <span class="n">protectionDomain</span><span class="o">)</span> <span class="o">-&gt;</span> <span class="n">builder</span> <span class="o">.</span><span class="na">method</span><span class="o">(</span><span class="nc">ElementMatchers</span><span class="o">.</span><span class="na">isPublic</span><span class="o">())</span>
+            <span class="o">.</span><span class="na">intercept</span><span class="o">(</span><span class="nc">MethodDelegation</span><span class="o">.</span><span class="na">to</span><span class="o">(</span><span class="nc">LoggingInterceptor</span><span class="o">.</span><span class="na">class</span><span class="o">))</span> <span class="o">)</span>
+            <span class="o">.</span><span class="na">installOn</span><span class="o">(</span><span class="n">instrumentation</span><span class="o">);</span>
+    <span class="o">}</span>
+<span class="o">}</span>
+<span class="cm">/* In Spring Boot, confronto ByteBuddy con CGLIB per la creazione dei proxy: */</span>
+<span class="nd">@Test</span> <span class="kd">public</span> <span class="kt">void</span> <span class="nf">compareByteBuddyVsCglib</span><span class="o">()</span> <span class="kd">throws</span> <span class="nc">Exception</span> <span class="o">{</span>
+    <span class="kt">long</span> <span class="n">start</span> <span class="o">=</span> <span class="nc">System</span><span class="o">.</span><span class="na">nanoTime</span><span class="o">();</span>
+    <span class="k">for</span> <span class="o">(</span><span class="kt">int</span> <span class="n">i</span> <span class="o">=</span> <span class="mi">0</span><span class="o">;</span>
+    <span class="n">i</span> <span class="o">&lt;</span> <span class="mi">1000</span><span class="o">;</span>
+    <span class="n">i</span><span class="o">++)</span> <span class="o">{</span>
+        <span class="k">new</span> <span class="nf">ByteBuddy</span><span class="o">().</span><span class="na">subclass</span><span class="o">(</span><span class="nc">OriginalService</span><span class="o">.</span><span class="na">class</span><span class="o">)</span>
+            <span class="o">.</span><span class="na">method</span><span class="o">(</span><span class="nc">ElementMatchers</span><span class="o">.</span><span class="na">any</span><span class="o">())</span>
+            <span class="o">.</span><span class="na">intercept</span><span class="o">(</span><span class="nc">MethodDelegation</span><span class="o">.</span><span class="na">to</span><span class="o">(</span><span class="nc">LoggingInterceptor</span><span class="o">.</span><span class="na">class</span><span class="o">))</span>
+            <span class="o">.</span><span class="na">make</span><span class="o">().</span><span class="na">load</span><span class="o">(</span><span class="n">getClass</span><span class="o">().</span><span class="na">getClassLoader</span><span class="o">()).</span><span class="na">getLoaded</span><span class="o">().</span><span class="na">newInstance</span><span class="o">();</span>
+    <span class="o">}</span>
+    <span class="kt">long</span> <span class="n">byteBuddyTime</span> <span class="o">=</span> <span class="nc">System</span><span class="o">.</span><span class="na">nanoTime</span><span class="o">()</span> <span class="o">-</span> <span class="n">start</span><span class="o">;</span>
+    <span class="c1">// ByteBuddy è tipicamente 30-50% più veloce di CGLIB nella generazione dei</span>
+        <span class="n">proxy</span> <span class="n">log</span><span class="o">.</span><span class="na">info</span><span class="o">(</span><span class="s">"ByteBuddy proxy generation:
+    {
+    }
+    ms"</span><span class="o">,</span> <span class="n">byteBuddyTime</span> <span class="o">/</span> <span class="mi">1_000_000</span><span class="o">);</span>
+<span class="o">}</span>
 </pre></td></tr></tbody></table></code></pre></div></div>
 
         </article>

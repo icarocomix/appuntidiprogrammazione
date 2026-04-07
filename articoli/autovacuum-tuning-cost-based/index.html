@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Autovacuum Tuning (Cost-Based) — DevLog</title>
-    <meta name="description" content="L'Autovacuum è fondamentale per recuperare lo spazio delle tuple morte, ma se non configurato correttamente può essere troppo timido o troppo aggressivo. PostgreSQL usa un sistema a 'punti' (costo) per limitare l'impatto dell'I/O: ogni operazione con
+    <meta name="description" content="L'Autovacuum è fondamentale per recuperare lo spazio delle tuple morte, ma se non configurato correttamente può essere troppo timido o troppo aggressivo. PostgreSQL usa un sistema a "punti" (costo) per limitare l'impatto dell'I/O: ogni operazione con
 ">
     <link rel="stylesheet" href="/appuntidiprogrammazione/assets/css/style.css">
 
@@ -102,22 +102,20 @@
 11
 12
 13
-14
-</pre></td><td class="rouge-code"><pre><span class="o">*</span> <span class="n">Regolo</span> <span class="n">i</span> <span class="n">parametri</span> <span class="n">per</span> <span class="n">rendere</span> <span class="n">il</span> <span class="k">vacuum</span> <span class="n">pi</span><span class="err">ù</span> <span class="n">aggressivo</span> <span class="n">sulla</span> <span class="n">tabella</span> <span class="n">critica</span><span class="p">,</span>
-<span class="o">*</span> <span class="n">senza</span> <span class="n">toccare</span> <span class="n">i</span> <span class="k">default</span> <span class="n">dell</span><span class="s1">'intero cluster */
- ALTER TABLE high_traffic_table SET (autovacuum_vacuum_cost_limit = 1000,
-autovacuum_vacuum_cost_delay = 10);
-/* Verifico che i nuovi parametri siano applicati */
- SELECT reloptions FROM pg_class WHERE relname = '</span><span class="n">high_traffic_table</span><span class="s1">'; 
-/* Monitoro il progresso in tempo reale durante un vacuum manuale */
- VACUUM (VERBOSE, ANALYZE) high_traffic_table; 
-* Controllo quante dead tuples si accumulano nel tempo: se n_dead_tup cresce più
-* veloce del vacuum, alzo ancora il limite */
- SELECT relname, n_live_tup, n_dead_tup, last_autovacuum, last_autoanalyze FROM
-pg_stat_user_tables WHERE relname = '</span><span class="n">high_traffic_table</span><span class="s1">';
-/* Se necessario, forzo un vacuum manuale fuori orario di punta */
- VACUUM ANALYZE high_traffic_table;
-</span></pre></td></tr></tbody></table></code></pre></div></div>
+</pre></td><td class="rouge-code"><pre>    <span class="cm">/* Regolo i parametri per rendere il vacuum più aggressivo sulla tabella
+        critica, senza toccare i default dell'intero cluster */</span> <span class="k">ALTER</span> <span class="k">TABLE</span>
+        <span class="n">high_traffic_table</span> <span class="k">SET</span> <span class="p">(</span><span class="n">autovacuum_vacuum_cost_limit</span> <span class="o">=</span> <span class="mi">1000</span><span class="p">,</span>
+        <span class="n">autovacuum_vacuum_cost_delay</span> <span class="o">=</span> <span class="mi">10</span><span class="p">);</span> <span class="cm">/* Verifico che i nuovi parametri
+        siano applicati */</span> <span class="k">SELECT</span> <span class="n">reloptions</span> <span class="k">FROM</span> <span class="n">pg_class</span> <span class="k">WHERE</span> <span class="n">relname</span> <span class="o">=</span>
+        <span class="s1">'high_traffic_table'</span><span class="p">;</span> <span class="cm">/* Monitoro il progresso in tempo reale durante un
+        vacuum manuale */</span> <span class="k">VACUUM</span> <span class="p">(</span><span class="k">VERBOSE</span><span class="p">,</span> <span class="k">ANALYZE</span><span class="p">)</span> <span class="n">high_traffic_table</span><span class="p">;</span> <span class="cm">/*
+        Controllo quante dead tuples si accumulano nel tempo: se n_dead_tup
+        cresce più veloce del vacuum, alzo ancora il limite */</span> <span class="k">SELECT</span> <span class="n">relname</span><span class="p">,</span>
+        <span class="n">n_live_tup</span><span class="p">,</span> <span class="n">n_dead_tup</span><span class="p">,</span> <span class="n">last_autovacuum</span><span class="p">,</span> <span class="n">last_autoanalyze</span> <span class="k">FROM</span>
+        <span class="n">pg_stat_user_tables</span> <span class="k">WHERE</span> <span class="n">relname</span> <span class="o">=</span> <span class="s1">'high_traffic_table'</span><span class="p">;</span> <span class="cm">/* Se
+        necessario, forzo un vacuum manuale fuori orario di punta */</span> <span class="k">VACUUM</span>
+        <span class="k">ANALYZE</span> <span class="n">high_traffic_table</span><span class="p">;</span>
+</pre></td></tr></tbody></table></code></pre></div></div>
 
         </article>
 

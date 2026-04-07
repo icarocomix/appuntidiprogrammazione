@@ -183,101 +183,201 @@
 92
 93
 94
-</pre></td><td class="rouge-code"><pre><span class="o">*</span> <span class="nx">Implemento</span> <span class="nx">un</span> <span class="nx">cluster</span> <span class="nx">manager</span> <span class="nx">robusto</span> <span class="nx">con</span> <span class="nx">auto</span><span class="o">-</span><span class="nx">restart</span> <span class="nx">dei</span> <span class="nx">worker</span> <span class="nx">e</span> <span class="nx">graceful</span>
-<span class="o">*</span> <span class="nx">shutdown</span><span class="p">.</span> <span class="o">*</span><span class="sr">/</span><span class="err">
-</span> <span class="kd">const</span> <span class="nx">cluster</span> <span class="o">=</span> <span class="nx">require</span><span class="p">(</span><span class="dl">'</span><span class="s1">cluster</span><span class="dl">'</span><span class="p">);</span> <span class="kd">const</span> <span class="nx">os</span> <span class="o">=</span> <span class="nx">require</span><span class="p">(</span><span class="dl">'</span><span class="s1">os</span><span class="dl">'</span><span class="p">);</span> <span class="kd">const</span> <span class="nx">process</span> <span class="o">=</span>
-<span class="nx">require</span><span class="p">(</span><span class="dl">'</span><span class="s1">process</span><span class="dl">'</span><span class="p">);</span> <span class="k">if</span> <span class="p">(</span><span class="nx">cluster</span><span class="p">.</span><span class="nx">isPrimary</span><span class="p">)</span>
-<span class="p">{</span> <span class="kd">const</span> <span class="nx">numWorkers</span> <span class="o">=</span> <span class="nx">os</span><span class="p">.</span><span class="nx">cpus</span><span class="p">().</span><span class="nx">length</span><span class="p">;</span> <span class="nx">console</span><span class="p">.</span><span class="nx">log</span><span class="p">(</span><span class="s2">`Master PID $
-{process.pid}
-: avvio $
-{numWorkers}
- worker`</span><span class="p">);</span> 
-<span class="c1">// Avvio un worker per ogni core CPU disponibile for (let i = 0; i &lt; numWorkers;</span>
-<span class="c1">// i++)</span>
-<span class="p">{</span> <span class="nx">spawnWorker</span><span class="p">();</span> <span class="p">}</span>
- 
-<span class="c1">// Auto-restart: se un worker crasha, ne avvio subito uno nuovo</span>
-<span class="c1">// cluster.on('exit', (worker, code, signal) =&gt;</span>
-<span class="p">{</span> <span class="k">if</span> <span class="p">(</span><span class="nx">signal</span><span class="p">)</span> 
-<span class="p">{</span> <span class="nx">console</span><span class="p">.</span><span class="nx">log</span><span class="p">(</span><span class="s2">`Worker $
-{worker.process.pid}
- killato dal segnale $
-{signal}
-: non riavvio`</span><span class="p">);</span> <span class="p">}</span>
- <span class="k">else</span> <span class="k">if</span> <span class="p">(</span><span class="nx">code</span> <span class="o">!==</span> <span class="mi">0</span><span class="p">)</span> 
-<span class="p">{</span> <span class="nx">console</span><span class="p">.</span><span class="nx">error</span><span class="p">(</span><span class="s2">`Worker $
-{worker.process.pid}
- crashato (code=$
-{code}
-): riavvio in 1s`</span><span class="p">);</span> <span class="nx">setTimeout</span><span class="p">(</span><span class="nx">spawnWorker</span><span class="p">,</span> <span class="mi">1000</span><span class="p">);</span> 
-<span class="c1">// Attendo 1s per evitare restart loop }</span>
- <span class="p">}</span>
-<span class="p">);</span> 
-<span class="c1">// Graceful shutdown: aspetto che i worker finiscano le richieste in corso</span>
-<span class="c1">// process.on('SIGTERM', () =&gt;</span>
-<span class="p">{</span> <span class="nx">console</span><span class="p">.</span><span class="nx">log</span><span class="p">(</span><span class="dl">'</span><span class="s1">Master: SIGTERM ricevuto, avvio graceful shutdown</span><span class="dl">'</span><span class="p">);</span> <span class="k">for</span> <span class="p">(</span><span class="kd">const</span>
-<span class="nx">worker</span> <span class="k">of</span> <span class="nb">Object</span><span class="p">.</span><span class="nx">values</span><span class="p">(</span><span class="nx">cluster</span><span class="p">.</span><span class="nx">workers</span><span class="p">))</span>
-<span class="p">{</span> <span class="nx">worker</span><span class="p">.</span><span class="nx">send</span><span class="p">(</span><span class="dl">'</span><span class="s1">shutdown</span><span class="dl">'</span><span class="p">);</span> 
-<span class="c1">// Segnalo ai worker di smettere di accettare nuove connessioni }</span>
- 
-<span class="c1">// Forzo la terminazione dopo 30 secondi se i worker non si chiudono</span>
-<span class="c1">// setTimeout(() =&gt;</span>
-<span class="p">{</span> <span class="nx">console</span><span class="p">.</span><span class="nx">warn</span><span class="p">(</span><span class="dl">'</span><span class="s1">Timeout graceful shutdown: forzo la terminazione</span><span class="dl">'</span><span class="p">);</span>
-<span class="nx">process</span><span class="p">.</span><span class="nx">exit</span><span class="p">(</span><span class="mi">1</span><span class="p">);</span> <span class="p">}</span>
-<span class="p">,</span> <span class="mi">30</span><span class="nx">_000</span><span class="p">);</span> <span class="p">}</span>
-<span class="p">);</span> 
-<span class="c1">// Comunicazione master-worker: raccolta metriche aggregate</span>
-<span class="c1">// cluster.on('message', (worker, message) =&gt;</span>
-<span class="p">{</span> <span class="k">if</span> <span class="p">(</span><span class="nx">message</span><span class="p">.</span><span class="nx">type</span> <span class="o">===</span> <span class="dl">'</span><span class="s1">metrics</span><span class="dl">'</span><span class="p">)</span> 
-<span class="p">{</span> <span class="nx">console</span><span class="p">.</span><span class="nx">log</span><span class="p">(</span><span class="s2">`Worker $
-{worker.id}
-: $
-{message.requestsPerSecond}
- req/s`</span><span class="p">);</span> <span class="p">}</span>
- <span class="p">}</span>
-<span class="p">);</span> <span class="kd">function</span> <span class="nx">spawnWorker</span><span class="p">()</span> 
-<span class="p">{</span> <span class="kd">const</span> <span class="nx">worker</span> <span class="o">=</span> <span class="nx">cluster</span><span class="p">.</span><span class="nx">fork</span><span class="p">();</span> <span class="nx">console</span><span class="p">.</span><span class="nx">log</span><span class="p">(</span><span class="s2">`Worker $
-{worker.process.pid}
- avviato`</span><span class="p">);</span> <span class="k">return</span> <span class="nx">worker</span><span class="p">;</span> <span class="p">}</span>
- <span class="p">}</span>
- <span class="k">else</span> 
-<span class="p">{</span> 
-<span class="c1">// CODICE WORKER: ogni worker è un processo Node.js indipendente const express =</span>
-<span class="c1">// require('express'); const app = express(); app.get('/health', (req, res) =&gt;</span>
-<span class="p">{</span> <span class="nx">res</span><span class="p">.</span><span class="nx">json</span><span class="p">(</span>
-<span class="p">{</span> <span class="na">status</span><span class="p">:</span> <span class="dl">'</span><span class="s1">ok</span><span class="dl">'</span><span class="p">,</span> <span class="na">pid</span><span class="p">:</span> <span class="nx">process</span><span class="p">.</span><span class="nx">pid</span><span class="p">,</span> <span class="na">workerId</span><span class="p">:</span> <span class="nx">cluster</span><span class="p">.</span><span class="nx">worker</span><span class="p">.</span><span class="nx">id</span> <span class="p">}</span>
-<span class="p">);</span> <span class="p">}</span>
-<span class="p">);</span> <span class="nx">app</span><span class="p">.</span><span class="kd">get</span><span class="p">(</span><span class="dl">'</span><span class="s1">/data</span><span class="dl">'</span><span class="p">,</span> <span class="k">async</span> <span class="p">(</span><span class="nx">req</span><span class="p">,</span> <span class="nx">res</span><span class="p">)</span> <span class="o">=&gt;</span> 
-<span class="p">{</span> <span class="kd">const</span> <span class="nx">result</span> <span class="o">=</span> <span class="k">await</span> <span class="nx">db</span><span class="p">.</span><span class="nx">query</span><span class="p">(</span><span class="nx">req</span><span class="p">.</span><span class="nx">query</span><span class="p">);</span> <span class="nx">res</span><span class="p">.</span><span class="nx">json</span><span class="p">(</span><span class="nx">result</span><span class="p">);</span> <span class="p">}</span>
-<span class="p">);</span> 
-<span class="c1">// Graceful shutdown del worker: smette di accettare nuove connessioni</span>
-<span class="c1">// process.on('message', (msg) =&gt;</span>
-<span class="p">{</span> <span class="k">if</span> <span class="p">(</span><span class="nx">msg</span> <span class="o">===</span> <span class="dl">'</span><span class="s1">shutdown</span><span class="dl">'</span><span class="p">)</span> 
-<span class="p">{</span> <span class="nx">server</span><span class="p">.</span><span class="nx">close</span><span class="p">(()</span> <span class="o">=&gt;</span> 
-<span class="p">{</span> <span class="nx">console</span><span class="p">.</span><span class="nx">log</span><span class="p">(</span><span class="s2">`Worker $
-{process.pid}
-: shutdown completato`</span><span class="p">);</span> <span class="nx">process</span><span class="p">.</span><span class="nx">exit</span><span class="p">(</span><span class="mi">0</span><span class="p">);</span> <span class="p">}</span>
-<span class="p">);</span> <span class="p">}</span>
- <span class="p">}</span>
-<span class="p">);</span> <span class="kd">const</span> <span class="nx">server</span> <span class="o">=</span> <span class="nx">app</span><span class="p">.</span><span class="nx">listen</span><span class="p">(</span><span class="mi">8080</span><span class="p">,</span> <span class="p">()</span> <span class="o">=&gt;</span> 
-<span class="p">{</span> <span class="nx">console</span><span class="p">.</span><span class="nx">log</span><span class="p">(</span><span class="s2">`Worker $
-{process.pid}
- in ascolto su :8080`</span><span class="p">);</span> <span class="p">}</span>
-<span class="p">);</span> 
-<span class="c1">// Metriche periodiche al master let requestCount = 0; app.use((req, res, next)</span>
-<span class="c1">// =&gt;</span>
-<span class="p">{</span> <span class="nx">requestCount</span><span class="o">++</span><span class="p">;</span> <span class="nx">next</span><span class="p">();</span> <span class="p">}</span>
-<span class="p">);</span> <span class="nx">setInterval</span><span class="p">(()</span> <span class="o">=&gt;</span> 
-<span class="p">{</span> <span class="nx">process</span><span class="p">.</span><span class="nx">send</span><span class="p">(</span>
-<span class="p">{</span> <span class="na">type</span><span class="p">:</span> <span class="dl">'</span><span class="s1">metrics</span><span class="dl">'</span><span class="p">,</span> <span class="na">requestsPerSecond</span><span class="p">:</span> <span class="nx">requestCount</span> <span class="p">}</span>
-<span class="p">);</span> <span class="nx">requestCount</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span> <span class="p">}</span>
-<span class="p">,</span> <span class="mi">1000</span><span class="p">);</span> <span class="p">}</span>
- 
-<span class="o">*</span> <span class="nx">Per</span> <span class="nx">applicazioni</span> <span class="nx">containerizzate</span> <span class="p">(</span><span class="nx">Docker</span><span class="o">/</span><span class="nx">K8s</span><span class="p">),</span> <span class="nx">il</span> <span class="nx">clustering</span> <span class="nx">non</span> <span class="nx">è</span> <span class="nx">sempre</span> <span class="nx">la</span>
-<span class="o">*</span> <span class="nx">scelta</span> <span class="na">giusta</span><span class="p">:</span> <span class="nx">preferisco</span> <span class="nx">più</span> <span class="nx">container</span> <span class="nx">con</span> <span class="nx">un</span> <span class="nx">worker</span> <span class="nx">ciascuno</span> <span class="nx">per</span> <span class="nx">avere</span>
-<span class="o">*</span> <span class="nx">isolamento</span><span class="p">,</span> <span class="nx">rolling</span> <span class="nx">deploy</span> <span class="nx">e</span> <span class="nx">scaling</span> <span class="nx">indipendente</span><span class="p">.</span> <span class="nx">Il</span> <span class="nx">cluster</span> <span class="nx">è</span> <span class="nx">ottimale</span> <span class="nx">per</span>
-<span class="o">*</span> <span class="nx">VM</span> <span class="nx">bare</span><span class="o">-</span><span class="nx">metal</span> <span class="nx">o</span> <span class="nx">quando</span> <span class="nx">non</span> <span class="nx">si</span> <span class="nx">vuole</span> <span class="nx">overhead</span> <span class="nx">Docker</span><span class="p">.</span> <span class="o">*</span><span class="sr">/</span><span class="err">
-</span></pre></td></tr></tbody></table></code></pre></div></div>
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+106
+107
+108
+109
+110
+111
+112
+113
+114
+115
+116
+117
+118
+119
+120
+121
+122
+123
+124
+125
+126
+127
+128
+129
+130
+131
+132
+133
+134
+135
+136
+137
+138
+139
+140
+141
+142
+143
+144
+</pre></td><td class="rouge-code"><pre><span class="cm">/* Implemento un cluster manager robusto con auto-restart dei worker e graceful
+    shutdown. */</span>
+<span class="kd">const</span> <span class="nx">cluster</span> <span class="o">=</span> <span class="nx">require</span><span class="p">(</span><span class="dl">'</span><span class="s1">cluster</span><span class="dl">'</span><span class="p">);</span>
+<span class="kd">const</span> <span class="nx">os</span> <span class="o">=</span> <span class="nx">require</span><span class="p">(</span><span class="dl">'</span><span class="s1">os</span><span class="dl">'</span><span class="p">);</span>
+<span class="kd">const</span> <span class="nx">process</span> <span class="o">=</span> <span class="nx">require</span><span class="p">(</span><span class="dl">'</span><span class="s1">process</span><span class="dl">'</span><span class="p">);</span>
+<span class="k">if</span> <span class="p">(</span><span class="nx">cluster</span><span class="p">.</span><span class="nx">isPrimary</span><span class="p">)</span> <span class="p">{</span>
+    <span class="kd">const</span> <span class="nx">numWorkers</span> <span class="o">=</span> <span class="nx">os</span><span class="p">.</span><span class="nx">cpus</span><span class="p">().</span><span class="nx">length</span><span class="p">;</span>
+    <span class="nx">console</span><span class="p">.</span><span class="nx">log</span><span class="p">(</span><span class="s2">`Master PID </span><span class="p">${</span>
+        <span class="nx">process</span><span class="p">.</span><span class="nx">pid</span>
+    <span class="p">}</span><span class="s2">
+    : avvio </span><span class="p">${</span>
+        <span class="nx">numWorkers</span>
+    <span class="p">}</span><span class="s2">
+    worker`</span><span class="p">);</span>
+    <span class="c1">// Avvio un worker per ogni core CPU disponibile for (let i = 0</span>
+    <span class="p">;</span>
+    <span class="nx">i</span> <span class="o">&lt;</span> <span class="nx">numWorkers</span><span class="p">;</span>
+    <span class="nx">i</span><span class="o">++</span><span class="p">)</span> <span class="p">{</span>
+        <span class="nx">spawnWorker</span><span class="p">();</span>
+    <span class="p">}</span>
+    <span class="c1">// Auto-restart: se un worker crasha, ne avvio subito uno nuovo</span>
+        <span class="nx">cluster</span><span class="p">.</span><span class="nx">on</span><span class="p">(</span><span class="dl">'</span><span class="s1">exit</span><span class="dl">'</span><span class="p">,</span> <span class="p">(</span><span class="nx">worker</span><span class="p">,</span> <span class="nx">code</span><span class="p">,</span> <span class="nx">signal</span><span class="p">)</span> <span class="o">=&gt;</span>
+    <span class="p">{</span>
+        <span class="k">if</span> <span class="p">(</span><span class="nx">signal</span><span class="p">)</span> <span class="p">{</span>
+            <span class="nx">console</span><span class="p">.</span><span class="nx">log</span><span class="p">(</span><span class="s2">`Worker </span><span class="p">${</span>
+                <span class="nx">worker</span><span class="p">.</span><span class="nx">process</span><span class="p">.</span><span class="nx">pid</span>
+            <span class="p">}</span><span class="s2">
+            killato dal segnale </span><span class="p">${</span>
+                <span class="nx">signal</span>
+            <span class="p">}</span><span class="s2">
+            : non riavvio`</span><span class="p">);</span>
+        <span class="p">}</span>
+        <span class="k">else</span> <span class="k">if</span> <span class="p">(</span><span class="nx">code</span> <span class="o">!==</span> <span class="mi">0</span><span class="p">)</span> <span class="p">{</span>
+            <span class="nx">console</span><span class="p">.</span><span class="nx">error</span><span class="p">(</span><span class="s2">`Worker </span><span class="p">${</span>
+                <span class="nx">worker</span><span class="p">.</span><span class="nx">process</span><span class="p">.</span><span class="nx">pid</span>
+            <span class="p">}</span><span class="s2">
+            crashato (code=</span><span class="p">${</span>
+                <span class="nx">code</span>
+            <span class="p">}</span><span class="s2">
+            ): riavvio in 1s`</span><span class="p">);</span>
+            <span class="nx">setTimeout</span><span class="p">(</span><span class="nx">spawnWorker</span><span class="p">,</span> <span class="mi">1000</span><span class="p">);</span>
+            <span class="c1">// Attendo 1s per evitare restart loop</span>
+        <span class="p">}</span>
+    <span class="p">}</span>
+    <span class="p">);</span>
+    <span class="c1">// Graceful shutdown: aspetto che i worker finiscano le richieste in corso</span>
+        <span class="nx">process</span><span class="p">.</span><span class="nx">on</span><span class="p">(</span><span class="dl">'</span><span class="s1">SIGTERM</span><span class="dl">'</span><span class="p">,</span> <span class="p">()</span> <span class="o">=&gt;</span>
+    <span class="p">{</span>
+        <span class="nx">console</span><span class="p">.</span><span class="nx">log</span><span class="p">(</span><span class="dl">'</span><span class="s1">Master: SIGTERM ricevuto, avvio graceful shutdown</span><span class="dl">'</span><span class="p">);</span>
+        <span class="k">for</span> <span class="p">(</span><span class="kd">const</span> <span class="nx">worker</span> <span class="k">of</span> <span class="nb">Object</span><span class="p">.</span><span class="nx">values</span><span class="p">(</span><span class="nx">cluster</span><span class="p">.</span><span class="nx">workers</span><span class="p">))</span> <span class="p">{</span>
+            <span class="nx">worker</span><span class="p">.</span><span class="nx">send</span><span class="p">(</span><span class="dl">'</span><span class="s1">shutdown</span><span class="dl">'</span><span class="p">);</span>
+            <span class="c1">// Segnalo ai worker di smettere di accettare nuove connessioni</span>
+        <span class="p">}</span>
+        <span class="c1">// Forzo la terminazione dopo 30 secondi se i worker non si chiudono</span>
+            <span class="nx">setTimeout</span><span class="p">(()</span> <span class="o">=&gt;</span>
+        <span class="p">{</span>
+            <span class="nx">console</span><span class="p">.</span><span class="nx">warn</span><span class="p">(</span><span class="dl">'</span><span class="s1">Timeout graceful shutdown: forzo la terminazione</span><span class="dl">'</span><span class="p">);</span>
+            <span class="nx">process</span><span class="p">.</span><span class="nx">exit</span><span class="p">(</span><span class="mi">1</span><span class="p">);</span>
+        <span class="p">}</span>
+        <span class="p">,</span> <span class="mi">30</span><span class="nx">_000</span><span class="p">);</span>
+    <span class="p">}</span>
+    <span class="p">);</span>
+    <span class="c1">// Comunicazione master-worker: raccolta metriche aggregate</span>
+        <span class="nx">cluster</span><span class="p">.</span><span class="nx">on</span><span class="p">(</span><span class="dl">'</span><span class="s1">message</span><span class="dl">'</span><span class="p">,</span> <span class="p">(</span><span class="nx">worker</span><span class="p">,</span> <span class="nx">message</span><span class="p">)</span> <span class="o">=&gt;</span>
+    <span class="p">{</span>
+        <span class="k">if</span> <span class="p">(</span><span class="nx">message</span><span class="p">.</span><span class="nx">type</span> <span class="o">===</span> <span class="dl">'</span><span class="s1">metrics</span><span class="dl">'</span><span class="p">)</span> <span class="p">{</span>
+            <span class="nx">console</span><span class="p">.</span><span class="nx">log</span><span class="p">(</span><span class="s2">`Worker </span><span class="p">${</span>
+                <span class="nx">worker</span><span class="p">.</span><span class="nx">id</span>
+            <span class="p">}</span><span class="s2">
+            : </span><span class="p">${</span>
+                <span class="nx">message</span><span class="p">.</span><span class="nx">requestsPerSecond</span>
+            <span class="p">}</span><span class="s2">
+            req/s`</span><span class="p">);</span>
+        <span class="p">}</span>
+    <span class="p">}</span>
+    <span class="p">);</span>
+    <span class="kd">function</span> <span class="nx">spawnWorker</span><span class="p">()</span> <span class="p">{</span>
+        <span class="kd">const</span> <span class="nx">worker</span> <span class="o">=</span> <span class="nx">cluster</span><span class="p">.</span><span class="nx">fork</span><span class="p">();</span>
+        <span class="nx">console</span><span class="p">.</span><span class="nx">log</span><span class="p">(</span><span class="s2">`Worker </span><span class="p">${</span>
+            <span class="nx">worker</span><span class="p">.</span><span class="nx">process</span><span class="p">.</span><span class="nx">pid</span>
+        <span class="p">}</span><span class="s2">
+        avviato`</span><span class="p">);</span>
+        <span class="k">return</span> <span class="nx">worker</span><span class="p">;</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+<span class="k">else</span> <span class="p">{</span>
+    <span class="c1">// CODICE WORKER: ogni worker è un processo Node.js indipendente const</span>
+        <span class="nx">express</span> <span class="o">=</span> <span class="nx">require</span><span class="p">(</span><span class="dl">'</span><span class="s1">express</span><span class="dl">'</span><span class="p">)</span>
+    <span class="p">;</span>
+    <span class="kd">const</span> <span class="nx">app</span> <span class="o">=</span> <span class="nx">express</span><span class="p">();</span>
+    <span class="nx">app</span><span class="p">.</span><span class="kd">get</span><span class="p">(</span><span class="dl">'</span><span class="s1">/health</span><span class="dl">'</span><span class="p">,</span> <span class="p">(</span><span class="nx">req</span><span class="p">,</span> <span class="nx">res</span><span class="p">)</span> <span class="o">=&gt;</span> <span class="p">{</span>
+        <span class="nx">res</span><span class="p">.</span><span class="nx">json</span><span class="p">({</span>
+            <span class="na">status</span><span class="p">:</span> <span class="dl">'</span><span class="s1">ok</span><span class="dl">'</span><span class="p">,</span> <span class="na">pid</span><span class="p">:</span> <span class="nx">process</span><span class="p">.</span><span class="nx">pid</span><span class="p">,</span> <span class="na">workerId</span><span class="p">:</span> <span class="nx">cluster</span><span class="p">.</span><span class="nx">worker</span><span class="p">.</span><span class="nx">id</span>
+        <span class="p">}</span>
+        <span class="p">);</span>
+    <span class="p">}</span>
+    <span class="p">);</span>
+    <span class="nx">app</span><span class="p">.</span><span class="kd">get</span><span class="p">(</span><span class="dl">'</span><span class="s1">/data</span><span class="dl">'</span><span class="p">,</span> <span class="k">async</span> <span class="p">(</span><span class="nx">req</span><span class="p">,</span> <span class="nx">res</span><span class="p">)</span> <span class="o">=&gt;</span> <span class="p">{</span>
+        <span class="kd">const</span> <span class="nx">result</span> <span class="o">=</span> <span class="k">await</span> <span class="nx">db</span><span class="p">.</span><span class="nx">query</span><span class="p">(</span><span class="nx">req</span><span class="p">.</span><span class="nx">query</span><span class="p">);</span>
+        <span class="nx">res</span><span class="p">.</span><span class="nx">json</span><span class="p">(</span><span class="nx">result</span><span class="p">);</span>
+    <span class="p">}</span>
+    <span class="p">);</span>
+    <span class="c1">// Graceful shutdown del worker: smette di accettare nuove connessioni</span>
+        <span class="nx">process</span><span class="p">.</span><span class="nx">on</span><span class="p">(</span><span class="dl">'</span><span class="s1">message</span><span class="dl">'</span><span class="p">,</span> <span class="p">(</span><span class="nx">msg</span><span class="p">)</span> <span class="o">=&gt;</span>
+    <span class="p">{</span>
+        <span class="k">if</span> <span class="p">(</span><span class="nx">msg</span> <span class="o">===</span> <span class="dl">'</span><span class="s1">shutdown</span><span class="dl">'</span><span class="p">)</span> <span class="p">{</span>
+            <span class="nx">server</span><span class="p">.</span><span class="nx">close</span><span class="p">(()</span> <span class="o">=&gt;</span> <span class="p">{</span>
+                <span class="nx">console</span><span class="p">.</span><span class="nx">log</span><span class="p">(</span><span class="s2">`Worker </span><span class="p">${</span>
+                    <span class="nx">process</span><span class="p">.</span><span class="nx">pid</span>
+                <span class="p">}</span><span class="s2">
+                : shutdown completato`</span><span class="p">);</span>
+                <span class="nx">process</span><span class="p">.</span><span class="nx">exit</span><span class="p">(</span><span class="mi">0</span><span class="p">);</span>
+            <span class="p">}</span>
+            <span class="p">);</span>
+        <span class="p">}</span>
+    <span class="p">}</span>
+    <span class="p">);</span>
+    <span class="kd">const</span> <span class="nx">server</span> <span class="o">=</span> <span class="nx">app</span><span class="p">.</span><span class="nx">listen</span><span class="p">(</span><span class="mi">8080</span><span class="p">,</span> <span class="p">()</span> <span class="o">=&gt;</span> <span class="p">{</span>
+        <span class="nx">console</span><span class="p">.</span><span class="nx">log</span><span class="p">(</span><span class="s2">`Worker </span><span class="p">${</span>
+            <span class="nx">process</span><span class="p">.</span><span class="nx">pid</span>
+        <span class="p">}</span><span class="s2">
+        in ascolto su :8080`</span><span class="p">);</span>
+    <span class="p">}</span>
+    <span class="p">);</span>
+    <span class="c1">// Metriche periodiche al master let requestCount = 0</span>
+    <span class="p">;</span>
+    <span class="nx">app</span><span class="p">.</span><span class="nx">use</span><span class="p">((</span><span class="nx">req</span><span class="p">,</span> <span class="nx">res</span><span class="p">,</span> <span class="nx">next</span><span class="p">)</span> <span class="o">=&gt;</span> <span class="p">{</span>
+        <span class="nx">requestCount</span><span class="o">++</span><span class="p">;</span>
+        <span class="nx">next</span><span class="p">();</span>
+    <span class="p">}</span>
+    <span class="p">);</span>
+    <span class="nx">setInterval</span><span class="p">(()</span> <span class="o">=&gt;</span> <span class="p">{</span>
+        <span class="nx">process</span><span class="p">.</span><span class="nx">send</span><span class="p">({</span>
+            <span class="na">type</span><span class="p">:</span> <span class="dl">'</span><span class="s1">metrics</span><span class="dl">'</span><span class="p">,</span> <span class="na">requestsPerSecond</span><span class="p">:</span> <span class="nx">requestCount</span>
+        <span class="p">}</span>
+        <span class="p">);</span>
+        <span class="nx">requestCount</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
+    <span class="p">}</span>
+    <span class="p">,</span> <span class="mi">1000</span><span class="p">);</span>
+<span class="p">}</span>
+<span class="cm">/* Per applicazioni containerizzate (Docker/K8s), il clustering non è sempre la
+    scelta giusta: preferisco più container con un worker ciascuno per avere
+    isolamento, rolling deploy e scaling indipendente. Il cluster è ottimale per
+    VM bare-metal o quando non si vuole overhead Docker. */</span>
+</pre></td></tr></tbody></table></code></pre></div></div>
 
         </article>
 

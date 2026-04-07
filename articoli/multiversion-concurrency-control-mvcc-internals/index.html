@@ -106,28 +106,24 @@
 15
 16
 17
-18
-19
-</pre></td><td class="rouge-code"><pre><span class="o">*</span> <span class="n">Guardo</span> <span class="n">i</span> <span class="n">metadati</span> <span class="n">nascosti</span> <span class="n">per</span> <span class="n">capire</span> <span class="n">lo</span> <span class="n">stato</span> <span class="n">di</span> <span class="n">visibilit</span><span class="err">à</span><span class="p">.</span> <span class="n">xmin</span> <span class="n">indica</span> <span class="n">la</span>
-<span class="o">*</span> <span class="n">transazione</span> <span class="n">che</span> <span class="n">ha</span> <span class="n">creato</span> <span class="n">la</span> <span class="n">riga</span><span class="p">,</span> <span class="n">xmax</span> <span class="n">quella</span> <span class="n">che</span> <span class="n">l</span><span class="s1">'ha cancellata o
-* aggiornata. Se xmax è valorizzato e la transazione corrispondente è conclusa,
-* la riga è una dead tuple pronta per il Vacuum. */
- SELECT xmin, xmax, ctid, * FROM my_table WHERE id = 500; 
-* Misuro il livello di bloat corrente per decidere se serve un intervento
-* manuale. */
- SELECT relname, n_live_tup, n_dead_tup, round(100.0 * n_dead_tup /
-nullif(n_live_tup + n_dead_tup, 0), 2) AS dead_pct, last_vacuum, last_autovacuum
-FROM pg_stat_user_tables WHERE relname = '</span><span class="n">my_table</span><span class="s1">';
-* Individuo le transazioni long-running che trattengono le vecchie versioni
-* delle righe impedendo al Vacuum di avanzare. */
- SELECT pid, now() - xact_start AS duration, state, query FROM pg_stat_activity
-WHERE xact_start IS NOT NULL AND now() - xact_start &gt; interval '</span><span class="mi">5</span> <span class="n">minutes</span><span class="s1">' ORDER
-BY duration DESC;
-* Verifico lo snapshot più vecchio attivo nel sistema: è il limite invalicabile
-* per il Vacuum. */
- SELECT backend_xmin, state, query FROM pg_stat_activity WHERE backend_xmin IS
-NOT NULL ORDER BY age(backend_xmin) DESC LIMIT 5;
-</span></pre></td></tr></tbody></table></code></pre></div></div>
+</pre></td><td class="rouge-code"><pre>    <span class="cm">/* Guardo i metadati nascosti per capire lo stato di visibilità. xmin indica
+        la transazione che ha creato la riga, xmax quella che l'ha cancellata o
+        aggiornata. Se xmax è valorizzato e la transazione corrispondente è
+        conclusa, la riga è una dead tuple pronta per il Vacuum. */</span> <span class="k">SELECT</span> <span class="n">xmin</span><span class="p">,</span>
+        <span class="n">xmax</span><span class="p">,</span> <span class="n">ctid</span><span class="p">,</span> <span class="o">*</span> <span class="k">FROM</span> <span class="n">my_table</span> <span class="k">WHERE</span> <span class="n">id</span> <span class="o">=</span> <span class="mi">500</span><span class="p">;</span> <span class="cm">/* Misuro il livello di
+        bloat corrente per decidere se serve un intervento manuale. */</span> <span class="k">SELECT</span>
+        <span class="n">relname</span><span class="p">,</span> <span class="n">n_live_tup</span><span class="p">,</span> <span class="n">n_dead_tup</span><span class="p">,</span> <span class="n">round</span><span class="p">(</span><span class="mi">100</span><span class="p">.</span><span class="mi">0</span> <span class="o">*</span> <span class="n">n_dead_tup</span> <span class="o">/</span>
+        <span class="k">nullif</span><span class="p">(</span><span class="n">n_live_tup</span> <span class="o">+</span> <span class="n">n_dead_tup</span><span class="p">,</span> <span class="mi">0</span><span class="p">),</span> <span class="mi">2</span><span class="p">)</span> <span class="k">AS</span> <span class="n">dead_pct</span><span class="p">,</span> <span class="n">last_vacuum</span><span class="p">,</span>
+        <span class="n">last_autovacuum</span> <span class="k">FROM</span> <span class="n">pg_stat_user_tables</span> <span class="k">WHERE</span> <span class="n">relname</span> <span class="o">=</span> <span class="s1">'my_table'</span><span class="p">;</span> <span class="cm">/*
+        Individuo le transazioni long-running che trattengono le vecchie
+        versioni delle righe impedendo al Vacuum di avanzare. */</span> <span class="k">SELECT</span> <span class="n">pid</span><span class="p">,</span>
+        <span class="n">now</span><span class="p">()</span> <span class="o">-</span> <span class="n">xact_start</span> <span class="k">AS</span> <span class="n">duration</span><span class="p">,</span> <span class="k">state</span><span class="p">,</span> <span class="n">query</span> <span class="k">FROM</span> <span class="n">pg_stat_activity</span> <span class="k">WHERE</span>
+        <span class="n">xact_start</span> <span class="k">IS</span> <span class="k">NOT</span> <span class="k">NULL</span> <span class="k">AND</span> <span class="n">now</span><span class="p">()</span> <span class="o">-</span> <span class="n">xact_start</span> <span class="o">&gt;</span> <span class="n">interval</span> <span class="s1">'5 minutes'</span>
+        <span class="k">ORDER</span> <span class="k">BY</span> <span class="n">duration</span> <span class="k">DESC</span><span class="p">;</span> <span class="cm">/* Verifico lo snapshot più vecchio attivo nel
+        sistema: è il limite invalicabile per il Vacuum. */</span> <span class="k">SELECT</span> <span class="n">backend_xmin</span><span class="p">,</span>
+        <span class="k">state</span><span class="p">,</span> <span class="n">query</span> <span class="k">FROM</span> <span class="n">pg_stat_activity</span> <span class="k">WHERE</span> <span class="n">backend_xmin</span> <span class="k">IS</span> <span class="k">NOT</span> <span class="k">NULL</span> <span class="k">ORDER</span>
+        <span class="k">BY</span> <span class="n">age</span><span class="p">(</span><span class="n">backend_xmin</span><span class="p">)</span> <span class="k">DESC</span> <span class="k">LIMIT</span> <span class="mi">5</span><span class="p">;</span>
+</pre></td></tr></tbody></table></code></pre></div></div>
 
         </article>
 

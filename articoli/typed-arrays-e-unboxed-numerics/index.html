@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Typed Arrays e Unboxed Numerics — DevLog</title>
-    <meta name="description" content="In JS standard, i numeri sono solitamente allocati nell'heap come 'Boxed Doubles'. Per il calcolo intensivo, gli array standard [] introducono overhead di puntatori. Float64Array o Int32Array allocano un blocco di memoria continua (C-style), permette
+    <meta name="description" content="In JS standard, i numeri sono solitamente allocati nell'heap come "Boxed Doubles". Per il calcolo intensivo, gli array standard [] introducono overhead di puntatori. Float64Array o Int32Array allocano un blocco di memoria continua (C-style), permette
 ">
     <link rel="stylesheet" href="/appuntidiprogrammazione/assets/css/style.css">
 
@@ -162,80 +162,140 @@
 71
 72
 73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
 </pre></td><td class="rouge-code"><pre><span class="cm">/* Confronto il costo tra Array standard e Typed Array per renderlo concreto. */</span>
- 
 <span class="c1">// APPROCCIO SBAGLIATO: Array standard con Boxed Doubles const standardArray =</span>
-<span class="c1">// new Array(1_000_000); for (let i = 0; i &lt; standardArray.length; i++)</span>
-<span class="p">{</span> <span class="nx">standardArray</span><span class="p">[</span><span class="nx">i</span><span class="p">]</span> <span class="o">=</span> <span class="nb">Math</span><span class="p">.</span><span class="nx">random</span><span class="p">();</span> 
-<span class="c1">// Ogni numero è un oggetto HeapNumber sull'heap V8 }</span>
- 
+    <span class="k">new</span> <span class="nb">Array</span><span class="p">(</span><span class="mi">1</span><span class="nx">_000_000</span><span class="p">)</span>
+<span class="p">;</span>
+<span class="k">for</span> <span class="p">(</span><span class="kd">let</span> <span class="nx">i</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
+<span class="nx">i</span> <span class="o">&lt;</span> <span class="nx">standardArray</span><span class="p">.</span><span class="nx">length</span><span class="p">;</span>
+<span class="nx">i</span><span class="o">++</span><span class="p">)</span> <span class="p">{</span>
+    <span class="nx">standardArray</span><span class="p">[</span><span class="nx">i</span><span class="p">]</span> <span class="o">=</span> <span class="nb">Math</span><span class="p">.</span><span class="nx">random</span><span class="p">();</span>
+    <span class="c1">// Ogni numero è un oggetto HeapNumber sull'heap V8</span>
+<span class="p">}</span>
 <span class="c1">// Operazione su array standard: V8 deve unboxare ogni elemento const sum1 =</span>
-<span class="c1">// standardArray.reduce((acc, v) =&gt; acc + v, 0);</span>
+    <span class="nx">standardArray</span><span class="p">.</span><span class="nx">reduce</span><span class="p">((</span><span class="nx">acc</span><span class="p">,</span> <span class="nx">v</span><span class="p">)</span> <span class="o">=&gt;</span> <span class="nx">acc</span> <span class="o">+</span> <span class="nx">v</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+<span class="p">;</span>
 <span class="c1">// APPROCCIO CORRETTO: Float64Array con memoria contigua const typedArray = new</span>
-<span class="c1">// Float64Array(1_000_000); for (let i = 0; i &lt; typedArray.length; i++)</span>
-<span class="p">{</span> <span class="nx">typedArray</span><span class="p">[</span><span class="nx">i</span><span class="p">]</span> <span class="o">=</span> <span class="nb">Math</span><span class="p">.</span><span class="nx">random</span><span class="p">();</span> 
-<span class="c1">// Scrittura diretta in memoria C-style: zero boxing }</span>
- 
+    <span class="nb">Float64Array</span><span class="p">(</span><span class="mi">1</span><span class="nx">_000_000</span><span class="p">)</span>
+<span class="p">;</span>
+<span class="k">for</span> <span class="p">(</span><span class="kd">let</span> <span class="nx">i</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
+<span class="nx">i</span> <span class="o">&lt;</span> <span class="nx">typedArray</span><span class="p">.</span><span class="nx">length</span><span class="p">;</span>
+<span class="nx">i</span><span class="o">++</span><span class="p">)</span> <span class="p">{</span>
+    <span class="nx">typedArray</span><span class="p">[</span><span class="nx">i</span><span class="p">]</span> <span class="o">=</span> <span class="nb">Math</span><span class="p">.</span><span class="nx">random</span><span class="p">();</span>
+    <span class="c1">// Scrittura diretta in memoria C-style: zero boxing</span>
+<span class="p">}</span>
 <span class="c1">// Operazione su Typed Array: V8 usa SIMD e accesso diretto ai double let sum2 =</span>
-<span class="c1">// 0; for (let i = 0; i &lt; typedArray.length; i++)</span>
-<span class="p">{</span> <span class="nx">sum2</span> <span class="o">+=</span> <span class="nx">typedArray</span><span class="p">[</span><span class="nx">i</span><span class="p">];</span> 
-<span class="c1">// Loop ottimizzato con istruzioni vettoriali dalla CPU }</span>
- 
+    <span class="mi">0</span>
+<span class="p">;</span>
+<span class="k">for</span> <span class="p">(</span><span class="kd">let</span> <span class="nx">i</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
+<span class="nx">i</span> <span class="o">&lt;</span> <span class="nx">typedArray</span><span class="p">.</span><span class="nx">length</span><span class="p">;</span>
+<span class="nx">i</span><span class="o">++</span><span class="p">)</span> <span class="p">{</span>
+    <span class="nx">sum2</span> <span class="o">+=</span> <span class="nx">typedArray</span><span class="p">[</span><span class="nx">i</span><span class="p">];</span>
+    <span class="c1">// Loop ottimizzato con istruzioni vettoriali dalla CPU</span>
+<span class="p">}</span>
 <span class="cm">/* Scelgo il tipo corretto in base al dominio del problema: */</span>
- 
-<span class="c1">// Float64Array: calcolo scientifico, audio (range completo double IEEE 754) </span>
-<span class="c1">// Float32Array: grafica 3D, WebGL (meno preciso ma 2x più compatto) </span>
-<span class="c1">// Int32Array: contatori, indici, coordinate pixel </span>
-<span class="c1">// Uint8Array: buffer raw, dati di rete, immagini (RGBA) </span>
-<span class="c1">// Uint8ClampedArray: manipolazione pixel canvas (clamping automatico 0-255) </span>
-<span class="o">*</span> <span class="nx">Implemento</span> <span class="nx">un</span> <span class="nx">equalizzatore</span> <span class="nx">audio</span> <span class="nx">con</span> <span class="nx">Typed</span> <span class="nx">Arrays</span> <span class="nx">per</span> <span class="nx">elaborazione</span> <span class="nx">real</span><span class="o">-</span><span class="na">time</span><span class="p">:</span>
-<span class="o">*</span> <span class="o">*</span><span class="sr">/</span><span class="err">
-</span> <span class="kd">class</span> <span class="nx">AudioEqualizer</span> 
-<span class="p">{</span> <span class="kd">constructor</span><span class="p">(</span><span class="nx">sampleRate</span><span class="p">,</span> <span class="nx">bufferSize</span><span class="p">)</span> 
-<span class="p">{</span> <span class="k">this</span><span class="p">.</span><span class="nx">sampleRate</span> <span class="o">=</span> <span class="nx">sampleRate</span><span class="p">;</span> <span class="k">this</span><span class="p">.</span><span class="nx">bufferSize</span> <span class="o">=</span> <span class="nx">bufferSize</span><span class="p">;</span> 
-<span class="c1">// Pre-alloco tutti i buffer una sola volta: zero GC pressure durante</span>
-<span class="c1">// l'elaborazione this.inputBuffer = new Float32Array(bufferSize);</span>
-<span class="c1">// this.outputBuffer = new Float32Array(bufferSize); this.coefficients = new</span>
-<span class="c1">// Float64Array(10);</span>
-<span class="c1">// 10 bande equalizzatore }</span>
- <span class="nx">applyEq</span><span class="p">(</span><span class="nx">inputData</span><span class="p">)</span> 
-<span class="p">{</span> 
-<span class="c1">// Copio i dati in ingresso nel buffer pre-allocato: zero nuove allocazioni</span>
-<span class="c1">// this.inputBuffer.set(inputData);</span>
-<span class="c1">// Applico i filtri: operazioni puramente numeriche su memoria contigua for (let</span>
-<span class="c1">// i = 0; i &lt; this.bufferSize; i++)</span>
-<span class="p">{</span> <span class="kd">let</span> <span class="nx">sample</span> <span class="o">=</span> <span class="k">this</span><span class="p">.</span><span class="nx">inputBuffer</span><span class="p">[</span><span class="nx">i</span><span class="p">];</span> <span class="k">for</span> <span class="p">(</span><span class="kd">let</span> <span class="nx">band</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span> <span class="nx">band</span> <span class="o">&lt;</span> <span class="mi">10</span><span class="p">;</span> <span class="nx">band</span><span class="o">++</span><span class="p">)</span> 
-<span class="p">{</span> <span class="nx">sample</span> <span class="o">*=</span> <span class="k">this</span><span class="p">.</span><span class="nx">coefficients</span><span class="p">[</span><span class="nx">band</span><span class="p">];</span> <span class="p">}</span>
- <span class="k">this</span><span class="p">.</span><span class="nx">outputBuffer</span><span class="p">[</span><span class="nx">i</span><span class="p">]</span> <span class="o">=</span> <span class="nb">Math</span><span class="p">.</span><span class="nx">max</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="nb">Math</span><span class="p">.</span><span class="nx">min</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="nx">sample</span><span class="p">));</span> 
-<span class="c1">// Clamping }</span>
- <span class="k">return</span> <span class="k">this</span><span class="p">.</span><span class="nx">outputBuffer</span><span class="p">;</span> 
-<span class="c1">// Ritorno il buffer pre-allocato: zero copie }</span>
- <span class="p">}</span>
- 
-<span class="o">*</span> <span class="nx">Per</span> <span class="nx">la</span> <span class="nx">manipolazione</span> <span class="nx">di</span> <span class="nx">pixel</span> <span class="nx">con</span> <span class="nx">Canvas</span> <span class="nx">API</span><span class="p">,</span> <span class="nx">uso</span> <span class="nb">Uint8ClampedArray</span> <span class="nx">tramite</span>
-<span class="o">*</span> <span class="na">ImageData</span><span class="p">:</span> <span class="o">*</span><span class="sr">/</span><span class="err">
-</span> <span class="kd">function</span> <span class="nx">applyBrightnessFilter</span><span class="p">(</span><span class="nx">canvas</span><span class="p">,</span> <span class="nx">brightness</span><span class="p">)</span> 
-<span class="p">{</span> <span class="kd">const</span> <span class="nx">ctx</span> <span class="o">=</span> <span class="nx">canvas</span><span class="p">.</span><span class="nx">getContext</span><span class="p">(</span><span class="dl">'</span><span class="s1">2d</span><span class="dl">'</span><span class="p">);</span> <span class="kd">const</span> <span class="nx">imageData</span> <span class="o">=</span> <span class="nx">ctx</span><span class="p">.</span><span class="nx">getImageData</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span>
-<span class="nx">canvas</span><span class="p">.</span><span class="nx">width</span><span class="p">,</span> <span class="nx">canvas</span><span class="p">.</span><span class="nx">height</span><span class="p">);</span> <span class="kd">const</span> <span class="nx">pixels</span> <span class="o">=</span> <span class="nx">imageData</span><span class="p">.</span><span class="nx">data</span><span class="p">;</span>
-<span class="c1">// Uint8ClampedArray: RGBA per ogni pixel </span>
-<span class="c1">// Itero sui pixel: ogni gruppo di 4 byte è un pixel RGBA for (let i = 0; i &lt;</span>
-<span class="c1">// pixels.length; i += 4)</span>
-<span class="p">{</span> <span class="nx">pixels</span><span class="p">[</span><span class="nx">i</span><span class="p">]</span> <span class="o">=</span> <span class="nx">pixels</span><span class="p">[</span><span class="nx">i</span><span class="p">]</span> <span class="o">+</span> <span class="nx">brightness</span><span class="p">;</span> 
-<span class="c1">// R: il clamping 0-255 è automatico pixels[i + 1] = pixels[i + 1] + brightness;</span>
-<span class="c1">// G pixels[i + 2] = pixels[i + 2] + brightness; </span>
-<span class="c1">// B </span>
-<span class="c1">// pixels[i + 3]: Alpha non modificato }</span>
- <span class="nx">ctx</span><span class="p">.</span><span class="nx">putImageData</span><span class="p">(</span><span class="nx">imageData</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">);</span> <span class="p">}</span>
- 
-<span class="cm">/* Per trasferire Typed Arrays tra Worker e Main Thread senza copiare: */</span>
- <span class="kd">const</span> <span class="nx">sharedBuffer</span> <span class="o">=</span> <span class="k">new</span> <span class="nx">SharedArrayBuffer</span><span class="p">(</span><span class="nb">Float64Array</span><span class="p">.</span><span class="nx">BYTES_PER_ELEMENT</span> <span class="o">*</span>
-<span class="mi">1</span><span class="nx">_000_000</span><span class="p">);</span> <span class="kd">const</span> <span class="nx">sharedArray</span> <span class="o">=</span> <span class="k">new</span> <span class="nb">Float64Array</span><span class="p">(</span><span class="nx">sharedBuffer</span><span class="p">);</span>
-<span class="c1">// Sia main thread che worker accedono allo stesso sharedArray: zero copie, zero</span>
-<span class="c1">// GC worker.postMessage(</span>
-<span class="p">{</span> <span class="na">buffer</span><span class="p">:</span> <span class="nx">sharedBuffer</span> <span class="p">}</span>
-<span class="p">);</span> 
-<span class="c1">// SharedArrayBuffer è condiviso, non trasferito</span>
-</pre></td></tr></tbody></table></code></pre></div></div>
+<span class="c1">// Float64Array: calcolo scientifico, audio (range completo double IEEE 754) //</span>
+    <span class="nl">Float32Array</span><span class="p">:</span> <span class="nx">grafica</span> <span class="mi">3</span><span class="nx">D</span><span class="p">,</span> <span class="nx">WebGL</span> <span class="p">(</span><span class="nx">meno</span> <span class="nx">preciso</span> <span class="nx">ma</span> <span class="mi">2</span><span class="nx">x</span> <span class="nx">più</span> <span class="nx">compatto</span><span class="p">)</span> <span class="c1">//</span>
+    <span class="nb">Int32Array</span><span class="p">:</span> <span class="nx">contatori</span><span class="p">,</span> <span class="nx">indici</span><span class="p">,</span> <span class="nx">coordinate</span> <span class="nx">pixel</span> <span class="c1">// Uint8Array: buffer raw,</span>
+    <span class="nx">dati</span> <span class="nx">di</span> <span class="nx">rete</span><span class="p">,</span> <span class="nx">immagini</span> <span class="p">(</span><span class="nx">RGBA</span><span class="p">)</span> <span class="c1">// Uint8ClampedArray: manipolazione pixel</span>
+    <span class="nx">canvas</span> <span class="p">(</span><span class="nx">clamping</span> <span class="nx">automatico</span> <span class="mi">0</span><span class="o">-</span><span class="mi">255</span><span class="p">)</span> <span class="cm">/* Implemento un equalizzatore audio con
+    Typed Arrays per elaborazione real-time: */</span> <span class="kd">class</span> <span class="nx">AudioEqualizer</span>
+<span class="p">{</span>
+    <span class="kd">constructor</span><span class="p">(</span><span class="nx">sampleRate</span><span class="p">,</span> <span class="nx">bufferSize</span><span class="p">)</span> <span class="p">{</span>
+        <span class="k">this</span><span class="p">.</span><span class="nx">sampleRate</span> <span class="o">=</span> <span class="nx">sampleRate</span><span class="p">;</span>
+        <span class="k">this</span><span class="p">.</span><span class="nx">bufferSize</span> <span class="o">=</span> <span class="nx">bufferSize</span><span class="p">;</span>
+        <span class="c1">// Pre-alloco tutti i buffer una sola volta: zero GC pressure durante</span>
+            <span class="nx">l</span><span class="dl">'</span><span class="s1">elaborazione this.inputBuffer = new Float32Array(bufferSize)
+        ;
+        this.outputBuffer = new Float32Array(bufferSize);
+        this.coefficients = new Float64Array(10);
+        // 10 bande equalizzatore
+    }
+    applyEq(inputData) {
+        // Copio i dati in ingresso nel buffer pre-allocato: zero nuove
+            allocazioni this.inputBuffer.set(inputData)
+        ;
+        // Applico i filtri: operazioni puramente numeriche su memoria contigua
+            for (let i = 0
+        ;
+        i &lt; this.bufferSize;
+        i++) {
+            let sample = this.inputBuffer[i];
+            for (let band = 0;
+            band &lt; 10;
+            band++) {
+                sample *= this.coefficients[band];
+            }
+            this.outputBuffer[i] = Math.max(-1, Math.min(1, sample));
+            // Clamping
+        }
+        return this.outputBuffer;
+        // Ritorno il buffer pre-allocato: zero copie
+    }
+}
+/* Per la manipolazione di pixel con Canvas API, uso Uint8ClampedArray tramite
+    ImageData: */
+function applyBrightnessFilter(canvas, brightness) {
+    const ctx = canvas.getContext(</span><span class="dl">'</span><span class="mi">2</span><span class="nx">d</span><span class="dl">'</span><span class="s1">);
+    const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    const pixels = imageData.data;
+    // Uint8ClampedArray: RGBA per ogni pixel // Itero sui pixel: ogni gruppo di
+        4 byte è un pixel RGBA for (let i = 0
+    ;
+    i &lt; pixels.length;
+    i += 4) {
+        pixels[i] = pixels[i] + brightness;
+        // R: il clamping 0-255 è automatico pixels[i + 1] = pixels[i + 1] +
+            brightness
+        ;
+        // G pixels[i + 2] = pixels[i + 2] + brightness
+        ;
+        // B // pixels[i + 3]: Alpha non modificato
+    }
+    ctx.putImageData(imageData, 0, 0);
+}
+/* Per trasferire Typed Arrays tra Worker e Main Thread senza copiare: */
+const sharedBuffer = new SharedArrayBuffer(Float64Array.BYTES_PER_ELEMENT *
+    1_000_000);
+const sharedArray = new Float64Array(sharedBuffer);
+// Sia main thread che worker accedono allo stesso sharedArray: zero copie, zero
+    GC worker.postMessage(
+{
+    buffer: sharedBuffer
+}
+);
+// SharedArrayBuffer è condiviso, non trasferito
+</span></pre></td></tr></tbody></table></code></pre></div></div>
 
         </article>
 

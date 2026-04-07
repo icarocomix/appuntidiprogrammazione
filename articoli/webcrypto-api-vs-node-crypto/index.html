@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>WebCrypto API vs Node Crypto — DevLog</title>
-    <meta name="description" content="Storicamente, la crittografia nel browser era lenta e insicura. La WebCrypto API espone operazioni hardware-accelerate e isolate. La differenza fondamentale è tra CryptoKey (oggetti non estraibili dalla memoria JS) e i buffer grezzi: usare chiavi 'no
+    <meta name="description" content="Storicamente, la crittografia nel browser era lenta e insicura. La WebCrypto API espone operazioni hardware-accelerate e isolate. La differenza fondamentale è tra CryptoKey (oggetti non estraibili dalla memoria JS) e i buffer grezzi: usare chiavi "no
 ">
     <link rel="stylesheet" href="/appuntidiprogrammazione/assets/css/style.css">
 
@@ -162,78 +162,130 @@
 71
 72
 73
-</pre></td><td class="rouge-code"><pre><span class="o">*</span> <span class="nx">Genero</span> <span class="nx">una</span> <span class="nx">coppia</span> <span class="nx">di</span> <span class="nx">chiavi</span> <span class="nx">ECDH</span> <span class="nx">non</span> <span class="nx">estraibile</span> <span class="nx">per</span> <span class="nx">il</span> <span class="nx">key</span> <span class="nx">exchange</span> <span class="nx">della</span>
-<span class="o">*</span> <span class="nx">E2EE</span><span class="p">.</span> <span class="nx">extractable</span><span class="p">:</span> <span class="kc">false</span> <span class="nx">è</span> <span class="nx">il</span> <span class="nx">parametro</span> <span class="nx">CRUCIALE</span><span class="p">:</span> <span class="nx">la</span> <span class="nx">chiave</span> <span class="nx">privata</span> <span class="nx">non</span> <span class="nx">può</span>
-<span class="o">*</span> <span class="nx">mai</span> <span class="nx">essere</span> <span class="nx">letta</span> <span class="nx">come</span> <span class="nx">buffer</span> <span class="nx">dal</span> <span class="nx">codice</span> <span class="nx">JS</span><span class="p">,</span> <span class="nx">nemmeno</span> <span class="nx">dal</span> <span class="nx">nostro</span><span class="p">.</span> <span class="nx">Questo</span> <span class="nx">la</span>
-<span class="o">*</span> <span class="nx">protegge</span> <span class="nx">da</span> <span class="nx">XSS</span><span class="p">,</span> <span class="nx">da</span> <span class="nx">extension</span> <span class="nx">malevole</span> <span class="nx">e</span> <span class="nx">da</span> <span class="nx">qualsiasi</span> <span class="nx">script</span> <span class="nx">sulla</span> <span class="nx">pagina</span><span class="p">.</span> <span class="o">*</span><span class="sr">/</span><span class="err">
-</span> <span class="k">async</span> <span class="kd">function</span> <span class="nx">generateE2EEKeyPair</span><span class="p">()</span> 
-<span class="p">{</span> <span class="kd">const</span> <span class="nx">keyPair</span> <span class="o">=</span> <span class="k">await</span> <span class="nb">window</span><span class="p">.</span><span class="nx">crypto</span><span class="p">.</span><span class="nx">subtle</span><span class="p">.</span><span class="nx">generateKey</span><span class="p">(</span> 
-<span class="p">{</span> <span class="na">name</span><span class="p">:</span> <span class="dl">'</span><span class="s1">ECDH</span><span class="dl">'</span><span class="p">,</span> <span class="na">namedCurve</span><span class="p">:</span> <span class="dl">'</span><span class="s1">P-256</span><span class="dl">'</span> <span class="p">}</span>
-<span class="p">,</span> <span class="kc">false</span><span class="p">,</span> 
-<span class="c1">// extractable: false -&gt; la chiave privata non può mai uscire dal browser secure</span>
-<span class="c1">// context ['deriveKey', 'deriveBits'] ); return keyPair;</span>
-<span class="c1">// </span>
-<span class="p">{</span> <span class="na">publicKey</span><span class="p">:</span> <span class="nx">CryptoKey</span><span class="p">,</span> <span class="na">privateKey</span><span class="p">:</span> <span class="nx">CryptoKey</span> <span class="p">}</span>
- <span class="p">}</span>
- 
-<span class="o">*</span> <span class="nx">Esporto</span> <span class="nx">solo</span> <span class="nx">la</span> <span class="nx">chiave</span> <span class="nx">PUBBLICA</span> <span class="nx">per</span> <span class="nx">inviarla</span> <span class="nx">al</span> <span class="nx">server</span><span class="o">/</span><span class="nx">interlocutore</span><span class="p">.</span> <span class="nx">La</span>
-<span class="o">*</span> <span class="nx">privata</span> <span class="nx">rimane</span> <span class="nx">inaccessibile</span><span class="p">.</span> <span class="o">*</span><span class="sr">/</span><span class="err">
-</span> <span class="k">async</span> <span class="kd">function</span> <span class="nx">exportPublicKey</span><span class="p">(</span><span class="nx">publicKey</span><span class="p">)</span> 
-<span class="p">{</span> <span class="kd">const</span> <span class="nx">exported</span> <span class="o">=</span> <span class="k">await</span> <span class="nb">window</span><span class="p">.</span><span class="nx">crypto</span><span class="p">.</span><span class="nx">subtle</span><span class="p">.</span><span class="nx">exportKey</span><span class="p">(</span><span class="dl">'</span><span class="s1">spki</span><span class="dl">'</span><span class="p">,</span> <span class="nx">publicKey</span><span class="p">);</span>
-<span class="k">return</span> <span class="nx">btoa</span><span class="p">(</span><span class="nb">String</span><span class="p">.</span><span class="nx">fromCharCode</span><span class="p">(...</span><span class="k">new</span> <span class="nb">Uint8Array</span><span class="p">(</span><span class="nx">exported</span><span class="p">)));</span>
-<span class="c1">// Base64 per trasmissione }</span>
- 
-<span class="o">*</span> <span class="nx">Derivo</span> <span class="nx">una</span> <span class="nx">chiave</span> <span class="nx">AES</span> <span class="nx">condivisa</span> <span class="nx">tramite</span> <span class="nx">ECDH</span><span class="p">:</span> <span class="nx">questo</span> <span class="nx">è</span> <span class="nx">il</span> <span class="dl">"</span><span class="s2">segreto</span><span class="dl">"</span> <span class="nx">della</span>
-<span class="o">*</span> <span class="nx">E2EE</span><span class="p">.</span> <span class="o">*</span><span class="sr">/</span><span class="err">
-</span> <span class="k">async</span> <span class="kd">function</span> <span class="nx">deriveSharedKey</span><span class="p">(</span><span class="nx">myPrivateKey</span><span class="p">,</span> <span class="nx">theirPublicKeyBytes</span><span class="p">)</span> 
-<span class="p">{</span> 
-<span class="c1">// Importo la chiave pubblica dell'interlocutore const theirPublicKey = await</span>
-<span class="c1">// window.crypto.subtle.importKey( 'spki', theirPublicKeyBytes,</span>
-<span class="p">{</span> <span class="na">name</span><span class="p">:</span> <span class="dl">'</span><span class="s1">ECDH</span><span class="dl">'</span><span class="p">,</span> <span class="na">namedCurve</span><span class="p">:</span> <span class="dl">'</span><span class="s1">P-256</span><span class="dl">'</span> <span class="p">}</span>
-<span class="p">,</span> <span class="kc">false</span><span class="p">,</span> <span class="p">[]</span> <span class="p">);</span> 
-<span class="c1">// Derivo la chiave AES-GCM condivisa: solo io e il mio interlocutore possiamo</span>
-<span class="c1">// calcolarla return window.crypto.subtle.deriveKey(</span>
-<span class="p">{</span> <span class="na">name</span><span class="p">:</span> <span class="dl">'</span><span class="s1">ECDH</span><span class="dl">'</span><span class="p">,</span> <span class="na">public</span><span class="p">:</span> <span class="nx">theirPublicKey</span> <span class="p">}</span>
-<span class="p">,</span> <span class="nx">myPrivateKey</span><span class="p">,</span> 
-<span class="p">{</span> <span class="na">name</span><span class="p">:</span> <span class="dl">'</span><span class="s1">AES-GCM</span><span class="dl">'</span><span class="p">,</span> <span class="na">length</span><span class="p">:</span> <span class="mi">256</span> <span class="p">}</span>
-<span class="p">,</span> <span class="kc">false</span><span class="p">,</span> 
-<span class="c1">// La chiave derivata è anch'essa non estraibile ['encrypt', 'decrypt'] ); }</span>
- 
-<span class="o">*</span> <span class="nx">Cifro</span> <span class="nx">un</span> <span class="nx">messaggio</span> <span class="nx">con</span> <span class="nx">la</span> <span class="nx">chiave</span> <span class="nx">condivisa</span><span class="p">:</span> <span class="nx">il</span> <span class="nx">server</span> <span class="nx">riceve</span> <span class="nx">solo</span> <span class="nx">il</span>
-<span class="o">*</span> <span class="nx">ciphertext</span><span class="p">.</span> <span class="o">*</span><span class="sr">/</span><span class="err">
-</span> <span class="k">async</span> <span class="kd">function</span> <span class="nx">encryptMessage</span><span class="p">(</span><span class="nx">sharedKey</span><span class="p">,</span> <span class="nx">plaintext</span><span class="p">)</span> 
-<span class="p">{</span> <span class="kd">const</span> <span class="nx">iv</span> <span class="o">=</span> <span class="nb">window</span><span class="p">.</span><span class="nx">crypto</span><span class="p">.</span><span class="nx">getRandomValues</span><span class="p">(</span><span class="k">new</span> <span class="nb">Uint8Array</span><span class="p">(</span><span class="mi">12</span><span class="p">));</span> 
-<span class="c1">// IV casuale a 96 bit per AES-GCM const encoder = new TextEncoder(); const</span>
-<span class="c1">// ciphertext = await window.crypto.subtle.encrypt(</span>
-<span class="p">{</span> <span class="na">name</span><span class="p">:</span> <span class="dl">'</span><span class="s1">AES-GCM</span><span class="dl">'</span><span class="p">,</span> <span class="nx">iv</span> <span class="p">}</span>
-<span class="p">,</span> <span class="nx">sharedKey</span><span class="p">,</span> <span class="nx">encoder</span><span class="p">.</span><span class="nx">encode</span><span class="p">(</span><span class="nx">plaintext</span><span class="p">)</span> <span class="p">);</span> <span class="k">return</span> 
-<span class="p">{</span> <span class="na">iv</span><span class="p">:</span> <span class="nb">Array</span><span class="p">.</span><span class="k">from</span><span class="p">(</span><span class="nx">iv</span><span class="p">),</span> <span class="na">ciphertext</span><span class="p">:</span> <span class="nb">Array</span><span class="p">.</span><span class="k">from</span><span class="p">(</span><span class="k">new</span> <span class="nb">Uint8Array</span><span class="p">(</span><span class="nx">ciphertext</span><span class="p">))</span> <span class="p">}</span>
-<span class="p">;</span> <span class="p">}</span>
- <span class="k">async</span> <span class="kd">function</span> <span class="nx">decryptMessage</span><span class="p">(</span><span class="nx">sharedKey</span><span class="p">,</span> 
-<span class="p">{</span> <span class="nx">iv</span><span class="p">,</span> <span class="nx">ciphertext</span> <span class="p">}</span>
-<span class="p">)</span> 
-<span class="p">{</span> <span class="kd">const</span> <span class="nx">decoder</span> <span class="o">=</span> <span class="k">new</span> <span class="nx">TextDecoder</span><span class="p">();</span> <span class="kd">const</span> <span class="nx">plaintext</span> <span class="o">=</span> <span class="k">await</span>
-<span class="nb">window</span><span class="p">.</span><span class="nx">crypto</span><span class="p">.</span><span class="nx">subtle</span><span class="p">.</span><span class="nx">decrypt</span><span class="p">(</span>
-<span class="p">{</span> <span class="na">name</span><span class="p">:</span> <span class="dl">'</span><span class="s1">AES-GCM</span><span class="dl">'</span><span class="p">,</span> <span class="na">iv</span><span class="p">:</span> <span class="k">new</span> <span class="nb">Uint8Array</span><span class="p">(</span><span class="nx">iv</span><span class="p">)</span> <span class="p">}</span>
-<span class="p">,</span> <span class="nx">sharedKey</span><span class="p">,</span> <span class="k">new</span> <span class="nb">Uint8Array</span><span class="p">(</span><span class="nx">ciphertext</span><span class="p">)</span> <span class="p">);</span> <span class="k">return</span> <span class="nx">decoder</span><span class="p">.</span><span class="nx">decode</span><span class="p">(</span><span class="nx">plaintext</span><span class="p">);</span> <span class="p">}</span>
- 
-<span class="o">*</span> <span class="nx">In</span> <span class="nx">Node</span><span class="p">.</span><span class="nx">js</span> <span class="nx">lato</span> <span class="nx">server</span> <span class="p">(</span><span class="nx">per</span> <span class="nx">operazioni</span> <span class="nx">di</span> <span class="nx">firma</span> <span class="nx">di</span> <span class="nx">token</span> <span class="nx">o</span> <span class="nx">certificati</span><span class="p">),</span> <span class="nx">uso</span>
-<span class="o">*</span> <span class="nx">il</span> <span class="nx">modulo</span> <span class="nx">crypto</span> <span class="nx">nativo</span> <span class="nx">che</span> <span class="nx">offre</span> <span class="nx">le</span> <span class="nx">stesse</span> <span class="nx">garanzie</span> <span class="nx">di</span> <span class="nx">isolamento</span><span class="p">:</span> <span class="o">*</span><span class="sr">/</span><span class="err">
-</span> <span class="kd">const</span> 
-<span class="p">{</span> <span class="nx">webcrypto</span> <span class="p">}</span>
- <span class="o">=</span> <span class="nx">require</span><span class="p">(</span><span class="dl">'</span><span class="s1">crypto</span><span class="dl">'</span><span class="p">);</span> <span class="kd">const</span> 
-<span class="p">{</span> <span class="nx">subtle</span> <span class="p">}</span>
- <span class="o">=</span> <span class="nx">webcrypto</span><span class="p">;</span> 
-<span class="c1">// Stessa API WebCrypto, disponibile da Node 15+ </span>
-<span class="c1">// In Node.js posso anche usare il modulo crypto classico per operazioni server-</span>
-<span class="c1">// side: const crypto = require('crypto'); const</span>
-<span class="p">{</span> <span class="nx">privateKey</span><span class="p">,</span> <span class="nx">publicKey</span> <span class="p">}</span>
- <span class="o">=</span> <span class="nx">crypto</span><span class="p">.</span><span class="nx">generateKeyPairSync</span><span class="p">(</span><span class="dl">'</span><span class="s1">ec</span><span class="dl">'</span><span class="p">,</span> 
-<span class="p">{</span> <span class="na">namedCurve</span><span class="p">:</span> <span class="dl">'</span><span class="s1">P-256</span><span class="dl">'</span><span class="p">,</span> <span class="na">publicKeyEncoding</span><span class="p">:</span> 
-<span class="p">{</span> <span class="na">type</span><span class="p">:</span> <span class="dl">'</span><span class="s1">spki</span><span class="dl">'</span><span class="p">,</span> <span class="na">format</span><span class="p">:</span> <span class="dl">'</span><span class="s1">pem</span><span class="dl">'</span> <span class="p">}</span>
-<span class="p">,</span> <span class="na">privateKeyEncoding</span><span class="p">:</span> 
-<span class="p">{</span> <span class="na">type</span><span class="p">:</span> <span class="dl">'</span><span class="s1">pkcs8</span><span class="dl">'</span><span class="p">,</span> <span class="na">format</span><span class="p">:</span> <span class="dl">'</span><span class="s1">pem</span><span class="dl">'</span> <span class="p">}</span>
- <span class="p">}</span>
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+</pre></td><td class="rouge-code"><pre><span class="cm">/* Genero una coppia di chiavi ECDH non estraibile per il key exchange della
+    E2EE. extractable: false è il parametro CRUCIALE: la chiave privata non può
+    mai essere letta come buffer dal codice JS, nemmeno dal nostro. Questo la
+    protegge da XSS, da extension malevole e da qualsiasi script sulla pagina.
+    */</span>
+<span class="k">async</span> <span class="kd">function</span> <span class="nx">generateE2EEKeyPair</span><span class="p">()</span> <span class="p">{</span>
+    <span class="kd">const</span> <span class="nx">keyPair</span> <span class="o">=</span> <span class="k">await</span> <span class="nb">window</span><span class="p">.</span><span class="nx">crypto</span><span class="p">.</span><span class="nx">subtle</span><span class="p">.</span><span class="nx">generateKey</span><span class="p">(</span> <span class="p">{</span>
+        <span class="na">name</span><span class="p">:</span> <span class="dl">'</span><span class="s1">ECDH</span><span class="dl">'</span><span class="p">,</span> <span class="na">namedCurve</span><span class="p">:</span> <span class="dl">'</span><span class="s1">P-256</span><span class="dl">'</span>
+    <span class="p">}</span>
+    <span class="p">,</span> <span class="kc">false</span><span class="p">,</span>
+    <span class="c1">// extractable: false -&gt; la chiave privata non può mai uscire dal browser</span>
+        <span class="nx">secure</span> <span class="nx">context</span> <span class="p">[</span><span class="dl">'</span><span class="s1">deriveKey</span><span class="dl">'</span><span class="p">,</span> <span class="dl">'</span><span class="s1">deriveBits</span><span class="dl">'</span><span class="p">]</span> <span class="p">)</span>
+    <span class="p">;</span>
+    <span class="k">return</span> <span class="nx">keyPair</span><span class="p">;</span>
+    <span class="c1">//</span>
+    <span class="p">{</span>
+        <span class="na">publicKey</span><span class="p">:</span> <span class="nx">CryptoKey</span><span class="p">,</span> <span class="na">privateKey</span><span class="p">:</span> <span class="nx">CryptoKey</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+<span class="cm">/* Esporto solo la chiave PUBBLICA per inviarla al server/interlocutore. La
+    privata rimane inaccessibile. */</span>
+<span class="k">async</span> <span class="kd">function</span> <span class="nx">exportPublicKey</span><span class="p">(</span><span class="nx">publicKey</span><span class="p">)</span> <span class="p">{</span>
+    <span class="kd">const</span> <span class="nx">exported</span> <span class="o">=</span> <span class="k">await</span> <span class="nb">window</span><span class="p">.</span><span class="nx">crypto</span><span class="p">.</span><span class="nx">subtle</span><span class="p">.</span><span class="nx">exportKey</span><span class="p">(</span><span class="dl">'</span><span class="s1">spki</span><span class="dl">'</span><span class="p">,</span> <span class="nx">publicKey</span><span class="p">);</span>
+    <span class="k">return</span> <span class="nx">btoa</span><span class="p">(</span><span class="nb">String</span><span class="p">.</span><span class="nx">fromCharCode</span><span class="p">(...</span><span class="k">new</span> <span class="nb">Uint8Array</span><span class="p">(</span><span class="nx">exported</span><span class="p">)));</span>
+    <span class="c1">// Base64 per trasmissione</span>
+<span class="p">}</span>
+<span class="cm">/* Derivo una chiave AES condivisa tramite ECDH: questo è il "segreto" della
+    E2EE. */</span>
+<span class="k">async</span> <span class="kd">function</span> <span class="nx">deriveSharedKey</span><span class="p">(</span><span class="nx">myPrivateKey</span><span class="p">,</span> <span class="nx">theirPublicKeyBytes</span><span class="p">)</span> <span class="p">{</span>
+    <span class="c1">// Importo la chiave pubblica dell'interlocutore const theirPublicKey =</span>
+        <span class="k">await</span> <span class="nb">window</span><span class="p">.</span><span class="nx">crypto</span><span class="p">.</span><span class="nx">subtle</span><span class="p">.</span><span class="nx">importKey</span><span class="p">(</span> <span class="dl">'</span><span class="s1">spki</span><span class="dl">'</span><span class="p">,</span> <span class="nx">theirPublicKeyBytes</span><span class="p">,</span>
+    <span class="p">{</span>
+        <span class="na">name</span><span class="p">:</span> <span class="dl">'</span><span class="s1">ECDH</span><span class="dl">'</span><span class="p">,</span> <span class="na">namedCurve</span><span class="p">:</span> <span class="dl">'</span><span class="s1">P-256</span><span class="dl">'</span>
+    <span class="p">}</span>
+    <span class="p">,</span> <span class="kc">false</span><span class="p">,</span> <span class="p">[]</span> <span class="p">);</span>
+    <span class="c1">// Derivo la chiave AES-GCM condivisa: solo io e il mio interlocutore</span>
+        <span class="nx">possiamo</span> <span class="nx">calcolarla</span>
+    <span class="k">return</span> <span class="nb">window</span><span class="p">.</span><span class="nx">crypto</span><span class="p">.</span><span class="nx">subtle</span><span class="p">.</span><span class="nx">deriveKey</span><span class="p">(</span> <span class="p">{</span>
+        <span class="na">name</span><span class="p">:</span> <span class="dl">'</span><span class="s1">ECDH</span><span class="dl">'</span><span class="p">,</span> <span class="na">public</span><span class="p">:</span> <span class="nx">theirPublicKey</span>
+    <span class="p">}</span>
+    <span class="p">,</span> <span class="nx">myPrivateKey</span><span class="p">,</span> <span class="p">{</span>
+        <span class="na">name</span><span class="p">:</span> <span class="dl">'</span><span class="s1">AES-GCM</span><span class="dl">'</span><span class="p">,</span> <span class="na">length</span><span class="p">:</span> <span class="mi">256</span>
+    <span class="p">}</span>
+    <span class="p">,</span> <span class="kc">false</span><span class="p">,</span>
+    <span class="c1">// La chiave derivata è anch'essa non estraibile ['encrypt', 'decrypt'] )</span>
+    <span class="p">;</span>
+<span class="p">}</span>
+<span class="cm">/* Cifro un messaggio con la chiave condivisa: il server riceve solo il
+    ciphertext. */</span>
+<span class="k">async</span> <span class="kd">function</span> <span class="nx">encryptMessage</span><span class="p">(</span><span class="nx">sharedKey</span><span class="p">,</span> <span class="nx">plaintext</span><span class="p">)</span> <span class="p">{</span>
+    <span class="kd">const</span> <span class="nx">iv</span> <span class="o">=</span> <span class="nb">window</span><span class="p">.</span><span class="nx">crypto</span><span class="p">.</span><span class="nx">getRandomValues</span><span class="p">(</span><span class="k">new</span> <span class="nb">Uint8Array</span><span class="p">(</span><span class="mi">12</span><span class="p">));</span>
+    <span class="c1">// IV casuale a 96 bit per AES-GCM const encoder = new TextEncoder()</span>
+    <span class="p">;</span>
+    <span class="kd">const</span> <span class="nx">ciphertext</span> <span class="o">=</span> <span class="k">await</span> <span class="nb">window</span><span class="p">.</span><span class="nx">crypto</span><span class="p">.</span><span class="nx">subtle</span><span class="p">.</span><span class="nx">encrypt</span><span class="p">(</span> <span class="p">{</span>
+        <span class="na">name</span><span class="p">:</span> <span class="dl">'</span><span class="s1">AES-GCM</span><span class="dl">'</span><span class="p">,</span> <span class="nx">iv</span>
+    <span class="p">}</span>
+    <span class="p">,</span> <span class="nx">sharedKey</span><span class="p">,</span> <span class="nx">encoder</span><span class="p">.</span><span class="nx">encode</span><span class="p">(</span><span class="nx">plaintext</span><span class="p">)</span> <span class="p">);</span>
+    <span class="k">return</span> <span class="p">{</span>
+        <span class="na">iv</span><span class="p">:</span> <span class="nb">Array</span><span class="p">.</span><span class="k">from</span><span class="p">(</span><span class="nx">iv</span><span class="p">),</span> <span class="na">ciphertext</span><span class="p">:</span> <span class="nb">Array</span><span class="p">.</span><span class="k">from</span><span class="p">(</span><span class="k">new</span> <span class="nb">Uint8Array</span><span class="p">(</span><span class="nx">ciphertext</span><span class="p">))</span>
+    <span class="p">}</span>
+    <span class="p">;</span>
+<span class="p">}</span>
+<span class="k">async</span> <span class="kd">function</span> <span class="nx">decryptMessage</span><span class="p">(</span><span class="nx">sharedKey</span><span class="p">,</span> <span class="p">{</span>
+    <span class="nx">iv</span><span class="p">,</span> <span class="nx">ciphertext</span>
+<span class="p">}</span>
+<span class="p">)</span> <span class="p">{</span>
+    <span class="kd">const</span> <span class="nx">decoder</span> <span class="o">=</span> <span class="k">new</span> <span class="nx">TextDecoder</span><span class="p">();</span>
+    <span class="kd">const</span> <span class="nx">plaintext</span> <span class="o">=</span> <span class="k">await</span> <span class="nb">window</span><span class="p">.</span><span class="nx">crypto</span><span class="p">.</span><span class="nx">subtle</span><span class="p">.</span><span class="nx">decrypt</span><span class="p">(</span> <span class="p">{</span>
+        <span class="na">name</span><span class="p">:</span> <span class="dl">'</span><span class="s1">AES-GCM</span><span class="dl">'</span><span class="p">,</span> <span class="na">iv</span><span class="p">:</span> <span class="k">new</span> <span class="nb">Uint8Array</span><span class="p">(</span><span class="nx">iv</span><span class="p">)</span>
+    <span class="p">}</span>
+    <span class="p">,</span> <span class="nx">sharedKey</span><span class="p">,</span> <span class="k">new</span> <span class="nb">Uint8Array</span><span class="p">(</span><span class="nx">ciphertext</span><span class="p">)</span> <span class="p">);</span>
+    <span class="k">return</span> <span class="nx">decoder</span><span class="p">.</span><span class="nx">decode</span><span class="p">(</span><span class="nx">plaintext</span><span class="p">);</span>
+<span class="p">}</span>
+<span class="cm">/* In Node.js lato server (per operazioni di firma di token o certificati), uso
+    il modulo crypto nativo che offre le stesse garanzie di isolamento: */</span>
+<span class="kd">const</span> <span class="p">{</span>
+    <span class="nx">webcrypto</span>
+<span class="p">}</span>
+<span class="o">=</span> <span class="nx">require</span><span class="p">(</span><span class="dl">'</span><span class="s1">crypto</span><span class="dl">'</span><span class="p">);</span>
+<span class="kd">const</span> <span class="p">{</span>
+    <span class="nx">subtle</span>
+<span class="p">}</span>
+<span class="o">=</span> <span class="nx">webcrypto</span><span class="p">;</span>
+<span class="c1">// Stessa API WebCrypto, disponibile da Node 15+ // In Node.js posso anche usare</span>
+    <span class="nx">il</span> <span class="nx">modulo</span> <span class="nx">crypto</span> <span class="nx">classico</span> <span class="nx">per</span> <span class="nx">operazioni</span> <span class="nx">server</span><span class="o">-</span><span class="nx">side</span><span class="p">:</span> <span class="kd">const</span> <span class="nx">crypto</span> <span class="o">=</span>
+    <span class="nx">require</span><span class="p">(</span><span class="dl">'</span><span class="s1">crypto</span><span class="dl">'</span><span class="p">)</span>
+<span class="p">;</span>
+<span class="kd">const</span> <span class="p">{</span>
+    <span class="nx">privateKey</span><span class="p">,</span> <span class="nx">publicKey</span>
+<span class="p">}</span>
+<span class="o">=</span> <span class="nx">crypto</span><span class="p">.</span><span class="nx">generateKeyPairSync</span><span class="p">(</span><span class="dl">'</span><span class="s1">ec</span><span class="dl">'</span><span class="p">,</span> <span class="p">{</span>
+    <span class="na">namedCurve</span><span class="p">:</span> <span class="dl">'</span><span class="s1">P-256</span><span class="dl">'</span><span class="p">,</span> <span class="na">publicKeyEncoding</span><span class="p">:</span> <span class="p">{</span>
+        <span class="na">type</span><span class="p">:</span> <span class="dl">'</span><span class="s1">spki</span><span class="dl">'</span><span class="p">,</span> <span class="na">format</span><span class="p">:</span> <span class="dl">'</span><span class="s1">pem</span><span class="dl">'</span>
+    <span class="p">}</span>
+    <span class="p">,</span> <span class="na">privateKeyEncoding</span><span class="p">:</span> <span class="p">{</span>
+        <span class="na">type</span><span class="p">:</span> <span class="dl">'</span><span class="s1">pkcs8</span><span class="dl">'</span><span class="p">,</span> <span class="na">format</span><span class="p">:</span> <span class="dl">'</span><span class="s1">pem</span><span class="dl">'</span>
+    <span class="p">}</span>
+<span class="p">}</span>
 <span class="p">);</span>
 </pre></td></tr></tbody></table></code></pre></div></div>
 

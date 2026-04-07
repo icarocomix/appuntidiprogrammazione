@@ -116,39 +116,33 @@
 25
 26
 27
-28
-29
-30
-</pre></td><td class="rouge-code"><pre><span class="o">*</span> <span class="n">Prima</span> <span class="n">di</span> <span class="n">intervenire</span><span class="p">,</span> <span class="n">misuro</span> <span class="n">il</span> <span class="n">livello</span> <span class="n">di</span> <span class="n">bloat</span> <span class="n">reale</span> <span class="n">sulla</span> <span class="n">tabella</span> <span class="n">per</span>
-<span class="o">*</span> <span class="n">quantificare</span> <span class="n">il</span> <span class="n">problema</span><span class="p">.</span> <span class="o">*/</span>
- <span class="k">SELECT</span> <span class="n">relname</span><span class="p">,</span> <span class="n">pg_size_pretty</span><span class="p">(</span><span class="n">pg_total_relation_size</span><span class="p">(</span><span class="n">relid</span><span class="p">))</span> <span class="k">AS</span> <span class="n">total_size</span><span class="p">,</span>
-<span class="n">pg_size_pretty</span><span class="p">(</span><span class="n">pg_relation_size</span><span class="p">(</span><span class="n">relid</span><span class="p">))</span> <span class="k">AS</span> <span class="n">table_size</span><span class="p">,</span> <span class="n">n_live_tup</span><span class="p">,</span> <span class="n">n_dead_tup</span><span class="p">,</span>
-<span class="n">round</span><span class="p">(</span><span class="mi">100</span><span class="p">.</span><span class="mi">0</span> <span class="o">*</span> <span class="n">n_dead_tup</span> <span class="o">/</span> <span class="k">nullif</span><span class="p">(</span><span class="n">n_live_tup</span> <span class="o">+</span> <span class="n">n_dead_tup</span><span class="p">,</span> <span class="mi">0</span><span class="p">),</span> <span class="mi">2</span><span class="p">)</span> <span class="k">AS</span> <span class="n">dead_pct</span><span class="p">,</span>
-<span class="n">last_vacuum</span><span class="p">,</span> <span class="n">last_autovacuum</span> <span class="k">FROM</span> <span class="n">pg_stat_user_tables</span> <span class="k">WHERE</span> <span class="n">relname</span> <span class="o">=</span>
-<span class="s1">'user_sessions'</span> <span class="k">ORDER</span> <span class="k">BY</span> <span class="n">dead_pct</span> <span class="k">DESC</span><span class="p">;</span>
-<span class="o">*</span> <span class="n">Verifico</span> <span class="n">se</span> <span class="n">l</span><span class="s1">'autovacuum è stato interrotto di recente su questa tabella. Un
-* contatore '</span><span class="n">autovacuum_count</span><span class="s1">' basso nonostante alta attività è un segnale di
-* allarme. */
- SELECT relname, autovacuum_count, autoanalyze_count, n_mod_since_analyze FROM
-pg_stat_user_tables WHERE relname = '</span><span class="n">user_sessions</span><span class="s1">';
-* Eseguo un vacuum mirato con parametri aggressivi durante la finestra notturna
-* di bassa attività. ANALYZE aggiorna le statistiche per migliorare le scelte
-* del Planner sulle query concorrenti. */
- VACUUM (ANALYZE, VERBOSE, PARALLEL 4) user_sessions; 
-* Per tabelle con bloat estremo dove VACUUM non è sufficiente, uso pg_repack
-* (estensione esterna) che ricostruisce la tabella online senza lock prolungati:
-* -- pg_repack -t user_sessions mydb */
- 
-* Configuro l'</span><span class="n">autovacuum</span> <span class="k">in</span> <span class="n">modo</span> <span class="n">aggressivo</span> <span class="n">specificamente</span> <span class="n">per</span> <span class="n">questa</span> <span class="n">tabella</span> <span class="n">ad</span>
-<span class="o">*</span> <span class="n">alta</span> <span class="n">frequenza</span> <span class="n">di</span> <span class="n">scrittura</span><span class="p">:</span> <span class="o">*/</span>
- <span class="k">ALTER</span> <span class="k">TABLE</span> <span class="n">user_sessions</span> <span class="k">SET</span> <span class="p">(</span> <span class="n">autovacuum_vacuum_scale_factor</span> <span class="o">=</span> <span class="mi">0</span><span class="p">.</span><span class="mi">005</span><span class="p">,</span>
-<span class="n">autovacuum_vacuum_cost_delay</span> <span class="o">=</span> <span class="s1">'2ms'</span><span class="p">,</span> <span class="n">autovacuum_vacuum_threshold</span> <span class="o">=</span> <span class="mi">100</span> <span class="p">);</span>
-<span class="o">*</span> <span class="k">In</span> <span class="n">Spring</span> <span class="n">Boot</span><span class="p">,</span> <span class="n">schedulo</span> <span class="n">un</span> <span class="n">job</span> <span class="n">notturno</span> <span class="n">che</span> <span class="n">forza</span> <span class="n">il</span> <span class="k">vacuum</span> <span class="n">durante</span> <span class="n">il</span> <span class="n">minimo</span>
-<span class="o">*</span> <span class="n">di</span> <span class="n">traffico</span><span class="p">:</span> <span class="o">@</span><span class="n">Scheduled</span><span class="p">(</span><span class="n">cron</span> <span class="o">=</span> <span class="nv">"0 30 2 * * *"</span><span class="p">)</span>
-<span class="o">//</span> <span class="n">Ogni</span> <span class="n">notte</span> <span class="n">alle</span> <span class="mi">02</span><span class="p">:</span><span class="mi">30</span> <span class="k">public</span> <span class="n">void</span> <span class="n">performMaintenanceVacuum</span><span class="p">()</span> 
-<span class="p">{</span> <span class="n">jdbcTemplate</span><span class="p">.</span><span class="k">execute</span><span class="p">(</span><span class="nv">"VACUUM (ANALYZE, VERBOSE) user_sessions"</span><span class="p">);</span>
-<span class="n">log</span><span class="p">.</span><span class="n">info</span><span class="p">(</span><span class="nv">"Vacuum su user_sessions completato"</span><span class="p">);</span> <span class="p">}</span>
- <span class="o">*/</span>
+</pre></td><td class="rouge-code"><pre>    <span class="cm">/* Prima di intervenire, misuro il livello di bloat reale sulla tabella per
+        quantificare il problema. */</span> <span class="k">SELECT</span> <span class="n">relname</span><span class="p">,</span>
+        <span class="n">pg_size_pretty</span><span class="p">(</span><span class="n">pg_total_relation_size</span><span class="p">(</span><span class="n">relid</span><span class="p">))</span> <span class="k">AS</span> <span class="n">total_size</span><span class="p">,</span>
+        <span class="n">pg_size_pretty</span><span class="p">(</span><span class="n">pg_relation_size</span><span class="p">(</span><span class="n">relid</span><span class="p">))</span> <span class="k">AS</span> <span class="n">table_size</span><span class="p">,</span> <span class="n">n_live_tup</span><span class="p">,</span>
+        <span class="n">n_dead_tup</span><span class="p">,</span> <span class="n">round</span><span class="p">(</span><span class="mi">100</span><span class="p">.</span><span class="mi">0</span> <span class="o">*</span> <span class="n">n_dead_tup</span> <span class="o">/</span> <span class="k">nullif</span><span class="p">(</span><span class="n">n_live_tup</span> <span class="o">+</span> <span class="n">n_dead_tup</span><span class="p">,</span>
+        <span class="mi">0</span><span class="p">),</span> <span class="mi">2</span><span class="p">)</span> <span class="k">AS</span> <span class="n">dead_pct</span><span class="p">,</span> <span class="n">last_vacuum</span><span class="p">,</span> <span class="n">last_autovacuum</span> <span class="k">FROM</span>
+        <span class="n">pg_stat_user_tables</span> <span class="k">WHERE</span> <span class="n">relname</span> <span class="o">=</span> <span class="s1">'user_sessions'</span> <span class="k">ORDER</span> <span class="k">BY</span> <span class="n">dead_pct</span>
+        <span class="k">DESC</span><span class="p">;</span> <span class="cm">/* Verifico se l'autovacuum è stato interrotto di recente su
+        questa tabella. Un contatore 'autovacuum_count' basso nonostante alta
+        attività è un segnale di allarme. */</span> <span class="k">SELECT</span> <span class="n">relname</span><span class="p">,</span> <span class="n">autovacuum_count</span><span class="p">,</span>
+        <span class="n">autoanalyze_count</span><span class="p">,</span> <span class="n">n_mod_since_analyze</span> <span class="k">FROM</span> <span class="n">pg_stat_user_tables</span> <span class="k">WHERE</span>
+        <span class="n">relname</span> <span class="o">=</span> <span class="s1">'user_sessions'</span><span class="p">;</span> <span class="cm">/* Eseguo un vacuum mirato con parametri
+        aggressivi durante la finestra notturna di bassa attività. ANALYZE
+        aggiorna le statistiche per migliorare le scelte del Planner sulle query
+        concorrenti. */</span> <span class="k">VACUUM</span> <span class="p">(</span><span class="k">ANALYZE</span><span class="p">,</span> <span class="k">VERBOSE</span><span class="p">,</span> <span class="n">PARALLEL</span> <span class="mi">4</span><span class="p">)</span> <span class="n">user_sessions</span><span class="p">;</span> <span class="cm">/*
+        Per tabelle con bloat estremo dove VACUUM non è sufficiente, uso
+        pg_repack (estensione esterna) che ricostruisce la tabella online senza
+        lock prolungati: -- pg_repack -t user_sessions mydb */</span> <span class="cm">/* Configuro
+        l'autovacuum in modo aggressivo specificamente per questa tabella ad
+        alta frequenza di scrittura: */</span> <span class="k">ALTER</span> <span class="k">TABLE</span> <span class="n">user_sessions</span> <span class="k">SET</span> <span class="p">(</span>
+        <span class="n">autovacuum_vacuum_scale_factor</span> <span class="o">=</span> <span class="mi">0</span><span class="p">.</span><span class="mi">005</span><span class="p">,</span> <span class="n">autovacuum_vacuum_cost_delay</span> <span class="o">=</span>
+        <span class="s1">'2ms'</span><span class="p">,</span> <span class="n">autovacuum_vacuum_threshold</span> <span class="o">=</span> <span class="mi">100</span> <span class="p">);</span> <span class="cm">/* In Spring Boot, schedulo
+        un job notturno che forza il vacuum durante il minimo di traffico:
+        @Scheduled(cron = "0 30 2 * * *") // Ogni notte alle 02:30 public void
+        performMaintenanceVacuum() { jdbcTemplate.execute("VACUUM (ANALYZE,
+        VERBOSE) user_sessions"); log.info("Vacuum su user_sessions
+        completato"); } */</span>
 </pre></td></tr></tbody></table></code></pre></div></div>
 
         </article>

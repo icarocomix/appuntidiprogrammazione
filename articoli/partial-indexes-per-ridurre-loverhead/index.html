@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Partial Indexes per ridurre loverhead — DevLog</title>
-    <meta name="description" content="Un errore comune è indicizzare l'intera tabella quando le query filtrano sempre per una condizione specifica (es. solo i record 'attivi'). I Partial Indexes includono solo le righe che soddisfano un predicato WHERE. Questo li rende minuscoli, velocis
+    <meta name="description" content="Un errore comune è indicizzare l'intera tabella quando le query filtrano sempre per una condizione specifica (es. solo i record "attivi"). I Partial Indexes includono solo le righe che soddisfano un predicato WHERE. Questo li rende minuscoli, velocis
 ">
     <link rel="stylesheet" href="/appuntidiprogrammazione/assets/css/style.css">
 
@@ -120,45 +120,37 @@
 29
 30
 31
-32
-33
-34
-35
-</pre></td><td class="rouge-code"><pre><span class="o">*</span> <span class="n">Creo</span> <span class="n">l</span><span class="s1">'indice solo sui dati "caldi". Postgres lo userà automaticamente quando
-* la WHERE della query implica la stessa condizione del predicato parziale. */
- CREATE INDEX idx_orders_pending ON orders (created_at) WHERE status =
-'</span><span class="n">PENDING</span><span class="s1">';
-/* Verifico che il Planner stia usando l'</span><span class="n">indice</span> <span class="n">parziale</span> <span class="n">e</span> <span class="n">non</span> <span class="n">un</span> <span class="n">Seq</span> <span class="n">Scan</span><span class="p">:</span> <span class="o">*/</span>
- <span class="k">EXPLAIN</span> <span class="p">(</span><span class="k">ANALYZE</span><span class="p">,</span> <span class="n">BUFFERS</span><span class="p">)</span> <span class="k">SELECT</span> <span class="n">id</span><span class="p">,</span> <span class="n">customer_id</span><span class="p">,</span> <span class="n">created_at</span> <span class="k">FROM</span> <span class="n">orders</span> <span class="k">WHERE</span>
-<span class="n">status</span> <span class="o">=</span> <span class="s1">'PENDING'</span> <span class="k">ORDER</span> <span class="k">BY</span> <span class="n">created_at</span><span class="p">;</span>
-<span class="o">*</span> <span class="n">Confronto</span> <span class="n">la</span> <span class="n">dimensione</span> <span class="n">dell</span><span class="s1">'indice parziale con quella che avrebbe un indice
-* completo: */
- SELECT pg_size_pretty(pg_relation_size('</span><span class="n">idx_orders_pending</span><span class="s1">')) AS
-partial_index_size; -- Es: 128 kB vs potenziali 800 MB per un indice completo su
-milioni di righe
-* Estendo il concetto a una coda di job: indicizzo solo i task non ancora
-* eseguiti. Quando un task viene completato (status -&gt; '</span><span class="n">DONE</span><span class="s1">'), esce
-* automaticamente dall'</span><span class="n">indice</span><span class="p">,</span> <span class="n">mantenendolo</span> <span class="n">piccolo</span> <span class="n">nel</span> <span class="n">tempo</span><span class="p">.</span> <span class="o">*/</span>
- <span class="k">CREATE</span> <span class="k">INDEX</span> <span class="n">idx_jobs_queue</span> <span class="k">ON</span> <span class="n">background_jobs</span> <span class="p">(</span><span class="n">priority</span> <span class="k">DESC</span><span class="p">,</span> <span class="n">scheduled_at</span>
-<span class="k">ASC</span><span class="p">)</span> <span class="k">WHERE</span> <span class="n">status</span> <span class="k">IN</span> <span class="p">(</span><span class="s1">'QUEUED'</span><span class="p">,</span> <span class="s1">'RETRY'</span><span class="p">);</span>
-<span class="o">*</span> <span class="n">Questa</span> <span class="n">query</span> <span class="n">sul</span> <span class="n">job</span> <span class="n">worker</span> <span class="k">user</span><span class="err">à</span> <span class="n">l</span><span class="s1">'indice parziale e restituirà subito il
-* prossimo task da eseguire: */
- SELECT id, payload FROM background_jobs WHERE status IN ('</span><span class="n">QUEUED</span><span class="s1">', '</span><span class="n">RETRY</span><span class="s1">')
-ORDER BY priority DESC, scheduled_at ASC FOR UPDATE SKIP LOCKED LIMIT 1;
-* Creo un indice parziale per i soli utenti non verificati, che sono una
-* minoranza ma vengono interrogati frequentemente dal sistema di sollecito: */
- CREATE INDEX idx_users_unverified ON users (created_at) WHERE email_verified =
-false;
-* Monitoro la frequenza d'</span><span class="n">uso</span> <span class="n">dell</span><span class="s1">'indice parziale per confermare che venga
-* effettivamente scelto dal Planner: */
- SELECT indexrelname, idx_scan, idx_tup_read, idx_tup_fetch FROM
-pg_stat_user_indexes WHERE relname = '</span><span class="n">orders</span><span class="s1">' AND indexrelname =
-'</span><span class="n">idx_orders_pending</span><span class="s1">';
-* In Spring Boot con Spring Data JPA, la query che sfrutta l'</span><span class="n">indice</span> <span class="n">parziale</span>
-<span class="o">*</span> <span class="n">deve</span> <span class="n">includere</span> <span class="n">esplicitamente</span> <span class="n">la</span> <span class="n">condizione</span> <span class="n">dello</span> <span class="n">stesso</span> <span class="n">predicato</span><span class="p">,</span> <span class="n">altrimenti</span>
-<span class="o">*</span> <span class="n">il</span> <span class="n">Planner</span> <span class="n">non</span> <span class="n">pu</span><span class="err">ò</span> <span class="n">usarlo</span><span class="p">:</span> <span class="o">*/</span>
- <span class="o">@</span><span class="n">Query</span><span class="p">(</span><span class="nv">"SELECT o FROM Order o WHERE o.status = 'PENDING' ORDER BY o.createdAt
-ASC"</span><span class="p">)</span> <span class="n">List</span><span class="o">&lt;</span><span class="k">Order</span><span class="o">&gt;</span> <span class="n">findPendingOrders</span><span class="p">(</span><span class="n">Pageable</span> <span class="n">pageable</span><span class="p">);</span>
+</pre></td><td class="rouge-code"><pre>    <span class="cm">/* Creo l'indice solo sui dati "caldi". Postgres lo userà automaticamente
+        quando la WHERE della query implica la stessa condizione del predicato
+        parziale. */</span> <span class="k">CREATE</span> <span class="k">INDEX</span> <span class="n">idx_orders_pending</span> <span class="k">ON</span> <span class="n">orders</span> <span class="p">(</span><span class="n">created_at</span><span class="p">)</span>
+        <span class="k">WHERE</span> <span class="n">status</span> <span class="o">=</span> <span class="s1">'PENDING'</span><span class="p">;</span> <span class="cm">/* Verifico che il Planner stia usando
+        l'indice parziale e non un Seq Scan: */</span> <span class="k">EXPLAIN</span> <span class="p">(</span><span class="k">ANALYZE</span><span class="p">,</span> <span class="n">BUFFERS</span><span class="p">)</span>
+        <span class="k">SELECT</span> <span class="n">id</span><span class="p">,</span> <span class="n">customer_id</span><span class="p">,</span> <span class="n">created_at</span> <span class="k">FROM</span> <span class="n">orders</span> <span class="k">WHERE</span> <span class="n">status</span> <span class="o">=</span> <span class="s1">'PENDING'</span>
+        <span class="k">ORDER</span> <span class="k">BY</span> <span class="n">created_at</span><span class="p">;</span> <span class="cm">/* Confronto la dimensione dell'indice parziale con
+        quella che avrebbe un indice completo: */</span> <span class="k">SELECT</span>
+        <span class="n">pg_size_pretty</span><span class="p">(</span><span class="n">pg_relation_size</span><span class="p">(</span><span class="s1">'idx_orders_pending'</span><span class="p">))</span> <span class="k">AS</span>
+        <span class="n">partial_index_size</span><span class="p">;</span> <span class="c1">-- Es: 128 kB vs potenziali 800 MB per un indice</span>
+        <span class="n">completo</span> <span class="n">su</span> <span class="n">milioni</span> <span class="n">di</span> <span class="n">righe</span> <span class="cm">/* Estendo il concetto a una coda di job:
+        indicizzo solo i task non ancora eseguiti. Quando un task viene
+        completato (status -&gt; 'DONE'), esce automaticamente dall'indice,
+        mantenendolo piccolo nel tempo. */</span> <span class="k">CREATE</span> <span class="k">INDEX</span> <span class="n">idx_jobs_queue</span> <span class="k">ON</span>
+        <span class="n">background_jobs</span> <span class="p">(</span><span class="n">priority</span> <span class="k">DESC</span><span class="p">,</span> <span class="n">scheduled_at</span> <span class="k">ASC</span><span class="p">)</span> <span class="k">WHERE</span> <span class="n">status</span> <span class="k">IN</span>
+        <span class="p">(</span><span class="s1">'QUEUED'</span><span class="p">,</span> <span class="s1">'RETRY'</span><span class="p">);</span> <span class="cm">/* Questa query sul job worker userà l'indice
+        parziale e restituirà subito il prossimo task da eseguire: */</span> <span class="k">SELECT</span> <span class="n">id</span><span class="p">,</span>
+        <span class="n">payload</span> <span class="k">FROM</span> <span class="n">background_jobs</span> <span class="k">WHERE</span> <span class="n">status</span> <span class="k">IN</span> <span class="p">(</span><span class="s1">'QUEUED'</span><span class="p">,</span> <span class="s1">'RETRY'</span><span class="p">)</span> <span class="k">ORDER</span>
+        <span class="k">BY</span> <span class="n">priority</span> <span class="k">DESC</span><span class="p">,</span> <span class="n">scheduled_at</span> <span class="k">ASC</span> <span class="k">FOR</span> <span class="k">UPDATE</span> <span class="n">SKIP</span> <span class="n">LOCKED</span> <span class="k">LIMIT</span> <span class="mi">1</span><span class="p">;</span> <span class="cm">/*
+        Creo un indice parziale per i soli utenti non verificati, che sono una
+        minoranza ma vengono interrogati frequentemente dal sistema di
+        sollecito: */</span> <span class="k">CREATE</span> <span class="k">INDEX</span> <span class="n">idx_users_unverified</span> <span class="k">ON</span> <span class="n">users</span> <span class="p">(</span><span class="n">created_at</span><span class="p">)</span>
+        <span class="k">WHERE</span> <span class="n">email_verified</span> <span class="o">=</span> <span class="k">false</span><span class="p">;</span> <span class="cm">/* Monitoro la frequenza d'uso dell'indice
+        parziale per confermare che venga effettivamente scelto dal Planner: */</span>
+        <span class="k">SELECT</span> <span class="n">indexrelname</span><span class="p">,</span> <span class="n">idx_scan</span><span class="p">,</span> <span class="n">idx_tup_read</span><span class="p">,</span> <span class="n">idx_tup_fetch</span> <span class="k">FROM</span>
+        <span class="n">pg_stat_user_indexes</span> <span class="k">WHERE</span> <span class="n">relname</span> <span class="o">=</span> <span class="s1">'orders'</span> <span class="k">AND</span> <span class="n">indexrelname</span> <span class="o">=</span>
+        <span class="s1">'idx_orders_pending'</span><span class="p">;</span> <span class="cm">/* In Spring Boot con Spring Data JPA, la query
+        che sfrutta l'indice parziale deve includere esplicitamente la
+        condizione dello stesso predicato, altrimenti il Planner non può usarlo:
+        */</span> <span class="o">@</span><span class="n">Query</span><span class="p">(</span><span class="nv">"SELECT o FROM Order o WHERE o.status = 'PENDING' ORDER BY
+        o.createdAt ASC"</span><span class="p">)</span> <span class="n">List</span><span class="o">&lt;</span><span class="k">Order</span><span class="o">&gt;</span> <span class="n">findPendingOrders</span><span class="p">(</span><span class="n">Pageable</span> <span class="n">pageable</span><span class="p">);</span>
 </pre></td></tr></tbody></table></code></pre></div></div>
 
         </article>

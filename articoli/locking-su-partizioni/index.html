@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Locking su Partizioni — DevLog</title>
-    <meta name="description" content="Quando si usano tabelle partizionate, i lock possono propagarsi in modo gerarchico. Un lock sulla tabella 'padre' (es. per una manutenzione dello schema) si propaga a tutte le partizioni 'figlie'. Tuttavia, nelle query DML standard (SELECT, UPDATE), 
+    <meta name="description" content="Quando si usano tabelle partizionate, i lock possono propagarsi in modo gerarchico. Un lock sulla tabella "padre" (es. per una manutenzione dello schema) si propaga a tutte le partizioni "figlie". Tuttavia, nelle query DML standard (SELECT, UPDATE), 
 ">
     <link rel="stylesheet" href="/appuntidiprogrammazione/assets/css/style.css">
 
@@ -106,27 +106,23 @@
 15
 16
 17
-18
-19
-</pre></td><td class="rouge-code"><pre><span class="o">*</span> <span class="n">Verifico</span> <span class="n">prima</span> <span class="n">la</span> <span class="n">struttura</span> <span class="n">delle</span> <span class="n">partizioni</span> <span class="n">esistenti</span> <span class="n">per</span> <span class="n">identificare</span> <span class="n">quella</span>
-<span class="o">*</span> <span class="n">da</span> <span class="n">rimuovere</span><span class="p">.</span> <span class="o">*/</span>
- <span class="k">SELECT</span> <span class="n">inhrelid</span><span class="p">::</span><span class="n">regclass</span> <span class="k">AS</span> <span class="n">partition_name</span><span class="p">,</span> <span class="n">pg_get_expr</span><span class="p">(</span><span class="k">c</span><span class="p">.</span><span class="n">relpartbound</span><span class="p">,</span> <span class="k">c</span><span class="p">.</span><span class="n">oid</span><span class="p">)</span>
-<span class="k">AS</span> <span class="n">partition_bound</span> <span class="k">FROM</span> <span class="n">pg_inherits</span> <span class="k">JOIN</span> <span class="n">pg_class</span> <span class="k">c</span> <span class="k">ON</span> <span class="n">inhrelid</span> <span class="o">=</span> <span class="k">c</span><span class="p">.</span><span class="n">oid</span> <span class="k">WHERE</span>
-<span class="n">inhparent</span> <span class="o">=</span> <span class="s1">'log_data'</span><span class="p">::</span><span class="n">regclass</span> <span class="k">ORDER</span> <span class="k">BY</span> <span class="n">partition_bound</span><span class="p">;</span>
-<span class="o">*</span> <span class="n">Distacco</span> <span class="n">la</span> <span class="n">partizione</span> <span class="n">vecchia</span> <span class="n">senza</span> <span class="n">bloccare</span> <span class="n">i</span> <span class="n">nuovi</span> <span class="n">inserimenti</span><span class="p">.</span>
-<span class="o">*</span> <span class="n">CONCURRENTLY</span> <span class="err">è</span> <span class="n">un</span><span class="s1">'operazione in due fasi: prima marca la partizione come
-* "detaching", poi completa il distacco quando tutte le transazioni attive sono
-* concluse. */
- ALTER TABLE log_data DETACH PARTITION log_data_2023_01 CONCURRENTLY; 
-* Verifico lo stato dell'</span><span class="n">operazione</span><span class="p">:</span> <span class="n">durante</span> <span class="n">il</span> <span class="n">distacco</span> <span class="n">CONCURRENTLY</span><span class="p">,</span> <span class="n">la</span>
-<span class="o">*</span> <span class="n">partizione</span> <span class="err">è</span> <span class="n">visibile</span> <span class="k">in</span> <span class="n">pg_partitioned_table</span> <span class="n">con</span> <span class="n">stato</span> <span class="s1">'d'</span><span class="p">.</span> <span class="o">*/</span>
- <span class="k">SELECT</span> <span class="n">relname</span><span class="p">,</span> <span class="n">pg_get_expr</span><span class="p">(</span><span class="n">relpartbound</span><span class="p">,</span> <span class="n">oid</span><span class="p">)</span> <span class="k">FROM</span> <span class="n">pg_class</span> <span class="k">WHERE</span> <span class="n">relname</span> <span class="o">=</span>
-<span class="s1">'log_data_2023_01'</span><span class="p">;</span>
-<span class="o">*</span> <span class="n">Una</span> <span class="n">volta</span> <span class="n">distaccata</span><span class="p">,</span> <span class="n">la</span> <span class="n">partizione</span> <span class="n">diventa</span> <span class="n">una</span> <span class="n">tabella</span> <span class="n">indipendente</span><span class="p">.</span> <span class="n">Posso</span>
-<span class="o">*</span> <span class="n">archiviarla</span> <span class="n">o</span> <span class="n">eliminarla</span> <span class="k">in</span> <span class="n">modo</span> <span class="n">completamente</span> <span class="n">asincrono</span> <span class="n">rispetto</span> <span class="n">al</span> <span class="n">traffico</span>
-<span class="o">*</span> <span class="n">sulla</span> <span class="n">tabella</span> <span class="n">principale</span><span class="p">.</span> <span class="o">*/</span>
- <span class="c1">-- pg_dump -t log_data_2023_01 mydb &gt; archivio_2023_01.sql -- DROP TABLE</span>
-<span class="n">log_data_2023_01</span><span class="p">;</span>
+</pre></td><td class="rouge-code"><pre>    <span class="cm">/* Verifico prima la struttura delle partizioni esistenti per identificare
+        quella da rimuovere. */</span> <span class="k">SELECT</span> <span class="n">inhrelid</span><span class="p">::</span><span class="n">regclass</span> <span class="k">AS</span> <span class="n">partition_name</span><span class="p">,</span>
+        <span class="n">pg_get_expr</span><span class="p">(</span><span class="k">c</span><span class="p">.</span><span class="n">relpartbound</span><span class="p">,</span> <span class="k">c</span><span class="p">.</span><span class="n">oid</span><span class="p">)</span> <span class="k">AS</span> <span class="n">partition_bound</span> <span class="k">FROM</span> <span class="n">pg_inherits</span>
+        <span class="k">JOIN</span> <span class="n">pg_class</span> <span class="k">c</span> <span class="k">ON</span> <span class="n">inhrelid</span> <span class="o">=</span> <span class="k">c</span><span class="p">.</span><span class="n">oid</span> <span class="k">WHERE</span> <span class="n">inhparent</span> <span class="o">=</span>
+        <span class="s1">'log_data'</span><span class="p">::</span><span class="n">regclass</span> <span class="k">ORDER</span> <span class="k">BY</span> <span class="n">partition_bound</span><span class="p">;</span> <span class="cm">/* Distacco la partizione
+        vecchia senza bloccare i nuovi inserimenti. CONCURRENTLY è un'operazione
+        in due fasi: prima marca la partizione come "detaching", poi completa il
+        distacco quando tutte le transazioni attive sono concluse. */</span> <span class="k">ALTER</span>
+        <span class="k">TABLE</span> <span class="n">log_data</span> <span class="n">DETACH</span> <span class="k">PARTITION</span> <span class="n">log_data_2023_01</span> <span class="n">CONCURRENTLY</span><span class="p">;</span> <span class="cm">/*
+        Verifico lo stato dell'operazione: durante il distacco CONCURRENTLY, la
+        partizione è visibile in pg_partitioned_table con stato 'd'. */</span> <span class="k">SELECT</span>
+        <span class="n">relname</span><span class="p">,</span> <span class="n">pg_get_expr</span><span class="p">(</span><span class="n">relpartbound</span><span class="p">,</span> <span class="n">oid</span><span class="p">)</span> <span class="k">FROM</span> <span class="n">pg_class</span> <span class="k">WHERE</span> <span class="n">relname</span> <span class="o">=</span>
+        <span class="s1">'log_data_2023_01'</span><span class="p">;</span> <span class="cm">/* Una volta distaccata, la partizione diventa una
+        tabella indipendente. Posso archiviarla o eliminarla in modo
+        completamente asincrono rispetto al traffico sulla tabella principale.
+        */</span> <span class="c1">-- pg_dump -t log_data_2023_01 mydb &gt; archivio_2023_01.sql -- DROP</span>
+        <span class="k">TABLE</span> <span class="n">log_data_2023_01</span><span class="p">;</span>
 </pre></td></tr></tbody></table></code></pre></div></div>
 
         </article>

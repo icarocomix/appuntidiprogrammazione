@@ -139,58 +139,56 @@
 48
 49
 50
-51
-</pre></td><td class="rouge-code"><pre><span class="o">*</span> <span class="nc">Abilito</span> <span class="n">la</span> <span class="n">deduplicazione</span> <span class="n">e</span> <span class="n">aggiungo</span> <span class="n">il</span> <span class="n">logging</span> <span class="n">per</span> <span class="n">misurare</span> <span class="n">il</span> <span class="n">risparmio</span>
-<span class="o">*</span> <span class="n">effettivo</span><span class="o">.</span> <span class="no">G1</span> <span class="n">esegue</span> <span class="n">la</span> <span class="n">deduplicazione</span> <span class="n">durante</span> <span class="n">i</span> <span class="n">cicli</span> <span class="n">di</span> <span class="nc">Young</span> <span class="no">GC</span> <span class="n">in</span> <span class="n">modo</span>
-<span class="o">*</span> <span class="n">incrementale</span> <span class="n">e</span> <span class="n">a</span> <span class="n">bassa</span> <span class="n">priorità</span><span class="o">.</span> <span class="o">*/</span>
- <span class="n">java</span> <span class="o">-</span><span class="nl">XX:</span><span class="o">+</span><span class="nc">UseG1GC</span> <span class="err">\</span> <span class="o">-</span><span class="nl">XX:</span><span class="o">+</span><span class="nc">UseStringDeduplication</span> <span class="err">\</span>
-<span class="o">-</span><span class="nl">XX:</span><span class="nc">StringDeduplicationAgeThreshold</span><span class="o">=</span><span class="mi">3</span> <span class="err">\</span>
-<span class="o">-</span><span class="nl">Xlog:</span><span class="n">stringdedup</span><span class="o">*=</span><span class="nl">debug:</span><span class="n">file</span><span class="o">=</span><span class="n">dedup</span><span class="o">.</span><span class="na">log</span><span class="o">:</span><span class="n">time</span> <span class="err">\</span> <span class="o">-</span><span class="nc">Xmx4G</span> <span class="err">\</span> <span class="o">-</span><span class="n">jar</span> <span class="n">api</span><span class="o">-</span><span class="n">gateway</span><span class="o">.</span><span class="na">jar</span>
+</pre></td><td class="rouge-code"><pre><span class="cm">/* Abilito la deduplicazione e aggiungo il logging per misurare il risparmio
+    effettivo. G1 esegue la deduplicazione durante i cicli di Young GC in modo
+    incrementale e a bassa priorità. */</span>
+<span class="n">java</span> <span class="o">-</span><span class="nl">XX:</span><span class="o">+</span><span class="nc">UseG1GC</span> <span class="err">\</span> <span class="o">-</span><span class="nl">XX:</span><span class="o">+</span><span class="nc">UseStringDeduplication</span> <span class="err">\</span>
+    <span class="o">-</span><span class="nl">XX:</span><span class="nc">StringDeduplicationAgeThreshold</span><span class="o">=</span><span class="mi">3</span> <span class="err">\</span>
+    <span class="o">-</span><span class="nl">Xlog:</span><span class="n">stringdedup</span><span class="o">*=</span><span class="nl">debug:</span><span class="n">file</span><span class="o">=</span><span class="n">dedup</span><span class="o">.</span><span class="na">log</span><span class="o">:</span><span class="n">time</span> <span class="err">\</span> <span class="o">-</span><span class="nc">Xmx4G</span> <span class="err">\</span> <span class="o">-</span><span class="n">jar</span> <span class="n">api</span><span class="o">-</span><span class="n">gateway</span><span class="o">.</span><span class="na">jar</span>
 <span class="cm">/* Nel log di deduplicazione cerco il risparmio cumulativo: */</span>
- 
-<span class="c1">// [stringdedup] Inspected: 1245230 strings </span>
-<span class="c1">// [stringdedup] Skipped: 234120 (already deduplicated) </span>
-<span class="c1">// [stringdedup] Deduplicated: 892340 strings, saved: 187MB </span>
-<span class="o">*</span> <span class="nc">StringDeduplicationAgeThreshold</span><span class="o">=</span><span class="mi">3</span> <span class="n">significa</span> <span class="n">che</span> <span class="n">una</span> <span class="n">stringa</span> <span class="n">viene</span> <span class="n">considerata</span>
-<span class="o">*</span> <span class="n">per</span> <span class="n">la</span> <span class="n">deduplicazione</span> <span class="n">solo</span> <span class="n">dopo</span> <span class="n">essere</span> <span class="n">sopravvissuta</span> <span class="n">a</span> <span class="mi">3</span> <span class="nc">Young</span> <span class="nl">GC:</span> <span class="n">evito</span> <span class="n">di</span>
-<span class="o">*</span> <span class="n">deduplicare</span> <span class="n">oggetti</span> <span class="n">temporanei</span> <span class="n">che</span> <span class="n">sarebbero</span> <span class="n">stati</span> <span class="n">raccolti</span> <span class="n">comunque</span><span class="o">.</span> <span class="o">*/</span>
- 
-<span class="o">*</span> <span class="nc">Identifico</span> <span class="n">le</span> <span class="n">stringhe</span> <span class="n">duplicate</span> <span class="n">più</span> <span class="n">costose</span> <span class="n">nel</span> <span class="n">mio</span> <span class="n">gateway</span> <span class="no">JSON</span> <span class="n">con</span> <span class="no">JFR</span> <span class="o">+</span>
-<span class="o">*</span> <span class="no">JDK</span> <span class="nc">Mission</span> <span class="nl">Control:</span> <span class="o">*/</span>
- 
-<span class="c1">// jcmd &lt;PID&gt; JFR.start name=memory settings=profile </span>
-<span class="c1">// jcmd &lt;PID&gt; JFR.dump filename=memory.jfr </span>
-<span class="c1">// In Mission Control: Memory &gt; Heap Live Set &gt; filtra per String </span>
-<span class="o">*</span> <span class="nc">Le</span> <span class="n">chiavi</span> <span class="no">JSON</span> <span class="nf">ripetute</span> <span class="o">(</span><span class="s">"userId"</span><span class="o">,</span> <span class="s">"timestamp"</span><span class="o">,</span> <span class="s">"status"</span><span class="o">,</span> <span class="s">"amount"</span><span class="o">)</span> <span class="n">sono</span> <span class="n">i</span>
-<span class="o">*</span> <span class="n">candidati</span> <span class="nl">perfetti:</span> <span class="n">un</span> <span class="n">gateway</span> <span class="n">che</span> <span class="n">processa</span> <span class="mf">10.000</span> <span class="n">req</span><span class="o">/</span><span class="n">s</span> <span class="n">con</span> <span class="n">payload</span> <span class="n">da</span> <span class="mi">1</span><span class="no">KB</span> <span class="n">ha</span>
-<span class="o">*</span> <span class="n">queste</span> <span class="n">stringhe</span> <span class="n">replicate</span> <span class="n">milioni</span> <span class="n">di</span> <span class="n">volte</span><span class="o">.</span> <span class="o">*/</span>
- 
-<span class="o">*</span> <span class="nc">In</span> <span class="nc">Spring</span> <span class="nc">Boot</span><span class="o">,</span> <span class="n">posso</span> <span class="n">complementare</span> <span class="n">la</span> <span class="n">deduplicazione</span> <span class="no">JVM</span> <span class="n">con</span> <span class="n">un</span> <span class="n">approccio</span>
-<span class="o">*</span> <span class="n">applicativo</span> <span class="n">per</span> <span class="n">le</span> <span class="n">stringhe</span> <span class="n">che</span> <span class="n">so</span> <span class="n">essere</span> <span class="nl">ripetitive:</span> <span class="o">*/</span>
- <span class="nd">@Component</span> <span class="kd">public</span> <span class="kd">class</span> <span class="nc">StringInternPool</span> 
-<span class="o">{</span> 
-<span class="c1">// Uso una ConcurrentHashMap come intern pool controllato per le chiavi JSON</span>
-<span class="c1">// note private final ConcurrentHashMap&lt;String, String&gt; pool = new</span>
-<span class="c1">// ConcurrentHashMap&lt;&gt;(256); private static final Set&lt;String&gt; KNOWN_KEYS =</span>
-<span class="c1">// Set.of( "userId", "timestamp", "status", "amount", "currency", "orderId" );</span>
-<span class="c1">// public String internIfKnown(String s)</span>
-<span class="o">{</span> <span class="k">if</span> <span class="o">(</span><span class="no">KNOWN_KEYS</span><span class="o">.</span><span class="na">contains</span><span class="o">(</span><span class="n">s</span><span class="o">))</span> 
-<span class="o">{</span> <span class="k">return</span> <span class="n">pool</span><span class="o">.</span><span class="na">computeIfAbsent</span><span class="o">(</span><span class="n">s</span><span class="o">,</span> <span class="n">k</span> <span class="o">-&gt;</span> <span class="n">k</span><span class="o">);</span> <span class="o">}</span>
- <span class="k">return</span> <span class="n">s</span><span class="o">;</span> 
-<span class="c1">// Per le altre stringhe, lascio lavorare la deduplicazione JVM }</span>
- <span class="o">}</span>
- 
+<span class="c1">// [stringdedup] Inspected: 1245230 strings // [stringdedup] Skipped: 234120</span>
+    <span class="o">(</span><span class="n">already</span> <span class="n">deduplicated</span><span class="o">)</span> <span class="c1">// [stringdedup] Deduplicated: 892340 strings, saved:</span>
+    <span class="mi">187</span><span class="no">MB</span> <span class="cm">/* StringDeduplicationAgeThreshold=3 significa che una stringa viene
+    considerata per la deduplicazione solo dopo essere sopravvissuta a 3 Young
+    GC: evito di deduplicare oggetti temporanei che sarebbero stati raccolti
+    comunque. */</span> <span class="cm">/* Identifico le stringhe duplicate più costose nel mio gateway
+    JSON con JFR + JDK Mission Control: */</span> <span class="c1">// jcmd &lt;PID&gt; JFR.start name=memory</span>
+    <span class="n">settings</span><span class="o">=</span><span class="n">profile</span> <span class="c1">// jcmd &lt;PID&gt; JFR.dump filename=memory.jfr // In Mission</span>
+    <span class="nl">Control:</span> <span class="nc">Memory</span> <span class="o">&gt;</span> <span class="nc">Heap</span> <span class="nc">Live</span> <span class="nc">Set</span> <span class="o">&gt;</span> <span class="n">filtra</span> <span class="n">per</span> <span class="nc">String</span> <span class="cm">/* Le chiavi JSON
+    ripetute ("userId", "timestamp", "status", "amount") sono i candidati
+    perfetti: un gateway che processa 10.000 req/s con payload da 1KB ha queste
+    stringhe replicate milioni di volte. */</span> <span class="cm">/* In Spring Boot, posso
+    complementare la deduplicazione JVM con un approccio applicativo per le
+    stringhe che so essere ripetitive: */</span> <span class="nd">@Component</span> <span class="kd">public</span> <span class="kd">class</span>
+    <span class="nc">StringInternPool</span>
+<span class="o">{</span>
+    <span class="c1">// Uso una ConcurrentHashMap come intern pool controllato per le chiavi JSON</span>
+        <span class="n">note</span> <span class="kd">private</span> <span class="kd">final</span> <span class="nc">ConcurrentHashMap</span><span class="o">&lt;</span><span class="nc">String</span><span class="o">,</span> <span class="nc">String</span><span class="o">&gt;</span> <span class="n">pool</span> <span class="o">=</span> <span class="k">new</span>
+        <span class="nc">ConcurrentHashMap</span><span class="o">&lt;&gt;(</span><span class="mi">256</span><span class="o">)</span>
+    <span class="o">;</span>
+    <span class="kd">private</span> <span class="kd">static</span> <span class="kd">final</span> <span class="nc">Set</span><span class="o">&lt;</span><span class="nc">String</span><span class="o">&gt;</span> <span class="no">KNOWN_KEYS</span> <span class="o">=</span> <span class="nc">Set</span><span class="o">.</span><span class="na">of</span><span class="o">(</span> <span class="s">"userId"</span><span class="o">,</span> <span class="s">"timestamp"</span><span class="o">,</span>
+        <span class="s">"status"</span><span class="o">,</span> <span class="s">"amount"</span><span class="o">,</span> <span class="s">"currency"</span><span class="o">,</span> <span class="s">"orderId"</span> <span class="o">);</span>
+    <span class="kd">public</span> <span class="nc">String</span> <span class="nf">internIfKnown</span><span class="o">(</span><span class="nc">String</span> <span class="n">s</span><span class="o">)</span> <span class="o">{</span>
+        <span class="k">if</span> <span class="o">(</span><span class="no">KNOWN_KEYS</span><span class="o">.</span><span class="na">contains</span><span class="o">(</span><span class="n">s</span><span class="o">))</span> <span class="o">{</span>
+            <span class="k">return</span> <span class="n">pool</span><span class="o">.</span><span class="na">computeIfAbsent</span><span class="o">(</span><span class="n">s</span><span class="o">,</span> <span class="n">k</span> <span class="o">-&gt;</span> <span class="n">k</span><span class="o">);</span>
+        <span class="o">}</span>
+        <span class="k">return</span> <span class="n">s</span><span class="o">;</span>
+        <span class="c1">// Per le altre stringhe, lascio lavorare la deduplicazione JVM</span>
+    <span class="o">}</span>
+<span class="o">}</span>
 <span class="cm">/* Monitoro il risparmio di memoria della deduplicazione tramite JMX: */</span>
- <span class="nd">@Scheduled</span><span class="o">(</span><span class="n">fixedDelay</span> <span class="o">=</span> <span class="mi">60_000</span><span class="o">)</span> <span class="kd">public</span> <span class="kt">void</span> <span class="nf">logMemoryStats</span><span class="o">()</span> 
-<span class="o">{</span> <span class="nc">MemoryMXBean</span> <span class="n">memBean</span> <span class="o">=</span> <span class="nc">ManagementFactory</span><span class="o">.</span><span class="na">getMemoryMXBean</span><span class="o">();</span> <span class="kt">long</span> <span class="n">heapUsed</span> <span class="o">=</span>
-<span class="n">memBean</span><span class="o">.</span><span class="na">getHeapMemoryUsage</span><span class="o">().</span><span class="na">getUsed</span><span class="o">();</span> <span class="kt">long</span> <span class="n">heapMax</span> <span class="o">=</span>
-<span class="n">memBean</span><span class="o">.</span><span class="na">getHeapMemoryUsage</span><span class="o">().</span><span class="na">getMax</span><span class="o">();</span> <span class="n">log</span><span class="o">.</span><span class="na">info</span><span class="o">(</span><span class="s">"Heap:
-{}
-MB / 
-{}
-MB (
-{}
-%)"</span><span class="o">,</span> <span class="n">heapUsed</span> <span class="o">/</span> <span class="mi">1_048_576</span><span class="o">,</span> <span class="n">heapMax</span> <span class="o">/</span> <span class="mi">1_048_576</span><span class="o">,</span> <span class="mi">100</span> <span class="o">*</span> <span class="n">heapUsed</span> <span class="o">/</span> <span class="n">heapMax</span><span class="o">);</span> <span class="o">}</span>
+<span class="nd">@Scheduled</span><span class="o">(</span><span class="n">fixedDelay</span> <span class="o">=</span> <span class="mi">60_000</span><span class="o">)</span> <span class="kd">public</span> <span class="kt">void</span> <span class="nf">logMemoryStats</span><span class="o">()</span> <span class="o">{</span>
+    <span class="nc">MemoryMXBean</span> <span class="n">memBean</span> <span class="o">=</span> <span class="nc">ManagementFactory</span><span class="o">.</span><span class="na">getMemoryMXBean</span><span class="o">();</span>
+    <span class="kt">long</span> <span class="n">heapUsed</span> <span class="o">=</span> <span class="n">memBean</span><span class="o">.</span><span class="na">getHeapMemoryUsage</span><span class="o">().</span><span class="na">getUsed</span><span class="o">();</span>
+    <span class="kt">long</span> <span class="n">heapMax</span> <span class="o">=</span> <span class="n">memBean</span><span class="o">.</span><span class="na">getHeapMemoryUsage</span><span class="o">().</span><span class="na">getMax</span><span class="o">();</span>
+    <span class="n">log</span><span class="o">.</span><span class="na">info</span><span class="o">(</span><span class="s">"Heap: {
+    }
+    MB / {
+    }
+    MB ({
+    }
+    %)"</span><span class="o">,</span> <span class="n">heapUsed</span> <span class="o">/</span> <span class="mi">1_048_576</span><span class="o">,</span> <span class="n">heapMax</span> <span class="o">/</span> <span class="mi">1_048_576</span><span class="o">,</span> <span class="mi">100</span> <span class="o">*</span> <span class="n">heapUsed</span> <span class="o">/</span> <span class="n">heapMax</span><span class="o">);</span>
+<span class="o">}</span>
 </pre></td></tr></tbody></table></code></pre></div></div>
 
         </article>

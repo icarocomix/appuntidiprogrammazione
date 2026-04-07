@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Linker Options e Variadic Functions — DevLog</title>
-    <meta name="description" content="Alcune funzioni C (come printf o ioctl) accettano un numero variabile di argomenti. Configurare i FunctionDescriptor variadici in Panama richiede di definire gli 'specializzatori' per ogni combinazione di argomenti usata. Questo livello di dettaglio 
+    <meta name="description" content="Alcune funzioni C (come printf o ioctl) accettano un numero variabile di argomenti. Configurare i FunctionDescriptor variadici in Panama richiede di definire gli "specializzatori" per ogni combinazione di argomenti usata. Questo livello di dettaglio 
 ">
     <link rel="stylesheet" href="/appuntidiprogrammazione/assets/css/style.css">
 
@@ -173,90 +173,138 @@
 82
 83
 84
-</pre></td><td class="rouge-code"><pre><span class="o">*</span> <span class="nc">Le</span> <span class="n">funzioni</span> <span class="n">variadiche</span> <span class="n">in</span> <span class="nf">C</span> <span class="o">(</span><span class="n">quelle</span> <span class="n">con</span> <span class="o">...)</span> <span class="n">richiedono</span> <span class="n">un</span> <span class="nc">FunctionDescriptor</span>
-<span class="o">*</span> <span class="n">specializzato</span> <span class="n">per</span> <span class="n">ogni</span> <span class="n">combinazione</span> <span class="n">di</span> <span class="n">argomenti</span> <span class="n">che</span> <span class="n">intendiamo</span> <span class="n">usare</span><span class="o">.</span> <span class="nc">Non</span>
-<span class="o">*</span> <span class="n">possiamo</span> <span class="n">creare</span> <span class="n">un</span> <span class="n">handle</span> <span class="s">"generico"</span><span class="o">:</span> <span class="n">ogni</span> <span class="n">combinazione</span> <span class="n">di</span> <span class="n">tipi</span> <span class="n">deve</span> <span class="n">avere</span> <span class="n">il</span>
-<span class="o">*</span> <span class="n">suo</span> <span class="n">handle</span> <span class="n">dedicato</span><span class="o">.</span> <span class="o">*/</span>
- <span class="nd">@Component</span> <span class="kd">public</span> <span class="kd">class</span> <span class="nc">SystemFunctionCaller</span> 
-<span class="o">{</span> <span class="kd">private</span> <span class="kd">final</span> <span class="nc">Linker</span> <span class="n">linker</span> <span class="o">=</span> <span class="nc">Linker</span><span class="o">.</span><span class="na">nativeLinker</span><span class="o">();</span> <span class="kd">private</span> <span class="kd">final</span>
-<span class="nc">SymbolLookup</span> <span class="n">stdlib</span> <span class="o">=</span> <span class="n">linker</span><span class="o">.</span><span class="na">defaultLookup</span><span class="o">();</span>
-<span class="c1">// Handle per printf(const char* format, int value) private final MethodHandle</span>
-<span class="c1">// printfInt;</span>
-<span class="c1">// Handle per printf(const char* format, double value) private final</span>
-<span class="c1">// MethodHandle printfDouble;</span>
-<span class="c1">// Handle per printf(const char* format, const char* value) private final</span>
-<span class="c1">// MethodHandle printfString;</span>
-<span class="c1">// Handle per ioctl(int fd, unsigned long request, struct*) private final</span>
-<span class="c1">// MethodHandle ioctlStruct; @PostConstruct public void init() throws Exception</span>
-<span class="o">{</span> <span class="nc">MemorySegment</span> <span class="n">printfAddr</span> <span class="o">=</span> <span class="n">stdlib</span><span class="o">.</span><span class="na">find</span><span class="o">(</span><span class="s">"printf"</span><span class="o">).</span><span class="na">orElseThrow</span><span class="o">();</span> 
-<span class="c1">// Ogni variante variadica ha il suo FunctionDescriptor specifico printfInt =</span>
-<span class="c1">// linker.downcallHandle( printfAddr,</span>
-<span class="c1">// FunctionDescriptor.of(ValueLayout.JAVA_INT, ValueLayout.ADDRESS,</span>
-<span class="c1">// ValueLayout.JAVA_INT), Linker.Option.firstVariadicArg(1)</span>
-<span class="c1">// Il primo argomento variadic è in posizione 1 ); printfDouble =</span>
-<span class="c1">// linker.downcallHandle( printfAddr,</span>
-<span class="c1">// FunctionDescriptor.of(ValueLayout.JAVA_INT, ValueLayout.ADDRESS,</span>
-<span class="c1">// ValueLayout.JAVA_DOUBLE), Linker.Option.firstVariadicArg(1) ); printfString =</span>
-<span class="c1">// linker.downcallHandle( printfAddr,</span>
-<span class="c1">// FunctionDescriptor.of(ValueLayout.JAVA_INT, ValueLayout.ADDRESS,</span>
-<span class="c1">// ValueLayout.ADDRESS), Linker.Option.firstVariadicArg(1) );</span>
-<span class="c1">// ioctl con struct: usato per configurare device driver Linux MemorySegment</span>
-<span class="c1">// ioctlAddr = stdlib.find("ioctl").orElseThrow(); ioctlStruct =</span>
-<span class="c1">// linker.downcallHandle( ioctlAddr, FunctionDescriptor.of(ValueLayout.JAVA_INT,</span>
-<span class="c1">// ValueLayout.JAVA_INT, ValueLayout.JAVA_LONG, ValueLayout.ADDRESS) ); }</span>
- 
-<span class="cm">/* Uso gli handle per chiamare le funzioni variadiche: */</span>
- <span class="kd">public</span> <span class="kt">void</span> <span class="nf">demonstratePrintf</span><span class="o">()</span> <span class="kd">throws</span> <span class="nc">Throwable</span> 
-<span class="o">{</span> <span class="k">try</span> <span class="o">(</span><span class="nc">Arena</span> <span class="n">arena</span> <span class="o">=</span> <span class="nc">Arena</span><span class="o">.</span><span class="na">ofConfined</span><span class="o">())</span> 
-<span class="o">{</span> <span class="nc">MemorySegment</span> <span class="n">intFormat</span> <span class="o">=</span> <span class="n">arena</span><span class="o">.</span><span class="na">allocateFrom</span><span class="o">(</span><span class="s">"Valore intero: %d
-"</span><span class="o">);</span> <span class="nc">MemorySegment</span> <span class="n">dblFormat</span> <span class="o">=</span> <span class="n">arena</span><span class="o">.</span><span class="na">allocateFrom</span><span class="o">(</span><span class="s">"Valore double: %.2f
-"</span><span class="o">);</span> <span class="nc">MemorySegment</span> <span class="n">strFormat</span> <span class="o">=</span> <span class="n">arena</span><span class="o">.</span><span class="na">allocateFrom</span><span class="o">(</span><span class="s">"Stringa: %s
-"</span><span class="o">);</span> <span class="nc">MemorySegment</span> <span class="n">strValue</span> <span class="o">=</span> <span class="n">arena</span><span class="o">.</span><span class="na">allocateFrom</span><span class="o">(</span><span class="s">"Hello Panama!"</span><span class="o">);</span>
-<span class="n">printfInt</span><span class="o">.</span><span class="na">invokeExact</span><span class="o">(</span><span class="n">intFormat</span><span class="o">,</span> <span class="mi">42</span><span class="o">);</span> <span class="n">printfDouble</span><span class="o">.</span><span class="na">invokeExact</span><span class="o">(</span><span class="n">dblFormat</span><span class="o">,</span>
-<span class="mf">3.14159</span><span class="o">);</span> <span class="n">printfString</span><span class="o">.</span><span class="na">invokeExact</span><span class="o">(</span><span class="n">strFormat</span><span class="o">,</span> <span class="n">strValue</span><span class="o">);</span> <span class="o">}</span>
- <span class="o">}</span>
- 
-<span class="cm">/* Uso ioctl per configurare un'interfaccia di rete tramite il kernel Linux: */</span>
- <span class="kd">public</span> <span class="kt">void</span> <span class="nf">configureNetworkInterface</span><span class="o">(</span><span class="kt">int</span> <span class="n">socketFd</span><span class="o">,</span> <span class="nc">NetworkConfig</span> <span class="n">config</span><span class="o">)</span>
-<span class="kd">throws</span> <span class="nc">Throwable</span>
-<span class="o">{</span> <span class="k">try</span> <span class="o">(</span><span class="nc">Arena</span> <span class="n">arena</span> <span class="o">=</span> <span class="nc">Arena</span><span class="o">.</span><span class="na">ofConfined</span><span class="o">())</span> 
-<span class="o">{</span> 
-<span class="c1">// Alloco la struct ifreq per passare i parametri al kernel MemorySegment ifreq</span>
-<span class="c1">// = arena.allocate(IFREQ_LAYOUT);</span>
-<span class="c1">// Scrivo il nome dell'interfaccia nel campo ifr_name MemorySegment ifName =</span>
-<span class="c1">// arena.allocateFrom(config.getInterfaceName()); ifreq.asSlice(0,</span>
-<span class="c1">// 16).copyFrom(ifName.asSlice(0, Math.min(15, ifName.byteSize())));</span>
-<span class="c1">// Chiamo ioctl con SIOCSIFMTU per impostare il MTU IFREQ_MTU_VH.set(ifreq, 0L,</span>
-<span class="c1">// config.getMtu()); int result = (int) ioctlStruct.invokeExact(socketFd,</span>
-<span class="c1">// SIOCSIFMTU, ifreq); if (result &lt; 0) throw new IOException("ioctl SIOCSIFMTU</span>
-<span class="c1">// fallita per " + config.getInterfaceName()); log.info("MTU impostato a</span>
-<span class="o">{}</span>
- <span class="n">su</span> 
-<span class="o">{}</span>
-<span class="s">", config.getMtu(), config.getInterfaceName()); }
- }
- }
- 
-* In Spring Boot, registro i SystemFunctionCaller come Bean e lo uso nei service
-* che devono interagire con il sistema operativo: */
- @Service public class NetworkManagementService 
-{ @Autowired private SystemFunctionCaller systemCaller; public void
-tuneNetworkInterfaces(List&lt;NetworkConfig&gt; configs)
-{ try (var scope = new StructuredTaskScope.ShutdownOnFailure()) 
-{ for (NetworkConfig config : configs) 
-{ scope.fork(() -&gt; 
-{ int fd = openSocket(); try 
-{ systemCaller.configureNetworkInterface(fd, config); }
- finally 
-{ closeSocket(fd); }
- return null; }
-); }
- scope.join().throwIfFailed(); }
- catch (Exception e) 
-{ throw new NetworkConfigurationException("</span><span class="nc">Errore</span> <span class="n">configurazione</span> <span class="n">interfacce</span><span class="err">"</span><span class="o">,</span>
-<span class="n">e</span><span class="o">);</span> <span class="o">}</span>
- <span class="o">}</span>
- <span class="o">}</span>
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+106
+107
+108
+</pre></td><td class="rouge-code"><pre><span class="cm">/* Le funzioni variadiche in C (quelle con ...) richiedono un FunctionDescriptor
+    specializzato per ogni combinazione di argomenti che intendiamo usare. Non
+    possiamo creare un handle "generico": ogni combinazione di tipi deve avere
+    il suo handle dedicato. */</span>
+<span class="nd">@Component</span> <span class="kd">public</span> <span class="kd">class</span> <span class="nc">SystemFunctionCaller</span> <span class="o">{</span>
+    <span class="kd">private</span> <span class="kd">final</span> <span class="nc">Linker</span> <span class="n">linker</span> <span class="o">=</span> <span class="nc">Linker</span><span class="o">.</span><span class="na">nativeLinker</span><span class="o">();</span>
+    <span class="kd">private</span> <span class="kd">final</span> <span class="nc">SymbolLookup</span> <span class="n">stdlib</span> <span class="o">=</span> <span class="n">linker</span><span class="o">.</span><span class="na">defaultLookup</span><span class="o">();</span>
+    <span class="c1">// Handle per printf(const char* format, int value) private final</span>
+        <span class="nc">MethodHandle</span> <span class="n">printfInt</span>
+    <span class="o">;</span>
+    <span class="c1">// Handle per printf(const char* format, double value) private final</span>
+        <span class="nc">MethodHandle</span> <span class="n">printfDouble</span>
+    <span class="o">;</span>
+    <span class="c1">// Handle per printf(const char* format, const char* value) private final</span>
+        <span class="nc">MethodHandle</span> <span class="n">printfString</span>
+    <span class="o">;</span>
+    <span class="c1">// Handle per ioctl(int fd, unsigned long request, struct*) private final</span>
+        <span class="nc">MethodHandle</span> <span class="n">ioctlStruct</span>
+    <span class="o">;</span>
+    <span class="nd">@PostConstruct</span> <span class="kd">public</span> <span class="kt">void</span> <span class="nf">init</span><span class="o">()</span> <span class="kd">throws</span> <span class="nc">Exception</span> <span class="o">{</span>
+        <span class="nc">MemorySegment</span> <span class="n">printfAddr</span> <span class="o">=</span> <span class="n">stdlib</span><span class="o">.</span><span class="na">find</span><span class="o">(</span><span class="s">"printf"</span><span class="o">).</span><span class="na">orElseThrow</span><span class="o">();</span>
+        <span class="c1">// Ogni variante variadica ha il suo FunctionDescriptor specifico</span>
+            <span class="n">printfInt</span> <span class="o">=</span> <span class="n">linker</span><span class="o">.</span><span class="na">downcallHandle</span><span class="o">(</span> <span class="n">printfAddr</span><span class="o">,</span>
+            <span class="nc">FunctionDescriptor</span><span class="o">.</span><span class="na">of</span><span class="o">(</span><span class="nc">ValueLayout</span><span class="o">.</span><span class="na">JAVA_INT</span><span class="o">,</span> <span class="nc">ValueLayout</span><span class="o">.</span><span class="na">ADDRESS</span><span class="o">,</span>
+            <span class="nc">ValueLayout</span><span class="o">.</span><span class="na">JAVA_INT</span><span class="o">),</span> <span class="nc">Linker</span><span class="o">.</span><span class="na">Option</span><span class="o">.</span><span class="na">firstVariadicArg</span><span class="o">(</span><span class="mi">1</span><span class="o">)</span> <span class="c1">// Il primo</span>
+            <span class="n">argomento</span> <span class="n">variadic</span> <span class="n">è</span> <span class="n">in</span> <span class="n">posizione</span> <span class="mi">1</span> <span class="o">)</span>
+        <span class="o">;</span>
+        <span class="n">printfDouble</span> <span class="o">=</span> <span class="n">linker</span><span class="o">.</span><span class="na">downcallHandle</span><span class="o">(</span> <span class="n">printfAddr</span><span class="o">,</span>
+            <span class="nc">FunctionDescriptor</span><span class="o">.</span><span class="na">of</span><span class="o">(</span><span class="nc">ValueLayout</span><span class="o">.</span><span class="na">JAVA_INT</span><span class="o">,</span> <span class="nc">ValueLayout</span><span class="o">.</span><span class="na">ADDRESS</span><span class="o">,</span>
+            <span class="nc">ValueLayout</span><span class="o">.</span><span class="na">JAVA_DOUBLE</span><span class="o">),</span> <span class="nc">Linker</span><span class="o">.</span><span class="na">Option</span><span class="o">.</span><span class="na">firstVariadicArg</span><span class="o">(</span><span class="mi">1</span><span class="o">)</span> <span class="o">);</span>
+        <span class="n">printfString</span> <span class="o">=</span> <span class="n">linker</span><span class="o">.</span><span class="na">downcallHandle</span><span class="o">(</span> <span class="n">printfAddr</span><span class="o">,</span>
+            <span class="nc">FunctionDescriptor</span><span class="o">.</span><span class="na">of</span><span class="o">(</span><span class="nc">ValueLayout</span><span class="o">.</span><span class="na">JAVA_INT</span><span class="o">,</span> <span class="nc">ValueLayout</span><span class="o">.</span><span class="na">ADDRESS</span><span class="o">,</span>
+            <span class="nc">ValueLayout</span><span class="o">.</span><span class="na">ADDRESS</span><span class="o">),</span> <span class="nc">Linker</span><span class="o">.</span><span class="na">Option</span><span class="o">.</span><span class="na">firstVariadicArg</span><span class="o">(</span><span class="mi">1</span><span class="o">)</span> <span class="o">);</span>
+        <span class="c1">// ioctl con struct: usato per configurare device driver Linux</span>
+            <span class="nc">MemorySegment</span> <span class="n">ioctlAddr</span> <span class="o">=</span> <span class="n">stdlib</span><span class="o">.</span><span class="na">find</span><span class="o">(</span><span class="s">"ioctl"</span><span class="o">).</span><span class="na">orElseThrow</span><span class="o">()</span>
+        <span class="o">;</span>
+        <span class="n">ioctlStruct</span> <span class="o">=</span> <span class="n">linker</span><span class="o">.</span><span class="na">downcallHandle</span><span class="o">(</span> <span class="n">ioctlAddr</span><span class="o">,</span>
+            <span class="nc">FunctionDescriptor</span><span class="o">.</span><span class="na">of</span><span class="o">(</span><span class="nc">ValueLayout</span><span class="o">.</span><span class="na">JAVA_INT</span><span class="o">,</span> <span class="nc">ValueLayout</span><span class="o">.</span><span class="na">JAVA_INT</span><span class="o">,</span>
+            <span class="nc">ValueLayout</span><span class="o">.</span><span class="na">JAVA_LONG</span><span class="o">,</span> <span class="nc">ValueLayout</span><span class="o">.</span><span class="na">ADDRESS</span><span class="o">)</span> <span class="o">);</span>
+    <span class="o">}</span>
+    <span class="cm">/* Uso gli handle per chiamare le funzioni variadiche: */</span>
+    <span class="kd">public</span> <span class="kt">void</span> <span class="nf">demonstratePrintf</span><span class="o">()</span> <span class="kd">throws</span> <span class="nc">Throwable</span> <span class="o">{</span>
+        <span class="k">try</span> <span class="o">(</span><span class="nc">Arena</span> <span class="n">arena</span> <span class="o">=</span> <span class="nc">Arena</span><span class="o">.</span><span class="na">ofConfined</span><span class="o">())</span> <span class="o">{</span>
+            <span class="nc">MemorySegment</span> <span class="n">intFormat</span> <span class="o">=</span> <span class="n">arena</span><span class="o">.</span><span class="na">allocateFrom</span><span class="o">(</span><span class="s">"Valore intero: %d "</span><span class="o">);</span>
+            <span class="nc">MemorySegment</span> <span class="n">dblFormat</span> <span class="o">=</span> <span class="n">arena</span><span class="o">.</span><span class="na">allocateFrom</span><span class="o">(</span><span class="s">"Valore double: %.2f
+                "</span><span class="o">);</span>
+            <span class="nc">MemorySegment</span> <span class="n">strFormat</span> <span class="o">=</span> <span class="n">arena</span><span class="o">.</span><span class="na">allocateFrom</span><span class="o">(</span><span class="s">"Stringa: %s "</span><span class="o">);</span>
+            <span class="nc">MemorySegment</span> <span class="n">strValue</span> <span class="o">=</span> <span class="n">arena</span><span class="o">.</span><span class="na">allocateFrom</span><span class="o">(</span><span class="s">"Hello Panama!"</span><span class="o">);</span>
+            <span class="n">printfInt</span><span class="o">.</span><span class="na">invokeExact</span><span class="o">(</span><span class="n">intFormat</span><span class="o">,</span> <span class="mi">42</span><span class="o">);</span>
+            <span class="n">printfDouble</span><span class="o">.</span><span class="na">invokeExact</span><span class="o">(</span><span class="n">dblFormat</span><span class="o">,</span> <span class="mf">3.14159</span><span class="o">);</span>
+            <span class="n">printfString</span><span class="o">.</span><span class="na">invokeExact</span><span class="o">(</span><span class="n">strFormat</span><span class="o">,</span> <span class="n">strValue</span><span class="o">);</span>
+        <span class="o">}</span>
+    <span class="o">}</span>
+    <span class="cm">/* Uso ioctl per configurare un'interfaccia di rete tramite il kernel Linux:
+        */</span>
+    <span class="kd">public</span> <span class="kt">void</span> <span class="nf">configureNetworkInterface</span><span class="o">(</span><span class="kt">int</span> <span class="n">socketFd</span><span class="o">,</span> <span class="nc">NetworkConfig</span> <span class="n">config</span><span class="o">)</span>
+        <span class="kd">throws</span> <span class="nc">Throwable</span> <span class="o">{</span>
+        <span class="k">try</span> <span class="o">(</span><span class="nc">Arena</span> <span class="n">arena</span> <span class="o">=</span> <span class="nc">Arena</span><span class="o">.</span><span class="na">ofConfined</span><span class="o">())</span> <span class="o">{</span>
+            <span class="c1">// Alloco la struct ifreq per passare i parametri al kernel</span>
+                <span class="nc">MemorySegment</span> <span class="n">ifreq</span> <span class="o">=</span> <span class="n">arena</span><span class="o">.</span><span class="na">allocate</span><span class="o">(</span><span class="no">IFREQ_LAYOUT</span><span class="o">)</span>
+            <span class="o">;</span>
+            <span class="c1">// Scrivo il nome dell'interfaccia nel campo ifr_name MemorySegment</span>
+                <span class="n">ifName</span> <span class="o">=</span> <span class="n">arena</span><span class="o">.</span><span class="na">allocateFrom</span><span class="o">(</span><span class="n">config</span><span class="o">.</span><span class="na">getInterfaceName</span><span class="o">())</span>
+            <span class="o">;</span>
+            <span class="n">ifreq</span><span class="o">.</span><span class="na">asSlice</span><span class="o">(</span><span class="mi">0</span><span class="o">,</span> <span class="mi">16</span><span class="o">).</span><span class="na">copyFrom</span><span class="o">(</span><span class="n">ifName</span><span class="o">.</span><span class="na">asSlice</span><span class="o">(</span><span class="mi">0</span><span class="o">,</span> <span class="nc">Math</span><span class="o">.</span><span class="na">min</span><span class="o">(</span><span class="mi">15</span><span class="o">,</span>
+                <span class="n">ifName</span><span class="o">.</span><span class="na">byteSize</span><span class="o">())));</span>
+            <span class="c1">// Chiamo ioctl con SIOCSIFMTU per impostare il MTU</span>
+                <span class="no">IFREQ_MTU_VH</span><span class="o">.</span><span class="na">set</span><span class="o">(</span><span class="n">ifreq</span><span class="o">,</span> <span class="mi">0L</span><span class="o">,</span> <span class="n">config</span><span class="o">.</span><span class="na">getMtu</span><span class="o">())</span>
+            <span class="o">;</span>
+            <span class="kt">int</span> <span class="n">result</span> <span class="o">=</span> <span class="o">(</span><span class="kt">int</span><span class="o">)</span> <span class="n">ioctlStruct</span><span class="o">.</span><span class="na">invokeExact</span><span class="o">(</span><span class="n">socketFd</span><span class="o">,</span> <span class="no">SIOCSIFMTU</span><span class="o">,</span>
+                <span class="n">ifreq</span><span class="o">);</span>
+            <span class="k">if</span> <span class="o">(</span><span class="n">result</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="o">)</span> <span class="k">throw</span> <span class="k">new</span> <span class="nc">IOException</span><span class="o">(</span><span class="s">"ioctl SIOCSIFMTU fallita per
+                "</span> <span class="o">+</span> <span class="n">config</span><span class="o">.</span><span class="na">getInterfaceName</span><span class="o">());</span>
+            <span class="n">log</span><span class="o">.</span><span class="na">info</span><span class="o">(</span><span class="s">"MTU impostato a {
+            }
+            su {
+            }
+            "</span><span class="o">,</span> <span class="n">config</span><span class="o">.</span><span class="na">getMtu</span><span class="o">(),</span> <span class="n">config</span><span class="o">.</span><span class="na">getInterfaceName</span><span class="o">());</span>
+        <span class="o">}</span>
+    <span class="o">}</span>
+<span class="o">}</span>
+<span class="cm">/* In Spring Boot, registro i SystemFunctionCaller come Bean e lo uso nei
+    service che devono interagire con il sistema operativo: */</span>
+<span class="nd">@Service</span> <span class="kd">public</span> <span class="kd">class</span> <span class="nc">NetworkManagementService</span> <span class="o">{</span>
+    <span class="nd">@Autowired</span> <span class="kd">private</span> <span class="nc">SystemFunctionCaller</span> <span class="n">systemCaller</span><span class="o">;</span>
+    <span class="kd">public</span> <span class="kt">void</span> <span class="nf">tuneNetworkInterfaces</span><span class="o">(</span><span class="nc">List</span><span class="o">&lt;</span><span class="nc">NetworkConfig</span><span class="o">&gt;</span> <span class="n">configs</span><span class="o">)</span> <span class="o">{</span>
+        <span class="k">try</span> <span class="o">(</span><span class="kt">var</span> <span class="n">scope</span> <span class="o">=</span> <span class="k">new</span> <span class="nc">StructuredTaskScope</span><span class="o">.</span><span class="na">ShutdownOnFailure</span><span class="o">())</span> <span class="o">{</span>
+            <span class="k">for</span> <span class="o">(</span><span class="nc">NetworkConfig</span> <span class="n">config</span> <span class="o">:</span> <span class="n">configs</span><span class="o">)</span> <span class="o">{</span>
+                <span class="n">scope</span><span class="o">.</span><span class="na">fork</span><span class="o">(()</span> <span class="o">-&gt;</span> <span class="o">{</span>
+                    <span class="kt">int</span> <span class="n">fd</span> <span class="o">=</span> <span class="n">openSocket</span><span class="o">();</span>
+                    <span class="k">try</span> <span class="o">{</span>
+                        <span class="n">systemCaller</span><span class="o">.</span><span class="na">configureNetworkInterface</span><span class="o">(</span><span class="n">fd</span><span class="o">,</span> <span class="n">config</span><span class="o">);</span>
+                    <span class="o">}</span>
+                    <span class="k">finally</span> <span class="o">{</span>
+                        <span class="n">closeSocket</span><span class="o">(</span><span class="n">fd</span><span class="o">);</span>
+                    <span class="o">}</span>
+                    <span class="k">return</span> <span class="kc">null</span><span class="o">;</span>
+                <span class="o">}</span>
+                <span class="o">);</span>
+            <span class="o">}</span>
+            <span class="n">scope</span><span class="o">.</span><span class="na">join</span><span class="o">().</span><span class="na">throwIfFailed</span><span class="o">();</span>
+        <span class="o">}</span>
+        <span class="k">catch</span> <span class="o">(</span><span class="nc">Exception</span> <span class="n">e</span><span class="o">)</span> <span class="o">{</span>
+            <span class="k">throw</span> <span class="k">new</span> <span class="nf">NetworkConfigurationException</span><span class="o">(</span><span class="s">"Errore configurazione
+                interfacce"</span><span class="o">,</span> <span class="n">e</span><span class="o">);</span>
+        <span class="o">}</span>
+    <span class="o">}</span>
+<span class="o">}</span>
 </pre></td></tr></tbody></table></code></pre></div></div>
 
         </article>

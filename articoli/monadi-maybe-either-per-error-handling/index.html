@@ -166,84 +166,132 @@
 75
 76
 77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
 </pre></td><td class="rouge-code"><pre><span class="cm">/* Implemento il contenitore Either completo con i metodi fondamentali. */</span>
- <span class="kd">const</span> <span class="nx">Right</span> <span class="o">=</span> <span class="nx">value</span> <span class="o">=&gt;</span> <span class="p">(</span>
-<span class="p">{</span> <span class="na">isRight</span><span class="p">:</span> <span class="kc">true</span><span class="p">,</span> <span class="na">isLeft</span><span class="p">:</span> <span class="kc">false</span><span class="p">,</span> <span class="na">map</span><span class="p">:</span> <span class="nx">fn</span> <span class="o">=&gt;</span> <span class="nx">Right</span><span class="p">(</span><span class="nx">fn</span><span class="p">(</span><span class="nx">value</span><span class="p">)),</span> 
-<span class="c1">// Applica fn se sono Right chain: fn =&gt; fn(value), </span>
-<span class="c1">// Come map ma fn restituisce già un Either getOrElse: _ =&gt; value, </span>
-<span class="c1">// Estrae il valore ignorando il default fold: (leftFn, rightFn) =&gt;</span>
-<span class="c1">// rightFn(value),</span>
-<span class="c1">// Applica la funzione di destra toString: () =&gt; `Right($</span>
-<span class="p">{</span><span class="nx">value</span><span class="p">}</span>
-<span class="p">)</span><span class="s2">` }
-); const Left = error =&gt; (
-{ isRight: false, isLeft: true, map: _ =&gt; Left(error), 
-// Cortocircuito: ignoro fn e propago l'errore chain: _ =&gt; Left(error), 
-// Cortocircuito: stesso comportamento getOrElse: defaultVal =&gt; defaultVal, 
-// Estrae il default poiché sono in errore fold: (leftFn, _) =&gt; leftFn(error), 
-// Applica la funzione di sinistra toString: () =&gt; `</span><span class="nx">Left</span><span class="p">(</span><span class="nx">$</span>
-<span class="p">{</span><span class="nx">error</span><span class="p">}</span>
-<span class="p">)</span><span class="s2">` }
-); 
-/* Helper per convertire valori nullable in Either. */
- const fromNullable = value =&gt; value != null ? Right(value) : Left('Valore nullo
-o undefined');
-/* Helper per wrappare funzioni che possono lanciare eccezioni. */
- const tryCatch = fn =&gt; 
-{ try 
-{ return Right(fn()); }
- catch (e) 
-{ return Left(e.message); }
- }
-; 
-* Pipeline di validazione che usa Either per gestire gli errori senza try/catch.
-* */
- function validateEmail(email) 
-{ return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) ? Right(email) : Left('Email
-non valida: ' + email); }
- function validateAge(age) 
-{ return Number.isInteger(age) &amp;&amp; age &gt;= 18 &amp;&amp; age &lt;= 120 ? Right(age) :
-Left('Età non valida: deve essere tra 18 e 120'); }
- function validateName(name) 
-{ return typeof name === 'string' &amp;&amp; name.trim().length &gt;= 2 ?
-Right(name.trim()) : Left('Nome non valido: minimo 2 caratteri'); }
- 
-* Compongo la validazione in una pipeline: il primo Left cortocircuita l'intera
-* catena. */
- function validateUserInput(rawInput) 
-{ return fromNullable(rawInput) .chain(input =&gt; validateName(input.name)
-.chain(name =&gt; validateEmail(input.email) .chain(email =&gt; validateAge(input.age)
-.map(age =&gt; (
-{ name, email, age }
-)) 
-// Costruisco l'oggetto validato ))); }
- 
-* Uso la pipeline nella gestione delle richieste Express senza nessun try/catch.
-* */
- app.post('/users', (req, res) =&gt; 
-{ validateUserInput(req.body) .chain(validData =&gt; tryCatch(() =&gt;
-db.users.create(validData))) .fold( error =&gt; res.status(400).json(
-{ success: false, error }
-), user =&gt; res.status(201).json(
-{ success: true, user }
-) ); }
-); 
-* Per operazioni asincrone, implemento AsyncEither (o uso una libreria come fp-
-* ts). */
- const AsyncRight = value =&gt; (
-{ map: async fn =&gt; AsyncRight(await fn(value)), chain: async fn =&gt; fn(value),
-fold: async (leftFn, rightFn) =&gt; rightFn(value) }
-); 
-/* Esempio di pipeline asincrona senza try/catch: */
- async function processRegistration(rawInput) 
-{ return validateUserInput(rawInput) .chain(async validData =&gt; 
-{ const exists = await db.users.findByEmail(validData.email); return exists ?
-Left('Email già registrata') : Right(validData); }
-) .chain(async data =&gt; 
-{ const user = await db.users.create(data); await
-emailService.sendWelcome(user.email); return Right(user); }
-); }
-</span></pre></td></tr></tbody></table></code></pre></div></div>
+<span class="kd">const</span> <span class="nx">Right</span> <span class="o">=</span> <span class="nx">value</span> <span class="o">=&gt;</span> <span class="p">({</span>
+    <span class="na">isRight</span><span class="p">:</span> <span class="kc">true</span><span class="p">,</span> <span class="na">isLeft</span><span class="p">:</span> <span class="kc">false</span><span class="p">,</span> <span class="na">map</span><span class="p">:</span> <span class="nx">fn</span> <span class="o">=&gt;</span> <span class="nx">Right</span><span class="p">(</span><span class="nx">fn</span><span class="p">(</span><span class="nx">value</span><span class="p">)),</span>
+    <span class="c1">// Applica fn se sono Right chain: fn =&gt; fn(value), // Come map ma fn</span>
+        <span class="nx">restituisce</span> <span class="nx">già</span> <span class="nx">un</span> <span class="nx">Either</span> <span class="na">getOrElse</span><span class="p">:</span> <span class="nx">_</span> <span class="o">=&gt;</span> <span class="nx">value</span><span class="p">,</span> <span class="c1">// Estrae il valore</span>
+        <span class="nx">ignorando</span> <span class="nx">il</span> <span class="k">default</span> <span class="na">fold</span><span class="p">:</span> <span class="p">(</span><span class="nx">leftFn</span><span class="p">,</span> <span class="nx">rightFn</span><span class="p">)</span> <span class="o">=&gt;</span> <span class="nx">rightFn</span><span class="p">(</span><span class="nx">value</span><span class="p">),</span> <span class="c1">//</span>
+        <span class="nx">Applica</span> <span class="nx">la</span> <span class="nx">funzione</span> <span class="nx">di</span> <span class="nx">destra</span> <span class="na">toString</span><span class="p">:</span> <span class="p">()</span> <span class="o">=&gt;</span> <span class="s2">`Right($
+    {
+        value
+    }
+    )`</span>
+<span class="p">}</span>
+<span class="p">);</span>
+<span class="kd">const</span> <span class="nx">Left</span> <span class="o">=</span> <span class="nx">error</span> <span class="o">=&gt;</span> <span class="p">({</span>
+    <span class="na">isRight</span><span class="p">:</span> <span class="kc">false</span><span class="p">,</span> <span class="na">isLeft</span><span class="p">:</span> <span class="kc">true</span><span class="p">,</span> <span class="na">map</span><span class="p">:</span> <span class="nx">_</span> <span class="o">=&gt;</span> <span class="nx">Left</span><span class="p">(</span><span class="nx">error</span><span class="p">),</span>
+    <span class="c1">// Cortocircuito: ignoro fn e propago l'errore chain: _ =&gt; Left(error), //</span>
+        <span class="na">Cortocircuito</span><span class="p">:</span> <span class="nx">stesso</span> <span class="nx">comportamento</span> <span class="na">getOrElse</span><span class="p">:</span> <span class="nx">defaultVal</span> <span class="o">=&gt;</span> <span class="nx">defaultVal</span><span class="p">,</span>
+        <span class="c1">// Estrae il default poiché sono in errore fold: (leftFn, _) =&gt;</span>
+        <span class="nx">leftFn</span><span class="p">(</span><span class="nx">error</span><span class="p">),</span> <span class="c1">// Applica la funzione di sinistra toString: () =&gt;</span>
+        <span class="s2">`Left($
+    {
+        error
+    }
+    )`</span>
+<span class="p">}</span>
+<span class="p">);</span>
+<span class="cm">/* Helper per convertire valori nullable in Either. */</span>
+<span class="kd">const</span> <span class="nx">fromNullable</span> <span class="o">=</span> <span class="nx">value</span> <span class="o">=&gt;</span> <span class="nx">value</span> <span class="o">!=</span> <span class="kc">null</span> <span class="p">?</span> <span class="nx">Right</span><span class="p">(</span><span class="nx">value</span><span class="p">)</span> <span class="p">:</span> <span class="nx">Left</span><span class="p">(</span><span class="dl">'</span><span class="s1">Valore nullo
+    o undefined</span><span class="dl">'</span><span class="p">);</span>
+<span class="cm">/* Helper per wrappare funzioni che possono lanciare eccezioni. */</span>
+<span class="kd">const</span> <span class="nx">tryCatch</span> <span class="o">=</span> <span class="nx">fn</span> <span class="o">=&gt;</span> <span class="p">{</span>
+    <span class="k">try</span> <span class="p">{</span>
+        <span class="k">return</span> <span class="nx">Right</span><span class="p">(</span><span class="nx">fn</span><span class="p">());</span>
+    <span class="p">}</span>
+    <span class="k">catch</span> <span class="p">(</span><span class="nx">e</span><span class="p">)</span> <span class="p">{</span>
+        <span class="k">return</span> <span class="nx">Left</span><span class="p">(</span><span class="nx">e</span><span class="p">.</span><span class="nx">message</span><span class="p">);</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+<span class="p">;</span>
+<span class="cm">/* Pipeline di validazione che usa Either per gestire gli errori senza
+    try/catch. */</span>
+<span class="kd">function</span> <span class="nx">validateEmail</span><span class="p">(</span><span class="nx">email</span><span class="p">)</span> <span class="p">{</span>
+    <span class="k">return</span> <span class="sr">/^</span><span class="se">[^\s</span><span class="err">
+</span><span class="sr">    @</span><span class="se">]</span><span class="err">+
+</span>    <span class="p">@[</span><span class="o">^</span><span class="err">\</span><span class="nx">s</span>
+    <span class="p">@]</span><span class="o">+</span><span class="err">\</span><span class="p">.[</span><span class="o">^</span><span class="err">\</span><span class="nx">s</span>
+    <span class="p">@]</span><span class="o">+</span><span class="nx">$</span><span class="o">/</span><span class="p">.</span><span class="nx">test</span><span class="p">(</span><span class="nx">email</span><span class="p">)</span> <span class="p">?</span> <span class="nx">Right</span><span class="p">(</span><span class="nx">email</span><span class="p">)</span> <span class="p">:</span> <span class="nx">Left</span><span class="p">(</span><span class="dl">'</span><span class="s1">Email non valida: </span><span class="dl">'</span> <span class="o">+</span> <span class="nx">email</span><span class="p">);</span>
+<span class="p">}</span>
+<span class="kd">function</span> <span class="nx">validateAge</span><span class="p">(</span><span class="nx">age</span><span class="p">)</span> <span class="p">{</span>
+    <span class="k">return</span> <span class="nb">Number</span><span class="p">.</span><span class="nx">isInteger</span><span class="p">(</span><span class="nx">age</span><span class="p">)</span> <span class="o">&amp;&amp;</span> <span class="nx">age</span> <span class="o">&gt;=</span> <span class="mi">18</span> <span class="o">&amp;&amp;</span> <span class="nx">age</span> <span class="o">&lt;=</span> <span class="mi">120</span> <span class="p">?</span> <span class="nx">Right</span><span class="p">(</span><span class="nx">age</span><span class="p">)</span> <span class="p">:</span>
+        <span class="nx">Left</span><span class="p">(</span><span class="dl">'</span><span class="s1">Età non valida: deve essere tra 18 e 120</span><span class="dl">'</span><span class="p">);</span>
+<span class="p">}</span>
+<span class="kd">function</span> <span class="nx">validateName</span><span class="p">(</span><span class="nx">name</span><span class="p">)</span> <span class="p">{</span>
+    <span class="k">return</span> <span class="k">typeof</span> <span class="nx">name</span> <span class="o">===</span> <span class="dl">'</span><span class="s1">string</span><span class="dl">'</span> <span class="o">&amp;&amp;</span> <span class="nx">name</span><span class="p">.</span><span class="nx">trim</span><span class="p">().</span><span class="nx">length</span> <span class="o">&gt;=</span> <span class="mi">2</span> <span class="p">?</span>
+        <span class="nx">Right</span><span class="p">(</span><span class="nx">name</span><span class="p">.</span><span class="nx">trim</span><span class="p">())</span> <span class="p">:</span> <span class="nx">Left</span><span class="p">(</span><span class="dl">'</span><span class="s1">Nome non valido: minimo 2 caratteri</span><span class="dl">'</span><span class="p">);</span>
+<span class="p">}</span>
+<span class="cm">/* Compongo la validazione in una pipeline: il primo Left cortocircuita l'intera
+    catena. */</span>
+<span class="kd">function</span> <span class="nx">validateUserInput</span><span class="p">(</span><span class="nx">rawInput</span><span class="p">)</span> <span class="p">{</span>
+    <span class="k">return</span> <span class="nx">fromNullable</span><span class="p">(</span><span class="nx">rawInput</span><span class="p">)</span> <span class="p">.</span><span class="nx">chain</span><span class="p">(</span><span class="nx">input</span> <span class="o">=&gt;</span> <span class="nx">validateName</span><span class="p">(</span><span class="nx">input</span><span class="p">.</span><span class="nx">name</span><span class="p">)</span>
+        <span class="p">.</span><span class="nx">chain</span><span class="p">(</span><span class="nx">name</span> <span class="o">=&gt;</span> <span class="nx">validateEmail</span><span class="p">(</span><span class="nx">input</span><span class="p">.</span><span class="nx">email</span><span class="p">)</span> <span class="p">.</span><span class="nx">chain</span><span class="p">(</span><span class="nx">email</span> <span class="o">=&gt;</span>
+        <span class="nx">validateAge</span><span class="p">(</span><span class="nx">input</span><span class="p">.</span><span class="nx">age</span><span class="p">)</span> <span class="p">.</span><span class="nx">map</span><span class="p">(</span><span class="nx">age</span> <span class="o">=&gt;</span> <span class="p">({</span>
+        <span class="nx">name</span><span class="p">,</span> <span class="nx">email</span><span class="p">,</span> <span class="nx">age</span>
+    <span class="p">}</span>
+    <span class="p">))</span>
+    <span class="c1">// Costruisco l'oggetto validato )))</span>
+    <span class="p">;</span>
+<span class="p">}</span>
+<span class="cm">/* Uso la pipeline nella gestione delle richieste Express senza nessun
+    try/catch. */</span>
+<span class="nx">app</span><span class="p">.</span><span class="nx">post</span><span class="p">(</span><span class="dl">'</span><span class="s1">/users</span><span class="dl">'</span><span class="p">,</span> <span class="p">(</span><span class="nx">req</span><span class="p">,</span> <span class="nx">res</span><span class="p">)</span> <span class="o">=&gt;</span> <span class="p">{</span>
+    <span class="nx">validateUserInput</span><span class="p">(</span><span class="nx">req</span><span class="p">.</span><span class="nx">body</span><span class="p">)</span> <span class="p">.</span><span class="nx">chain</span><span class="p">(</span><span class="nx">validData</span> <span class="o">=&gt;</span> <span class="nx">tryCatch</span><span class="p">(()</span> <span class="o">=&gt;</span>
+        <span class="nx">db</span><span class="p">.</span><span class="nx">users</span><span class="p">.</span><span class="nx">create</span><span class="p">(</span><span class="nx">validData</span><span class="p">)))</span> <span class="p">.</span><span class="nx">fold</span><span class="p">(</span> <span class="nx">error</span> <span class="o">=&gt;</span> <span class="nx">res</span><span class="p">.</span><span class="nx">status</span><span class="p">(</span><span class="mi">400</span><span class="p">).</span><span class="nx">json</span><span class="p">({</span>
+        <span class="na">success</span><span class="p">:</span> <span class="kc">false</span><span class="p">,</span> <span class="nx">error</span>
+    <span class="p">}</span>
+    <span class="p">),</span> <span class="nx">user</span> <span class="o">=&gt;</span> <span class="nx">res</span><span class="p">.</span><span class="nx">status</span><span class="p">(</span><span class="mi">201</span><span class="p">).</span><span class="nx">json</span><span class="p">({</span>
+        <span class="na">success</span><span class="p">:</span> <span class="kc">true</span><span class="p">,</span> <span class="nx">user</span>
+    <span class="p">}</span>
+    <span class="p">)</span> <span class="p">);</span>
+<span class="p">}</span>
+<span class="p">);</span>
+<span class="cm">/* Per operazioni asincrone, implemento AsyncEither (o uso una libreria come
+    fp-ts). */</span>
+<span class="kd">const</span> <span class="nx">AsyncRight</span> <span class="o">=</span> <span class="nx">value</span> <span class="o">=&gt;</span> <span class="p">({</span>
+    <span class="na">map</span><span class="p">:</span> <span class="k">async</span> <span class="nx">fn</span> <span class="o">=&gt;</span> <span class="nx">AsyncRight</span><span class="p">(</span><span class="k">await</span> <span class="nx">fn</span><span class="p">(</span><span class="nx">value</span><span class="p">)),</span> <span class="na">chain</span><span class="p">:</span> <span class="k">async</span> <span class="nx">fn</span> <span class="o">=&gt;</span> <span class="nx">fn</span><span class="p">(</span><span class="nx">value</span><span class="p">),</span>
+        <span class="na">fold</span><span class="p">:</span> <span class="k">async</span> <span class="p">(</span><span class="nx">leftFn</span><span class="p">,</span> <span class="nx">rightFn</span><span class="p">)</span> <span class="o">=&gt;</span> <span class="nx">rightFn</span><span class="p">(</span><span class="nx">value</span><span class="p">)</span>
+<span class="p">}</span>
+<span class="p">);</span>
+<span class="cm">/* Esempio di pipeline asincrona senza try/catch: */</span>
+<span class="k">async</span> <span class="kd">function</span> <span class="nx">processRegistration</span><span class="p">(</span><span class="nx">rawInput</span><span class="p">)</span> <span class="p">{</span>
+    <span class="k">return</span> <span class="nx">validateUserInput</span><span class="p">(</span><span class="nx">rawInput</span><span class="p">)</span> <span class="p">.</span><span class="nx">chain</span><span class="p">(</span><span class="k">async</span> <span class="nx">validData</span> <span class="o">=&gt;</span> <span class="p">{</span>
+        <span class="kd">const</span> <span class="nx">exists</span> <span class="o">=</span> <span class="k">await</span> <span class="nx">db</span><span class="p">.</span><span class="nx">users</span><span class="p">.</span><span class="nx">findByEmail</span><span class="p">(</span><span class="nx">validData</span><span class="p">.</span><span class="nx">email</span><span class="p">);</span>
+        <span class="k">return</span> <span class="nx">exists</span> <span class="p">?</span> <span class="nx">Left</span><span class="p">(</span><span class="dl">'</span><span class="s1">Email già registrata</span><span class="dl">'</span><span class="p">)</span> <span class="p">:</span> <span class="nx">Right</span><span class="p">(</span><span class="nx">validData</span><span class="p">);</span>
+    <span class="p">}</span>
+    <span class="p">)</span> <span class="p">.</span><span class="nx">chain</span><span class="p">(</span><span class="k">async</span> <span class="nx">data</span> <span class="o">=&gt;</span> <span class="p">{</span>
+        <span class="kd">const</span> <span class="nx">user</span> <span class="o">=</span> <span class="k">await</span> <span class="nx">db</span><span class="p">.</span><span class="nx">users</span><span class="p">.</span><span class="nx">create</span><span class="p">(</span><span class="nx">data</span><span class="p">);</span>
+        <span class="k">await</span> <span class="nx">emailService</span><span class="p">.</span><span class="nx">sendWelcome</span><span class="p">(</span><span class="nx">user</span><span class="p">.</span><span class="nx">email</span><span class="p">);</span>
+        <span class="k">return</span> <span class="nx">Right</span><span class="p">(</span><span class="nx">user</span><span class="p">);</span>
+    <span class="p">}</span>
+    <span class="p">);</span>
+<span class="p">}</span>
+</pre></td></tr></tbody></table></code></pre></div></div>
 
         </article>
 

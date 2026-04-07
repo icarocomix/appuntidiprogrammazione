@@ -153,70 +153,108 @@
 62
 63
 64
-</pre></td><td class="rouge-code"><pre><span class="o">*</span> <span class="nc">Implemento</span> <span class="n">un</span> <span class="n">dizionario</span> <span class="n">in</span><span class="o">-</span><span class="n">memory</span> <span class="n">thread</span><span class="o">-</span><span class="n">safe</span> <span class="n">che</span> <span class="n">usa</span> <span class="n">memoria</span> <span class="n">nativa</span> <span class="n">per</span> <span class="n">i</span>
-<span class="o">*</span> <span class="n">valori</span><span class="o">.</span> <span class="nc">La</span> <span class="n">chiave</span> <span class="n">è</span> <span class="n">in</span> <span class="nf">Java</span> <span class="o">(</span><span class="nc">String</span><span class="o">),</span> <span class="n">il</span> <span class="n">valore</span> <span class="n">è</span> <span class="n">in</span> <span class="n">memoria</span> <span class="n">nativa</span> <span class="n">per</span>
-<span class="o">*</span> <span class="n">evitare</span> <span class="n">pressione</span> <span class="n">sul</span> <span class="no">GC</span><span class="o">.</span> <span class="o">*/</span>
- <span class="nd">@Component</span> <span class="kd">public</span> <span class="kd">class</span> <span class="nc">NativeKeyValueStore</span> 
-<span class="o">{</span> <span class="kd">private</span> <span class="kd">final</span> <span class="nc">Arena</span> <span class="n">sharedArena</span> <span class="o">=</span> <span class="nc">Arena</span><span class="o">.</span><span class="na">ofShared</span><span class="o">();</span> <span class="kd">private</span> <span class="kd">final</span>
-<span class="nc">ConcurrentHashMap</span><span class="o">&lt;</span><span class="nc">String</span><span class="o">,</span> <span class="nc">MemorySegment</span><span class="o">&gt;</span> <span class="n">index</span> <span class="o">=</span> <span class="k">new</span> <span class="nc">ConcurrentHashMap</span><span class="o">&lt;&gt;();</span>
-<span class="kd">private</span> <span class="kd">static</span> <span class="kd">final</span> <span class="nc">VarHandle</span> <span class="no">INT_VH</span> <span class="o">=</span> <span class="nc">ValueLayout</span><span class="o">.</span><span class="na">JAVA_INT</span><span class="o">.</span><span class="na">varHandle</span><span class="o">();</span>
-<span class="kd">private</span> <span class="kd">static</span> <span class="kd">final</span> <span class="nc">VarHandle</span> <span class="no">LONG_VH</span> <span class="o">=</span> <span class="nc">ValueLayout</span><span class="o">.</span><span class="na">JAVA_LONG</span><span class="o">.</span><span class="na">varHandle</span><span class="o">();</span>
-<span class="o">*</span> <span class="nc">Scrittura</span> <span class="n">con</span> <span class="n">semantica</span> <span class="s">"release"</span><span class="o">:</span> <span class="n">garantisce</span> <span class="n">che</span> <span class="n">tutte</span> <span class="n">le</span> <span class="n">scritture</span>
-<span class="o">*</span> <span class="n">precedenti</span> <span class="n">siano</span> <span class="n">visibili</span> <span class="n">agli</span> <span class="n">altri</span> <span class="n">thread</span> <span class="n">prima</span> <span class="n">che</span> <span class="n">il</span> <span class="n">valore</span> <span class="n">sia</span>
-<span class="o">*</span> <span class="n">considerato</span> <span class="s">"pubblicato"</span><span class="o">.</span> <span class="o">*/</span>
- <span class="kd">public</span> <span class="kt">void</span> <span class="nf">put</span><span class="o">(</span><span class="nc">String</span> <span class="n">key</span><span class="o">,</span> <span class="kt">int</span> <span class="n">value</span><span class="o">)</span> 
-<span class="o">{</span> <span class="nc">MemorySegment</span> <span class="n">segment</span> <span class="o">=</span> <span class="n">index</span><span class="o">.</span><span class="na">computeIfAbsent</span><span class="o">(</span><span class="n">key</span><span class="o">,</span> <span class="n">k</span> <span class="o">-&gt;</span>
-<span class="n">sharedArena</span><span class="o">.</span><span class="na">allocate</span><span class="o">(</span><span class="nc">ValueLayout</span><span class="o">.</span><span class="na">JAVA_INT</span><span class="o">));</span>
-<span class="c1">// setRelease: barriera di memoria in scrittura </span>
-<span class="c1">// Gli altri thread che fanno getAcquire vedranno questo valore aggiornato</span>
-<span class="c1">// INT_VH.setRelease(segment, 0L, value); }</span>
- 
-<span class="o">*</span> <span class="nc">Lettura</span> <span class="n">con</span> <span class="n">semantica</span> <span class="s">"acquire"</span><span class="o">:</span> <span class="n">garantisce</span> <span class="n">che</span> <span class="n">il</span> <span class="n">thread</span> <span class="n">veda</span> <span class="n">tutti</span> <span class="n">i</span> <span class="n">dati</span>
-<span class="o">*</span> <span class="n">scritti</span> <span class="n">prima</span> <span class="n">del</span> <span class="n">setRelease</span> <span class="n">corrispondente</span><span class="o">.</span> <span class="o">*/</span>
- <span class="kd">public</span> <span class="kt">int</span> <span class="nf">get</span><span class="o">(</span><span class="nc">String</span> <span class="n">key</span><span class="o">)</span> 
-<span class="o">{</span> <span class="nc">MemorySegment</span> <span class="n">segment</span> <span class="o">=</span> <span class="n">index</span><span class="o">.</span><span class="na">get</span><span class="o">(</span><span class="n">key</span><span class="o">);</span> <span class="k">if</span> <span class="o">(</span><span class="n">segment</span> <span class="o">==</span> <span class="kc">null</span><span class="o">)</span> <span class="k">throw</span> <span class="k">new</span>
-<span class="nc">KeyNotFoundException</span><span class="o">(</span><span class="n">key</span><span class="o">);</span>
-<span class="c1">// getAcquire: barriera di memoria in lettura return (int)</span>
-<span class="c1">// INT_VH.getAcquire(segment, 0L); }</span>
- 
-<span class="cm">/* Per operazioni atomiche CAS (Compare-And-Swap) sulla memoria nativa: */</span>
- <span class="kd">public</span> <span class="kt">boolean</span> <span class="nf">compareAndSet</span><span class="o">(</span><span class="nc">String</span> <span class="n">key</span><span class="o">,</span> <span class="kt">int</span> <span class="n">expectedValue</span><span class="o">,</span> <span class="kt">int</span> <span class="n">newValue</span><span class="o">)</span> 
-<span class="o">{</span> <span class="nc">MemorySegment</span> <span class="n">segment</span> <span class="o">=</span> <span class="n">index</span><span class="o">.</span><span class="na">get</span><span class="o">(</span><span class="n">key</span><span class="o">);</span> <span class="k">if</span> <span class="o">(</span><span class="n">segment</span> <span class="o">==</span> <span class="kc">null</span><span class="o">)</span> <span class="k">return</span> <span class="kc">false</span><span class="o">;</span>
-<span class="k">return</span> <span class="no">INT_VH</span><span class="o">.</span><span class="na">compareAndSet</span><span class="o">(</span><span class="n">segment</span><span class="o">,</span> <span class="mi">0L</span><span class="o">,</span> <span class="n">expectedValue</span><span class="o">,</span> <span class="n">newValue</span><span class="o">);</span> <span class="o">}</span>
- 
-<span class="o">*</span> <span class="nc">Esempio</span> <span class="n">di</span> <span class="n">data</span> <span class="n">race</span> <span class="n">da</span> <span class="nl">EVITARE:</span> <span class="n">accesso</span> <span class="n">non</span> <span class="n">sincronizzato</span> <span class="n">da</span> <span class="n">thread</span> <span class="n">multipli</span><span class="o">.</span>
-<span class="o">*</span> <span class="o">*/</span>
- <span class="nd">@Test</span> <span class="kd">public</span> <span class="kt">void</span> <span class="nf">demonstrateDataRace</span><span class="o">()</span> <span class="kd">throws</span> <span class="nc">Exception</span> 
-<span class="o">{</span> <span class="nc">Arena</span> <span class="n">sharedArena</span> <span class="o">=</span> <span class="nc">Arena</span><span class="o">.</span><span class="na">ofShared</span><span class="o">();</span> <span class="nc">MemorySegment</span> <span class="n">counter</span> <span class="o">=</span>
-<span class="n">sharedArena</span><span class="o">.</span><span class="na">allocate</span><span class="o">(</span><span class="nc">ValueLayout</span><span class="o">.</span><span class="na">JAVA_LONG</span><span class="o">);</span>
-<span class="c1">// SBAGLIATO: due thread incrementano il counter senza sincronizzazione</span>
-<span class="c1">// ExecutorService exec = Executors.newFixedThreadPool(2); for (int i = 0; i &lt;</span>
-<span class="c1">// 2; i++)</span>
-<span class="o">{</span> <span class="n">exec</span><span class="o">.</span><span class="na">submit</span><span class="o">(()</span> <span class="o">-&gt;</span> 
-<span class="o">{</span> <span class="k">for</span> <span class="o">(</span><span class="kt">int</span> <span class="n">j</span> <span class="o">=</span> <span class="mi">0</span><span class="o">;</span> <span class="n">j</span> <span class="o">&lt;</span> <span class="mi">100_000</span><span class="o">;</span> <span class="n">j</span><span class="o">++)</span> 
-<span class="o">{</span> <span class="kt">long</span> <span class="n">current</span> <span class="o">=</span> <span class="o">(</span><span class="kt">long</span><span class="o">)</span> <span class="no">LONG_VH</span><span class="o">.</span><span class="na">get</span><span class="o">(</span><span class="n">counter</span><span class="o">,</span> <span class="mi">0L</span><span class="o">);</span> 
-<span class="c1">// leggi LONG_VH.set(counter, 0L, current + 1); </span>
-<span class="c1">// scrivi: data race! }</span>
- <span class="o">}</span>
-<span class="o">);</span> <span class="o">}</span>
- <span class="n">exec</span><span class="o">.</span><span class="na">shutdown</span><span class="o">();</span> <span class="n">exec</span><span class="o">.</span><span class="na">awaitTermination</span><span class="o">(</span><span class="mi">5</span><span class="o">,</span> <span class="nc">TimeUnit</span><span class="o">.</span><span class="na">SECONDS</span><span class="o">);</span> <span class="kt">long</span> <span class="n">result</span> <span class="o">=</span>
-<span class="o">(</span><span class="kt">long</span><span class="o">)</span> <span class="no">LONG_VH</span><span class="o">.</span><span class="na">get</span><span class="o">(</span><span class="n">counter</span><span class="o">,</span> <span class="mi">0L</span><span class="o">);</span>
-<span class="c1">// Risultato atteso: 200_000, ma sarà &lt; 200_000 a causa del race condition</span>
-<span class="c1">// log.info("Counter finale (con race):</span>
-<span class="o">{}</span>
-<span class="err">"</span><span class="o">,</span> <span class="n">result</span><span class="o">);</span> 
-<span class="c1">// CORRETTO: uso getAndAdd atomico long correctResult = (long)</span>
-<span class="c1">// LONG_VH.getAndAdd(counter, 0L, 1L);</span>
-<span class="c1">// CAS atomico }</span>
- 
-<span class="o">*</span> <span class="nc">Per</span> <span class="n">strutture</span> <span class="n">dati</span> <span class="n">più</span> <span class="n">complesse</span><span class="o">,</span> <span class="n">uso</span> <span class="n">un</span> <span class="n">lock</span> <span class="n">esplicito</span> <span class="o">+</span> <span class="n">barriere</span> <span class="n">di</span> <span class="nl">memoria:</span>
-<span class="o">*</span> <span class="o">*/</span>
- <span class="kd">public</span> <span class="kt">void</span> <span class="nf">atomicUpdate</span><span class="o">(</span><span class="nc">String</span> <span class="n">key</span><span class="o">,</span> <span class="kt">int</span> <span class="n">delta</span><span class="o">)</span> 
-<span class="o">{</span> <span class="nc">MemorySegment</span> <span class="n">segment</span> <span class="o">=</span> <span class="n">index</span><span class="o">.</span><span class="na">get</span><span class="o">(</span><span class="n">key</span><span class="o">);</span> <span class="k">if</span> <span class="o">(</span><span class="n">segment</span> <span class="o">==</span> <span class="kc">null</span><span class="o">)</span> <span class="k">return</span><span class="o">;</span> <span class="kt">int</span>
-<span class="n">current</span><span class="o">,</span> <span class="n">newValue</span><span class="o">;</span> <span class="k">do</span>
-<span class="o">{</span> <span class="n">current</span> <span class="o">=</span> <span class="o">(</span><span class="kt">int</span><span class="o">)</span> <span class="no">INT_VH</span><span class="o">.</span><span class="na">getVolatile</span><span class="o">(</span><span class="n">segment</span><span class="o">,</span> <span class="mi">0L</span><span class="o">);</span> <span class="n">newValue</span> <span class="o">=</span> <span class="n">current</span> <span class="o">+</span> <span class="n">delta</span><span class="o">;</span> <span class="o">}</span>
- <span class="k">while</span> <span class="o">(!</span><span class="no">INT_VH</span><span class="o">.</span><span class="na">compareAndSet</span><span class="o">(</span><span class="n">segment</span><span class="o">,</span> <span class="mi">0L</span><span class="o">,</span> <span class="n">current</span><span class="o">,</span> <span class="n">newValue</span><span class="o">));</span> 
-<span class="c1">// CAS loop lock-free }</span>
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+</pre></td><td class="rouge-code"><pre><span class="cm">/* Implemento un dizionario in-memory thread-safe che usa memoria nativa per i
+    valori. La chiave è in Java (String), il valore è in memoria nativa per
+    evitare pressione sul GC. */</span>
+<span class="nd">@Component</span> <span class="kd">public</span> <span class="kd">class</span> <span class="nc">NativeKeyValueStore</span> <span class="o">{</span>
+    <span class="kd">private</span> <span class="kd">final</span> <span class="nc">Arena</span> <span class="n">sharedArena</span> <span class="o">=</span> <span class="nc">Arena</span><span class="o">.</span><span class="na">ofShared</span><span class="o">();</span>
+    <span class="kd">private</span> <span class="kd">final</span> <span class="nc">ConcurrentHashMap</span><span class="o">&lt;</span><span class="nc">String</span><span class="o">,</span> <span class="nc">MemorySegment</span><span class="o">&gt;</span> <span class="n">index</span> <span class="o">=</span> <span class="k">new</span>
+        <span class="nc">ConcurrentHashMap</span><span class="o">&lt;&gt;();</span>
+    <span class="kd">private</span> <span class="kd">static</span> <span class="kd">final</span> <span class="nc">VarHandle</span> <span class="no">INT_VH</span> <span class="o">=</span> <span class="nc">ValueLayout</span><span class="o">.</span><span class="na">JAVA_INT</span><span class="o">.</span><span class="na">varHandle</span><span class="o">();</span>
+    <span class="kd">private</span> <span class="kd">static</span> <span class="kd">final</span> <span class="nc">VarHandle</span> <span class="no">LONG_VH</span> <span class="o">=</span> <span class="nc">ValueLayout</span><span class="o">.</span><span class="na">JAVA_LONG</span><span class="o">.</span><span class="na">varHandle</span><span class="o">();</span>
+    <span class="cm">/* Scrittura con semantica "release": garantisce che tutte le scritture
+        precedenti siano visibili agli altri thread prima che il valore sia
+        considerato "pubblicato". */</span>
+    <span class="kd">public</span> <span class="kt">void</span> <span class="nf">put</span><span class="o">(</span><span class="nc">String</span> <span class="n">key</span><span class="o">,</span> <span class="kt">int</span> <span class="n">value</span><span class="o">)</span> <span class="o">{</span>
+        <span class="nc">MemorySegment</span> <span class="n">segment</span> <span class="o">=</span> <span class="n">index</span><span class="o">.</span><span class="na">computeIfAbsent</span><span class="o">(</span><span class="n">key</span><span class="o">,</span> <span class="n">k</span> <span class="o">-&gt;</span>
+            <span class="n">sharedArena</span><span class="o">.</span><span class="na">allocate</span><span class="o">(</span><span class="nc">ValueLayout</span><span class="o">.</span><span class="na">JAVA_INT</span><span class="o">));</span>
+        <span class="c1">// setRelease: barriera di memoria in scrittura // Gli altri thread che</span>
+            <span class="n">fanno</span> <span class="n">getAcquire</span> <span class="n">vedranno</span> <span class="n">questo</span> <span class="n">valore</span> <span class="n">aggiornato</span>
+            <span class="no">INT_VH</span><span class="o">.</span><span class="na">setRelease</span><span class="o">(</span><span class="n">segment</span><span class="o">,</span> <span class="mi">0L</span><span class="o">,</span> <span class="n">value</span><span class="o">)</span>
+        <span class="o">;</span>
+    <span class="o">}</span>
+    <span class="cm">/* Lettura con semantica "acquire": garantisce che il thread veda tutti i
+        dati scritti prima del setRelease corrispondente. */</span>
+    <span class="kd">public</span> <span class="kt">int</span> <span class="nf">get</span><span class="o">(</span><span class="nc">String</span> <span class="n">key</span><span class="o">)</span> <span class="o">{</span>
+        <span class="nc">MemorySegment</span> <span class="n">segment</span> <span class="o">=</span> <span class="n">index</span><span class="o">.</span><span class="na">get</span><span class="o">(</span><span class="n">key</span><span class="o">);</span>
+        <span class="k">if</span> <span class="o">(</span><span class="n">segment</span> <span class="o">==</span> <span class="kc">null</span><span class="o">)</span> <span class="k">throw</span> <span class="k">new</span> <span class="nc">KeyNotFoundException</span><span class="o">(</span><span class="n">key</span><span class="o">);</span>
+        <span class="c1">// getAcquire: barriera di memoria in lettura</span>
+        <span class="k">return</span> <span class="o">(</span><span class="kt">int</span><span class="o">)</span> <span class="no">INT_VH</span><span class="o">.</span><span class="na">getAcquire</span><span class="o">(</span><span class="n">segment</span><span class="o">,</span> <span class="mi">0L</span><span class="o">);</span>
+    <span class="o">}</span>
+    <span class="cm">/* Per operazioni atomiche CAS (Compare-And-Swap) sulla memoria nativa: */</span>
+    <span class="kd">public</span> <span class="kt">boolean</span> <span class="nf">compareAndSet</span><span class="o">(</span><span class="nc">String</span> <span class="n">key</span><span class="o">,</span> <span class="kt">int</span> <span class="n">expectedValue</span><span class="o">,</span> <span class="kt">int</span> <span class="n">newValue</span><span class="o">)</span> <span class="o">{</span>
+        <span class="nc">MemorySegment</span> <span class="n">segment</span> <span class="o">=</span> <span class="n">index</span><span class="o">.</span><span class="na">get</span><span class="o">(</span><span class="n">key</span><span class="o">);</span>
+        <span class="k">if</span> <span class="o">(</span><span class="n">segment</span> <span class="o">==</span> <span class="kc">null</span><span class="o">)</span> <span class="k">return</span> <span class="kc">false</span><span class="o">;</span>
+        <span class="k">return</span> <span class="no">INT_VH</span><span class="o">.</span><span class="na">compareAndSet</span><span class="o">(</span><span class="n">segment</span><span class="o">,</span> <span class="mi">0L</span><span class="o">,</span> <span class="n">expectedValue</span><span class="o">,</span> <span class="n">newValue</span><span class="o">);</span>
+    <span class="o">}</span>
+    <span class="cm">/* Esempio di data race da EVITARE: accesso non sincronizzato da thread
+        multipli. */</span>
+    <span class="nd">@Test</span> <span class="kd">public</span> <span class="kt">void</span> <span class="nf">demonstrateDataRace</span><span class="o">()</span> <span class="kd">throws</span> <span class="nc">Exception</span> <span class="o">{</span>
+        <span class="nc">Arena</span> <span class="n">sharedArena</span> <span class="o">=</span> <span class="nc">Arena</span><span class="o">.</span><span class="na">ofShared</span><span class="o">();</span>
+        <span class="nc">MemorySegment</span> <span class="n">counter</span> <span class="o">=</span> <span class="n">sharedArena</span><span class="o">.</span><span class="na">allocate</span><span class="o">(</span><span class="nc">ValueLayout</span><span class="o">.</span><span class="na">JAVA_LONG</span><span class="o">);</span>
+        <span class="c1">// SBAGLIATO: due thread incrementano il counter senza sincronizzazione</span>
+            <span class="nc">ExecutorService</span> <span class="n">exec</span> <span class="o">=</span> <span class="nc">Executors</span><span class="o">.</span><span class="na">newFixedThreadPool</span><span class="o">(</span><span class="mi">2</span><span class="o">)</span>
+        <span class="o">;</span>
+        <span class="k">for</span> <span class="o">(</span><span class="kt">int</span> <span class="n">i</span> <span class="o">=</span> <span class="mi">0</span><span class="o">;</span>
+        <span class="n">i</span> <span class="o">&lt;</span> <span class="mi">2</span><span class="o">;</span>
+        <span class="n">i</span><span class="o">++)</span> <span class="o">{</span>
+            <span class="n">exec</span><span class="o">.</span><span class="na">submit</span><span class="o">(()</span> <span class="o">-&gt;</span> <span class="o">{</span>
+                <span class="k">for</span> <span class="o">(</span><span class="kt">int</span> <span class="n">j</span> <span class="o">=</span> <span class="mi">0</span><span class="o">;</span>
+                <span class="n">j</span> <span class="o">&lt;</span> <span class="mi">100_000</span><span class="o">;</span>
+                <span class="n">j</span><span class="o">++)</span> <span class="o">{</span>
+                    <span class="kt">long</span> <span class="n">current</span> <span class="o">=</span> <span class="o">(</span><span class="kt">long</span><span class="o">)</span> <span class="no">LONG_VH</span><span class="o">.</span><span class="na">get</span><span class="o">(</span><span class="n">counter</span><span class="o">,</span> <span class="mi">0L</span><span class="o">);</span>
+                    <span class="c1">// leggi LONG_VH.set(counter, 0L, current + 1)</span>
+                    <span class="o">;</span>
+                    <span class="c1">// scrivi: data race!</span>
+                <span class="o">}</span>
+            <span class="o">}</span>
+            <span class="o">);</span>
+        <span class="o">}</span>
+        <span class="n">exec</span><span class="o">.</span><span class="na">shutdown</span><span class="o">();</span>
+        <span class="n">exec</span><span class="o">.</span><span class="na">awaitTermination</span><span class="o">(</span><span class="mi">5</span><span class="o">,</span> <span class="nc">TimeUnit</span><span class="o">.</span><span class="na">SECONDS</span><span class="o">);</span>
+        <span class="kt">long</span> <span class="n">result</span> <span class="o">=</span> <span class="o">(</span><span class="kt">long</span><span class="o">)</span> <span class="no">LONG_VH</span><span class="o">.</span><span class="na">get</span><span class="o">(</span><span class="n">counter</span><span class="o">,</span> <span class="mi">0L</span><span class="o">);</span>
+        <span class="c1">// Risultato atteso: 200_000, ma sarà &lt; 200_000 a causa del race</span>
+            <span class="n">condition</span> <span class="n">log</span><span class="o">.</span><span class="na">info</span><span class="o">(</span><span class="s">"Counter finale (con race):
+        {
+        }
+        "</span><span class="o">,</span> <span class="n">result</span><span class="o">);</span>
+        <span class="c1">// CORRETTO: uso getAndAdd atomico long correctResult = (long)</span>
+            <span class="no">LONG_VH</span><span class="o">.</span><span class="na">getAndAdd</span><span class="o">(</span><span class="n">counter</span><span class="o">,</span> <span class="mi">0L</span><span class="o">,</span> <span class="mi">1L</span><span class="o">)</span>
+        <span class="o">;</span>
+        <span class="c1">// CAS atomico</span>
+    <span class="o">}</span>
+    <span class="cm">/* Per strutture dati più complesse, uso un lock esplicito + barriere di
+        memoria: */</span>
+    <span class="kd">public</span> <span class="kt">void</span> <span class="nf">atomicUpdate</span><span class="o">(</span><span class="nc">String</span> <span class="n">key</span><span class="o">,</span> <span class="kt">int</span> <span class="n">delta</span><span class="o">)</span> <span class="o">{</span>
+        <span class="nc">MemorySegment</span> <span class="n">segment</span> <span class="o">=</span> <span class="n">index</span><span class="o">.</span><span class="na">get</span><span class="o">(</span><span class="n">key</span><span class="o">);</span>
+        <span class="k">if</span> <span class="o">(</span><span class="n">segment</span> <span class="o">==</span> <span class="kc">null</span><span class="o">)</span> <span class="k">return</span><span class="o">;</span>
+        <span class="kt">int</span> <span class="n">current</span><span class="o">,</span> <span class="n">newValue</span><span class="o">;</span>
+        <span class="k">do</span> <span class="o">{</span>
+            <span class="n">current</span> <span class="o">=</span> <span class="o">(</span><span class="kt">int</span><span class="o">)</span> <span class="no">INT_VH</span><span class="o">.</span><span class="na">getVolatile</span><span class="o">(</span><span class="n">segment</span><span class="o">,</span> <span class="mi">0L</span><span class="o">);</span>
+            <span class="n">newValue</span> <span class="o">=</span> <span class="n">current</span> <span class="o">+</span> <span class="n">delta</span><span class="o">;</span>
+        <span class="o">}</span>
+        <span class="k">while</span> <span class="o">(!</span><span class="no">INT_VH</span><span class="o">.</span><span class="na">compareAndSet</span><span class="o">(</span><span class="n">segment</span><span class="o">,</span> <span class="mi">0L</span><span class="o">,</span> <span class="n">current</span><span class="o">,</span> <span class="n">newValue</span><span class="o">));</span>
+        <span class="c1">// CAS loop lock-free</span>
+    <span class="o">}</span>
 </pre></td></tr></tbody></table></code></pre></div></div>
 
         </article>

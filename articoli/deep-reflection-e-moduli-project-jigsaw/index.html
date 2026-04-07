@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Deep Reflection e Moduli (Project Jigsaw) — DevLog</title>
-    <meta name="description" content="Da Java 9, l'incapsulamento è diventato reale: non si può più accedere ai campi privati di librerie esterne se il modulo non lo permette. Gestire gli errori di 'Access Denied' usando i flag --add-opens è la soluzione immediata, ma la reflection 'prof
+    <meta name="description" content="Da Java 9, l'incapsulamento è diventato reale: non si può più accedere ai campi privati di librerie esterne se il modulo non lo permette. Gestire gli errori di "Access Denied" usando i flag --add-opens è la soluzione immediata, ma la reflection "prof
 ">
     <link rel="stylesheet" href="/appuntidiprogrammazione/assets/css/style.css">
 
@@ -144,71 +144,61 @@
 53
 54
 55
-56
-57
-58
-59
-60
-</pre></td><td class="rouge-code"><pre><span class="o">*</span> <span class="nc">Definisco</span> <span class="n">il</span> <span class="n">module</span><span class="o">-</span><span class="n">info</span><span class="o">.</span><span class="na">java</span> <span class="n">con</span> <span class="n">aperture</span> <span class="n">selettive</span> <span class="n">e</span> <span class="n">granulari</span><span class="o">.</span> <span class="nc">Apro</span> <span class="n">solo</span> <span class="n">i</span>
-<span class="o">*</span> <span class="n">pacchetti</span> <span class="n">strettamente</span> <span class="n">necessari</span> <span class="n">e</span> <span class="n">solo</span> <span class="n">ai</span> <span class="n">moduli</span> <span class="n">che</span> <span class="n">li</span> <span class="n">richiedono</span><span class="o">,</span> <span class="n">evitando</span>
-<span class="o">*</span> <span class="n">aperture</span> <span class="n">globali</span> <span class="n">che</span> <span class="n">annullerebbero</span> <span class="n">i</span> <span class="n">benefici</span> <span class="n">di</span> <span class="nc">Jigsaw</span><span class="o">.</span> <span class="o">*/</span>
- <span class="n">module</span> <span class="n">com</span><span class="o">.</span><span class="na">myapp</span> 
-<span class="o">{</span> 
-<span class="c1">// Esporto l'API pubblica: visibile a tutti i moduli che dichiarano la</span>
-<span class="c1">// dipendenza exports com.myapp.api; exports com.myapp.model;</span>
-<span class="c1">// Apro il package model a Jackson per la serializzazione/deserializzazione: </span>
-<span class="c1">// Jackson ha bisogno di accedere ai campi privati per costruire gli oggetti</span>
-<span class="c1">// opens com.myapp.model to com.fasterxml.jackson.databind;</span>
-<span class="c1">// Apro il package config a Spring per l'iniezione delle dipendenze opens</span>
-<span class="c1">// com.myapp.config to spring.core, spring.beans, spring.context;</span>
-<span class="c1">// Apro il package service a Spring AOP per la generazione dei proxy</span>
-<span class="c1">// CGLIB/ByteBuddy opens com.myapp.service to spring.aop, net.bytebuddy;</span>
-<span class="c1">// NON apro com.myapp.internal: rimane completamente incapsulato }</span>
- 
-<span class="o">*</span> <span class="nc">Per</span> <span class="n">le</span> <span class="n">librerie</span> <span class="n">legacy</span> <span class="n">che</span> <span class="n">usano</span> <span class="n">reflection</span> <span class="n">senza</span> <span class="n">essere</span> <span class="n">module</span><span class="o">-</span><span class="n">aware</span><span class="o">,</span>
-<span class="o">*</span> <span class="n">aggiungo</span> <span class="o">--</span><span class="n">add</span><span class="o">-</span><span class="n">opens</span> <span class="n">nella</span> <span class="n">stringa</span> <span class="n">di</span> <span class="n">avvio</span> <span class="no">JVM</span> <span class="n">come</span> <span class="n">soluzione</span> <span class="nl">temporanea:</span> <span class="o">*/</span>
- 
-<span class="c1">// java --add-opens java.base/java.lang=ALL-UNNAMED </span>
-<span class="c1">// --add-opens java.base/java.util=ALL-UNNAMED </span>
-<span class="c1">// --add-opens java.base/sun.nio.ch=ALL-UNNAMED </span>
-<span class="c1">// -jar legacy-app.jar </span>
-<span class="o">*</span> <span class="nc">In</span> <span class="nc">Spring</span> <span class="nc">Boot</span> <span class="mi">3</span><span class="o">.</span><span class="na">x</span> <span class="n">con</span> <span class="n">moduli</span> <span class="nc">Java</span><span class="o">,</span> <span class="n">configuro</span> <span class="n">il</span> <span class="n">pom</span><span class="o">.</span><span class="na">xml</span> <span class="n">per</span> <span class="n">passare</span>
-<span class="o">*</span> <span class="n">automaticamente</span> <span class="n">i</span> <span class="o">--</span><span class="n">add</span><span class="o">-</span><span class="n">opens</span> <span class="n">al</span> <span class="n">plugin</span> <span class="n">maven</span><span class="o">-</span><span class="n">surefire</span> <span class="n">per</span> <span class="n">i</span> <span class="nl">test:</span> <span class="o">*/</span>
- 
-<span class="c1">// &lt;plugin&gt; </span>
-<span class="c1">// &lt;groupId&gt;org.apache.maven.plugins&lt;/groupId&gt; </span>
-<span class="c1">// &lt;artifactId&gt;maven-surefire-plugin&lt;/artifactId&gt; </span>
-<span class="c1">// &lt;configuration&gt; </span>
-<span class="c1">// &lt;argLine&gt; </span>
-<span class="c1">// --add-opens java.base/java.lang=ALL-UNNAMED </span>
-<span class="c1">// --add-opens java.base/java.util=ALL-UNNAMED </span>
-<span class="c1">// &lt;/argLine&gt; </span>
-<span class="c1">// &lt;/configuration&gt; </span>
-<span class="c1">// &lt;/plugin&gt; </span>
-<span class="o">*</span> <span class="nc">Individuo</span> <span class="n">automaticamente</span> <span class="n">le</span> <span class="n">violazioni</span> <span class="n">di</span> <span class="n">accesso</span> <span class="n">ai</span> <span class="n">moduli</span> <span class="n">nei</span> <span class="n">log</span> <span class="n">di</span> <span class="nl">avvio:</span>
-<span class="o">*</span> <span class="o">*/</span>
- <span class="nd">@EventListener</span><span class="o">(</span><span class="nc">ApplicationStartedEvent</span><span class="o">.</span><span class="na">class</span><span class="o">)</span> <span class="kd">public</span> <span class="kt">void</span> <span class="nf">checkModuleAccess</span><span class="o">()</span> 
-<span class="o">{</span> <span class="nc">ModuleLayer</span> <span class="n">layer</span> <span class="o">=</span> <span class="nc">ModuleLayer</span><span class="o">.</span><span class="na">boot</span><span class="o">();</span> 
-<span class="c1">// Verifico che i moduli critici siano accessibili per evitare sorprese a</span>
-<span class="c1">// runtime layer.findModule("com.fasterxml.jackson.databind").ifPresentOrElse( m</span>
-<span class="c1">// -&gt; log.info("Jackson module trovato:</span>
-<span class="o">{}</span>
-<span class="s">", m.getName()), () -&gt; log.warn("</span><span class="nc">Jackson</span> <span class="n">module</span> <span class="n">non</span> <span class="n">trovato</span> <span class="n">nel</span> <span class="nl">ModuleLayer:</span>
-<span class="n">possibili</span> <span class="n">problemi</span> <span class="n">di</span> <span class="n">serializzazione</span><span class="s">") ); }
- 
-/* Strategia di migrazione graduale da classpath a module path: */
- 
-// Fase 1: avvio ancora sul classpath (--class-path) per garantire compatibilità
-// Fase 2: aggiungo module-info.java con aperture ampie (opens com.myapp to ALL-
-// UNNAMED)
-// Fase 3: restringo progressivamente le aperture modulo per modulo 
-// Fase 4: rimuovo tutti gli --add-opens dalla stringa di avvio 
-* Verifico a compile time che non ci siano dipendenze da API interne del JDK
-* usando jdeps: */
- 
-// jdeps --jdk-internals --multi-release 17 target/myapp.jar 
-// Output: se vedo "</span><span class="no">JDK</span> <span class="n">internal</span> <span class="no">API</span><span class="err">"</span> <span class="n">devo</span> <span class="n">sostituire</span> <span class="n">con</span> <span class="no">API</span> <span class="n">pubbliche</span> <span class="n">prima</span> <span class="n">di</span>
-<span class="c1">// Java 21</span>
+</pre></td><td class="rouge-code"><pre><span class="cm">/* Definisco il module-info.java con aperture selettive e granulari. Apro solo i
+    pacchetti strettamente necessari e solo ai moduli che li richiedono,
+    evitando aperture globali che annullerebbero i benefici di Jigsaw. */</span>
+<span class="n">module</span> <span class="n">com</span><span class="o">.</span><span class="na">myapp</span> <span class="o">{</span>
+    <span class="c1">// Esporto l'API pubblica: visibile a tutti i moduli che dichiarano la</span>
+        <span class="n">dipendenza</span> <span class="n">exports</span> <span class="n">com</span><span class="o">.</span><span class="na">myapp</span><span class="o">.</span><span class="na">api</span>
+    <span class="o">;</span>
+    <span class="n">exports</span> <span class="n">com</span><span class="o">.</span><span class="na">myapp</span><span class="o">.</span><span class="na">model</span><span class="o">;</span>
+    <span class="c1">// Apro il package model a Jackson per la serializzazione/deserializzazione:</span>
+        <span class="c1">// Jackson ha bisogno di accedere ai campi privati per costruire gli</span>
+        <span class="n">oggetti</span> <span class="n">opens</span> <span class="n">com</span><span class="o">.</span><span class="na">myapp</span><span class="o">.</span><span class="na">model</span> <span class="n">to</span> <span class="n">com</span><span class="o">.</span><span class="na">fasterxml</span><span class="o">.</span><span class="na">jackson</span><span class="o">.</span><span class="na">databind</span>
+    <span class="o">;</span>
+    <span class="c1">// Apro il package config a Spring per l'iniezione delle dipendenze opens</span>
+        <span class="n">com</span><span class="o">.</span><span class="na">myapp</span><span class="o">.</span><span class="na">config</span> <span class="n">to</span> <span class="n">spring</span><span class="o">.</span><span class="na">core</span><span class="o">,</span> <span class="n">spring</span><span class="o">.</span><span class="na">beans</span><span class="o">,</span> <span class="n">spring</span><span class="o">.</span><span class="na">context</span>
+    <span class="o">;</span>
+    <span class="c1">// Apro il package service a Spring AOP per la generazione dei proxy</span>
+        <span class="no">CGLIB</span><span class="o">/</span><span class="nc">ByteBuddy</span> <span class="n">opens</span> <span class="n">com</span><span class="o">.</span><span class="na">myapp</span><span class="o">.</span><span class="na">service</span> <span class="n">to</span> <span class="n">spring</span><span class="o">.</span><span class="na">aop</span><span class="o">,</span> <span class="n">net</span><span class="o">.</span><span class="na">bytebuddy</span>
+    <span class="o">;</span>
+    <span class="c1">// NON apro com.myapp.internal: rimane completamente incapsulato</span>
+<span class="o">}</span>
+<span class="cm">/* Per le librerie legacy che usano reflection senza essere module-aware,
+    aggiungo --add-opens nella stringa di avvio JVM come soluzione temporanea:
+    */</span>
+<span class="c1">// java --add-opens java.base/java.lang=ALL-UNNAMED // --add-opens</span>
+    <span class="n">java</span><span class="o">.</span><span class="na">base</span><span class="o">/</span><span class="n">java</span><span class="o">.</span><span class="na">util</span><span class="o">=</span><span class="no">ALL</span><span class="o">-</span><span class="no">UNNAMED</span> <span class="c1">// --add-opens</span>
+    <span class="n">java</span><span class="o">.</span><span class="na">base</span><span class="o">/</span><span class="n">sun</span><span class="o">.</span><span class="na">nio</span><span class="o">.</span><span class="na">ch</span><span class="o">=</span><span class="no">ALL</span><span class="o">-</span><span class="no">UNNAMED</span> <span class="c1">// -jar legacy-app.jar /* In Spring Boot</span>
+    <span class="mi">3</span><span class="o">.</span><span class="na">x</span> <span class="n">con</span> <span class="n">moduli</span> <span class="nc">Java</span><span class="o">,</span> <span class="n">configuro</span> <span class="n">il</span> <span class="n">pom</span><span class="o">.</span><span class="na">xml</span> <span class="n">per</span> <span class="n">passare</span> <span class="n">automaticamente</span> <span class="n">i</span>
+    <span class="o">--</span><span class="n">add</span><span class="o">-</span><span class="n">opens</span> <span class="n">al</span> <span class="n">plugin</span> <span class="n">maven</span><span class="o">-</span><span class="n">surefire</span> <span class="n">per</span> <span class="n">i</span> <span class="nl">test:</span> <span class="o">*/</span> <span class="c1">// &lt;plugin&gt; //</span>
+    <span class="o">&lt;</span><span class="n">groupId</span><span class="o">&gt;</span><span class="n">org</span><span class="o">.</span><span class="na">apache</span><span class="o">.</span><span class="na">maven</span><span class="o">.</span><span class="na">plugins</span><span class="o">&lt;/</span><span class="n">groupId</span><span class="o">&gt;</span> <span class="c1">//</span>
+    <span class="o">&lt;</span><span class="n">artifactId</span><span class="o">&gt;</span><span class="n">maven</span><span class="o">-</span><span class="n">surefire</span><span class="o">-</span><span class="n">plugin</span><span class="o">&lt;/</span><span class="n">artifactId</span><span class="o">&gt;</span> <span class="c1">// &lt;configuration&gt; //</span>
+    <span class="o">&lt;</span><span class="n">argLine</span><span class="o">&gt;</span> <span class="c1">// --add-opens java.base/java.lang=ALL-UNNAMED // --add-opens</span>
+    <span class="n">java</span><span class="o">.</span><span class="na">base</span><span class="o">/</span><span class="n">java</span><span class="o">.</span><span class="na">util</span><span class="o">=</span><span class="no">ALL</span><span class="o">-</span><span class="no">UNNAMED</span> <span class="c1">// &lt;/argLine&gt; // &lt;/configuration&gt; //</span>
+    <span class="o">&lt;/</span><span class="n">plugin</span><span class="o">&gt;</span> <span class="cm">/* Individuo automaticamente le violazioni di accesso ai moduli
+    nei log di avvio: */</span> <span class="nd">@EventListener</span><span class="o">(</span><span class="nc">ApplicationStartedEvent</span><span class="o">.</span><span class="na">class</span><span class="o">)</span> <span class="kd">public</span>
+    <span class="kt">void</span> <span class="nf">checkModuleAccess</span><span class="o">()</span>
+<span class="o">{</span>
+    <span class="nc">ModuleLayer</span> <span class="n">layer</span> <span class="o">=</span> <span class="nc">ModuleLayer</span><span class="o">.</span><span class="na">boot</span><span class="o">();</span>
+    <span class="c1">// Verifico che i moduli critici siano accessibili per evitare sorprese a</span>
+        <span class="n">runtime</span>
+        <span class="n">layer</span><span class="o">.</span><span class="na">findModule</span><span class="o">(</span><span class="s">"com.fasterxml.jackson.databind"</span><span class="o">).</span><span class="na">ifPresentOrElse</span><span class="o">(</span> <span class="n">m</span> <span class="o">-&gt;</span>
+        <span class="n">log</span><span class="o">.</span><span class="na">info</span><span class="o">(</span><span class="s">"Jackson module trovato:
+    {
+    }
+    "</span><span class="o">,</span> <span class="n">m</span><span class="o">.</span><span class="na">getName</span><span class="o">()),</span> <span class="o">()</span> <span class="o">-&gt;</span> <span class="n">log</span><span class="o">.</span><span class="na">warn</span><span class="o">(</span><span class="s">"Jackson module non trovato nel ModuleLayer:
+        possibili problemi di serializzazione"</span><span class="o">)</span> <span class="o">);</span>
+<span class="o">}</span>
+<span class="cm">/* Strategia di migrazione graduale da classpath a module path: */</span>
+<span class="c1">// Fase 1: avvio ancora sul classpath (--class-path) per garantire compatibilità</span>
+    <span class="c1">// Fase 2: aggiungo module-info.java con aperture ampie (opens com.myapp to</span>
+    <span class="no">ALL</span><span class="o">-</span><span class="no">UNNAMED</span><span class="o">)</span> <span class="c1">// Fase 3: restringo progressivamente le aperture modulo per</span>
+    <span class="n">modulo</span> <span class="c1">// Fase 4: rimuovo tutti gli --add-opens dalla stringa di avvio /*</span>
+    <span class="nc">Verifico</span> <span class="n">a</span> <span class="n">compile</span> <span class="n">time</span> <span class="n">che</span> <span class="n">non</span> <span class="n">ci</span> <span class="n">siano</span> <span class="n">dipendenze</span> <span class="n">da</span> <span class="no">API</span> <span class="n">interne</span> <span class="n">del</span> <span class="no">JDK</span>
+    <span class="n">usando</span> <span class="nl">jdeps:</span> <span class="o">*/</span> <span class="c1">// jdeps --jdk-internals --multi-release 17</span>
+    <span class="n">target</span><span class="o">/</span><span class="n">myapp</span><span class="o">.</span><span class="na">jar</span> <span class="c1">// Output: se vedo "JDK internal API" devo sostituire con</span>
+    <span class="no">API</span> <span class="n">pubbliche</span> <span class="n">prima</span> <span class="n">di</span> <span class="nc">Java</span> <span class="mi">21</span>
 </pre></td></tr></tbody></table></code></pre></div></div>
 
         </article>

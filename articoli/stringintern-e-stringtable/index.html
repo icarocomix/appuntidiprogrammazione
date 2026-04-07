@@ -180,97 +180,127 @@
 89
 90
 91
-</pre></td><td class="rouge-code"><pre><span class="o">*</span> <span class="nc">Configuro</span> <span class="n">la</span> <span class="no">JVM</span> <span class="n">con</span> <span class="n">una</span> <span class="nc">StringTable</span> <span class="n">più</span> <span class="n">grande</span> <span class="n">per</span> <span class="n">supportare</span> <span class="n">l</span><span class="err">'</span><span class="n">interning</span>
-<span class="o">*</span> <span class="n">massivo</span> <span class="n">senza</span> <span class="n">degradare</span> <span class="n">le</span> <span class="n">performance</span> <span class="n">di</span> <span class="n">lookup</span><span class="o">.</span> <span class="nc">Il</span> <span class="n">valore</span> <span class="n">deve</span> <span class="n">essere</span> <span class="n">un</span>
-<span class="o">*</span> <span class="n">numero</span> <span class="n">primo</span> <span class="n">per</span> <span class="n">minimizzare</span> <span class="n">le</span> <span class="n">collisioni</span> <span class="n">nella</span> <span class="n">tabella</span> <span class="n">hash</span> <span class="n">nativa</span><span class="o">.</span> <span class="o">*/</span>
- 
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+106
+</pre></td><td class="rouge-code"><pre><span class="cm">/* Configuro la JVM con una StringTable più grande per supportare l'interning
+    massivo senza degradare le performance di lookup. Il valore deve essere un
+    numero primo per minimizzare le collisioni nella tabella hash nativa. */</span>
 <span class="c1">// java -XX:StringTableSize=1000003 -XX:+PrintStringTableStatistics -jar</span>
-<span class="c1">// reporting-app.jar</span>
-<span class="o">*</span> <span class="nc">PrintStringTableStatistics</span> <span class="n">stampa</span> <span class="n">le</span> <span class="n">statistiche</span> <span class="n">della</span> <span class="n">tabella</span> <span class="n">all</span><span class="err">'</span><span class="n">uscita</span>
-<span class="o">*</span> <span class="n">della</span> <span class="nl">JVM:</span> <span class="o">*/</span>
- 
-<span class="c1">// StringTable statistics: </span>
-<span class="c1">// Number of buckets: 1000003 = 8000024 bytes, avg 8.000 </span>
-<span class="c1">// Number of entries: 245678 = 5896272 bytes, avg 24.000 </span>
-<span class="c1">// Average bucket size: 0.246 </span>
-<span class="c1">// Variance of bucket size: 0.247 </span>
-<span class="c1">// Std. dev. of bucket size: 0.497 </span>
-<span class="o">*</span> <span class="nc">Implemento</span> <span class="n">un</span> <span class="n">layer</span> <span class="n">di</span> <span class="n">interning</span> <span class="n">controllato</span> <span class="n">che</span> <span class="n">interna</span> <span class="n">solo</span> <span class="n">le</span> <span class="n">stringhe</span> <span class="n">che</span>
-<span class="o">*</span> <span class="n">so</span> <span class="n">essere</span> <span class="n">ripetitive</span><span class="o">,</span> <span class="n">evitando</span> <span class="n">di</span> <span class="n">internare</span> <span class="n">stringhe</span> <span class="n">arbitrarie</span> <span class="n">che</span>
-<span class="o">*</span> <span class="n">saturerebbero</span> <span class="n">la</span> <span class="nl">StringTable:</span> <span class="o">*/</span>
- <span class="nd">@Component</span> <span class="kd">public</span> <span class="kd">class</span> <span class="nc">StringInternService</span> 
-<span class="o">{</span> 
-<span class="c1">// Lista delle colonne che so essere a bassa cardinalità (pochi valori distinti,</span>
-<span class="c1">// molte ripetizioni) private static final Set&lt;String&gt; LOW_CARDINALITY_COLUMNS =</span>
-<span class="c1">// Set.of( "status", "currency", "country", "payment_method", "order_type" );</span>
-<span class="o">*</span> <span class="nc">Interno</span> <span class="n">solo</span> <span class="n">i</span> <span class="n">valori</span> <span class="n">di</span> <span class="n">colonne</span> <span class="n">note</span> <span class="n">come</span> <span class="n">ripetitive</span><span class="o">.</span> <span class="nc">Per</span> <span class="n">le</span> <span class="n">altre</span> <span class="n">colonne</span><span class="o">,</span>
-<span class="o">*</span> <span class="n">lascio</span> <span class="n">che</span> <span class="n">la</span> <span class="no">JVM</span> <span class="n">gestisca</span> <span class="n">la</span> <span class="n">memoria</span> <span class="n">normalmente</span> <span class="n">o</span> <span class="n">che</span> <span class="n">intervenga</span> <span class="n">la</span> <span class="nc">String</span>
-<span class="o">*</span> <span class="nc">Deduplication</span> <span class="n">di</span> <span class="no">G1</span><span class="o">.</span> <span class="o">*/</span>
- <span class="kd">public</span> <span class="nc">String</span> <span class="nf">internIfLowCardinality</span><span class="o">(</span><span class="nc">String</span> <span class="n">columnName</span><span class="o">,</span> <span class="nc">String</span> <span class="n">value</span><span class="o">)</span> 
-<span class="o">{</span> <span class="k">if</span> <span class="o">(</span><span class="n">value</span> <span class="o">==</span> <span class="kc">null</span><span class="o">)</span> <span class="k">return</span> <span class="kc">null</span><span class="o">;</span> <span class="k">if</span>
-<span class="o">(</span><span class="no">LOW_CARDINALITY_COLUMNS</span><span class="o">.</span><span class="na">contains</span><span class="o">(</span><span class="n">columnName</span><span class="o">))</span>
-<span class="o">{</span> <span class="k">return</span> <span class="n">value</span><span class="o">.</span><span class="na">intern</span><span class="o">();</span> 
-<span class="c1">// Condivido l'istanza con tutte le altre uguali }</span>
- <span class="k">return</span> <span class="n">value</span><span class="o">;</span> 
-<span class="c1">// Lascio al GC la gestione normale }</span>
- <span class="o">}</span>
- 
-<span class="o">*</span> <span class="nc">Uso</span> <span class="nf">intern</span><span class="o">()</span> <span class="n">nel</span> <span class="n">layer</span> <span class="n">di</span> <span class="n">mapping</span> <span class="n">dei</span> <span class="nc">ResultSet</span> <span class="n">per</span> <span class="n">evitare</span> <span class="n">duplicati</span> <span class="n">durante</span>
-<span class="o">*</span> <span class="n">il</span> <span class="n">caricamento</span> <span class="nl">bulk:</span> <span class="o">*/</span>
- <span class="nd">@Component</span> <span class="kd">public</span> <span class="kd">class</span> <span class="nc">ReportRowMapper</span> <span class="kd">implements</span> <span class="nc">RowMapper</span><span class="o">&lt;</span><span class="nc">ReportRow</span><span class="o">&gt;</span> 
-<span class="o">{</span> <span class="nd">@Override</span> <span class="kd">public</span> <span class="nc">ReportRow</span> <span class="nf">mapRow</span><span class="o">(</span><span class="nc">ResultSet</span> <span class="n">rs</span><span class="o">,</span> <span class="kt">int</span> <span class="n">rowNum</span><span class="o">)</span> <span class="kd">throws</span>
-<span class="nc">SQLException</span>
-<span class="o">{</span> <span class="k">return</span> <span class="k">new</span> <span class="nc">ReportRow</span><span class="o">(</span> <span class="n">rs</span><span class="o">.</span><span class="na">getLong</span><span class="o">(</span><span class="s">"id"</span><span class="o">),</span> <span class="n">rs</span><span class="o">.</span><span class="na">getString</span><span class="o">(</span><span class="s">"status"</span><span class="o">).</span><span class="na">intern</span><span class="o">(),</span> 
-<span class="c1">// "PENDING", "COMPLETED", "FAILED": ~3 valori distinti</span>
-<span class="c1">// rs.getString("currency").intern(),</span>
-<span class="c1">// "EUR", "USD", "GBP": ~5 valori distinti rs.getString("description") </span>
-<span class="c1">// Non interno: alta cardinalità, ogni riga è diversa ); }</span>
- <span class="o">}</span>
- 
-<span class="o">*</span> <span class="nc">Confronto</span> <span class="n">il</span> <span class="n">consumo</span> <span class="n">di</span> <span class="n">memoria</span> <span class="n">con</span> <span class="n">e</span> <span class="n">senza</span> <span class="n">interning</span> <span class="n">tramite</span> <span class="n">un</span> <span class="n">test</span>
-<span class="o">*</span> <span class="nl">dedicato:</span> <span class="o">*/</span>
- <span class="nd">@Test</span> <span class="kd">public</span> <span class="kt">void</span> <span class="nf">verifyInternMemoryGain</span><span class="o">()</span> 
-<span class="o">{</span> <span class="kt">int</span> <span class="n">rowCount</span> <span class="o">=</span> <span class="mi">1_000_000</span><span class="o">;</span> 
-<span class="c1">// Senza interning: 1M istanze diverse di "COMPLETED" List&lt;String&gt; withoutIntern</span>
-<span class="c1">// = new ArrayList&lt;&gt;(rowCount); for (int i = 0; i &lt; rowCount; i++)</span>
-<span class="o">{</span> <span class="n">withoutIntern</span><span class="o">.</span><span class="na">add</span><span class="o">(</span><span class="k">new</span> <span class="nc">String</span><span class="o">(</span><span class="s">"COMPLETED"</span><span class="o">));</span> 
-<span class="c1">// Forzo la creazione di istanze separate }</span>
- 
-<span class="c1">// Con interning: 1M riferimenti alla stessa istanza in StringTable List&lt;String&gt;</span>
-<span class="c1">// withIntern = new ArrayList&lt;&gt;(rowCount); for (int i = 0; i &lt; rowCount; i++)</span>
-<span class="o">{</span> <span class="n">withIntern</span><span class="o">.</span><span class="na">add</span><span class="o">(</span><span class="s">"COMPLETED"</span><span class="o">.</span><span class="na">intern</span><span class="o">());</span> 
-<span class="c1">// Tutti puntano alla stessa istanza }</span>
- 
-<span class="c1">// Verifico che le istanze internate siano identiche (stesso riferimento)</span>
-<span class="c1">// assertSame(withIntern.get(0), withIntern.get(999_999));</span>
-<span class="c1">// true: stessa istanza </span>
-<span class="c1">// Le istanze non internate sono uguali ma non identiche</span>
-<span class="c1">// assertNotSame(withoutIntern.get(0), withoutIntern.get(999_999));</span>
-<span class="c1">// true: istanze diverse }</span>
- 
-<span class="o">*</span> <span class="nc">Per</span> <span class="n">scenari</span> <span class="n">con</span> <span class="n">cardinalità</span> <span class="n">medio</span><span class="o">-</span><span class="n">alta</span> <span class="o">(</span><span class="n">es</span><span class="o">.</span> <span class="mf">10.000</span> <span class="n">valori</span> <span class="n">distinti</span> <span class="n">su</span> <span class="mi">10</span><span class="no">M</span>
-<span class="o">*</span> <span class="n">righe</span><span class="o">),</span> <span class="n">uso</span> <span class="n">una</span> <span class="nc">Map</span> <span class="n">come</span> <span class="n">intern</span> <span class="n">pool</span> <span class="n">manuale</span> <span class="n">invece</span> <span class="n">di</span> <span class="nc">String</span><span class="o">.</span><span class="na">intern</span><span class="o">(),</span> <span class="n">per</span>
-<span class="o">*</span> <span class="n">avere</span> <span class="n">controllo</span> <span class="n">sulla</span> <span class="nl">dimensione:</span> <span class="o">*/</span>
- <span class="nd">@Component</span> <span class="kd">public</span> <span class="kd">class</span> <span class="nc">BoundedInternPool</span> 
-<span class="o">{</span> <span class="kd">private</span> <span class="kd">final</span> <span class="kt">int</span> <span class="n">maxSize</span><span class="o">;</span> <span class="kd">private</span> <span class="kd">final</span> <span class="nc">ConcurrentHashMap</span><span class="o">&lt;</span><span class="nc">String</span><span class="o">,</span> <span class="nc">String</span><span class="o">&gt;</span>
-<span class="n">pool</span><span class="o">;</span> <span class="kd">public</span> <span class="nf">BoundedInternPool</span><span class="o">(</span><span class="kt">int</span> <span class="n">maxSize</span><span class="o">)</span>
-<span class="o">{</span> <span class="k">this</span><span class="o">.</span><span class="na">maxSize</span> <span class="o">=</span> <span class="n">maxSize</span><span class="o">;</span> <span class="k">this</span><span class="o">.</span><span class="na">pool</span> <span class="o">=</span> <span class="k">new</span> <span class="nc">ConcurrentHashMap</span><span class="o">&lt;&gt;(</span><span class="n">maxSize</span> <span class="o">*</span> <span class="mi">2</span><span class="o">);</span> <span class="o">}</span>
- <span class="kd">public</span> <span class="nc">String</span> <span class="nf">intern</span><span class="o">(</span><span class="nc">String</span> <span class="n">value</span><span class="o">)</span> 
-<span class="o">{</span> <span class="k">if</span> <span class="o">(</span><span class="n">value</span> <span class="o">==</span> <span class="kc">null</span><span class="o">)</span> <span class="k">return</span> <span class="kc">null</span><span class="o">;</span> <span class="nc">String</span> <span class="n">existing</span> <span class="o">=</span> <span class="n">pool</span><span class="o">.</span><span class="na">get</span><span class="o">(</span><span class="n">value</span><span class="o">);</span> <span class="k">if</span>
-<span class="o">(</span><span class="n">existing</span> <span class="o">!=</span> <span class="kc">null</span><span class="o">)</span> <span class="k">return</span> <span class="n">existing</span><span class="o">;</span>
-<span class="c1">// Cache hit: ritorno l'istanza condivisa </span>
-<span class="c1">// Cache miss: aggiungo solo se non abbiamo superato il limite if (pool.size() &lt;</span>
-<span class="c1">// maxSize)</span>
-<span class="o">{</span> <span class="k">return</span> <span class="n">pool</span><span class="o">.</span><span class="na">computeIfAbsent</span><span class="o">(</span><span class="n">value</span><span class="o">,</span> <span class="n">k</span> <span class="o">-&gt;</span> <span class="n">k</span><span class="o">);</span> <span class="o">}</span>
- <span class="k">return</span> <span class="n">value</span><span class="o">;</span> 
-<span class="c1">// Pool pieno: ritorno il valore senza internare }</span>
- 
-<span class="cm">/* Espongo le statistiche del pool per monitorare l'efficacia dell'interning: */</span>
- <span class="kd">public</span> <span class="kt">double</span> <span class="nf">getHitRate</span><span class="o">()</span> 
-<span class="o">{</span> <span class="k">return</span> <span class="o">(</span><span class="kt">double</span><span class="o">)</span> <span class="n">hitCount</span><span class="o">.</span><span class="na">get</span><span class="o">()</span> <span class="o">/</span> <span class="o">(</span><span class="n">hitCount</span><span class="o">.</span><span class="na">get</span><span class="o">()</span> <span class="o">+</span> <span class="n">missCount</span><span class="o">.</span><span class="na">get</span><span class="o">());</span> <span class="o">}</span>
- <span class="kd">public</span> <span class="kt">int</span> <span class="nf">getPoolSize</span><span class="o">()</span> 
-<span class="o">{</span> <span class="k">return</span> <span class="n">pool</span><span class="o">.</span><span class="na">size</span><span class="o">();</span> <span class="o">}</span>
- <span class="o">}</span>
+    <span class="n">reporting</span><span class="o">-</span><span class="n">app</span><span class="o">.</span><span class="na">jar</span> <span class="cm">/* PrintStringTableStatistics stampa le statistiche della
+    tabella all'uscita della JVM: */</span> <span class="c1">// StringTable statistics: // Number of</span>
+    <span class="nl">buckets:</span> <span class="mi">1000003</span> <span class="o">=</span> <span class="mi">8000024</span> <span class="n">bytes</span><span class="o">,</span> <span class="n">avg</span> <span class="mf">8.000</span> <span class="c1">// Number of entries: 245678 =</span>
+    <span class="mi">5896272</span> <span class="n">bytes</span><span class="o">,</span> <span class="n">avg</span> <span class="mf">24.000</span> <span class="c1">// Average bucket size: 0.246 // Variance of</span>
+    <span class="n">bucket</span> <span class="nl">size:</span> <span class="mf">0.247</span> <span class="c1">// Std. dev. of bucket size: 0.497 /* Implemento un layer</span>
+    <span class="n">di</span> <span class="n">interning</span> <span class="n">controllato</span> <span class="n">che</span> <span class="n">interna</span> <span class="n">solo</span> <span class="n">le</span> <span class="n">stringhe</span> <span class="n">che</span> <span class="n">so</span> <span class="n">essere</span>
+    <span class="n">ripetitive</span><span class="o">,</span> <span class="n">evitando</span> <span class="n">di</span> <span class="n">internare</span> <span class="n">stringhe</span> <span class="n">arbitrarie</span> <span class="n">che</span> <span class="n">saturerebbero</span> <span class="n">la</span>
+    <span class="nl">StringTable:</span> <span class="o">*/</span> <span class="nd">@Component</span> <span class="kd">public</span> <span class="kd">class</span> <span class="nc">StringInternService</span>
+<span class="o">{</span>
+    <span class="c1">// Lista delle colonne che so essere a bassa cardinalità (pochi valori</span>
+        <span class="n">distinti</span><span class="o">,</span> <span class="n">molte</span> <span class="n">ripetizioni</span><span class="o">)</span> <span class="kd">private</span> <span class="kd">static</span> <span class="kd">final</span> <span class="nc">Set</span><span class="o">&lt;</span><span class="nc">String</span><span class="o">&gt;</span>
+        <span class="no">LOW_CARDINALITY_COLUMNS</span> <span class="o">=</span> <span class="nc">Set</span><span class="o">.</span><span class="na">of</span><span class="o">(</span> <span class="s">"status"</span><span class="o">,</span> <span class="s">"currency"</span><span class="o">,</span> <span class="s">"country"</span><span class="o">,</span>
+        <span class="s">"payment_method"</span><span class="o">,</span> <span class="s">"order_type"</span> <span class="o">)</span>
+    <span class="o">;</span>
+    <span class="cm">/* Interno solo i valori di colonne note come ripetitive. Per le altre
+        colonne, lascio che la JVM gestisca la memoria normalmente o che
+        intervenga la String Deduplication di G1. */</span>
+    <span class="kd">public</span> <span class="nc">String</span> <span class="nf">internIfLowCardinality</span><span class="o">(</span><span class="nc">String</span> <span class="n">columnName</span><span class="o">,</span> <span class="nc">String</span> <span class="n">value</span><span class="o">)</span> <span class="o">{</span>
+        <span class="k">if</span> <span class="o">(</span><span class="n">value</span> <span class="o">==</span> <span class="kc">null</span><span class="o">)</span> <span class="k">return</span> <span class="kc">null</span><span class="o">;</span>
+        <span class="k">if</span> <span class="o">(</span><span class="no">LOW_CARDINALITY_COLUMNS</span><span class="o">.</span><span class="na">contains</span><span class="o">(</span><span class="n">columnName</span><span class="o">))</span> <span class="o">{</span>
+            <span class="k">return</span> <span class="n">value</span><span class="o">.</span><span class="na">intern</span><span class="o">();</span>
+            <span class="c1">// Condivido l'istanza con tutte le altre uguali</span>
+        <span class="o">}</span>
+        <span class="k">return</span> <span class="n">value</span><span class="o">;</span>
+        <span class="c1">// Lascio al GC la gestione normale</span>
+    <span class="o">}</span>
+<span class="o">}</span>
+<span class="cm">/* Uso intern() nel layer di mapping dei ResultSet per evitare duplicati durante
+    il caricamento bulk: */</span>
+<span class="nd">@Component</span> <span class="kd">public</span> <span class="kd">class</span> <span class="nc">ReportRowMapper</span> <span class="kd">implements</span> <span class="nc">RowMapper</span><span class="o">&lt;</span><span class="nc">ReportRow</span><span class="o">&gt;</span> <span class="o">{</span>
+    <span class="nd">@Override</span> <span class="kd">public</span> <span class="nc">ReportRow</span> <span class="nf">mapRow</span><span class="o">(</span><span class="nc">ResultSet</span> <span class="n">rs</span><span class="o">,</span> <span class="kt">int</span> <span class="n">rowNum</span><span class="o">)</span> <span class="kd">throws</span>
+        <span class="nc">SQLException</span> <span class="o">{</span>
+        <span class="k">return</span> <span class="k">new</span> <span class="nf">ReportRow</span><span class="o">(</span> <span class="n">rs</span><span class="o">.</span><span class="na">getLong</span><span class="o">(</span><span class="s">"id"</span><span class="o">),</span> <span class="n">rs</span><span class="o">.</span><span class="na">getString</span><span class="o">(</span><span class="s">"status"</span><span class="o">).</span><span class="na">intern</span><span class="o">(),</span>
+        <span class="c1">// "PENDING", "COMPLETED", "FAILED": ~3 valori distinti</span>
+            <span class="n">rs</span><span class="o">.</span><span class="na">getString</span><span class="o">(</span><span class="s">"currency"</span><span class="o">).</span><span class="na">intern</span><span class="o">(),</span> <span class="c1">// "EUR", "USD", "GBP": ~5 valori</span>
+            <span class="n">distinti</span> <span class="n">rs</span><span class="o">.</span><span class="na">getString</span><span class="o">(</span><span class="s">"description"</span><span class="o">)</span> <span class="c1">// Non interno: alta</span>
+            <span class="n">cardinalità</span><span class="o">,</span> <span class="n">ogni</span> <span class="n">riga</span> <span class="n">è</span> <span class="n">diversa</span> <span class="o">)</span>
+        <span class="o">;</span>
+    <span class="o">}</span>
+<span class="o">}</span>
+<span class="cm">/* Confronto il consumo di memoria con e senza interning tramite un test
+    dedicato: */</span>
+<span class="nd">@Test</span> <span class="kd">public</span> <span class="kt">void</span> <span class="nf">verifyInternMemoryGain</span><span class="o">()</span> <span class="o">{</span>
+    <span class="kt">int</span> <span class="n">rowCount</span> <span class="o">=</span> <span class="mi">1_000_000</span><span class="o">;</span>
+    <span class="c1">// Senza interning: 1M istanze diverse di "COMPLETED" List&lt;String&gt;</span>
+        <span class="n">withoutIntern</span> <span class="o">=</span> <span class="k">new</span> <span class="nc">ArrayList</span><span class="o">&lt;&gt;(</span><span class="n">rowCount</span><span class="o">)</span>
+    <span class="o">;</span>
+    <span class="k">for</span> <span class="o">(</span><span class="kt">int</span> <span class="n">i</span> <span class="o">=</span> <span class="mi">0</span><span class="o">;</span>
+    <span class="n">i</span> <span class="o">&lt;</span> <span class="n">rowCount</span><span class="o">;</span>
+    <span class="n">i</span><span class="o">++)</span> <span class="o">{</span>
+        <span class="n">withoutIntern</span><span class="o">.</span><span class="na">add</span><span class="o">(</span><span class="k">new</span> <span class="nc">String</span><span class="o">(</span><span class="s">"COMPLETED"</span><span class="o">));</span>
+        <span class="c1">// Forzo la creazione di istanze separate</span>
+    <span class="o">}</span>
+    <span class="c1">// Con interning: 1M riferimenti alla stessa istanza in StringTable</span>
+        <span class="nc">List</span><span class="o">&lt;</span><span class="nc">String</span><span class="o">&gt;</span> <span class="n">withIntern</span> <span class="o">=</span> <span class="k">new</span> <span class="nc">ArrayList</span><span class="o">&lt;&gt;(</span><span class="n">rowCount</span><span class="o">)</span>
+    <span class="o">;</span>
+    <span class="k">for</span> <span class="o">(</span><span class="kt">int</span> <span class="n">i</span> <span class="o">=</span> <span class="mi">0</span><span class="o">;</span>
+    <span class="n">i</span> <span class="o">&lt;</span> <span class="n">rowCount</span><span class="o">;</span>
+    <span class="n">i</span><span class="o">++)</span> <span class="o">{</span>
+        <span class="n">withIntern</span><span class="o">.</span><span class="na">add</span><span class="o">(</span><span class="s">"COMPLETED"</span><span class="o">.</span><span class="na">intern</span><span class="o">());</span>
+        <span class="c1">// Tutti puntano alla stessa istanza</span>
+    <span class="o">}</span>
+    <span class="c1">// Verifico che le istanze internate siano identiche (stesso riferimento)</span>
+        <span class="n">assertSame</span><span class="o">(</span><span class="n">withIntern</span><span class="o">.</span><span class="na">get</span><span class="o">(</span><span class="mi">0</span><span class="o">),</span> <span class="n">withIntern</span><span class="o">.</span><span class="na">get</span><span class="o">(</span><span class="mi">999_999</span><span class="o">))</span>
+    <span class="o">;</span>
+    <span class="c1">// true: stessa istanza // Le istanze non internate sono uguali ma non</span>
+        <span class="n">identiche</span> <span class="nf">assertNotSame</span><span class="o">(</span><span class="n">withoutIntern</span><span class="o">.</span><span class="na">get</span><span class="o">(</span><span class="mi">0</span><span class="o">),</span>
+        <span class="n">withoutIntern</span><span class="o">.</span><span class="na">get</span><span class="o">(</span><span class="mi">999_999</span><span class="o">))</span>
+    <span class="o">;</span>
+    <span class="c1">// true: istanze diverse</span>
+<span class="o">}</span>
+<span class="cm">/* Per scenari con cardinalità medio-alta (es. 10.000 valori distinti su 10M
+    righe), uso una Map come intern pool manuale invece di String.intern(), per
+    avere controllo sulla dimensione: */</span>
+<span class="nd">@Component</span> <span class="kd">public</span> <span class="kd">class</span> <span class="nc">BoundedInternPool</span> <span class="o">{</span>
+    <span class="kd">private</span> <span class="kd">final</span> <span class="kt">int</span> <span class="n">maxSize</span><span class="o">;</span>
+    <span class="kd">private</span> <span class="kd">final</span> <span class="nc">ConcurrentHashMap</span><span class="o">&lt;</span><span class="nc">String</span><span class="o">,</span> <span class="nc">String</span><span class="o">&gt;</span> <span class="n">pool</span><span class="o">;</span>
+    <span class="kd">public</span> <span class="nf">BoundedInternPool</span><span class="o">(</span><span class="kt">int</span> <span class="n">maxSize</span><span class="o">)</span> <span class="o">{</span>
+        <span class="k">this</span><span class="o">.</span><span class="na">maxSize</span> <span class="o">=</span> <span class="n">maxSize</span><span class="o">;</span>
+        <span class="k">this</span><span class="o">.</span><span class="na">pool</span> <span class="o">=</span> <span class="k">new</span> <span class="nc">ConcurrentHashMap</span><span class="o">&lt;&gt;(</span><span class="n">maxSize</span> <span class="o">*</span> <span class="mi">2</span><span class="o">);</span>
+    <span class="o">}</span>
+    <span class="kd">public</span> <span class="nc">String</span> <span class="nf">intern</span><span class="o">(</span><span class="nc">String</span> <span class="n">value</span><span class="o">)</span> <span class="o">{</span>
+        <span class="k">if</span> <span class="o">(</span><span class="n">value</span> <span class="o">==</span> <span class="kc">null</span><span class="o">)</span> <span class="k">return</span> <span class="kc">null</span><span class="o">;</span>
+        <span class="nc">String</span> <span class="n">existing</span> <span class="o">=</span> <span class="n">pool</span><span class="o">.</span><span class="na">get</span><span class="o">(</span><span class="n">value</span><span class="o">);</span>
+        <span class="k">if</span> <span class="o">(</span><span class="n">existing</span> <span class="o">!=</span> <span class="kc">null</span><span class="o">)</span> <span class="k">return</span> <span class="n">existing</span><span class="o">;</span>
+        <span class="c1">// Cache hit: ritorno l'istanza condivisa // Cache miss: aggiungo solo</span>
+            <span class="n">se</span> <span class="n">non</span> <span class="n">abbiamo</span> <span class="n">superato</span> <span class="n">il</span> <span class="n">limite</span> <span class="nf">if</span> <span class="o">(</span><span class="n">pool</span><span class="o">.</span><span class="na">size</span><span class="o">()</span> <span class="o">&lt;</span> <span class="n">maxSize</span><span class="o">)</span>
+        <span class="o">{</span>
+            <span class="k">return</span> <span class="n">pool</span><span class="o">.</span><span class="na">computeIfAbsent</span><span class="o">(</span><span class="n">value</span><span class="o">,</span> <span class="n">k</span> <span class="o">-&gt;</span> <span class="n">k</span><span class="o">);</span>
+        <span class="o">}</span>
+        <span class="k">return</span> <span class="n">value</span><span class="o">;</span>
+        <span class="c1">// Pool pieno: ritorno il valore senza internare</span>
+    <span class="o">}</span>
+    <span class="cm">/* Espongo le statistiche del pool per monitorare l'efficacia
+        dell'interning: */</span>
+    <span class="kd">public</span> <span class="kt">double</span> <span class="nf">getHitRate</span><span class="o">()</span> <span class="o">{</span>
+        <span class="k">return</span> <span class="o">(</span><span class="kt">double</span><span class="o">)</span> <span class="n">hitCount</span><span class="o">.</span><span class="na">get</span><span class="o">()</span> <span class="o">/</span> <span class="o">(</span><span class="n">hitCount</span><span class="o">.</span><span class="na">get</span><span class="o">()</span> <span class="o">+</span> <span class="n">missCount</span><span class="o">.</span><span class="na">get</span><span class="o">());</span>
+    <span class="o">}</span>
+    <span class="kd">public</span> <span class="kt">int</span> <span class="nf">getPoolSize</span><span class="o">()</span> <span class="o">{</span>
+        <span class="k">return</span> <span class="n">pool</span><span class="o">.</span><span class="na">size</span><span class="o">();</span>
+    <span class="o">}</span>
+<span class="o">}</span>
 </pre></td></tr></tbody></table></code></pre></div></div>
 
         </article>

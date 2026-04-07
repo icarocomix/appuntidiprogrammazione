@@ -106,27 +106,23 @@
 15
 16
 17
-18
-19
-</pre></td><td class="rouge-code"><pre><span class="o">*</span> <span class="n">Nella</span> <span class="n">sessione</span> <span class="n">di</span> <span class="n">debug</span><span class="p">,</span> <span class="n">posso</span> <span class="n">abbassare</span> <span class="n">temporaneamente</span> <span class="n">il</span> <span class="n">timeout</span> <span class="n">per</span>
-<span class="o">*</span> <span class="n">forzare</span> <span class="n">una</span> <span class="n">rilevazione</span> <span class="n">pi</span><span class="err">ù</span> <span class="n">rapida</span> <span class="n">e</span> <span class="n">osservare</span> <span class="n">il</span> <span class="n">comportamento</span><span class="p">.</span> <span class="o">*/</span>
- <span class="k">SET</span> <span class="n">deadlock_timeout</span> <span class="o">=</span> <span class="s1">'500ms'</span><span class="p">;</span> 
-<span class="o">*</span> <span class="n">Abilito</span> <span class="n">il</span> <span class="n">logging</span> <span class="n">dei</span> <span class="k">lock</span> <span class="n">lenti</span> <span class="n">nel</span> <span class="n">file</span> <span class="n">postgresql</span><span class="p">.</span><span class="n">conf</span> <span class="n">per</span> <span class="n">intercettare</span> <span class="n">le</span>
-<span class="o">*</span> <span class="n">attese</span> <span class="n">sospette</span> <span class="n">prima</span> <span class="n">che</span> <span class="n">degenerino</span> <span class="k">in</span> <span class="n">deadlock</span><span class="p">.</span> <span class="n">log_lock_waits</span> <span class="o">=</span> <span class="k">on</span>
-<span class="o">*</span> <span class="n">deadlock_timeout</span> <span class="o">=</span> <span class="s1">'1s'</span> <span class="c1">-- soglia oltre la quale viene loggata l'attesa */</span>
- 
-<span class="o">*</span> <span class="n">Simulo</span> <span class="n">un</span> <span class="n">deadlock</span> <span class="n">per</span> <span class="n">analizzarne</span> <span class="n">l</span><span class="s1">'output nei log: -- Sessione A: BEGIN;
-* UPDATE accounts SET balance = balance - 100 WHERE id = 1; -- poi aggiorna id=2
-* -- Sessione B (concorrente): BEGIN; UPDATE accounts SET balance = balance +
-* 100 WHERE id = 2; -- poi aggiorna id=1 Nel log troverò: ERROR: deadlock
-* detected DETAIL: Process 1234 waits for ShareLock on transaction 5678; blocked
-* by process 9012. Process 9012 waits for ShareLock on transaction 5678; blocked
-* by process 1234. HINT: See server log for query details. */
- 
-* La causa radice applicativa più comune è l'</span><span class="n">ordine</span> <span class="n">di</span> <span class="n">aggiornamento</span>
-<span class="o">*</span> <span class="n">inconsistente</span><span class="p">.</span> <span class="n">La</span> <span class="n">soluzione</span> <span class="n">strutturale</span> <span class="err">è</span> <span class="n">sempre</span> <span class="n">aggiornare</span> <span class="n">le</span> <span class="n">righe</span> <span class="n">nello</span>
-<span class="o">*</span> <span class="n">stesso</span> <span class="n">ordine</span><span class="p">,</span> <span class="n">es</span><span class="p">.</span> <span class="n">sempre</span> <span class="n">per</span> <span class="n">id</span> <span class="n">crescente</span><span class="p">:</span> <span class="k">UPDATE</span> <span class="n">accounts</span> <span class="k">SET</span> <span class="n">balance</span> <span class="o">=</span>
-<span class="o">*</span> <span class="n">balance</span> <span class="o">+</span> <span class="n">delta</span> <span class="k">WHERE</span> <span class="n">id</span> <span class="o">=</span> <span class="k">ANY</span><span class="p">(</span><span class="n">ARRAY</span><span class="p">[</span><span class="mi">1</span><span class="p">,</span><span class="mi">2</span><span class="p">]</span> <span class="k">ORDER</span> <span class="k">BY</span> <span class="mi">1</span><span class="p">);</span>  <span class="o">*/</span>
+</pre></td><td class="rouge-code"><pre>    <span class="cm">/* Nella sessione di debug, posso abbassare temporaneamente il timeout per
+        forzare una rilevazione più rapida e osservare il comportamento. */</span> <span class="k">SET</span>
+        <span class="n">deadlock_timeout</span> <span class="o">=</span> <span class="s1">'500ms'</span><span class="p">;</span> <span class="cm">/* Abilito il logging dei lock lenti nel
+        file postgresql.conf per intercettare le attese sospette prima che
+        degenerino in deadlock. log_lock_waits = on deadlock_timeout = '1s' --
+        soglia oltre la quale viene loggata l'attesa */</span> <span class="cm">/* Simulo un deadlock
+        per analizzarne l'output nei log: -- Sessione A: BEGIN; UPDATE accounts
+        SET balance = balance - 100 WHERE id = 1; -- poi aggiorna id=2 --
+        Sessione B (concorrente): BEGIN; UPDATE accounts SET balance = balance +
+        100 WHERE id = 2; -- poi aggiorna id=1 Nel log troverò: ERROR: deadlock
+        detected DETAIL: Process 1234 waits for ShareLock on transaction 5678;
+        blocked by process 9012. Process 9012 waits for ShareLock on transaction
+        5678; blocked by process 1234. HINT: See server log for query details.
+        */</span> <span class="cm">/* La causa radice applicativa più comune è l'ordine di aggiornamento
+        inconsistente. La soluzione strutturale è sempre aggiornare le righe
+        nello stesso ordine, es. sempre per id crescente: UPDATE accounts SET
+        balance = balance + delta WHERE id = ANY(ARRAY[1,2] ORDER BY 1);  */</span>
 </pre></td></tr></tbody></table></code></pre></div></div>
 
         </article>

@@ -123,42 +123,40 @@
 32
 33
 34
-35
-</pre></td><td class="rouge-code"><pre><span class="o">*</span> <span class="n">Creo</span> <span class="n">un</span> <span class="n">indice</span> <span class="n">BRIN</span> <span class="n">su</span> <span class="n">una</span> <span class="n">colonna</span> <span class="nb">timestamp</span><span class="p">.</span> <span class="n">pages_per_range</span><span class="o">=</span><span class="mi">64</span> <span class="n">significa</span> <span class="n">che</span>
-<span class="o">*</span> <span class="n">ogni</span> <span class="n">voce</span> <span class="n">dell</span><span class="s1">'indice copre 64 pagine (512KB con block_size=8KB): più piccolo
-* = più preciso ma indice più grande. */
- CREATE INDEX idx_telemetry_brin ON telemetry_data USING BRIN (recorded_at) WITH
-(pages_per_range = 64);
-/* Confronto la dimensione con un B-Tree equivalente: */
- SELECT pg_size_pretty(pg_relation_size('</span><span class="n">idx_telemetry_brin</span><span class="s1">')) AS brin_size; --
-Es: 48 kB -- CREATE INDEX idx_telemetry_btree ON telemetry_data (recorded_at);
--- SELECT pg_size_pretty(pg_relation_size('</span><span class="n">idx_telemetry_btree</span><span class="s1">')) AS btree_size;
--- Es: 4200 MB
-* Verifico la correlazione fisica della colonna per confermare che BRIN sia
-* adatto: un valore vicino a 1.0 o -1.0 indica dati ordinati e BRIN sarà
-* efficace. */
- SELECT attname, correlation FROM pg_stats WHERE tablename = '</span><span class="n">telemetry_data</span><span class="s1">'
-AND attname = '</span><span class="n">recorded_at</span><span class="s1">';
-* Eseguo una query su un intervallo temporale e verifico che BRIN elimini la
-* maggior parte dei blocchi: */
- EXPLAIN (ANALYZE, BUFFERS) SELECT device_id, value FROM telemetry_data WHERE
-recorded_at BETWEEN '</span><span class="mi">2026</span><span class="o">-</span><span class="mi">03</span><span class="o">-</span><span class="mi">01</span><span class="s1">' AND '</span><span class="mi">2026</span><span class="o">-</span><span class="mi">03</span><span class="o">-</span><span class="mi">07</span><span class="s1">';
-* Nell'</span><span class="k">output</span> <span class="n">cerco</span> <span class="nv">"Lossy"</span> <span class="n">e</span> <span class="nv">"pages_removed"</span><span class="p">:</span> <span class="n">un</span> <span class="n">alto</span> <span class="n">numero</span> <span class="n">di</span> <span class="n">pagine</span> <span class="n">rimosse</span>
-<span class="o">*</span> <span class="n">indica</span> <span class="n">che</span> <span class="n">BRIN</span> <span class="n">sta</span> <span class="n">lavorando</span> <span class="n">bene</span><span class="p">.</span> <span class="o">*/</span>
- 
-<span class="o">*</span> <span class="n">Se</span> <span class="n">nel</span> <span class="n">tempo</span> <span class="n">i</span> <span class="n">dati</span> <span class="n">vengono</span> <span class="n">inseriti</span> <span class="n">fuori</span> <span class="n">ordine</span> <span class="p">(</span><span class="n">es</span><span class="p">.</span> <span class="n">dati</span> <span class="k">in</span> <span class="n">ritardo</span> <span class="n">da</span>
-<span class="o">*</span> <span class="n">sensori</span> <span class="n">offline</span><span class="p">),</span> <span class="n">aggiorno</span> <span class="n">il</span> <span class="n">riepilogo</span> <span class="n">BRIN</span> <span class="n">manualmente</span><span class="p">:</span> <span class="o">*/</span>
- <span class="k">SELECT</span> <span class="n">brin_summarize_new_values</span><span class="p">(</span><span class="s1">'idx_telemetry_brin'</span><span class="p">::</span><span class="n">regclass</span><span class="p">);</span> 
-<span class="o">*</span> <span class="n">Per</span> <span class="n">trovare</span> <span class="n">il</span> <span class="n">pages_per_range</span> <span class="n">ottimale</span><span class="p">,</span> <span class="n">testo</span> <span class="n">diversi</span> <span class="n">valori</span> <span class="n">e</span> <span class="n">misuro</span> <span class="n">il</span>
-<span class="o">*</span> <span class="n">rapporto</span> <span class="n">tra</span> <span class="n">dimensione</span> <span class="n">indice</span> <span class="n">e</span> <span class="n">pagine</span> <span class="n">escluse</span> <span class="n">nelle</span> <span class="n">query</span> <span class="n">tipiche</span><span class="p">:</span> <span class="o">*/</span>
- <span class="k">CREATE</span> <span class="k">INDEX</span> <span class="n">idx_telemetry_brin_32</span> <span class="k">ON</span> <span class="n">telemetry_data</span> <span class="k">USING</span> <span class="n">BRIN</span> <span class="p">(</span><span class="n">recorded_at</span><span class="p">)</span>
-<span class="k">WITH</span> <span class="p">(</span><span class="n">pages_per_range</span> <span class="o">=</span> <span class="mi">32</span><span class="p">);</span> <span class="k">CREATE</span> <span class="k">INDEX</span> <span class="n">idx_telemetry_brin_128</span> <span class="k">ON</span>
-<span class="n">telemetry_data</span> <span class="k">USING</span> <span class="n">BRIN</span> <span class="p">(</span><span class="n">recorded_at</span><span class="p">)</span> <span class="k">WITH</span> <span class="p">(</span><span class="n">pages_per_range</span> <span class="o">=</span> <span class="mi">128</span><span class="p">);</span>
-<span class="o">*</span> <span class="k">In</span> <span class="n">Spring</span> <span class="n">Boot</span><span class="p">,</span> <span class="n">per</span> <span class="n">tabelle</span> <span class="n">IoT</span> <span class="n">uso</span> <span class="n">sempre</span> <span class="n">BRIN</span> <span class="n">sulle</span> <span class="n">colonne</span> <span class="n">temporali</span> <span class="n">e</span>
-<span class="o">*</span> <span class="n">B</span><span class="o">-</span><span class="n">Tree</span> <span class="n">solo</span> <span class="n">su</span> <span class="n">device_id</span> <span class="n">per</span> <span class="n">i</span> <span class="n">lookup</span> <span class="n">puntuali</span><span class="p">:</span> <span class="o">*/</span>
- <span class="c1">-- CREATE INDEX idx_telemetry_device ON telemetry_data (device_id); -- B-Tree</span>
-<span class="n">per</span> <span class="n">lookup</span> <span class="n">puntuale</span> <span class="c1">-- CREATE INDEX idx_telemetry_brin ON telemetry_data USING</span>
-<span class="n">BRIN</span> <span class="p">(</span><span class="n">recorded_at</span><span class="p">);</span> <span class="c1">-- BRIN per range temporali</span>
+</pre></td><td class="rouge-code"><pre>    <span class="cm">/* Creo un indice BRIN su una colonna timestamp. pages_per_range=64
+        significa che ogni voce dell'indice copre 64 pagine (512KB con
+        block_size=8KB): più piccolo = più preciso ma indice più grande. */</span>
+        <span class="k">CREATE</span> <span class="k">INDEX</span> <span class="n">idx_telemetry_brin</span> <span class="k">ON</span> <span class="n">telemetry_data</span> <span class="k">USING</span> <span class="n">BRIN</span>
+        <span class="p">(</span><span class="n">recorded_at</span><span class="p">)</span> <span class="k">WITH</span> <span class="p">(</span><span class="n">pages_per_range</span> <span class="o">=</span> <span class="mi">64</span><span class="p">);</span> <span class="cm">/* Confronto la dimensione
+        con un B-Tree equivalente: */</span> <span class="k">SELECT</span>
+        <span class="n">pg_size_pretty</span><span class="p">(</span><span class="n">pg_relation_size</span><span class="p">(</span><span class="s1">'idx_telemetry_brin'</span><span class="p">))</span> <span class="k">AS</span> <span class="n">brin_size</span><span class="p">;</span> <span class="c1">--</span>
+        <span class="n">Es</span><span class="p">:</span> <span class="mi">48</span> <span class="n">kB</span> <span class="c1">-- CREATE INDEX idx_telemetry_btree ON telemetry_data</span>
+        <span class="p">(</span><span class="n">recorded_at</span><span class="p">);</span> <span class="c1">-- SELECT</span>
+        <span class="n">pg_size_pretty</span><span class="p">(</span><span class="n">pg_relation_size</span><span class="p">(</span><span class="s1">'idx_telemetry_btree'</span><span class="p">))</span> <span class="k">AS</span> <span class="n">btree_size</span><span class="p">;</span>
+        <span class="c1">-- Es: 4200 MB /* Verifico la correlazione fisica della colonna per</span>
+        <span class="n">confermare</span> <span class="n">che</span> <span class="n">BRIN</span> <span class="n">sia</span> <span class="n">adatto</span><span class="p">:</span> <span class="n">un</span> <span class="n">valore</span> <span class="n">vicino</span> <span class="n">a</span> <span class="mi">1</span><span class="p">.</span><span class="mi">0</span> <span class="n">o</span> <span class="o">-</span><span class="mi">1</span><span class="p">.</span><span class="mi">0</span> <span class="n">indica</span>
+        <span class="n">dati</span> <span class="n">ordinati</span> <span class="n">e</span> <span class="n">BRIN</span> <span class="n">sar</span><span class="err">à</span> <span class="n">efficace</span><span class="p">.</span> <span class="o">*/</span> <span class="k">SELECT</span> <span class="n">attname</span><span class="p">,</span> <span class="n">correlation</span> <span class="k">FROM</span>
+        <span class="n">pg_stats</span> <span class="k">WHERE</span> <span class="n">tablename</span> <span class="o">=</span> <span class="s1">'telemetry_data'</span> <span class="k">AND</span> <span class="n">attname</span> <span class="o">=</span> <span class="s1">'recorded_at'</span><span class="p">;</span>
+        <span class="cm">/* Eseguo una query su un intervallo temporale e verifico che BRIN
+        elimini la maggior parte dei blocchi: */</span> <span class="k">EXPLAIN</span> <span class="p">(</span><span class="k">ANALYZE</span><span class="p">,</span> <span class="n">BUFFERS</span><span class="p">)</span>
+        <span class="k">SELECT</span> <span class="n">device_id</span><span class="p">,</span> <span class="n">value</span> <span class="k">FROM</span> <span class="n">telemetry_data</span> <span class="k">WHERE</span> <span class="n">recorded_at</span> <span class="k">BETWEEN</span>
+        <span class="s1">'2026-03-01'</span> <span class="k">AND</span> <span class="s1">'2026-03-07'</span><span class="p">;</span> <span class="cm">/* Nell'output cerco "Lossy" e
+        "pages_removed": un alto numero di pagine rimosse indica che BRIN sta
+        lavorando bene. */</span> <span class="cm">/* Se nel tempo i dati vengono inseriti fuori ordine
+        (es. dati in ritardo da sensori offline), aggiorno il riepilogo BRIN
+        manualmente: */</span> <span class="k">SELECT</span>
+        <span class="n">brin_summarize_new_values</span><span class="p">(</span><span class="s1">'idx_telemetry_brin'</span><span class="p">::</span><span class="n">regclass</span><span class="p">);</span> <span class="cm">/* Per
+        trovare il pages_per_range ottimale, testo diversi valori e misuro il
+        rapporto tra dimensione indice e pagine escluse nelle query tipiche: */</span>
+        <span class="k">CREATE</span> <span class="k">INDEX</span> <span class="n">idx_telemetry_brin_32</span> <span class="k">ON</span> <span class="n">telemetry_data</span> <span class="k">USING</span> <span class="n">BRIN</span>
+        <span class="p">(</span><span class="n">recorded_at</span><span class="p">)</span> <span class="k">WITH</span> <span class="p">(</span><span class="n">pages_per_range</span> <span class="o">=</span> <span class="mi">32</span><span class="p">);</span> <span class="k">CREATE</span> <span class="k">INDEX</span>
+        <span class="n">idx_telemetry_brin_128</span> <span class="k">ON</span> <span class="n">telemetry_data</span> <span class="k">USING</span> <span class="n">BRIN</span> <span class="p">(</span><span class="n">recorded_at</span><span class="p">)</span> <span class="k">WITH</span>
+        <span class="p">(</span><span class="n">pages_per_range</span> <span class="o">=</span> <span class="mi">128</span><span class="p">);</span> <span class="cm">/* In Spring Boot, per tabelle IoT uso sempre
+        BRIN sulle colonne temporali e B-Tree solo su device_id per i lookup
+        puntuali: */</span> <span class="c1">-- CREATE INDEX idx_telemetry_device ON telemetry_data</span>
+        <span class="p">(</span><span class="n">device_id</span><span class="p">);</span> <span class="c1">-- B-Tree per lookup puntuale -- CREATE INDEX</span>
+        <span class="n">idx_telemetry_brin</span> <span class="k">ON</span> <span class="n">telemetry_data</span> <span class="k">USING</span> <span class="n">BRIN</span> <span class="p">(</span><span class="n">recorded_at</span><span class="p">);</span> <span class="c1">-- BRIN</span>
+        <span class="n">per</span> <span class="k">range</span> <span class="n">temporali</span>
 </pre></td></tr></tbody></table></code></pre></div></div>
 
         </article>

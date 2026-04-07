@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>JNI Critical Sections e GC — DevLog</title>
-    <meta name="description" content="Quando il codice nativo JNI è in esecuzione, il GC potrebbe aver bisogno di spostare gli oggetti nell'heap, ma non può farlo se il C sta usando i puntatori (pinning). Il rischio è bloccare il GC (Stop-The-World prolungato) a causa di thread nativi 'l
+    <meta name="description" content="Quando il codice nativo JNI è in esecuzione, il GC potrebbe aver bisogno di spostare gli oggetti nell'heap, ma non può farlo se il C sta usando i puntatori (pinning). Il rischio è bloccare il GC (Stop-The-World prolungato) a causa di thread nativi "l
 ">
     <link rel="stylesheet" href="/appuntidiprogrammazione/assets/css/style.css">
 
@@ -146,63 +146,101 @@
 55
 56
 57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
 </pre></td><td class="rouge-code"><pre><span class="cm">/* PATTERN SBAGLIATO: la sezione critica dura troppo a lungo e congela il GC. */</span>
- <span class="no">JNIEXPORT</span> <span class="kt">void</span> <span class="no">JNICALL</span> <span class="nf">Java_MatrixService_multiplyBad</span><span class="o">(</span><span class="nc">JNIEnv</span><span class="o">*</span> <span class="n">env</span><span class="o">,</span> <span class="n">jobject</span> <span class="n">obj</span><span class="o">,</span>
-<span class="n">jintArray</span> <span class="n">a</span><span class="o">,</span> <span class="n">jintArray</span> <span class="n">b</span><span class="o">,</span> <span class="n">jintArray</span> <span class="n">result</span><span class="o">)</span>
-<span class="o">{</span> <span class="n">jint</span><span class="o">*</span> <span class="n">dataA</span> <span class="o">=</span> <span class="o">(*</span><span class="n">env</span><span class="o">)-&gt;</span><span class="nc">GetPrimitiveArrayCritical</span><span class="o">(</span><span class="n">env</span><span class="o">,</span> <span class="n">a</span><span class="o">,</span> <span class="no">NULL</span><span class="o">);</span> <span class="n">jint</span><span class="o">*</span> <span class="n">dataB</span> <span class="o">=</span>
-<span class="o">(*</span><span class="n">env</span><span class="o">)-&gt;</span><span class="nc">GetPrimitiveArrayCritical</span><span class="o">(</span><span class="n">env</span><span class="o">,</span> <span class="n">b</span><span class="o">,</span> <span class="no">NULL</span><span class="o">);</span>
-<span class="c1">// SBAGLIATO: operazione O(n^3) dentro la sezione critica </span>
-<span class="c1">// Il GC è bloccato per tutta la durata del calcolo! for (int i = 0; i &lt; N; i++)</span>
-<span class="c1">// for (int j = 0; j &lt; N; j++) for (int k = 0; k &lt; N; k++) result_data[i*N+j] +=</span>
-<span class="c1">// dataA[i*N+k] * dataB[k*N+j]; (*env)-&gt;ReleasePrimitiveArrayCritical(env, a,</span>
-<span class="c1">// dataA, JNI_ABORT); (*env)-&gt;ReleasePrimitiveArrayCritical(env, b, dataB,</span>
-<span class="c1">// JNI_ABORT); }</span>
- 
-<span class="o">*</span> <span class="no">PATTERN</span> <span class="no">CORRETTO</span> <span class="n">con</span> <span class="nl">Panama:</span> <span class="n">uso</span> <span class="nc">MemorySegment</span> <span class="n">per</span> <span class="n">eliminare</span> <span class="n">completamente</span> <span class="n">il</span>
-<span class="o">*</span> <span class="n">problema</span><span class="o">.</span> <span class="nc">Panama</span> <span class="n">non</span> <span class="n">fa</span> <span class="n">pinning</span> <span class="n">dell</span><span class="err">'</span><span class="n">heap</span> <span class="n">perché</span> <span class="n">lavora</span> <span class="n">su</span> <span class="n">memoria</span> <span class="n">off</span><span class="o">-</span><span class="nl">heap:</span>
-<span class="o">*</span> <span class="n">il</span> <span class="no">GC</span> <span class="n">è</span> <span class="n">sempre</span> <span class="n">libero</span> <span class="n">di</span> <span class="n">muovere</span> <span class="n">gli</span> <span class="n">oggetti</span> <span class="nc">Java</span><span class="o">.</span> <span class="o">*/</span>
- <span class="nd">@Service</span> <span class="kd">public</span> <span class="kd">class</span> <span class="nc">MatrixMultiplicationService</span> 
-<span class="o">{</span> <span class="kd">private</span> <span class="kd">final</span> <span class="nc">MethodHandle</span> <span class="n">matrixMultiplyHandle</span><span class="o">;</span> <span class="kd">public</span> <span class="kt">int</span><span class="o">[]</span> <span class="nf">multiply</span><span class="o">(</span><span class="kt">int</span><span class="o">[]</span>
-<span class="n">matrixA</span><span class="o">,</span> <span class="kt">int</span><span class="o">[]</span> <span class="n">matrixB</span><span class="o">,</span> <span class="kt">int</span> <span class="n">n</span><span class="o">)</span> <span class="kd">throws</span> <span class="nc">Throwable</span>
-<span class="o">{</span> <span class="k">try</span> <span class="o">(</span><span class="nc">Arena</span> <span class="n">arena</span> <span class="o">=</span> <span class="nc">Arena</span><span class="o">.</span><span class="na">ofConfined</span><span class="o">())</span> 
-<span class="o">{</span> 
-<span class="c1">// Copio i dati in memoria off-heap: nessun pinning dell'heap Java MemorySegment</span>
-<span class="c1">// segA = arena.allocateFrom(ValueLayout.JAVA_INT, matrixA); MemorySegment segB</span>
-<span class="c1">// = arena.allocateFrom(ValueLayout.JAVA_INT, matrixB); MemorySegment segResult</span>
-<span class="c1">// = arena.allocate((long) n * n * ValueLayout.JAVA_INT.byteSize());</span>
-<span class="c1">// Il C lavora su memoria nativa: il GC è completamente libero durante il</span>
-<span class="c1">// calcolo matrixMultiplyHandle.invokeExact(segA, segB, segResult, n); return</span>
-<span class="c1">// segResult.toArray(ValueLayout.JAVA_INT); }</span>
- <span class="o">}</span>
- <span class="o">}</span>
- 
-<span class="o">*</span> <span class="nc">Se</span> <span class="n">sono</span> <span class="n">costretto</span> <span class="n">a</span> <span class="n">usare</span> <span class="no">JNI</span> <span class="n">legacy</span><span class="o">,</span> <span class="n">minimizzo</span> <span class="n">il</span> <span class="n">tempo</span> <span class="n">della</span> <span class="n">sezione</span> <span class="n">critica</span>
-<span class="o">*</span> <span class="n">copiando</span> <span class="n">i</span> <span class="n">dati</span> <span class="n">fuori</span> <span class="n">dalla</span> <span class="n">sezione</span> <span class="n">prima</span> <span class="n">del</span> <span class="nl">calcolo:</span> <span class="o">*/</span>
- <span class="no">JNIEXPORT</span> <span class="kt">void</span> <span class="no">JNICALL</span> <span class="nf">Java_MatrixService_multiplyCorrect</span><span class="o">(</span><span class="nc">JNIEnv</span><span class="o">*</span> <span class="n">env</span><span class="o">,</span> <span class="n">jobject</span>
-<span class="n">obj</span><span class="o">,</span> <span class="n">jintArray</span> <span class="n">a</span><span class="o">,</span> <span class="n">jintArray</span> <span class="n">b</span><span class="o">,</span> <span class="n">jsize</span> <span class="n">n</span><span class="o">)</span>
-<span class="o">{</span> 
-<span class="c1">// Alloco buffer C temporanei jint* localA = (jint*)malloc(n * n *</span>
-<span class="c1">// sizeof(jint)); jint* localB = (jint*)malloc(n * n * sizeof(jint)); jint*</span>
-<span class="c1">// localResult = (jint*)calloc(n * n, sizeof(jint));</span>
-<span class="cm">/* Sezione critica MINIMA: solo la copia dei dati, non il calcolo */</span>
- <span class="n">jint</span><span class="o">*</span> <span class="n">dataA</span> <span class="o">=</span> <span class="o">(*</span><span class="n">env</span><span class="o">)-&gt;</span><span class="nc">GetPrimitiveArrayCritical</span><span class="o">(</span><span class="n">env</span><span class="o">,</span> <span class="n">a</span><span class="o">,</span> <span class="no">NULL</span><span class="o">);</span> <span class="n">memcpy</span><span class="o">(</span><span class="n">localA</span><span class="o">,</span>
-<span class="n">dataA</span><span class="o">,</span> <span class="n">n</span> <span class="o">*</span> <span class="n">n</span> <span class="o">*</span> <span class="n">sizeof</span><span class="o">(</span><span class="n">jint</span><span class="o">));</span>
-<span class="c1">// Copia veloce (*env)-&gt;ReleasePrimitiveArrayCritical(env, a, dataA, JNI_ABORT);</span>
-<span class="c1">// Rilascio IMMEDIATO jint* dataB = (*env)-&gt;GetPrimitiveArrayCritical(env, b,</span>
-<span class="c1">// NULL); memcpy(localB, dataB, n * n * sizeof(jint));</span>
-<span class="c1">// (*env)-&gt;ReleasePrimitiveArrayCritical(env, b, dataB, JNI_ABORT);</span>
-<span class="c1">// Il calcolo avviene FUORI dalla sezione critica: GC libero di girare</span>
-<span class="c1">// matrix_multiply(localA, localB, localResult, n);</span>
-<span class="cm">/* Scrittura risultato: altra sezione critica minima */</span>
- <span class="n">jintArray</span> <span class="n">result</span> <span class="o">=</span> <span class="o">(*</span><span class="n">env</span><span class="o">)-&gt;</span><span class="nc">NewIntArray</span><span class="o">(</span><span class="n">env</span><span class="o">,</span> <span class="n">n</span> <span class="o">*</span> <span class="n">n</span><span class="o">);</span> <span class="n">jint</span><span class="o">*</span> <span class="n">resultData</span> <span class="o">=</span>
-<span class="o">(*</span><span class="n">env</span><span class="o">)-&gt;</span><span class="nc">GetPrimitiveArrayCritical</span><span class="o">(</span><span class="n">env</span><span class="o">,</span> <span class="n">result</span><span class="o">,</span> <span class="no">NULL</span><span class="o">);</span> <span class="n">memcpy</span><span class="o">(</span><span class="n">resultData</span><span class="o">,</span>
-<span class="n">localResult</span><span class="o">,</span> <span class="n">n</span> <span class="o">*</span> <span class="n">n</span> <span class="o">*</span> <span class="n">sizeof</span><span class="o">(</span><span class="n">jint</span><span class="o">));</span> <span class="o">(*</span><span class="n">env</span><span class="o">)-&gt;</span><span class="nc">ReleasePrimitiveArrayCritical</span><span class="o">(</span><span class="n">env</span><span class="o">,</span>
-<span class="n">result</span><span class="o">,</span> <span class="n">resultData</span><span class="o">,</span> <span class="mi">0</span><span class="o">);</span> <span class="n">free</span><span class="o">(</span><span class="n">localA</span><span class="o">);</span> <span class="n">free</span><span class="o">(</span><span class="n">localB</span><span class="o">);</span> <span class="n">free</span><span class="o">(</span><span class="n">localResult</span><span class="o">);</span> <span class="o">}</span>
- 
+<span class="no">JNIEXPORT</span> <span class="kt">void</span> <span class="no">JNICALL</span> <span class="nf">Java_MatrixService_multiplyBad</span><span class="o">(</span><span class="nc">JNIEnv</span><span class="o">*</span> <span class="n">env</span><span class="o">,</span> <span class="n">jobject</span> <span class="n">obj</span><span class="o">,</span>
+    <span class="n">jintArray</span> <span class="n">a</span><span class="o">,</span> <span class="n">jintArray</span> <span class="n">b</span><span class="o">,</span> <span class="n">jintArray</span> <span class="n">result</span><span class="o">)</span> <span class="o">{</span>
+    <span class="n">jint</span><span class="o">*</span> <span class="n">dataA</span> <span class="o">=</span> <span class="o">(*</span><span class="n">env</span><span class="o">)-&gt;</span><span class="nc">GetPrimitiveArrayCritical</span><span class="o">(</span><span class="n">env</span><span class="o">,</span> <span class="n">a</span><span class="o">,</span> <span class="no">NULL</span><span class="o">);</span>
+    <span class="n">jint</span><span class="o">*</span> <span class="n">dataB</span> <span class="o">=</span> <span class="o">(*</span><span class="n">env</span><span class="o">)-&gt;</span><span class="nc">GetPrimitiveArrayCritical</span><span class="o">(</span><span class="n">env</span><span class="o">,</span> <span class="n">b</span><span class="o">,</span> <span class="no">NULL</span><span class="o">);</span>
+    <span class="c1">// SBAGLIATO: operazione O(n^3) dentro la sezione critica // Il GC è</span>
+        <span class="n">bloccato</span> <span class="n">per</span> <span class="n">tutta</span> <span class="n">la</span> <span class="n">durata</span> <span class="n">del</span> <span class="n">calcolo</span><span class="o">!</span> <span class="k">for</span> <span class="o">(</span><span class="kt">int</span> <span class="n">i</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="o">;</span>
+    <span class="n">i</span> <span class="o">&lt;</span> <span class="no">N</span><span class="o">;</span>
+    <span class="n">i</span><span class="o">++)</span> <span class="k">for</span> <span class="o">(</span><span class="kt">int</span> <span class="n">j</span> <span class="o">=</span> <span class="mi">0</span><span class="o">;</span>
+    <span class="n">j</span> <span class="o">&lt;</span> <span class="no">N</span><span class="o">;</span>
+    <span class="n">j</span><span class="o">++)</span> <span class="k">for</span> <span class="o">(</span><span class="kt">int</span> <span class="n">k</span> <span class="o">=</span> <span class="mi">0</span><span class="o">;</span>
+    <span class="n">k</span> <span class="o">&lt;</span> <span class="no">N</span><span class="o">;</span>
+    <span class="n">k</span><span class="o">++)</span> <span class="n">result_data</span><span class="o">[</span><span class="n">i</span><span class="o">*</span><span class="no">N</span><span class="o">+</span><span class="n">j</span><span class="o">]</span> <span class="o">+=</span> <span class="n">dataA</span><span class="o">[</span><span class="n">i</span><span class="o">*</span><span class="no">N</span><span class="o">+</span><span class="n">k</span><span class="o">]</span> <span class="o">*</span> <span class="n">dataB</span><span class="o">[</span><span class="n">k</span><span class="o">*</span><span class="no">N</span><span class="o">+</span><span class="n">j</span><span class="o">];</span>
+    <span class="o">(*</span><span class="n">env</span><span class="o">)-&gt;</span><span class="nc">ReleasePrimitiveArrayCritical</span><span class="o">(</span><span class="n">env</span><span class="o">,</span> <span class="n">a</span><span class="o">,</span> <span class="n">dataA</span><span class="o">,</span> <span class="no">JNI_ABORT</span><span class="o">);</span>
+    <span class="o">(*</span><span class="n">env</span><span class="o">)-&gt;</span><span class="nc">ReleasePrimitiveArrayCritical</span><span class="o">(</span><span class="n">env</span><span class="o">,</span> <span class="n">b</span><span class="o">,</span> <span class="n">dataB</span><span class="o">,</span> <span class="no">JNI_ABORT</span><span class="o">);</span>
+<span class="o">}</span>
+<span class="cm">/* PATTERN CORRETTO con Panama: uso MemorySegment per eliminare completamente il
+    problema. Panama non fa pinning dell'heap perché lavora su memoria off-heap:
+    il GC è sempre libero di muovere gli oggetti Java. */</span>
+<span class="nd">@Service</span> <span class="kd">public</span> <span class="kd">class</span> <span class="nc">MatrixMultiplicationService</span> <span class="o">{</span>
+    <span class="kd">private</span> <span class="kd">final</span> <span class="nc">MethodHandle</span> <span class="n">matrixMultiplyHandle</span><span class="o">;</span>
+    <span class="kd">public</span> <span class="kt">int</span><span class="o">[]</span> <span class="nf">multiply</span><span class="o">(</span><span class="kt">int</span><span class="o">[]</span> <span class="n">matrixA</span><span class="o">,</span> <span class="kt">int</span><span class="o">[]</span> <span class="n">matrixB</span><span class="o">,</span> <span class="kt">int</span> <span class="n">n</span><span class="o">)</span> <span class="kd">throws</span> <span class="nc">Throwable</span>
+        <span class="o">{</span>
+        <span class="k">try</span> <span class="o">(</span><span class="nc">Arena</span> <span class="n">arena</span> <span class="o">=</span> <span class="nc">Arena</span><span class="o">.</span><span class="na">ofConfined</span><span class="o">())</span> <span class="o">{</span>
+            <span class="c1">// Copio i dati in memoria off-heap: nessun pinning dell'heap Java</span>
+                <span class="nc">MemorySegment</span> <span class="n">segA</span> <span class="o">=</span> <span class="n">arena</span><span class="o">.</span><span class="na">allocateFrom</span><span class="o">(</span><span class="nc">ValueLayout</span><span class="o">.</span><span class="na">JAVA_INT</span><span class="o">,</span>
+                <span class="n">matrixA</span><span class="o">)</span>
+            <span class="o">;</span>
+            <span class="nc">MemorySegment</span> <span class="n">segB</span> <span class="o">=</span> <span class="n">arena</span><span class="o">.</span><span class="na">allocateFrom</span><span class="o">(</span><span class="nc">ValueLayout</span><span class="o">.</span><span class="na">JAVA_INT</span><span class="o">,</span>
+                <span class="n">matrixB</span><span class="o">);</span>
+            <span class="nc">MemorySegment</span> <span class="n">segResult</span> <span class="o">=</span> <span class="n">arena</span><span class="o">.</span><span class="na">allocate</span><span class="o">((</span><span class="kt">long</span><span class="o">)</span> <span class="n">n</span> <span class="o">*</span> <span class="n">n</span> <span class="o">*</span>
+                <span class="nc">ValueLayout</span><span class="o">.</span><span class="na">JAVA_INT</span><span class="o">.</span><span class="na">byteSize</span><span class="o">());</span>
+            <span class="c1">// Il C lavora su memoria nativa: il GC è completamente libero</span>
+                <span class="n">durante</span> <span class="n">il</span> <span class="n">calcolo</span> <span class="n">matrixMultiplyHandle</span><span class="o">.</span><span class="na">invokeExact</span><span class="o">(</span><span class="n">segA</span><span class="o">,</span> <span class="n">segB</span><span class="o">,</span>
+                <span class="n">segResult</span><span class="o">,</span> <span class="n">n</span><span class="o">)</span>
+            <span class="o">;</span>
+            <span class="k">return</span> <span class="n">segResult</span><span class="o">.</span><span class="na">toArray</span><span class="o">(</span><span class="nc">ValueLayout</span><span class="o">.</span><span class="na">JAVA_INT</span><span class="o">);</span>
+        <span class="o">}</span>
+    <span class="o">}</span>
+<span class="o">}</span>
+<span class="cm">/* Se sono costretto a usare JNI legacy, minimizzo il tempo della sezione
+    critica copiando i dati fuori dalla sezione prima del calcolo: */</span>
+<span class="no">JNIEXPORT</span> <span class="kt">void</span> <span class="no">JNICALL</span> <span class="nf">Java_MatrixService_multiplyCorrect</span><span class="o">(</span><span class="nc">JNIEnv</span><span class="o">*</span> <span class="n">env</span><span class="o">,</span> <span class="n">jobject</span>
+    <span class="n">obj</span><span class="o">,</span> <span class="n">jintArray</span> <span class="n">a</span><span class="o">,</span> <span class="n">jintArray</span> <span class="n">b</span><span class="o">,</span> <span class="n">jsize</span> <span class="n">n</span><span class="o">)</span> <span class="o">{</span>
+    <span class="c1">// Alloco buffer C temporanei jint* localA = (jint*)malloc(n * n *</span>
+        <span class="n">sizeof</span><span class="o">(</span><span class="n">jint</span><span class="o">))</span>
+    <span class="o">;</span>
+    <span class="n">jint</span><span class="o">*</span> <span class="n">localB</span> <span class="o">=</span> <span class="o">(</span><span class="n">jint</span><span class="o">*)</span><span class="n">malloc</span><span class="o">(</span><span class="n">n</span> <span class="o">*</span> <span class="n">n</span> <span class="o">*</span> <span class="n">sizeof</span><span class="o">(</span><span class="n">jint</span><span class="o">));</span>
+    <span class="n">jint</span><span class="o">*</span> <span class="n">localResult</span> <span class="o">=</span> <span class="o">(</span><span class="n">jint</span><span class="o">*)</span><span class="n">calloc</span><span class="o">(</span><span class="n">n</span> <span class="o">*</span> <span class="n">n</span><span class="o">,</span> <span class="n">sizeof</span><span class="o">(</span><span class="n">jint</span><span class="o">));</span>
+    <span class="cm">/* Sezione critica MINIMA: solo la copia dei dati, non il calcolo */</span>
+    <span class="n">jint</span><span class="o">*</span> <span class="n">dataA</span> <span class="o">=</span> <span class="o">(*</span><span class="n">env</span><span class="o">)-&gt;</span><span class="nc">GetPrimitiveArrayCritical</span><span class="o">(</span><span class="n">env</span><span class="o">,</span> <span class="n">a</span><span class="o">,</span> <span class="no">NULL</span><span class="o">);</span>
+    <span class="n">memcpy</span><span class="o">(</span><span class="n">localA</span><span class="o">,</span> <span class="n">dataA</span><span class="o">,</span> <span class="n">n</span> <span class="o">*</span> <span class="n">n</span> <span class="o">*</span> <span class="n">sizeof</span><span class="o">(</span><span class="n">jint</span><span class="o">));</span>
+    <span class="c1">// Copia veloce (*env)-&gt;ReleasePrimitiveArrayCritical(env, a, dataA,</span>
+        <span class="no">JNI_ABORT</span><span class="o">)</span>
+    <span class="o">;</span>
+    <span class="c1">// Rilascio IMMEDIATO jint* dataB = (*env)-&gt;GetPrimitiveArrayCritical(env,</span>
+        <span class="n">b</span><span class="o">,</span> <span class="no">NULL</span><span class="o">)</span>
+    <span class="o">;</span>
+    <span class="n">memcpy</span><span class="o">(</span><span class="n">localB</span><span class="o">,</span> <span class="n">dataB</span><span class="o">,</span> <span class="n">n</span> <span class="o">*</span> <span class="n">n</span> <span class="o">*</span> <span class="n">sizeof</span><span class="o">(</span><span class="n">jint</span><span class="o">));</span>
+    <span class="o">(*</span><span class="n">env</span><span class="o">)-&gt;</span><span class="nc">ReleasePrimitiveArrayCritical</span><span class="o">(</span><span class="n">env</span><span class="o">,</span> <span class="n">b</span><span class="o">,</span> <span class="n">dataB</span><span class="o">,</span> <span class="no">JNI_ABORT</span><span class="o">);</span>
+    <span class="c1">// Il calcolo avviene FUORI dalla sezione critica: GC libero di girare</span>
+        <span class="n">matrix_multiply</span><span class="o">(</span><span class="n">localA</span><span class="o">,</span> <span class="n">localB</span><span class="o">,</span> <span class="n">localResult</span><span class="o">,</span> <span class="n">n</span><span class="o">)</span>
+    <span class="o">;</span>
+    <span class="cm">/* Scrittura risultato: altra sezione critica minima */</span>
+    <span class="n">jintArray</span> <span class="n">result</span> <span class="o">=</span> <span class="o">(*</span><span class="n">env</span><span class="o">)-&gt;</span><span class="nc">NewIntArray</span><span class="o">(</span><span class="n">env</span><span class="o">,</span> <span class="n">n</span> <span class="o">*</span> <span class="n">n</span><span class="o">);</span>
+    <span class="n">jint</span><span class="o">*</span> <span class="n">resultData</span> <span class="o">=</span> <span class="o">(*</span><span class="n">env</span><span class="o">)-&gt;</span><span class="nc">GetPrimitiveArrayCritical</span><span class="o">(</span><span class="n">env</span><span class="o">,</span> <span class="n">result</span><span class="o">,</span> <span class="no">NULL</span><span class="o">);</span>
+    <span class="n">memcpy</span><span class="o">(</span><span class="n">resultData</span><span class="o">,</span> <span class="n">localResult</span><span class="o">,</span> <span class="n">n</span> <span class="o">*</span> <span class="n">n</span> <span class="o">*</span> <span class="n">sizeof</span><span class="o">(</span><span class="n">jint</span><span class="o">));</span>
+    <span class="o">(*</span><span class="n">env</span><span class="o">)-&gt;</span><span class="nc">ReleasePrimitiveArrayCritical</span><span class="o">(</span><span class="n">env</span><span class="o">,</span> <span class="n">result</span><span class="o">,</span> <span class="n">resultData</span><span class="o">,</span> <span class="mi">0</span><span class="o">);</span>
+    <span class="n">free</span><span class="o">(</span><span class="n">localA</span><span class="o">);</span>
+    <span class="n">free</span><span class="o">(</span><span class="n">localB</span><span class="o">);</span>
+    <span class="n">free</span><span class="o">(</span><span class="n">localResult</span><span class="o">);</span>
+<span class="o">}</span>
 <span class="cm">/* Monitoro le pause GC causate da JNI in produzione tramite JFR: */</span>
- 
-<span class="c1">// jcmd &lt;PID&gt; JFR.start name=gc_jni settings=profile </span>
-<span class="c1">// Filtro per eventi "GC Pause" con causa "JNI Critical Section"</span>
+<span class="c1">// jcmd &lt;PID&gt; JFR.start name=gc_jni settings=profile // Filtro per eventi "GC</span>
+    <span class="nc">Pause</span><span class="s">" con causa "</span><span class="no">JNI</span> <span class="nc">Critical</span> <span class="nc">Section</span><span class="err">"</span>
 </pre></td></tr></tbody></table></code></pre></div></div>
 
         </article>

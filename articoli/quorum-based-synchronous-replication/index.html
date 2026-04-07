@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Quorum-based Synchronous Replication — DevLog</title>
-    <meta name="description" content="Dalla versione 10, PostgreSQL supporta la replica sincrona basata su quorum: la transazione è sicura se N nodi su una lista di M confermano la ricezione. Questo meccanismo evita il 'Single Point of Failure' della replica sincrona classica: se uno sta
+    <meta name="description" content="Dalla versione 10, PostgreSQL supporta la replica sincrona basata su quorum: la transazione è sicura se N nodi su una lista di M confermano la ricezione. Questo meccanismo evita il "Single Point of Failure" della replica sincrona classica: se uno sta
 ">
     <link rel="stylesheet" href="/appuntidiprogrammazione/assets/css/style.css">
 
@@ -96,17 +96,13 @@
 5
 6
 7
-8
-9
-</pre></td><td class="rouge-code"><pre><span class="cm">/* Nel postgresql.conf del Master */</span>
- <span class="n">synchronous_standby_names</span> <span class="o">=</span> <span class="s1">'ANY 2 (node_a, node_b, node_c)'</span><span class="p">;</span>
-<span class="n">synchronous_commit</span> <span class="o">=</span> <span class="k">on</span><span class="p">;</span>
-<span class="cm">/* Monitoraggio del quorum in tempo reale */</span>
- <span class="k">SELECT</span> <span class="n">application_name</span><span class="p">,</span> <span class="n">sync_state</span><span class="p">,</span> <span class="n">pg_wal_lsn_diff</span><span class="p">(</span><span class="n">sent_lsn</span><span class="p">,</span> <span class="n">flush_lsn</span><span class="p">)</span> <span class="k">AS</span>
-<span class="n">bytes_not_flushed</span> <span class="k">FROM</span> <span class="n">pg_stat_replication</span> <span class="k">ORDER</span> <span class="k">BY</span> <span class="n">sync_state</span> <span class="k">DESC</span><span class="p">;</span>
-<span class="cm">/* Test di durabilità */</span>
- <span class="k">BEGIN</span><span class="p">;</span> <span class="k">INSERT</span> <span class="k">INTO</span> <span class="n">ordini</span> <span class="p">(</span><span class="n">cliente_id</span><span class="p">,</span> <span class="n">importo</span><span class="p">,</span> <span class="n">stato</span><span class="p">)</span> <span class="k">VALUES</span> <span class="p">(</span><span class="mi">42</span><span class="p">,</span> <span class="mi">1500</span><span class="p">.</span><span class="mi">00</span><span class="p">,</span>
-<span class="s1">'confermato'</span><span class="p">);</span> <span class="k">COMMIT</span><span class="p">;</span>
+</pre></td><td class="rouge-code"><pre>    <span class="cm">/* Nel postgresql.conf del Master */</span> <span class="n">synchronous_standby_names</span> <span class="o">=</span> <span class="s1">'ANY 2
+        (node_a, node_b, node_c)'</span><span class="p">;</span> <span class="n">synchronous_commit</span> <span class="o">=</span> <span class="k">on</span><span class="p">;</span> <span class="cm">/* Monitoraggio del
+        quorum in tempo reale */</span> <span class="k">SELECT</span> <span class="n">application_name</span><span class="p">,</span> <span class="n">sync_state</span><span class="p">,</span>
+        <span class="n">pg_wal_lsn_diff</span><span class="p">(</span><span class="n">sent_lsn</span><span class="p">,</span> <span class="n">flush_lsn</span><span class="p">)</span> <span class="k">AS</span> <span class="n">bytes_not_flushed</span> <span class="k">FROM</span>
+        <span class="n">pg_stat_replication</span> <span class="k">ORDER</span> <span class="k">BY</span> <span class="n">sync_state</span> <span class="k">DESC</span><span class="p">;</span> <span class="cm">/* Test di durabilità */</span>
+        <span class="k">BEGIN</span><span class="p">;</span> <span class="k">INSERT</span> <span class="k">INTO</span> <span class="n">ordini</span> <span class="p">(</span><span class="n">cliente_id</span><span class="p">,</span> <span class="n">importo</span><span class="p">,</span> <span class="n">stato</span><span class="p">)</span> <span class="k">VALUES</span> <span class="p">(</span><span class="mi">42</span><span class="p">,</span>
+        <span class="mi">1500</span><span class="p">.</span><span class="mi">00</span><span class="p">,</span> <span class="s1">'confermato'</span><span class="p">);</span> <span class="k">COMMIT</span><span class="p">;</span>
 </pre></td></tr></tbody></table></code></pre></div></div>
 
         </article>

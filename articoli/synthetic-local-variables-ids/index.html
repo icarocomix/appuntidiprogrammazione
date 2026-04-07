@@ -90,172 +90,88 @@
 <h2 id="esempio-implementativo">Esempio Implementativo</h2>
 
 <pre><code class="language-thymeleaf">&lt;!-- CASO BASE: checkbox con label associata tramite #ids.seq e #ids.prev.
-#ids.seq('chk') genera un ID con suffisso incrementale: "chk1", "chk2",
-"chk3"... #ids.prev('chk') riferisce l'ID generato dall'ultima chiamata a
-seq('chk') sullo stesso elemento. --&gt;
+    #ids.seq('chk') genera un ID con suffisso incrementale: "chk1", "chk2",
+    "chk3"... #ids.prev('chk') riferisce l'ID generato dall'ultima chiamata a
+    seq('chk') sullo stesso elemento. --&gt;
 &lt;ul&gt;
-    &lt;li
-        th:each="permission : $
-{permissions}
-"
-    &gt;
-        &lt;input
-            type="checkbox"
-            th:id="$
-{#ids.seq('perm')}
-"
-            th:name="permissions"
-            th:value="$
-{permission.code}
-"
-            th:checked="$
-{permission.assigned}
-"
-        /&gt;
-        &lt;label
-            th:for="$
-{#ids.prev('perm')}
-"
-            th:text="$
-{permission.label}
-"
-            &gt;Permesso&lt;/label
-        &gt;
-    &lt;/li&gt;
-&lt;/ul&gt;
-&lt;!-- Output generato: --&gt;
-&lt;!-- &lt;input type="checkbox" id="perm1" name="permissions" value="READ"&gt; --&gt;
-&lt;!-- &lt;label for="perm1"&gt;Lettura&lt;/label&gt; --&gt;
-&lt;!-- &lt;input type="checkbox" id="perm2" name="permissions" value="WRITE"&gt; --&gt;
-&lt;!-- &lt;label for="perm2"&gt;Scrittura&lt;/label&gt; --&gt;
+    &lt;li th:each="permission : ${permissions}"&gt;
+        &lt;input type="checkbox" th:id="${#ids.seq('perm')}" th:name="permissions"
+            th:value="${permission.code}" th:checked="${permission.assigned}"&gt;
+            &lt;label th:for="${#ids.prev('perm')}" th:text="${permission.label}"&gt;
+                Permesso
+            &lt;/label&gt;
+        &lt;/li&gt;
+    &lt;/ul&gt;
+    &lt;!-- Output generato: --&gt;
+    &lt;!-- &lt;input type="checkbox" id="perm1" name="permissions" value="READ"&gt;
+    --&gt;
+    &lt;!-- &lt;label for="perm1"&gt;
+    Lettura
+&lt;/label&gt;
+--&gt;
+&lt;!-- &lt;input type="checkbox" id="perm2" name="permissions" value="WRITE"&gt;
+--&gt;
+&lt;!-- &lt;label for="perm2"&gt;
+Scrittura
+&lt;/label&gt;
+--&gt;
 &lt;!-- CASO AVANZATO: form dinamico con più campi per riga, ciascuno con ID
-univoco. Ogni riga ha un gruppo di input associati: tutti condividono il
-suffisso incrementale della riga. --&gt;
-&lt;div
-    class="form-row"
-    th:each="item : $
-{orderItems}
-"
-&gt;
+    univoco. Ogni riga ha un gruppo di input associati: tutti condividono il
+    suffisso incrementale della riga. --&gt;
+&lt;div class="form-row" th:each="item : ${orderItems}"&gt;
     &lt;!-- #ids.seq genera il numero della riga: usato come suffisso per tutti i
-campi --&gt;
-    &lt;div
-        th:with="rowId=$
-{#ids.seq('row')}
-"
-    &gt;
+        campi --&gt;
+    &lt;div th:with="rowId=${#ids.seq('row')}"&gt;
         &lt;!-- Campo prodotto --&gt;
-        &lt;label
-            th:for="'product-' + $
-{rowId}
-"
-            &gt;Prodotto&lt;/label
-        &gt;
-        &lt;input
-            type="text"
-            th:id="'product-' + $
-{rowId}
-"
-            th:name="'items[__$
-{itemStat.index}
-__].productName'"
-            th:value="$
-{item.productName}
-"
-            class="form-control"
-        /&gt;
-        &lt;!-- Campo quantità: ID correlato alla stessa riga --&gt;
-        &lt;label
-            th:for="'qty-' + $
-{rowId}
-"
-            &gt;Quantità&lt;/label
-        &gt;
-        &lt;input
-            type="number"
-            th:id="'qty-' + $
-{rowId}
-"
-            th:name="'items[__$
-{itemStat.index}
-__].quantity'"
-            th:value="$
-{item.quantity}
-"
-            class="form-control"
-            min="1"
-        /&gt;
-        &lt;!-- Campo prezzo: stessa riga --&gt;
-        &lt;label
-            th:for="'price-' + $
-{rowId}
-"
-            &gt;Prezzo&lt;/label
-        &gt;
-        &lt;input
-            type="number"
-            th:id="'price-' + $
-{rowId}
-"
-            th:name="'items[__$
-{itemStat.index}
-__].price'"
-            th:value="$
-{item.price}
-"
-            class="form-control"
-            step="0.01"
-        /&gt;
-    &lt;/div&gt;
-&lt;/div&gt;
-&lt;!-- CASO COMPONENTI RIUTILIZZABILI: un frammento che usa #ids funziona
-correttamente anche se incluso più volte nella stessa pagina. Ogni inclusione
-genera ID distinti. --&gt;
-&lt;div th:fragment="toggle-panel(title, content)"&gt;
-    &lt;div
-        th:with="panelId=$
-{#ids.seq('panel')}
-"
-    &gt;
-        &lt;button
-            class="btn btn-outline-secondary"
-            th:attr="data-bs-toggle='collapse', data-bs-target='#collapse-' + $
-{panelId}
-"
-            th:text="$
-{title}
-"
-        &gt;
-            Titolo
-        &lt;/button&gt;
-        &lt;div
-            th:id="'collapse-' + $
-{panelId}
-"
-            class="collapse"
-        &gt;
-            &lt;p
-                th:text="$
-{content}
-"
-            &gt;
-                Contenuto
-            &lt;/p&gt;
-        &lt;/div&gt;
-    &lt;/div&gt;
-&lt;/div&gt;
-&lt;!-- Due inclusioni dello stesso frammento: ID distinti garantiti --&gt;
-&lt;th:block
-    th:replace="~
-{:: toggle-panel('Sezione A', 'Contenuto A')}
-"
-&gt;&lt;/th:block&gt;
-&lt;th:block
-    th:replace="~
-{:: toggle-panel('Sezione B', 'Contenuto B')}
-"
-&gt;&lt;/th:block&gt;
-&lt;!-- Genera: collapse-1 e collapse-2, mai duplicati --&gt;
+        &lt;label th:for="'product-' + ${rowId}"&gt;
+            Prodotto
+        &lt;/label&gt;
+        &lt;input type="text" th:id="'product-' + ${rowId}"
+            th:name="'items[__${itemStat.index}__].productName'"
+            th:value="${item.productName}" class="form-control"&gt;
+            &lt;!-- Campo quantità: ID correlato alla stessa riga --&gt;
+            &lt;label th:for="'qty-' + ${rowId}"&gt;
+                Quantità
+            &lt;/label&gt;
+            &lt;input type="number" th:id="'qty-' + ${rowId}"
+                th:name="'items[__${itemStat.index}__].quantity'"
+                th:value="${item.quantity}" class="form-control" min="1"&gt;
+                &lt;!-- Campo prezzo: stessa riga --&gt;
+                &lt;label th:for="'price-' + ${rowId}"&gt;
+                    Prezzo
+                &lt;/label&gt;
+                &lt;input type="number" th:id="'price-' + ${rowId}"
+                    th:name="'items[__${itemStat.index}__].price'"
+                    th:value="${item.price}" class="form-control" step="0.01"&gt;
+                &lt;/div&gt;
+            &lt;/div&gt;
+            &lt;!-- CASO COMPONENTI RIUTILIZZABILI: un frammento che usa #ids
+                funziona correttamente anche se incluso più volte nella stessa
+                pagina. Ogni inclusione genera ID distinti. --&gt;
+            &lt;div th:fragment="toggle-panel(title, content)"&gt;
+                &lt;div th:with="panelId=${#ids.seq('panel')}"&gt;
+                    &lt;button class="btn btn-outline-secondary"
+                        th:attr="data-bs-toggle='collapse',
+                        data-bs-target='#collapse-' + ${panelId}"
+                        th:text="${title}"&gt;
+                        Titolo
+                    &lt;/button&gt;
+                    &lt;div th:id="'collapse-' + ${panelId}" class="collapse"&gt;
+                        &lt;p th:text="${content}"&gt;
+                            Contenuto
+                        &lt;/p&gt;
+                    &lt;/div&gt;
+                &lt;/div&gt;
+            &lt;/div&gt;
+            &lt;!-- Due inclusioni dello stesso frammento: ID distinti garantiti
+                --&gt;
+            &lt;th:block th:replace="~{:: toggle-panel('Sezione A', 'Contenuto
+                A')}"&gt;
+            &lt;/th:block&gt;
+            &lt;th:block th:replace="~{:: toggle-panel('Sezione B', 'Contenuto
+                B')}"&gt;
+            &lt;/th:block&gt;
+            &lt;!-- Genera: collapse-1 e collapse-2, mai duplicati --&gt;
 </code></pre>
 
         </article>

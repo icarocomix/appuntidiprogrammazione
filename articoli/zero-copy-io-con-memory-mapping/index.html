@@ -170,87 +170,159 @@
 79
 80
 81
-</pre></td><td class="rouge-code"><pre><span class="o">*</span> <span class="nc">Implemento</span> <span class="n">un</span> <span class="n">analizzatore</span> <span class="n">di</span> <span class="n">log</span> <span class="n">da</span> <span class="n">file</span> <span class="n">multi</span><span class="o">-</span><span class="no">GB</span> <span class="n">che</span> <span class="n">non</span> <span class="n">carica</span> <span class="n">mai</span> <span class="n">l</span><span class="err">'</span><span class="n">intero</span>
-<span class="o">*</span> <span class="n">file</span> <span class="n">in</span> <span class="n">memoria</span><span class="o">.</span> <span class="nc">Il</span> <span class="n">kernel</span> <span class="n">carica</span> <span class="n">le</span> <span class="n">pagine</span> <span class="n">solo</span> <span class="n">quando</span> <span class="n">le</span> <span class="n">accediamo</span> <span class="n">e</span> <span class="n">le</span>
-<span class="o">*</span> <span class="n">scarta</span> <span class="n">quando</span> <span class="n">non</span> <span class="n">servono</span> <span class="n">più</span><span class="o">.</span> <span class="o">*/</span>
- <span class="nd">@Service</span> <span class="kd">public</span> <span class="kd">class</span> <span class="nc">LargeLogAnalyzer</span> 
-<span class="o">{</span> <span class="kd">public</span> <span class="nc">LogStats</span> <span class="nf">analyzeLog</span><span class="o">(</span><span class="nc">Path</span> <span class="n">logFile</span><span class="o">)</span> <span class="kd">throws</span> <span class="nc">Exception</span> 
-<span class="o">{</span> <span class="k">try</span> <span class="o">(</span><span class="nc">FileChannel</span> <span class="n">channel</span> <span class="o">=</span> <span class="nc">FileChannel</span><span class="o">.</span><span class="na">open</span><span class="o">(</span><span class="n">logFile</span><span class="o">,</span> <span class="nc">StandardOpenOption</span><span class="o">.</span><span class="na">READ</span><span class="o">);</span>
-<span class="nc">Arena</span> <span class="n">arena</span> <span class="o">=</span> <span class="nc">Arena</span><span class="o">.</span><span class="na">ofConfined</span><span class="o">())</span>
-<span class="o">{</span> <span class="kt">long</span> <span class="n">fileSize</span> <span class="o">=</span> <span class="n">channel</span><span class="o">.</span><span class="na">size</span><span class="o">();</span> <span class="n">log</span><span class="o">.</span><span class="na">info</span><span class="o">(</span><span class="s">"Analisi file da 
-{}
-GB"</span><span class="o">,</span> <span class="n">fileSize</span> <span class="o">/</span> <span class="mf">1_073_741_824.0</span><span class="o">);</span> 
-<span class="c1">// Mappo l'intero file in un MemorySegment: questa operazione è istantanea </span>
-<span class="c1">// Il kernel non carica nulla finché non accediamo ai byte MemorySegment</span>
-<span class="c1">// mmappedFile = channel.map( FileChannel.MapMode.READ_ONLY, 0, fileSize, arena</span>
-<span class="c1">// );</span>
-<span class="c1">// Scansiono il file cercando le righe ERROR senza mai allocare String</span>
-<span class="c1">// temporanee long errorCount = 0; long warningCount = 0; long offset = 0; while</span>
-<span class="c1">// (offset &lt; fileSize)</span>
-<span class="o">{</span> 
-<span class="c1">// Trovo la fine della riga corrente long lineEnd = findNewline(mmappedFile,</span>
-<span class="c1">// offset, fileSize);</span>
-<span class="c1">// Lavoro direttamente sul segmento: zero copie if (lineContains(mmappedFile,</span>
-<span class="c1">// offset, lineEnd, "ERROR"))</span>
-<span class="o">{</span> <span class="n">errorCount</span><span class="o">++;</span> <span class="o">}</span>
- <span class="k">else</span> <span class="nf">if</span> <span class="o">(</span><span class="n">lineContains</span><span class="o">(</span><span class="n">mmappedFile</span><span class="o">,</span> <span class="n">offset</span><span class="o">,</span> <span class="n">lineEnd</span><span class="o">,</span> <span class="s">"WARNING"</span><span class="o">))</span> 
-<span class="o">{</span> <span class="n">warningCount</span><span class="o">++;</span> <span class="o">}</span>
- <span class="n">offset</span> <span class="o">=</span> <span class="n">lineEnd</span> <span class="o">+</span> <span class="mi">1</span><span class="o">;</span> <span class="o">}</span>
- <span class="k">return</span> <span class="k">new</span> <span class="nf">LogStats</span><span class="o">(</span><span class="n">errorCount</span><span class="o">,</span> <span class="n">warningCount</span><span class="o">);</span> <span class="o">}</span>
- 
-<span class="c1">// Qui: il mapping viene rilasciato istantaneamente }</span>
- <span class="kd">private</span> <span class="kt">long</span> <span class="nf">findNewline</span><span class="o">(</span><span class="nc">MemorySegment</span> <span class="n">segment</span><span class="o">,</span> <span class="kt">long</span> <span class="n">from</span><span class="o">,</span> <span class="kt">long</span> <span class="n">max</span><span class="o">)</span> 
-<span class="o">{</span> <span class="k">for</span> <span class="o">(</span><span class="kt">long</span> <span class="n">i</span> <span class="o">=</span> <span class="n">from</span><span class="o">;</span> <span class="n">i</span> <span class="o">&lt;</span> <span class="n">max</span><span class="o">;</span> <span class="n">i</span><span class="o">++)</span> 
-<span class="o">{</span> <span class="k">if</span> <span class="o">(</span><span class="n">segment</span><span class="o">.</span><span class="na">get</span><span class="o">(</span><span class="nc">ValueLayout</span><span class="o">.</span><span class="na">JAVA_BYTE</span><span class="o">,</span> <span class="n">i</span><span class="o">)</span> <span class="o">==</span> <span class="sc">'
-'</span><span class="o">)</span> <span class="k">return</span> <span class="n">i</span><span class="o">;</span> <span class="o">}</span>
- <span class="k">return</span> <span class="n">max</span><span class="o">;</span> <span class="o">}</span>
- <span class="kd">private</span> <span class="kt">boolean</span> <span class="nf">lineContains</span><span class="o">(</span><span class="nc">MemorySegment</span> <span class="n">segment</span><span class="o">,</span> <span class="kt">long</span> <span class="n">start</span><span class="o">,</span> <span class="kt">long</span> <span class="n">end</span><span class="o">,</span>
-<span class="nc">String</span> <span class="n">pattern</span><span class="o">)</span>
-<span class="o">{</span> 
-<span class="c1">// Confronto i byte del pattern direttamente nel segmento senza creare String</span>
-<span class="c1">// byte[] patternBytes = pattern.getBytes(StandardCharsets.UTF_8); outer: for</span>
-<span class="c1">// (long i = start; i &lt;= end - patternBytes.length; i++)</span>
-<span class="o">{</span> <span class="k">for</span> <span class="o">(</span><span class="kt">int</span> <span class="n">j</span> <span class="o">=</span> <span class="mi">0</span><span class="o">;</span> <span class="n">j</span> <span class="o">&lt;</span> <span class="n">patternBytes</span><span class="o">.</span><span class="na">length</span><span class="o">;</span> <span class="n">j</span><span class="o">++)</span> 
-<span class="o">{</span> <span class="k">if</span> <span class="o">(</span><span class="n">segment</span><span class="o">.</span><span class="na">get</span><span class="o">(</span><span class="nc">ValueLayout</span><span class="o">.</span><span class="na">JAVA_BYTE</span><span class="o">,</span> <span class="n">i</span> <span class="o">+</span> <span class="n">j</span><span class="o">)</span> <span class="o">!=</span> <span class="n">patternBytes</span><span class="o">[</span><span class="n">j</span><span class="o">])</span> <span class="k">continue</span>
-<span class="n">outer</span><span class="o">;</span> <span class="o">}</span>
- <span class="k">return</span> <span class="kc">true</span><span class="o">;</span> <span class="o">}</span>
- <span class="k">return</span> <span class="kc">false</span><span class="o">;</span> <span class="o">}</span>
- <span class="o">}</span>
- 
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+106
+107
+108
+109
+110
+111
+112
+113
+114
+115
+116
+117
+</pre></td><td class="rouge-code"><pre><span class="cm">/* Implemento un analizzatore di log da file multi-GB che non carica mai
+    l'intero file in memoria. Il kernel carica le pagine solo quando le
+    accediamo e le scarta quando non servono più. */</span>
+<span class="nd">@Service</span> <span class="kd">public</span> <span class="kd">class</span> <span class="nc">LargeLogAnalyzer</span> <span class="o">{</span>
+    <span class="kd">public</span> <span class="nc">LogStats</span> <span class="nf">analyzeLog</span><span class="o">(</span><span class="nc">Path</span> <span class="n">logFile</span><span class="o">)</span> <span class="kd">throws</span> <span class="nc">Exception</span> <span class="o">{</span>
+        <span class="k">try</span> <span class="o">(</span><span class="nc">FileChannel</span> <span class="n">channel</span> <span class="o">=</span> <span class="nc">FileChannel</span><span class="o">.</span><span class="na">open</span><span class="o">(</span><span class="n">logFile</span><span class="o">,</span>
+            <span class="nc">StandardOpenOption</span><span class="o">.</span><span class="na">READ</span><span class="o">);</span>
+        <span class="nc">Arena</span> <span class="n">arena</span> <span class="o">=</span> <span class="nc">Arena</span><span class="o">.</span><span class="na">ofConfined</span><span class="o">())</span> <span class="o">{</span>
+            <span class="kt">long</span> <span class="n">fileSize</span> <span class="o">=</span> <span class="n">channel</span><span class="o">.</span><span class="na">size</span><span class="o">();</span>
+            <span class="n">log</span><span class="o">.</span><span class="na">info</span><span class="o">(</span><span class="s">"Analisi file da {
+            }
+            GB"</span><span class="o">,</span> <span class="n">fileSize</span> <span class="o">/</span> <span class="mf">1_073_741_824.0</span><span class="o">);</span>
+            <span class="c1">// Mappo l'intero file in un MemorySegment: questa operazione è</span>
+                <span class="n">istantanea</span> <span class="c1">// Il kernel non carica nulla finché non accediamo ai</span>
+                <span class="kt">byte</span> <span class="nc">MemorySegment</span> <span class="n">mmappedFile</span> <span class="o">=</span> <span class="n">channel</span><span class="o">.</span><span class="na">map</span><span class="o">(</span>
+                <span class="nc">FileChannel</span><span class="o">.</span><span class="na">MapMode</span><span class="o">.</span><span class="na">READ_ONLY</span><span class="o">,</span> <span class="mi">0</span><span class="o">,</span> <span class="n">fileSize</span><span class="o">,</span> <span class="n">arena</span> <span class="o">)</span>
+            <span class="o">;</span>
+            <span class="c1">// Scansiono il file cercando le righe ERROR senza mai allocare</span>
+                <span class="nc">String</span> <span class="n">temporanee</span> <span class="kt">long</span> <span class="n">errorCount</span> <span class="o">=</span> <span class="mi">0</span>
+            <span class="o">;</span>
+            <span class="kt">long</span> <span class="n">warningCount</span> <span class="o">=</span> <span class="mi">0</span><span class="o">;</span>
+            <span class="kt">long</span> <span class="n">offset</span> <span class="o">=</span> <span class="mi">0</span><span class="o">;</span>
+            <span class="k">while</span> <span class="o">(</span><span class="n">offset</span> <span class="o">&lt;</span> <span class="n">fileSize</span><span class="o">)</span> <span class="o">{</span>
+                <span class="c1">// Trovo la fine della riga corrente long lineEnd =</span>
+                    <span class="n">findNewline</span><span class="o">(</span><span class="n">mmappedFile</span><span class="o">,</span> <span class="n">offset</span><span class="o">,</span> <span class="n">fileSize</span><span class="o">)</span>
+                <span class="o">;</span>
+                <span class="c1">// Lavoro direttamente sul segmento: zero copie if</span>
+                    <span class="o">(</span><span class="n">lineContains</span><span class="o">(</span><span class="n">mmappedFile</span><span class="o">,</span> <span class="n">offset</span><span class="o">,</span> <span class="n">lineEnd</span><span class="o">,</span> <span class="s">"ERROR"</span><span class="o">))</span>
+                <span class="o">{</span>
+                    <span class="n">errorCount</span><span class="o">++;</span>
+                <span class="o">}</span>
+                <span class="k">else</span> <span class="nf">if</span> <span class="o">(</span><span class="n">lineContains</span><span class="o">(</span><span class="n">mmappedFile</span><span class="o">,</span> <span class="n">offset</span><span class="o">,</span> <span class="n">lineEnd</span><span class="o">,</span> <span class="s">"WARNING"</span><span class="o">))</span>
+                    <span class="o">{</span>
+                    <span class="n">warningCount</span><span class="o">++;</span>
+                <span class="o">}</span>
+                <span class="n">offset</span> <span class="o">=</span> <span class="n">lineEnd</span> <span class="o">+</span> <span class="mi">1</span><span class="o">;</span>
+            <span class="o">}</span>
+            <span class="k">return</span> <span class="k">new</span> <span class="nf">LogStats</span><span class="o">(</span><span class="n">errorCount</span><span class="o">,</span> <span class="n">warningCount</span><span class="o">);</span>
+        <span class="o">}</span>
+        <span class="c1">// Qui: il mapping viene rilasciato istantaneamente</span>
+    <span class="o">}</span>
+    <span class="kd">private</span> <span class="kt">long</span> <span class="nf">findNewline</span><span class="o">(</span><span class="nc">MemorySegment</span> <span class="n">segment</span><span class="o">,</span> <span class="kt">long</span> <span class="n">from</span><span class="o">,</span> <span class="kt">long</span> <span class="n">max</span><span class="o">)</span> <span class="o">{</span>
+        <span class="k">for</span> <span class="o">(</span><span class="kt">long</span> <span class="n">i</span> <span class="o">=</span> <span class="n">from</span><span class="o">;</span>
+        <span class="n">i</span> <span class="o">&lt;</span> <span class="n">max</span><span class="o">;</span>
+        <span class="n">i</span><span class="o">++)</span> <span class="o">{</span>
+            <span class="k">if</span> <span class="o">(</span><span class="n">segment</span><span class="o">.</span><span class="na">get</span><span class="o">(</span><span class="nc">ValueLayout</span><span class="o">.</span><span class="na">JAVA_BYTE</span><span class="o">,</span> <span class="n">i</span><span class="o">)</span> <span class="o">==</span> <span class="sc">' '</span><span class="o">)</span> <span class="k">return</span> <span class="n">i</span><span class="o">;</span>
+        <span class="o">}</span>
+        <span class="k">return</span> <span class="n">max</span><span class="o">;</span>
+    <span class="o">}</span>
+    <span class="kd">private</span> <span class="kt">boolean</span> <span class="nf">lineContains</span><span class="o">(</span><span class="nc">MemorySegment</span> <span class="n">segment</span><span class="o">,</span> <span class="kt">long</span> <span class="n">start</span><span class="o">,</span> <span class="kt">long</span> <span class="n">end</span><span class="o">,</span>
+        <span class="nc">String</span> <span class="n">pattern</span><span class="o">)</span> <span class="o">{</span>
+        <span class="c1">// Confronto i byte del pattern direttamente nel segmento senza creare</span>
+            <span class="nc">String</span> <span class="kt">byte</span><span class="o">[]</span> <span class="n">patternBytes</span> <span class="o">=</span>
+            <span class="n">pattern</span><span class="o">.</span><span class="na">getBytes</span><span class="o">(</span><span class="nc">StandardCharsets</span><span class="o">.</span><span class="na">UTF_8</span><span class="o">)</span>
+        <span class="o">;</span>
+        <span class="nl">outer:</span> <span class="k">for</span> <span class="o">(</span><span class="kt">long</span> <span class="n">i</span> <span class="o">=</span> <span class="n">start</span><span class="o">;</span>
+        <span class="n">i</span> <span class="o">&lt;=</span> <span class="n">end</span> <span class="o">-</span> <span class="n">patternBytes</span><span class="o">.</span><span class="na">length</span><span class="o">;</span>
+        <span class="n">i</span><span class="o">++)</span> <span class="o">{</span>
+            <span class="k">for</span> <span class="o">(</span><span class="kt">int</span> <span class="n">j</span> <span class="o">=</span> <span class="mi">0</span><span class="o">;</span>
+            <span class="n">j</span> <span class="o">&lt;</span> <span class="n">patternBytes</span><span class="o">.</span><span class="na">length</span><span class="o">;</span>
+            <span class="n">j</span><span class="o">++)</span> <span class="o">{</span>
+                <span class="k">if</span> <span class="o">(</span><span class="n">segment</span><span class="o">.</span><span class="na">get</span><span class="o">(</span><span class="nc">ValueLayout</span><span class="o">.</span><span class="na">JAVA_BYTE</span><span class="o">,</span> <span class="n">i</span> <span class="o">+</span> <span class="n">j</span><span class="o">)</span> <span class="o">!=</span>
+                    <span class="n">patternBytes</span><span class="o">[</span><span class="n">j</span><span class="o">])</span> <span class="k">continue</span> <span class="n">outer</span><span class="o">;</span>
+            <span class="o">}</span>
+            <span class="k">return</span> <span class="kc">true</span><span class="o">;</span>
+        <span class="o">}</span>
+        <span class="k">return</span> <span class="kc">false</span><span class="o">;</span>
+    <span class="o">}</span>
+<span class="o">}</span>
 <span class="cm">/* Per file che superano Integer.MAX_VALUE bytes, mappa a chunk: */</span>
- <span class="kd">public</span> <span class="kt">void</span> <span class="nf">processHugeFile</span><span class="o">(</span><span class="nc">Path</span> <span class="n">path</span><span class="o">)</span> <span class="kd">throws</span> <span class="nc">Exception</span> 
-<span class="o">{</span> <span class="k">try</span> <span class="o">(</span><span class="nc">FileChannel</span> <span class="n">channel</span> <span class="o">=</span> <span class="nc">FileChannel</span><span class="o">.</span><span class="na">open</span><span class="o">(</span><span class="n">path</span><span class="o">,</span> <span class="nc">StandardOpenOption</span><span class="o">.</span><span class="na">READ</span><span class="o">))</span> 
-<span class="o">{</span> <span class="kt">long</span> <span class="n">fileSize</span> <span class="o">=</span> <span class="n">channel</span><span class="o">.</span><span class="na">size</span><span class="o">();</span> <span class="kt">long</span> <span class="n">chunkSize</span> <span class="o">=</span> <span class="mi">512L</span> <span class="o">*</span> <span class="mi">1024</span> <span class="o">*</span> <span class="mi">1024</span><span class="o">;</span> 
-<span class="c1">// 512MB per chunk for (long offset = 0; offset &lt; fileSize; offset += chunkSize)</span>
-<span class="o">{</span> <span class="kt">long</span> <span class="n">size</span> <span class="o">=</span> <span class="nc">Math</span><span class="o">.</span><span class="na">min</span><span class="o">(</span><span class="n">chunkSize</span><span class="o">,</span> <span class="n">fileSize</span> <span class="o">-</span> <span class="n">offset</span><span class="o">);</span> <span class="k">try</span> <span class="o">(</span><span class="nc">Arena</span> <span class="n">arena</span> <span class="o">=</span>
-<span class="nc">Arena</span><span class="o">.</span><span class="na">ofConfined</span><span class="o">())</span>
-<span class="o">{</span> <span class="nc">MemorySegment</span> <span class="n">chunk</span> <span class="o">=</span> <span class="n">channel</span><span class="o">.</span><span class="na">map</span><span class="o">(</span><span class="nc">FileChannel</span><span class="o">.</span><span class="na">MapMode</span><span class="o">.</span><span class="na">READ_ONLY</span><span class="o">,</span> <span class="n">offset</span><span class="o">,</span> <span class="n">size</span><span class="o">,</span>
-<span class="n">arena</span><span class="o">);</span> <span class="n">processChunk</span><span class="o">(</span><span class="n">chunk</span><span class="o">);</span> <span class="o">}</span>
- 
-<span class="c1">// Il chunk viene unmappato: la RAM viene liberata per il chunk successivo }</span>
- <span class="o">}</span>
- <span class="o">}</span>
- 
+<span class="kd">public</span> <span class="kt">void</span> <span class="nf">processHugeFile</span><span class="o">(</span><span class="nc">Path</span> <span class="n">path</span><span class="o">)</span> <span class="kd">throws</span> <span class="nc">Exception</span> <span class="o">{</span>
+    <span class="k">try</span> <span class="o">(</span><span class="nc">FileChannel</span> <span class="n">channel</span> <span class="o">=</span> <span class="nc">FileChannel</span><span class="o">.</span><span class="na">open</span><span class="o">(</span><span class="n">path</span><span class="o">,</span> <span class="nc">StandardOpenOption</span><span class="o">.</span><span class="na">READ</span><span class="o">))</span>
+        <span class="o">{</span>
+        <span class="kt">long</span> <span class="n">fileSize</span> <span class="o">=</span> <span class="n">channel</span><span class="o">.</span><span class="na">size</span><span class="o">();</span>
+        <span class="kt">long</span> <span class="n">chunkSize</span> <span class="o">=</span> <span class="mi">512L</span> <span class="o">*</span> <span class="mi">1024</span> <span class="o">*</span> <span class="mi">1024</span><span class="o">;</span>
+        <span class="c1">// 512MB per chunk for (long offset = 0</span>
+        <span class="o">;</span>
+        <span class="n">offset</span> <span class="o">&lt;</span> <span class="n">fileSize</span><span class="o">;</span>
+        <span class="n">offset</span> <span class="o">+=</span> <span class="n">chunkSize</span><span class="o">)</span> <span class="o">{</span>
+            <span class="kt">long</span> <span class="n">size</span> <span class="o">=</span> <span class="nc">Math</span><span class="o">.</span><span class="na">min</span><span class="o">(</span><span class="n">chunkSize</span><span class="o">,</span> <span class="n">fileSize</span> <span class="o">-</span> <span class="n">offset</span><span class="o">);</span>
+            <span class="k">try</span> <span class="o">(</span><span class="nc">Arena</span> <span class="n">arena</span> <span class="o">=</span> <span class="nc">Arena</span><span class="o">.</span><span class="na">ofConfined</span><span class="o">())</span> <span class="o">{</span>
+                <span class="nc">MemorySegment</span> <span class="n">chunk</span> <span class="o">=</span> <span class="n">channel</span><span class="o">.</span><span class="na">map</span><span class="o">(</span><span class="nc">FileChannel</span><span class="o">.</span><span class="na">MapMode</span><span class="o">.</span><span class="na">READ_ONLY</span><span class="o">,</span>
+                    <span class="n">offset</span><span class="o">,</span> <span class="n">size</span><span class="o">,</span> <span class="n">arena</span><span class="o">);</span>
+                <span class="n">processChunk</span><span class="o">(</span><span class="n">chunk</span><span class="o">);</span>
+            <span class="o">}</span>
+            <span class="c1">// Il chunk viene unmappato: la RAM viene liberata per il chunk</span>
+                <span class="n">successivo</span>
+        <span class="o">}</span>
+    <span class="o">}</span>
+<span class="o">}</span>
 <span class="cm">/* Confronto il consumo di memoria con e senza mmap: */</span>
- <span class="nd">@Test</span> <span class="kd">public</span> <span class="kt">void</span> <span class="nf">compareMemoryUsage</span><span class="o">()</span> <span class="kd">throws</span> <span class="nc">Exception</span> 
-<span class="o">{</span> <span class="kt">long</span> <span class="n">heapBefore</span> <span class="o">=</span> <span class="nc">Runtime</span><span class="o">.</span><span class="na">getRuntime</span><span class="o">().</span><span class="na">totalMemory</span><span class="o">()</span> <span class="o">-</span>
-<span class="nc">Runtime</span><span class="o">.</span><span class="na">getRuntime</span><span class="o">().</span><span class="na">freeMemory</span><span class="o">();</span>
-<span class="c1">// Approccio classico: legge tutto in heap byte[] allBytes =</span>
-<span class="c1">// Files.readAllBytes(Paths.get("large-file.log"));</span>
-<span class="c1">// 2GB sull'heap! long heapAfterClassic = Runtime.getRuntime().totalMemory() -</span>
-<span class="c1">// Runtime.getRuntime().freeMemory(); log.info("Heap usato approccio classico:</span>
-<span class="o">{}</span>
-<span class="no">MB</span><span class="s">", (heapAfterClassic - heapBefore) / 1_048_576); 
-// Approccio mmap: zero heap try (FileChannel ch =
-// FileChannel.open(Paths.get("</span><span class="n">large</span><span class="o">-</span><span class="n">file</span><span class="o">.</span><span class="na">log</span><span class="s">"), StandardOpenOption.READ); Arena
-// arena = Arena.ofConfined())
-{ MemorySegment mapped = ch.map(FileChannel.MapMode.READ_ONLY, 0, ch.size(),
-arena); long heapAfterMmap = Runtime.getRuntime().totalMemory() -
-Runtime.getRuntime().freeMemory(); log.info("</span><span class="nc">Heap</span> <span class="n">usato</span> <span class="n">approccio</span> <span class="nl">mmap:</span>
-<span class="o">{}</span>
-<span class="no">MB</span><span class="err">"</span><span class="o">,</span> <span class="o">(</span><span class="n">heapAfterMmap</span> <span class="o">-</span> <span class="n">heapBefore</span><span class="o">)</span> <span class="o">/</span> <span class="mi">1_048_576</span><span class="o">);</span> 
-<span class="c1">// ~0MB }</span>
- <span class="o">}</span>
+<span class="nd">@Test</span> <span class="kd">public</span> <span class="kt">void</span> <span class="nf">compareMemoryUsage</span><span class="o">()</span> <span class="kd">throws</span> <span class="nc">Exception</span> <span class="o">{</span>
+    <span class="kt">long</span> <span class="n">heapBefore</span> <span class="o">=</span> <span class="nc">Runtime</span><span class="o">.</span><span class="na">getRuntime</span><span class="o">().</span><span class="na">totalMemory</span><span class="o">()</span> <span class="o">-</span>
+        <span class="nc">Runtime</span><span class="o">.</span><span class="na">getRuntime</span><span class="o">().</span><span class="na">freeMemory</span><span class="o">();</span>
+    <span class="c1">// Approccio classico: legge tutto in heap byte[] allBytes =</span>
+        <span class="nc">Files</span><span class="o">.</span><span class="na">readAllBytes</span><span class="o">(</span><span class="nc">Paths</span><span class="o">.</span><span class="na">get</span><span class="o">(</span><span class="s">"large-file.log"</span><span class="o">))</span>
+    <span class="o">;</span>
+    <span class="c1">// 2GB sull'heap! long heapAfterClassic = Runtime.getRuntime().totalMemory()</span>
+        <span class="o">-</span> <span class="nc">Runtime</span><span class="o">.</span><span class="na">getRuntime</span><span class="o">().</span><span class="na">freeMemory</span><span class="o">()</span>
+    <span class="o">;</span>
+    <span class="n">log</span><span class="o">.</span><span class="na">info</span><span class="o">(</span><span class="s">"Heap usato approccio classico: {
+    }
+    MB"</span><span class="o">,</span> <span class="o">(</span><span class="n">heapAfterClassic</span> <span class="o">-</span> <span class="n">heapBefore</span><span class="o">)</span> <span class="o">/</span> <span class="mi">1_048_576</span><span class="o">);</span>
+    <span class="c1">// Approccio mmap: zero heap try (FileChannel ch =</span>
+        <span class="nc">FileChannel</span><span class="o">.</span><span class="na">open</span><span class="o">(</span><span class="nc">Paths</span><span class="o">.</span><span class="na">get</span><span class="o">(</span><span class="s">"large-file.log"</span><span class="o">),</span> <span class="nc">StandardOpenOption</span><span class="o">.</span><span class="na">READ</span><span class="o">)</span>
+    <span class="o">;</span>
+    <span class="nc">Arena</span> <span class="n">arena</span> <span class="o">=</span> <span class="nc">Arena</span><span class="o">.</span><span class="na">ofConfined</span><span class="o">())</span> <span class="o">{</span>
+        <span class="nc">MemorySegment</span> <span class="n">mapped</span> <span class="o">=</span> <span class="n">ch</span><span class="o">.</span><span class="na">map</span><span class="o">(</span><span class="nc">FileChannel</span><span class="o">.</span><span class="na">MapMode</span><span class="o">.</span><span class="na">READ_ONLY</span><span class="o">,</span> <span class="mi">0</span><span class="o">,</span>
+            <span class="n">ch</span><span class="o">.</span><span class="na">size</span><span class="o">(),</span> <span class="n">arena</span><span class="o">);</span>
+        <span class="kt">long</span> <span class="n">heapAfterMmap</span> <span class="o">=</span> <span class="nc">Runtime</span><span class="o">.</span><span class="na">getRuntime</span><span class="o">().</span><span class="na">totalMemory</span><span class="o">()</span> <span class="o">-</span>
+            <span class="nc">Runtime</span><span class="o">.</span><span class="na">getRuntime</span><span class="o">().</span><span class="na">freeMemory</span><span class="o">();</span>
+        <span class="n">log</span><span class="o">.</span><span class="na">info</span><span class="o">(</span><span class="s">"Heap usato approccio mmap: {
+        }
+        MB"</span><span class="o">,</span> <span class="o">(</span><span class="n">heapAfterMmap</span> <span class="o">-</span> <span class="n">heapBefore</span><span class="o">)</span> <span class="o">/</span> <span class="mi">1_048_576</span><span class="o">);</span>
+        <span class="c1">// ~0MB</span>
+    <span class="o">}</span>
+<span class="o">}</span>
 </pre></td></tr></tbody></table></code></pre></div></div>
 
         </article>

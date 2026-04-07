@@ -91,133 +91,69 @@
 
 <pre><code class="language-thymeleaf">&lt;!-- DEFINIZIONE DEL COMPONENTE: fragments/components.html --&gt;
 &lt;!-- Il componente Button accetta label, variant, icon e disabled come
-parametri. Il token _ come valore default garantisce che il template sia
-apribile nel browser senza server: il designer vede "Salva" con classe "btn-
-primary". --&gt;
+    parametri. Il token _ come valore default garantisce che il template sia
+    apribile nel browser senza server: il designer vede "Salva" con classe
+    "btn-primary". --&gt;
 &lt;div th:fragment="button(label, variant, icon, disabled)" th:remove="tag"&gt;
-    &lt;button
-        th:type="'button'"
-        th:class="'btn btn-' + $
-{variant ?: 'primary'}
-"
-        th:disabled="$
-{disabled ?: false}
-"
-        th:attr="aria-label=$
-{label ?: 'Azione'}
-"
-    &gt;
+    &lt;button th:type="'button'" th:class="'btn btn-' + ${variant ?: 'primary'}"
+        th:disabled="${disabled ?: false}" th:attr="aria-label=${label ?:
+        'Azione'}"&gt;
         &lt;!-- Icona opzionale: se icon è _ o null, il tag span non viene
-renderizzato --&gt;
-        &lt;span
-            th:if="$
-{icon != null and icon != _}
-"
-            th:class="'icon icon-' + $
-{icon}
-"
-        &gt;&lt;/span&gt;
-        &lt;span
-            th:text="$
-{label ?: 'Salva'}
-"
-            &gt;Salva&lt;/span
-        &gt;
+            renderizzato --&gt;
+        &lt;span th:if="${icon != null and icon != _}" th:class="'icon icon-' +
+            ${icon}"&gt;
+        &lt;/span&gt;
+        &lt;span th:text="${label ?: 'Salva'}"&gt;
+            Salva
+        &lt;/span&gt;
     &lt;/button&gt;
 &lt;/div&gt;
 &lt;!-- COMPONENTE Card con parametri multipli e contenuto innestato --&gt;
-&lt;div
-    th:fragment="card(title, subtitle, cssClass, collapsible)"
-    th:class="'card ' + $
-{cssClass ?: ''}
-"
-    th:remove="tag"
-&gt;
+&lt;div th:fragment="card(title, subtitle, cssClass, collapsible)" th:class="'card
+    ' + ${cssClass ?: ''}" th:remove="tag"&gt;
     &lt;div class="card-header"&gt;
-        &lt;h5
-            class="card-title"
-            th:text="$
-{title ?: 'Titolo Card'}
-"
-        &gt;
+        &lt;h5 class="card-title" th:text="${title ?: 'Titolo Card'}"&gt;
             Titolo Card
         &lt;/h5&gt;
-        &lt;p
-            th:if="$
-{subtitle != null and subtitle != _}
-"
-            class="card-subtitle"
-            th:text="$
-{subtitle}
-"
-        &gt;
+        &lt;p th:if="${subtitle != null and subtitle != _}" class="card-subtitle"
+            th:text="${subtitle}"&gt;
             Sottotitolo
         &lt;/p&gt;
         &lt;!-- Pulsante collapse: visibile solo se collapsible=true --&gt;
-        &lt;button
-            th:if="$
-{collapsible ?: false}
-"
-            class="btn btn-sm btn-outline-secondary"
-            data-bs-toggle="collapse"
-            th:attr="data-bs-target='#card-body-' + $
-{#ids.seq('card')}
-"
-        &gt;
+        &lt;button th:if="${collapsible ?: false}" class="btn btn-sm
+            btn-outline-secondary" data-bs-toggle="collapse"
+            th:attr="data-bs-target='#card-body-' + ${#ids.seq('card')}"&gt;
             Comprimi
         &lt;/button&gt;
     &lt;/div&gt;
     &lt;div class="card-body"&gt;
         &lt;!-- Layout placeholder (slot): il contenuto viene iniettato dal
-chiamante --&gt;
-        &lt;th:block
-            th:replace="~
-{::card-content}
-"
-        &gt;
-            &lt;p&gt;Contenuto di default visibile nel browser senza server.&lt;/p&gt;
+            chiamante --&gt;
+        &lt;th:block th:replace="~{::card-content}"&gt;
+            &lt;p&gt;
+                Contenuto di default visibile nel browser senza server.
+            &lt;/p&gt;
         &lt;/th:block&gt;
     &lt;/div&gt;
 &lt;/div&gt;
 &lt;!-- UTILIZZO DEI COMPONENTI nel template pagina: --&gt;
 &lt;!-- Button con tutti i parametri --&gt;
-&lt;th:block
-    th:replace="~
-{fragments/components :: button('Elimina', 'danger', 'trash', false)}
-"
-&gt;&lt;/th:block&gt;
+&lt;th:block th:replace="~{fragments/components :: button('Elimina', 'danger',
+    'trash', false)}"&gt;
+&lt;/th:block&gt;
 &lt;!-- Button con solo label: gli altri parametri usano il default --&gt;
-&lt;th:block
-    th:replace="~
-{fragments/components :: button('Salva', _, _, _)}
-"
-&gt;&lt;/th:block&gt;
+&lt;th:block th:replace="~{fragments/components :: button('Salva', _, _, _)}"&gt;
+&lt;/th:block&gt;
 &lt;!-- Card completa con contenuto iniettato --&gt;
-&lt;th:block
-    th:replace="~
-{fragments/components :: card('Ordini Recenti', 'Ultimi 30 giorni', 'shadow-sm',
-true)}
-"
-&gt;
+&lt;th:block th:replace="~{fragments/components :: card('Ordini Recenti', 'Ultimi
+    30 giorni', 'shadow-sm', true)}"&gt;
     &lt;th:block th:fragment="card-content"&gt;
         &lt;table class="table"&gt;
-            &lt;tr
-                th:each="order : $
-{orders}
-"
-            &gt;
-                &lt;td
-                    th:text="$
-{order.id}
-"
-                &gt;
+            &lt;tr th:each="order : ${orders}"&gt;
+                &lt;td th:text="${order.id}"&gt;
                     ID
                 &lt;/td&gt;
-                &lt;td
-                    th:text="$
-{order.total}
-"
-                &gt;
+                &lt;td th:text="${order.total}"&gt;
                     Totale
                 &lt;/td&gt;
             &lt;/tr&gt;

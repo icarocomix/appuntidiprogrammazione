@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Headless-Ready: Fragment Rendering (HTMX) — DevLog</title>
-    <meta name="description" content="Spesso serve ritornare solo un pezzo di HTML per aggiornamenti AJAX/HTMX, non l'intera pagina. Thymeleaf può processare solo una porzione del file .html (es. return 'page :: my-fragment'). Questo abilita pattern 'HTML over the wire', permettendo a Sp
+    <meta name="description" content="Spesso serve ritornare solo un pezzo di HTML per aggiornamenti AJAX/HTMX, non l'intera pagina. Thymeleaf può processare solo una porzione del file .html (es. return "page :: my-fragment"). Questo abilita pattern "HTML over the wire", permettendo a Sp
 ">
     <link rel="stylesheet" href="/appuntidiprogrammazione/assets/css/style.css">
 
@@ -89,94 +89,122 @@
 
 <h2 id="esempio-implementativo">Esempio Implementativo</h2>
 
-<pre><code class="language-thymeleaf">* Controller che gestisce sia la richiesta iniziale (pagina intera) che le
-* richieste HTMX (solo frammento). */
- @Controller @RequestMapping("/products") public class ProductController 
-{ @Autowired private ProductService productService; 
+<pre><code class="language-thymeleaf">/* Controller che gestisce sia la richiesta iniziale (pagina intera) che le
+    richieste HTMX (solo frammento). */
+@Controller @RequestMapping("/products") public class ProductController {
+    @Autowired private ProductService productService;
 /* Prima richiesta: carica l'intera pagina con i primi risultati. */
- @GetMapping public String productList(Model model, @RequestParam(defaultValue =
-"0") int page)
-{ Page&lt;Product&gt; products = productService.findAll(PageRequest.of(page, 20));
-model.addAttribute("products", products.getContent());
-model.addAttribute("currentPage", page); model.addAttribute("hasMore",
-products.hasNext()); return "products";
-// Restituisce l'intera pagina products.html }
- 
-* Richiesta HTMX: restituisce SOLO il frammento della lista. HTMX manda l'header
-* HX-Request: true per identificarsi. */
- @GetMapping("/more") public String loadMore(Model model, @RequestParam int
-page, @RequestHeader(value = "HX-Request", defaultValue = "false") boolean
-isHtmx)
-{ Page&lt;Product&gt; products = productService.findAll(PageRequest.of(page, 20));
-model.addAttribute("products", products.getContent());
-model.addAttribute("currentPage", page); model.addAttribute("hasMore",
-products.hasNext()); if (isHtmx)
-{ 
-// Restituisco SOLO il frammento: nessun layout, nessun header, solo le righe
-// HTML return "products :: product-rows"; }
- return "products"; 
-// Fallback per richiesta diretta (browser senza JS) }
- 
-* Controller per ricerca live con HTMX: aggiorna solo i risultati mentre
-* l'utente digita. */
- @GetMapping("/search") public String search(@RequestParam String q, Model
-model, @RequestHeader(value = "HX-Request", defaultValue = "false") boolean
-isHtmx)
-{ List&lt;Product&gt; results = productService.search(q);
-model.addAttribute("products", results); model.addAttribute("query", q);
-model.addAttribute("hasMore", false); return isHtmx ? "products :: product-rows"
-: "products"; }
- 
-/* Per operazioni CRUD, restituisco il singolo elemento aggiornato: */
- @PostMapping("/
-{id}
-/toggle-status") public String toggleStatus(@PathVariable Long id, Model model,
-@RequestHeader(value = "HX-Request", defaultValue = "false") boolean isHtmx)
-{ Product product = productService.toggleStatus(id);
-model.addAttribute("product", product); return isHtmx ? "products :: product-
-row(product=$
-{product}
-)" : "redirect:/products"; }
- }
- &lt;!-- Template products.html: contiene sia la pagina intera che i frammenti
-HTMX. --&gt; &lt;!DOCTYPE html&gt; &lt;html xmlns:th="http:
-// www.thymeleaf.org"&gt; &lt;body&gt; &lt;div class="container"&gt; &lt;h1&gt;Prodotti&lt;/h1&gt; &lt;!--
-// Campo di ricerca live: HTMX aggiorna #product-list a ogni keystroke --&gt;
-// &lt;input type="search" name="q" placeholder="Cerca prodotti..." hx-
-// get="/products/search" hx-target="#product-list" hx-trigger="keyup changed
-// delay:300ms" hx-swap="innerHTML"&gt; &lt;!-- Contenitore della lista: viene
-// aggiornato da HTMX --&gt; &lt;div id="product-list"&gt; &lt;!-- Frammento riutilizzabile:
-// usato sia per il rendering iniziale che per gli aggiornamenti --&gt; &lt;th:block
-// th:replace="~
-{:: product-rows}
-"&gt;&lt;/th:block&gt; &lt;/div&gt; &lt;!-- Pulsante "Carica altro": si auto-sostituisce con il
-prossimo batch --&gt; &lt;button th:if="$
-{hasMore}
-" th:attr="hx-get='/products/more?page=' + $
-{currentPage + 1}
-" hx-target="#product-list" hx-swap="beforeend" &lt;!-- Aggiunge DOPO il contenuto
-esistente --&gt; th:hx-indicator="'#loading-spinner'"&gt; Carica altri 20 prodotti
-&lt;/button&gt; &lt;div id="loading-spinner" class="htmx-indicator spinner-border"&gt;&lt;/div&gt;
-&lt;/div&gt; &lt;!-- FRAMMENTO: le righe della lista (usato per rendering iniziale e
-aggiornamenti HTMX) --&gt; &lt;th:block th:fragment="product-rows"&gt; &lt;div
-th:each="product : $
-{products}
-" th:fragment="product-row(product)" th:id="'product-' + $
-{product.id}
-" class="product-card"&gt; &lt;h3 th:text="$
-{product.name}
-"&gt;Nome Prodotto&lt;/h3&gt; &lt;span th:text="$
-{#finance.formatCurrency(product.price, 'EUR')}
-"&gt;€ 0&lt;/span&gt; &lt;span th:class="$
-{product.active ? 'badge-success' : 'badge-secondary'}
-" th:text="$
-{product.active ? 'Attivo' : 'Inattivo'}
-"&gt;Stato&lt;/span&gt; &lt;!-- Toggle status: aggiorna solo questa card senza ricaricare la
-lista --&gt; &lt;button th:attr="hx-post='/products/' + $
-{product.id}
- + '/toggle-status'" th:hx-target="'#product-' + $
-{product.id}
-" hx-swap="outerHTML"&gt; Toggle &lt;/button&gt; &lt;/div&gt; &lt;/th:block&gt; &lt;/body&gt; &lt;/html&gt;
+@GetMapping public String productList(Model model, @RequestParam(defaultValue =
+    "0") int page) { Page
+&lt;Product&gt;
+    products = productService.findAll(PageRequest.of(page, 20));
+        model.addAttribute("products", products.getContent());
+        model.addAttribute("currentPage", page); model.addAttribute("hasMore",
+        products.hasNext()); return "products"; // Restituisce l'intera pagina
+        products.html }
+    /* Richiesta HTMX: restituisce SOLO il frammento della lista. HTMX manda
+        l'header HX-Request: true per identificarsi. */
+    @GetMapping("/more") public String loadMore(Model model, @RequestParam int
+        page, @RequestHeader(value = "HX-Request", defaultValue = "false")
+        boolean isHtmx) { Page
+    &lt;Product&gt;
+        products = productService.findAll(PageRequest.of(page, 20));
+            model.addAttribute("products", products.getContent());
+            model.addAttribute("currentPage", page);
+            model.addAttribute("hasMore", products.hasNext()); if (isHtmx) { //
+            Restituisco SOLO il frammento: nessun layout, nessun header, solo le
+            righe HTML return "products :: product-rows"; } return "products";
+            // Fallback per richiesta diretta (browser senza JS) }
+        /* Controller per ricerca live con HTMX: aggiorna solo i risultati
+            mentre l'utente digita. */
+        @GetMapping("/search") public String search(@RequestParam String q,
+            Model model, @RequestHeader(value = "HX-Request", defaultValue =
+            "false") boolean isHtmx) { List
+        &lt;Product&gt;
+            results = productService.search(q); model.addAttribute("products",
+                results); model.addAttribute("query", q);
+                model.addAttribute("hasMore", false); return isHtmx ? "products
+                :: product-rows" : "products"; }
+            /* Per operazioni CRUD, restituisco il singolo elemento aggiornato:
+                */
+            @PostMapping("/{id}/toggle-status") public String
+                toggleStatus(@PathVariable Long id, Model model,
+                @RequestHeader(value = "HX-Request", defaultValue = "false")
+                boolean isHtmx) { Product product =
+                productService.toggleStatus(id); model.addAttribute("product",
+                product); return isHtmx ? "products ::
+                product-row(product=${product})" : "redirect:/products"; } }
+            &lt;!-- Template products.html: contiene sia la pagina intera che i
+                frammenti HTMX. --&gt;
+            &lt;!DOCTYPE html&gt;
+            &lt;html xmlns:th="http://www.thymeleaf.org"&gt;
+                &lt;body&gt;
+                    &lt;div class="container"&gt;
+                        &lt;h1&gt;
+                            Prodotti
+                        &lt;/h1&gt;
+                        &lt;!-- Campo di ricerca live: HTMX aggiorna #product-list
+                            a ogni keystroke --&gt;
+                        &lt;input type="search" name="q" placeholder="Cerca
+                            prodotti..." hx-get="/products/search"
+                            hx-target="#product-list" hx-trigger="keyup changed
+                            delay:300ms" hx-swap="innerHTML"&gt;
+                            &lt;!-- Contenitore della lista: viene aggiornato da
+                                HTMX --&gt;
+                            &lt;div id="product-list"&gt;
+                                &lt;!-- Frammento riutilizzabile: usato sia per il
+                                    rendering iniziale che per gli aggiornamenti
+                                    --&gt;
+                                &lt;th:block th:replace="~{:: product-rows}"&gt;
+                                &lt;/th:block&gt;
+                            &lt;/div&gt;
+                            &lt;!-- Pulsante "Carica altro": si auto-sostituisce
+                                con il prossimo batch --&gt;
+                            &lt;button th:if="${hasMore}"
+                                th:attr="hx-get='/products/more?page=' +
+                                ${currentPage + 1}" hx-target="#product-list"
+                                hx-swap="beforeend" &lt;!-- Aggiunge DOPO il
+                                contenuto esistente --&gt;
+                                th:hx-indicator="'#loading-spinner'"&gt; Carica
+                                    altri 20 prodotti
+                            &lt;/button&gt;
+                            &lt;div id="loading-spinner" class="htmx-indicator
+                                spinner-border"&gt;
+                            &lt;/div&gt;
+                        &lt;/div&gt;
+                        &lt;!-- FRAMMENTO: le righe della lista (usato per
+                            rendering iniziale e aggiornamenti HTMX) --&gt;
+                        &lt;th:block th:fragment="product-rows"&gt;
+                            &lt;div th:each="product : ${products}"
+                                th:fragment="product-row(product)"
+                                th:id="'product-' + ${product.id}"
+                                class="product-card"&gt;
+                                &lt;h3 th:text="${product.name}"&gt;
+                                    Nome Prodotto
+                                &lt;/h3&gt;
+                                &lt;span
+                                    th:text="${#finance.formatCurrency(product.p
+                                    rice, 'EUR')}"&gt;
+                                    € 0
+                                &lt;/span&gt;
+                                &lt;span th:class="${product.active ?
+                                    'badge-success' : 'badge-secondary'}"
+                                    th:text="${product.active ? 'Attivo' :
+                                    'Inattivo'}"&gt;
+                                    Stato
+                                &lt;/span&gt;
+                                &lt;!-- Toggle status: aggiorna solo questa card
+                                    senza ricaricare la lista --&gt;
+                                &lt;button th:attr="hx-post='/products/' +
+                                    ${product.id} + '/toggle-status'"
+                                    th:hx-target="'#product-' + ${product.id}"
+                                    hx-swap="outerHTML"&gt;
+                                    Toggle
+                                &lt;/button&gt;
+                            &lt;/div&gt;
+                        &lt;/th:block&gt;
+                    &lt;/body&gt;
+                &lt;/html&gt;
 </code></pre>
 
         </article>

@@ -147,64 +147,76 @@
 56
 57
 58
-</pre></td><td class="rouge-code"><pre><span class="o">*</span> <span class="nc">Confronto</span> <span class="n">il</span> <span class="n">costo</span> <span class="n">in</span> <span class="n">memoria</span> <span class="n">tra</span> <span class="n">le</span> <span class="n">due</span> <span class="n">approcci</span><span class="o">.</span> <span class="nc">Con</span> <span class="nl">AtomicInteger:</span> <span class="n">ogni</span>
-<span class="o">*</span> <span class="n">nodo</span> <span class="n">ha</span> <span class="n">un</span> <span class="nf">riferimento</span> <span class="o">(</span><span class="mi">8</span> <span class="kt">byte</span><span class="o">)</span> <span class="o">+</span> <span class="n">oggetto</span> <span class="nf">AtomicInteger</span> <span class="o">(</span><span class="mi">16</span> <span class="kt">byte</span> <span class="n">header</span> <span class="o">+</span> <span class="mi">4</span>
-<span class="o">*</span> <span class="kt">byte</span> <span class="n">valore</span> <span class="o">=</span> <span class="o">~</span><span class="mi">20</span> <span class="kt">byte</span><span class="o">)</span> <span class="o">=</span> <span class="mi">28</span> <span class="kt">byte</span> <span class="n">per</span> <span class="n">nodo</span><span class="o">.</span> <span class="o">*/</span>
- <span class="kd">public</span> <span class="kd">class</span> <span class="nc">NodeWithAtomicInteger</span> 
-<span class="o">{</span> <span class="kd">private</span> <span class="kd">final</span> <span class="nc">AtomicInteger</span> <span class="n">status</span> <span class="o">=</span> <span class="k">new</span> <span class="nc">AtomicInteger</span><span class="o">(</span><span class="mi">0</span><span class="o">);</span> 
-<span class="c1">// ~28 byte extra per nodo }</span>
- 
-<span class="o">*</span> <span class="nc">Con</span> <span class="nl">AtomicIntegerFieldUpdater:</span> <span class="n">il</span> <span class="n">campo</span> <span class="kd">volatile</span> <span class="n">costa</span> <span class="n">solo</span> <span class="mi">4</span> <span class="kt">byte</span><span class="o">.</span> <span class="no">L</span><span class="err">'</span><span class="n">updater</span>
-<span class="o">*</span> <span class="n">è</span> <span class="n">statico</span> <span class="n">e</span> <span class="n">condiviso</span> <span class="n">tra</span> <span class="no">TUTTE</span> <span class="n">le</span> <span class="nl">istanze:</span> <span class="n">allocato</span> <span class="n">una</span> <span class="n">sola</span> <span class="n">volta</span><span class="o">.</span> <span class="o">*/</span>
- <span class="kd">public</span> <span class="kd">class</span> <span class="nc">GraphNode</span> 
-<span class="o">{</span> 
-<span class="c1">// Dichiaro il campo come volatile: è il requisito fondamentale per gli updater</span>
-<span class="c1">// volatile int status = 0;</span>
-<span class="c1">// Solo 4 byte, nessun oggetto wrapper volatile int refCount = 0; volatile int</span>
-<span class="c1">// version = 0;</span>
-<span class="o">*</span> <span class="nc">Gli</span> <span class="n">updater</span> <span class="n">sono</span> <span class="nl">statici:</span> <span class="n">esistono</span> <span class="n">una</span> <span class="n">sola</span> <span class="n">volta</span> <span class="n">per</span> <span class="n">la</span> <span class="n">classe</span><span class="o">,</span>
-<span class="o">*</span> <span class="n">indipendentemente</span> <span class="n">da</span> <span class="n">quante</span> <span class="n">istanze</span> <span class="n">creo</span><span class="o">.</span> <span class="nc">Usano</span> <span class="n">reflection</span> <span class="n">per</span> <span class="n">accedere</span> <span class="n">al</span>
-<span class="o">*</span> <span class="nl">campo:</span> <span class="n">il</span> <span class="n">campo</span> <span class="n">deve</span> <span class="n">essere</span> <span class="n">visible</span> <span class="n">e</span> <span class="kd">volatile</span><span class="o">.</span> <span class="o">*/</span>
- <span class="kd">private</span> <span class="kd">static</span> <span class="kd">final</span> <span class="nc">AtomicIntegerFieldUpdater</span><span class="o">&lt;</span><span class="nc">GraphNode</span><span class="o">&gt;</span> <span class="no">STATUS_UPDATER</span> <span class="o">=</span>
-<span class="nc">AtomicIntegerFieldUpdater</span><span class="o">.</span><span class="na">newUpdater</span><span class="o">(</span><span class="nc">GraphNode</span><span class="o">.</span><span class="na">class</span><span class="o">,</span> <span class="s">"status"</span><span class="o">);</span> <span class="kd">private</span> <span class="kd">static</span>
-<span class="kd">final</span> <span class="nc">AtomicIntegerFieldUpdater</span><span class="o">&lt;</span><span class="nc">GraphNode</span><span class="o">&gt;</span> <span class="no">REF_UPDATER</span> <span class="o">=</span>
-<span class="nc">AtomicIntegerFieldUpdater</span><span class="o">.</span><span class="na">newUpdater</span><span class="o">(</span><span class="nc">GraphNode</span><span class="o">.</span><span class="na">class</span><span class="o">,</span> <span class="s">"refCount"</span><span class="o">);</span> <span class="kd">private</span>
-<span class="kd">static</span> <span class="kd">final</span> <span class="nc">AtomicIntegerFieldUpdater</span><span class="o">&lt;</span><span class="nc">GraphNode</span><span class="o">&gt;</span> <span class="no">VERSION_UPDATER</span> <span class="o">=</span>
-<span class="nc">AtomicIntegerFieldUpdater</span><span class="o">.</span><span class="na">newUpdater</span><span class="o">(</span><span class="nc">GraphNode</span><span class="o">.</span><span class="na">class</span><span class="o">,</span> <span class="s">"version"</span><span class="o">);</span>
-<span class="o">*</span> <span class="nc">Eseguo</span> <span class="n">il</span> <span class="nc">Compare</span><span class="o">-</span><span class="nc">And</span><span class="o">-</span><span class="nc">Set</span> <span class="nl">atomico:</span> <span class="n">equivalente</span> <span class="n">a</span> <span class="nc">AtomicInteger</span><span class="o">.</span><span class="na">compareAndSet</span><span class="o">()</span>
-<span class="o">*</span> <span class="n">ma</span> <span class="n">senza</span> <span class="n">allocazione</span><span class="o">.</span> <span class="o">*/</span>
- <span class="kd">public</span> <span class="kt">boolean</span> <span class="nf">markAsProcessed</span><span class="o">()</span> 
-<span class="o">{</span> <span class="k">return</span> <span class="no">STATUS_UPDATER</span><span class="o">.</span><span class="na">compareAndSet</span><span class="o">(</span><span class="k">this</span><span class="o">,</span> <span class="mi">0</span><span class="o">,</span> <span class="mi">1</span><span class="o">);</span> <span class="o">}</span>
- <span class="kd">public</span> <span class="kt">int</span> <span class="nf">incrementRefCount</span><span class="o">()</span> 
-<span class="o">{</span> <span class="k">return</span> <span class="no">REF_UPDATER</span><span class="o">.</span><span class="na">incrementAndGet</span><span class="o">(</span><span class="k">this</span><span class="o">);</span> <span class="o">}</span>
- <span class="kd">public</span> <span class="kt">int</span> <span class="nf">getAndIncrementVersion</span><span class="o">()</span> 
-<span class="o">{</span> <span class="k">return</span> <span class="no">VERSION_UPDATER</span><span class="o">.</span><span class="na">getAndIncrement</span><span class="o">(</span><span class="k">this</span><span class="o">);</span> <span class="o">}</span>
- 
-<span class="o">*</span> <span class="nc">Verifica</span> <span class="n">dello</span> <span class="n">stato</span> <span class="n">senza</span> <span class="nl">lock:</span> <span class="n">la</span> <span class="n">lettura</span> <span class="n">di</span> <span class="n">un</span> <span class="kd">volatile</span> <span class="n">è</span> <span class="n">atomica</span> <span class="n">per</span> <span class="n">i</span>
-<span class="o">*</span> <span class="n">tipi</span> <span class="o">&lt;=</span> <span class="mi">64</span> <span class="n">bit</span><span class="o">.</span> <span class="o">*/</span>
- <span class="kd">public</span> <span class="kt">boolean</span> <span class="nf">isProcessed</span><span class="o">()</span> 
-<span class="o">{</span> <span class="k">return</span> <span class="n">status</span> <span class="o">==</span> <span class="mi">1</span><span class="o">;</span> <span class="o">}</span>
- <span class="o">}</span>
- 
-<span class="o">*</span> <span class="nc">Calcolo</span> <span class="n">il</span> <span class="n">risparmio</span> <span class="n">di</span> <span class="n">memoria</span> <span class="n">su</span> <span class="mi">10</span> <span class="n">milioni</span> <span class="n">di</span> <span class="nl">nodi:</span> <span class="nc">Con</span> <span class="nl">AtomicInteger:</span> <span class="mi">10</span><span class="no">M</span>
-<span class="o">*</span> <span class="o">*</span> <span class="mi">28</span> <span class="kt">byte</span> <span class="o">=</span> <span class="mi">280</span> <span class="no">MB</span> <span class="n">extra</span> <span class="nc">Con</span> <span class="kd">volatile</span> <span class="kt">int</span><span class="o">:</span> <span class="mi">10</span><span class="no">M</span> <span class="o">*</span> <span class="mi">4</span> <span class="kt">byte</span> <span class="o">=</span> <span class="mi">40</span> <span class="no">MB</span> <span class="o">-&gt;</span> <span class="n">risparmio</span>
-<span class="o">*</span> <span class="n">di</span> <span class="mi">240</span> <span class="no">MB</span> <span class="n">e</span> <span class="n">meno</span> <span class="n">pressione</span> <span class="n">sul</span> <span class="no">GC</span> <span class="o">*/</span>
- 
-<span class="o">*</span> <span class="nc">In</span> <span class="nc">Spring</span> <span class="nc">Boot</span><span class="o">,</span> <span class="n">uso</span> <span class="n">questa</span> <span class="n">tecnica</span> <span class="n">per</span> <span class="n">implementare</span> <span class="n">una</span> <span class="n">cache</span> <span class="no">LRU</span> <span class="n">custom</span> <span class="n">in</span>
-<span class="o">*</span> <span class="n">memoria</span> <span class="n">con</span> <span class="n">milioni</span> <span class="n">di</span> <span class="nl">entry:</span> <span class="o">*/</span>
- <span class="nd">@Component</span> <span class="kd">public</span> <span class="kd">class</span> <span class="nc">DenseLruCache</span><span class="o">&lt;</span><span class="no">K</span><span class="o">,</span> <span class="no">V</span><span class="o">&gt;</span> 
-<span class="o">{</span> <span class="kd">private</span> <span class="kd">final</span> <span class="nc">Map</span><span class="o">&lt;</span><span class="no">K</span><span class="o">,</span> <span class="nc">CacheEntry</span><span class="o">&lt;</span><span class="no">V</span><span class="o">&gt;&gt;</span> <span class="n">store</span> <span class="o">=</span> <span class="k">new</span>
-<span class="nc">ConcurrentHashMap</span><span class="o">&lt;&gt;(</span><span class="mi">1_000_000</span><span class="o">);</span> <span class="kd">public</span> <span class="kd">static</span> <span class="kd">class</span> <span class="nc">CacheEntry</span><span class="o">&lt;</span><span class="no">V</span><span class="o">&gt;</span>
-<span class="o">{</span> <span class="kd">volatile</span> <span class="kt">int</span> <span class="n">hits</span> <span class="o">=</span> <span class="mi">0</span><span class="o">;</span> 
-<span class="c1">// AtomicIntegerFieldUpdater invece di AtomicInteger final V value; CacheEntry(V</span>
-<span class="c1">// value)</span>
-<span class="o">{</span> <span class="k">this</span><span class="o">.</span><span class="na">value</span> <span class="o">=</span> <span class="n">value</span><span class="o">;</span> <span class="o">}</span>
- <span class="kd">private</span> <span class="kd">static</span> <span class="kd">final</span> <span class="nc">AtomicIntegerFieldUpdater</span><span class="o">&lt;</span><span class="nc">CacheEntry</span><span class="o">&gt;</span> <span class="no">HITS_UPDATER</span> <span class="o">=</span>
-<span class="nc">AtomicIntegerFieldUpdater</span><span class="o">.</span><span class="na">newUpdater</span><span class="o">(</span><span class="nc">CacheEntry</span><span class="o">.</span><span class="na">class</span><span class="o">,</span> <span class="s">"hits"</span><span class="o">);</span> <span class="kd">public</span> <span class="kt">void</span>
-<span class="nf">recordHit</span><span class="o">()</span>
-<span class="o">{</span> <span class="no">HITS_UPDATER</span><span class="o">.</span><span class="na">incrementAndGet</span><span class="o">(</span><span class="k">this</span><span class="o">);</span> <span class="o">}</span>
- <span class="o">}</span>
- <span class="o">}</span>
+59
+60
+61
+62
+63
+64
+</pre></td><td class="rouge-code"><pre><span class="cm">/* Confronto il costo in memoria tra le due approcci. Con AtomicInteger: ogni
+    nodo ha un riferimento (8 byte) + oggetto AtomicInteger (16 byte header + 4
+    byte valore = ~20 byte) = 28 byte per nodo. */</span>
+<span class="kd">public</span> <span class="kd">class</span> <span class="nc">NodeWithAtomicInteger</span> <span class="o">{</span>
+    <span class="kd">private</span> <span class="kd">final</span> <span class="nc">AtomicInteger</span> <span class="n">status</span> <span class="o">=</span> <span class="k">new</span> <span class="nc">AtomicInteger</span><span class="o">(</span><span class="mi">0</span><span class="o">);</span>
+    <span class="c1">// ~28 byte extra per nodo</span>
+<span class="o">}</span>
+<span class="cm">/* Con AtomicIntegerFieldUpdater: il campo volatile costa solo 4 byte. L'updater
+    è statico e condiviso tra TUTTE le istanze: allocato una sola volta. */</span>
+<span class="kd">public</span> <span class="kd">class</span> <span class="nc">GraphNode</span> <span class="o">{</span>
+    <span class="c1">// Dichiaro il campo come volatile: è il requisito fondamentale per gli</span>
+        <span class="n">updater</span> <span class="kd">volatile</span> <span class="kt">int</span> <span class="n">status</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="o">;</span>
+    <span class="c1">// Solo 4 byte, nessun oggetto wrapper volatile int refCount = 0</span>
+    <span class="o">;</span>
+    <span class="kd">volatile</span> <span class="kt">int</span> <span class="n">version</span> <span class="o">=</span> <span class="mi">0</span><span class="o">;</span>
+    <span class="cm">/* Gli updater sono statici: esistono una sola volta per la classe,
+        indipendentemente da quante istanze creo. Usano reflection per accedere
+        al campo: il campo deve essere visible e volatile. */</span>
+    <span class="kd">private</span> <span class="kd">static</span> <span class="kd">final</span> <span class="nc">AtomicIntegerFieldUpdater</span><span class="o">&lt;</span><span class="nc">GraphNode</span><span class="o">&gt;</span> <span class="no">STATUS_UPDATER</span> <span class="o">=</span>
+        <span class="nc">AtomicIntegerFieldUpdater</span><span class="o">.</span><span class="na">newUpdater</span><span class="o">(</span><span class="nc">GraphNode</span><span class="o">.</span><span class="na">class</span><span class="o">,</span> <span class="s">"status"</span><span class="o">);</span>
+    <span class="kd">private</span> <span class="kd">static</span> <span class="kd">final</span> <span class="nc">AtomicIntegerFieldUpdater</span><span class="o">&lt;</span><span class="nc">GraphNode</span><span class="o">&gt;</span> <span class="no">REF_UPDATER</span> <span class="o">=</span>
+        <span class="nc">AtomicIntegerFieldUpdater</span><span class="o">.</span><span class="na">newUpdater</span><span class="o">(</span><span class="nc">GraphNode</span><span class="o">.</span><span class="na">class</span><span class="o">,</span> <span class="s">"refCount"</span><span class="o">);</span>
+    <span class="kd">private</span> <span class="kd">static</span> <span class="kd">final</span> <span class="nc">AtomicIntegerFieldUpdater</span><span class="o">&lt;</span><span class="nc">GraphNode</span><span class="o">&gt;</span> <span class="no">VERSION_UPDATER</span> <span class="o">=</span>
+        <span class="nc">AtomicIntegerFieldUpdater</span><span class="o">.</span><span class="na">newUpdater</span><span class="o">(</span><span class="nc">GraphNode</span><span class="o">.</span><span class="na">class</span><span class="o">,</span> <span class="s">"version"</span><span class="o">);</span>
+    <span class="cm">/* Eseguo il Compare-And-Set atomico: equivalente a
+        AtomicInteger.compareAndSet() ma senza allocazione. */</span>
+    <span class="kd">public</span> <span class="kt">boolean</span> <span class="nf">markAsProcessed</span><span class="o">()</span> <span class="o">{</span>
+        <span class="k">return</span> <span class="no">STATUS_UPDATER</span><span class="o">.</span><span class="na">compareAndSet</span><span class="o">(</span><span class="k">this</span><span class="o">,</span> <span class="mi">0</span><span class="o">,</span> <span class="mi">1</span><span class="o">);</span>
+    <span class="o">}</span>
+    <span class="kd">public</span> <span class="kt">int</span> <span class="nf">incrementRefCount</span><span class="o">()</span> <span class="o">{</span>
+        <span class="k">return</span> <span class="no">REF_UPDATER</span><span class="o">.</span><span class="na">incrementAndGet</span><span class="o">(</span><span class="k">this</span><span class="o">);</span>
+    <span class="o">}</span>
+    <span class="kd">public</span> <span class="kt">int</span> <span class="nf">getAndIncrementVersion</span><span class="o">()</span> <span class="o">{</span>
+        <span class="k">return</span> <span class="no">VERSION_UPDATER</span><span class="o">.</span><span class="na">getAndIncrement</span><span class="o">(</span><span class="k">this</span><span class="o">);</span>
+    <span class="o">}</span>
+    <span class="cm">/* Verifica dello stato senza lock: la lettura di un volatile è atomica per
+        i tipi &lt;= 64 bit. */</span>
+    <span class="kd">public</span> <span class="kt">boolean</span> <span class="nf">isProcessed</span><span class="o">()</span> <span class="o">{</span>
+        <span class="k">return</span> <span class="n">status</span> <span class="o">==</span> <span class="mi">1</span><span class="o">;</span>
+    <span class="o">}</span>
+<span class="o">}</span>
+<span class="cm">/* Calcolo il risparmio di memoria su 10 milioni di nodi: Con AtomicInteger: 10M
+    * 28 byte = 280 MB extra Con volatile int: 10M * 4 byte = 40 MB -&gt; risparmio
+    di 240 MB e meno pressione sul GC */</span>
+<span class="cm">/* In Spring Boot, uso questa tecnica per implementare una cache LRU custom in
+    memoria con milioni di entry: */</span>
+<span class="nd">@Component</span> <span class="kd">public</span> <span class="kd">class</span> <span class="nc">DenseLruCache</span><span class="o">&lt;</span><span class="no">K</span><span class="o">,</span> <span class="no">V</span><span class="o">&gt;</span> <span class="o">{</span>
+    <span class="kd">private</span> <span class="kd">final</span> <span class="nc">Map</span><span class="o">&lt;</span><span class="no">K</span><span class="o">,</span> <span class="nc">CacheEntry</span><span class="o">&lt;</span><span class="no">V</span><span class="o">&gt;&gt;</span> <span class="n">store</span> <span class="o">=</span> <span class="k">new</span>
+        <span class="nc">ConcurrentHashMap</span><span class="o">&lt;&gt;(</span><span class="mi">1_000_000</span><span class="o">);</span>
+    <span class="kd">public</span> <span class="kd">static</span> <span class="kd">class</span> <span class="nc">CacheEntry</span><span class="o">&lt;</span><span class="no">V</span><span class="o">&gt;</span> <span class="o">{</span>
+        <span class="kd">volatile</span> <span class="kt">int</span> <span class="n">hits</span> <span class="o">=</span> <span class="mi">0</span><span class="o">;</span>
+        <span class="c1">// AtomicIntegerFieldUpdater invece di AtomicInteger final V value</span>
+        <span class="o">;</span>
+        <span class="nc">CacheEntry</span><span class="o">(</span><span class="no">V</span> <span class="n">value</span><span class="o">)</span> <span class="o">{</span>
+            <span class="k">this</span><span class="o">.</span><span class="na">value</span> <span class="o">=</span> <span class="n">value</span><span class="o">;</span>
+        <span class="o">}</span>
+        <span class="kd">private</span> <span class="kd">static</span> <span class="kd">final</span> <span class="nc">AtomicIntegerFieldUpdater</span><span class="o">&lt;</span><span class="nc">CacheEntry</span><span class="o">&gt;</span> <span class="no">HITS_UPDATER</span>
+            <span class="o">=</span> <span class="nc">AtomicIntegerFieldUpdater</span><span class="o">.</span><span class="na">newUpdater</span><span class="o">(</span><span class="nc">CacheEntry</span><span class="o">.</span><span class="na">class</span><span class="o">,</span> <span class="s">"hits"</span><span class="o">);</span>
+        <span class="kd">public</span> <span class="kt">void</span> <span class="nf">recordHit</span><span class="o">()</span> <span class="o">{</span>
+            <span class="no">HITS_UPDATER</span><span class="o">.</span><span class="na">incrementAndGet</span><span class="o">(</span><span class="k">this</span><span class="o">);</span>
+        <span class="o">}</span>
+    <span class="o">}</span>
+<span class="o">}</span>
 </pre></td></tr></tbody></table></code></pre></div></div>
 
         </article>

@@ -161,78 +161,90 @@
 70
 71
 72
-</pre></td><td class="rouge-code"><pre><span class="o">*</span> <span class="nc">Definisco</span> <span class="n">il</span> <span class="n">contenitore</span> <span class="n">per</span> <span class="n">il</span> <span class="n">contesto</span> <span class="n">dell</span><span class="err">'</span><span class="n">utente</span> <span class="n">come</span> <span class="nc">ThreadLocal</span> <span class="n">statico</span><span class="o">.</span>
-<span class="o">*</span> <span class="nc">Ogni</span> <span class="n">thread</span> <span class="n">del</span> <span class="n">pool</span> <span class="n">ha</span> <span class="n">la</span> <span class="n">sua</span> <span class="n">copia</span> <span class="n">indipendente</span> <span class="n">del</span> <span class="n">valore</span><span class="o">.</span> <span class="o">*/</span>
- <span class="kd">public</span> <span class="kd">class</span> <span class="nc">UserContext</span> 
-<span class="o">{</span> <span class="kd">private</span> <span class="kd">static</span> <span class="kd">final</span> <span class="nc">ThreadLocal</span><span class="o">&lt;</span><span class="nc">UserCtx</span><span class="o">&gt;</span> <span class="no">CTX</span> <span class="o">=</span> <span class="k">new</span> <span class="nc">ThreadLocal</span><span class="o">&lt;&gt;();</span> <span class="kd">public</span>
-<span class="kd">static</span> <span class="kt">void</span> <span class="nf">set</span><span class="o">(</span><span class="nc">UserCtx</span> <span class="n">ctx</span><span class="o">)</span>
-<span class="o">{</span> <span class="no">CTX</span><span class="o">.</span><span class="na">set</span><span class="o">(</span><span class="n">ctx</span><span class="o">);</span> <span class="o">}</span>
- <span class="kd">public</span> <span class="kd">static</span> <span class="nc">UserCtx</span> <span class="nf">get</span><span class="o">()</span> 
-<span class="o">{</span> <span class="k">return</span> <span class="no">CTX</span><span class="o">.</span><span class="na">get</span><span class="o">();</span> <span class="o">}</span>
- 
-<span class="o">*</span> <span class="nc">Il</span> <span class="nf">remove</span><span class="o">()</span> <span class="n">è</span> <span class="n">il</span> <span class="n">punto</span> <span class="nl">critico:</span> <span class="n">senza</span> <span class="n">di</span> <span class="n">esso</span><span class="o">,</span> <span class="n">il</span> <span class="n">thread</span> <span class="n">torna</span> <span class="n">nel</span> <span class="n">pool</span> <span class="n">di</span>
-<span class="o">*</span> <span class="nc">Tomcat</span> <span class="n">con</span> <span class="n">il</span> <span class="n">vecchio</span> <span class="nc">UserCtx</span> <span class="n">ancora</span> <span class="n">dentro</span><span class="o">,</span> <span class="n">contaminando</span> <span class="n">la</span> <span class="n">richiesta</span>
-<span class="o">*</span> <span class="n">successiva</span> <span class="n">di</span> <span class="n">un</span> <span class="n">utente</span> <span class="n">diverso</span><span class="o">.</span> <span class="o">*/</span>
- <span class="kd">public</span> <span class="kd">static</span> <span class="kt">void</span> <span class="nf">clear</span><span class="o">()</span> 
-<span class="o">{</span> <span class="no">CTX</span><span class="o">.</span><span class="na">remove</span><span class="o">();</span> <span class="o">}</span>
- <span class="o">}</span>
- 
-<span class="o">*</span> <span class="nc">Uso</span> <span class="n">corretto</span> <span class="n">in</span> <span class="n">un</span> <span class="nc">Filter</span> <span class="nl">Spring:</span> <span class="n">imposto</span> <span class="n">il</span> <span class="n">contesto</span> <span class="n">all</span><span class="err">'</span><span class="n">inizio</span> <span class="n">della</span>
-<span class="o">*</span> <span class="n">richiesta</span> <span class="n">e</span> <span class="n">lo</span> <span class="n">pulisco</span> <span class="no">SEMPRE</span> <span class="n">nel</span> <span class="k">finally</span><span class="o">,</span> <span class="n">anche</span> <span class="n">in</span> <span class="n">caso</span> <span class="n">di</span> <span class="n">eccezione</span><span class="o">.</span> <span class="o">*/</span>
- <span class="nd">@Component</span> <span class="kd">public</span> <span class="kd">class</span> <span class="nc">UserContextFilter</span> <span class="kd">implements</span> <span class="nc">Filter</span> 
-<span class="o">{</span> <span class="nd">@Override</span> <span class="kd">public</span> <span class="kt">void</span> <span class="nf">doFilter</span><span class="o">(</span><span class="nc">ServletRequest</span> <span class="n">req</span><span class="o">,</span> <span class="nc">ServletResponse</span> <span class="n">res</span><span class="o">,</span>
-<span class="nc">FilterChain</span> <span class="n">chain</span><span class="o">)</span> <span class="kd">throws</span> <span class="nc">IOException</span><span class="o">,</span> <span class="nc">ServletException</span>
-<span class="o">{</span> <span class="nc">HttpServletRequest</span> <span class="n">httpReq</span> <span class="o">=</span> <span class="o">(</span><span class="nc">HttpServletRequest</span><span class="o">)</span> <span class="n">req</span><span class="o">;</span> <span class="nc">String</span> <span class="n">userId</span> <span class="o">=</span>
-<span class="n">httpReq</span><span class="o">.</span><span class="na">getHeader</span><span class="o">(</span><span class="s">"X-User-Id"</span><span class="o">);</span> <span class="nc">String</span> <span class="n">traceId</span> <span class="o">=</span> <span class="n">httpReq</span><span class="o">.</span><span class="na">getHeader</span><span class="o">(</span><span class="s">"X-Trace-
-Id"</span><span class="o">);</span> <span class="nc">UserContext</span><span class="o">.</span><span class="na">set</span><span class="o">(</span><span class="k">new</span> <span class="nc">UserCtx</span><span class="o">(</span><span class="n">userId</span><span class="o">,</span> <span class="n">traceId</span><span class="o">));</span> <span class="k">try</span>
-<span class="o">{</span> <span class="n">chain</span><span class="o">.</span><span class="na">doFilter</span><span class="o">(</span><span class="n">req</span><span class="o">,</span> <span class="n">res</span><span class="o">);</span> <span class="o">}</span>
- <span class="k">finally</span> 
-<span class="o">{</span> <span class="nc">UserContext</span><span class="o">.</span><span class="na">clear</span><span class="o">();</span> 
-<span class="c1">// Garantito anche in caso di eccezione: il thread torna pulito nel pool }</span>
- <span class="o">}</span>
- <span class="o">}</span>
- 
-<span class="o">*</span> <span class="nc">Ora</span> <span class="n">qualsiasi</span> <span class="n">service</span> <span class="n">o</span> <span class="n">repository</span> <span class="n">può</span> <span class="n">leggere</span> <span class="n">il</span> <span class="n">contesto</span> <span class="n">senza</span> <span class="n">riceverlo</span>
-<span class="o">*</span> <span class="n">come</span> <span class="nl">parametro:</span> <span class="o">*/</span>
- <span class="nd">@Service</span> <span class="kd">public</span> <span class="kd">class</span> <span class="nc">OrderService</span> 
-<span class="o">{</span> <span class="kd">public</span> <span class="nc">List</span><span class="o">&lt;</span><span class="nc">Order</span><span class="o">&gt;</span> <span class="nf">findMyOrders</span><span class="o">()</span> 
-<span class="o">{</span> <span class="nc">String</span> <span class="n">userId</span> <span class="o">=</span> <span class="nc">UserContext</span><span class="o">.</span><span class="na">get</span><span class="o">().</span><span class="na">getUserId</span><span class="o">();</span> 
-<span class="c1">// Disponibile ovunque nello stesso thread return</span>
-<span class="c1">// orderRepository.findByUserId(userId); }</span>
- <span class="o">}</span>
- 
-<span class="o">*</span> <span class="no">ATTENZIONE</span> <span class="n">con</span> <span class="n">i</span> <span class="n">virtual</span> <span class="nl">thread:</span> <span class="n">ogni</span> <span class="n">virtual</span> <span class="n">thread</span> <span class="n">ha</span> <span class="n">il</span> <span class="n">proprio</span>
-<span class="o">*</span> <span class="nc">ThreadLocal</span><span class="o">,</span> <span class="n">ma</span> <span class="n">vengono</span> <span class="n">creati</span> <span class="n">e</span> <span class="n">distrutti</span> <span class="n">per</span> <span class="n">ogni</span> <span class="n">richiesta</span><span class="o">.</span> <span class="nc">Il</span> <span class="n">memory</span> <span class="n">leak</span>
-<span class="o">*</span> <span class="n">non</span> <span class="n">si</span> <span class="n">manifesta</span> <span class="n">come</span> <span class="n">con</span> <span class="n">i</span> <span class="n">thread</span> <span class="no">OS</span> <span class="n">del</span> <span class="n">pool</span><span class="o">,</span> <span class="n">ma</span> <span class="n">il</span> <span class="n">costo</span> <span class="n">di</span> <span class="n">allocazione</span> <span class="n">del</span>
-<span class="o">*</span> <span class="nc">ThreadLocal</span> <span class="n">rimane</span><span class="o">.</span> <span class="nc">Per</span> <span class="n">i</span> <span class="n">virtual</span> <span class="n">thread</span> <span class="n">preferisco</span> <span class="n">passare</span> <span class="n">il</span> <span class="n">contesto</span>
-<span class="o">*</span> <span class="n">esplicitamente</span> <span class="n">o</span> <span class="n">usare</span> <span class="nf">ScopedValue</span> <span class="o">(</span><span class="nc">Java</span> <span class="mi">21</span> <span class="n">preview</span><span class="o">):</span> <span class="o">*/</span>
- 
+73
+74
+75
+76
+77
+78
+</pre></td><td class="rouge-code"><pre><span class="cm">/* Definisco il contenitore per il contesto dell'utente come ThreadLocal
+    statico. Ogni thread del pool ha la sua copia indipendente del valore. */</span>
+<span class="kd">public</span> <span class="kd">class</span> <span class="nc">UserContext</span> <span class="o">{</span>
+    <span class="kd">private</span> <span class="kd">static</span> <span class="kd">final</span> <span class="nc">ThreadLocal</span><span class="o">&lt;</span><span class="nc">UserCtx</span><span class="o">&gt;</span> <span class="no">CTX</span> <span class="o">=</span> <span class="k">new</span> <span class="nc">ThreadLocal</span><span class="o">&lt;&gt;();</span>
+    <span class="kd">public</span> <span class="kd">static</span> <span class="kt">void</span> <span class="nf">set</span><span class="o">(</span><span class="nc">UserCtx</span> <span class="n">ctx</span><span class="o">)</span> <span class="o">{</span>
+        <span class="no">CTX</span><span class="o">.</span><span class="na">set</span><span class="o">(</span><span class="n">ctx</span><span class="o">);</span>
+    <span class="o">}</span>
+    <span class="kd">public</span> <span class="kd">static</span> <span class="nc">UserCtx</span> <span class="nf">get</span><span class="o">()</span> <span class="o">{</span>
+        <span class="k">return</span> <span class="no">CTX</span><span class="o">.</span><span class="na">get</span><span class="o">();</span>
+    <span class="o">}</span>
+    <span class="cm">/* Il remove() è il punto critico: senza di esso, il thread torna nel pool
+        di Tomcat con il vecchio UserCtx ancora dentro, contaminando la
+        richiesta successiva di un utente diverso. */</span>
+    <span class="kd">public</span> <span class="kd">static</span> <span class="kt">void</span> <span class="nf">clear</span><span class="o">()</span> <span class="o">{</span>
+        <span class="no">CTX</span><span class="o">.</span><span class="na">remove</span><span class="o">();</span>
+    <span class="o">}</span>
+<span class="o">}</span>
+<span class="cm">/* Uso corretto in un Filter Spring: imposto il contesto all'inizio della
+    richiesta e lo pulisco SEMPRE nel finally, anche in caso di eccezione. */</span>
+<span class="nd">@Component</span> <span class="kd">public</span> <span class="kd">class</span> <span class="nc">UserContextFilter</span> <span class="kd">implements</span> <span class="nc">Filter</span> <span class="o">{</span>
+    <span class="nd">@Override</span> <span class="kd">public</span> <span class="kt">void</span> <span class="nf">doFilter</span><span class="o">(</span><span class="nc">ServletRequest</span> <span class="n">req</span><span class="o">,</span> <span class="nc">ServletResponse</span> <span class="n">res</span><span class="o">,</span>
+        <span class="nc">FilterChain</span> <span class="n">chain</span><span class="o">)</span> <span class="kd">throws</span> <span class="nc">IOException</span><span class="o">,</span> <span class="nc">ServletException</span> <span class="o">{</span>
+        <span class="nc">HttpServletRequest</span> <span class="n">httpReq</span> <span class="o">=</span> <span class="o">(</span><span class="nc">HttpServletRequest</span><span class="o">)</span> <span class="n">req</span><span class="o">;</span>
+        <span class="nc">String</span> <span class="n">userId</span> <span class="o">=</span> <span class="n">httpReq</span><span class="o">.</span><span class="na">getHeader</span><span class="o">(</span><span class="s">"X-User-Id"</span><span class="o">);</span>
+        <span class="nc">String</span> <span class="n">traceId</span> <span class="o">=</span> <span class="n">httpReq</span><span class="o">.</span><span class="na">getHeader</span><span class="o">(</span><span class="s">"X-Trace-Id"</span><span class="o">);</span>
+        <span class="nc">UserContext</span><span class="o">.</span><span class="na">set</span><span class="o">(</span><span class="k">new</span> <span class="nc">UserCtx</span><span class="o">(</span><span class="n">userId</span><span class="o">,</span> <span class="n">traceId</span><span class="o">));</span>
+        <span class="k">try</span> <span class="o">{</span>
+            <span class="n">chain</span><span class="o">.</span><span class="na">doFilter</span><span class="o">(</span><span class="n">req</span><span class="o">,</span> <span class="n">res</span><span class="o">);</span>
+        <span class="o">}</span>
+        <span class="k">finally</span> <span class="o">{</span>
+            <span class="nc">UserContext</span><span class="o">.</span><span class="na">clear</span><span class="o">();</span>
+            <span class="c1">// Garantito anche in caso di eccezione: il thread torna pulito nel</span>
+                <span class="n">pool</span>
+        <span class="o">}</span>
+    <span class="o">}</span>
+<span class="o">}</span>
+<span class="cm">/* Ora qualsiasi service o repository può leggere il contesto senza riceverlo
+    come parametro: */</span>
+<span class="nd">@Service</span> <span class="kd">public</span> <span class="kd">class</span> <span class="nc">OrderService</span> <span class="o">{</span>
+    <span class="kd">public</span> <span class="nc">List</span><span class="o">&lt;</span><span class="nc">Order</span><span class="o">&gt;</span> <span class="nf">findMyOrders</span><span class="o">()</span> <span class="o">{</span>
+        <span class="nc">String</span> <span class="n">userId</span> <span class="o">=</span> <span class="nc">UserContext</span><span class="o">.</span><span class="na">get</span><span class="o">().</span><span class="na">getUserId</span><span class="o">();</span>
+        <span class="c1">// Disponibile ovunque nello stesso thread</span>
+        <span class="k">return</span> <span class="n">orderRepository</span><span class="o">.</span><span class="na">findByUserId</span><span class="o">(</span><span class="n">userId</span><span class="o">);</span>
+    <span class="o">}</span>
+<span class="o">}</span>
+<span class="cm">/* ATTENZIONE con i virtual thread: ogni virtual thread ha il proprio
+    ThreadLocal, ma vengono creati e distrutti per ogni richiesta. Il memory
+    leak non si manifesta come con i thread OS del pool, ma il costo di
+    allocazione del ThreadLocal rimane. Per i virtual thread preferisco passare
+    il contesto esplicitamente o usare ScopedValue (Java 21 preview): */</span>
 <span class="c1">// ScopedValue: il successore moderno di ThreadLocal per i virtual thread</span>
-<span class="c1">// ScopedValue&lt;UserCtx&gt; USER_CTX = ScopedValue.newInstance();</span>
-<span class="c1">// ScopedValue.where(USER_CTX, new UserCtx(userId, traceId)) .run(() -&gt;</span>
-<span class="o">{</span> 
-<span class="c1">// Tutto il codice qui dentro ha accesso a USER_CTX.get()</span>
-<span class="c1">// orderService.findMyOrders(); }</span>
-<span class="o">);</span> 
+    <span class="nc">ScopedValue</span><span class="o">&lt;</span><span class="nc">UserCtx</span><span class="o">&gt;</span> <span class="no">USER_CTX</span> <span class="o">=</span> <span class="nc">ScopedValue</span><span class="o">.</span><span class="na">newInstance</span><span class="o">()</span>
+<span class="o">;</span>
+<span class="nc">ScopedValue</span><span class="o">.</span><span class="na">where</span><span class="o">(</span><span class="no">USER_CTX</span><span class="o">,</span> <span class="k">new</span> <span class="nc">UserCtx</span><span class="o">(</span><span class="n">userId</span><span class="o">,</span> <span class="n">traceId</span><span class="o">))</span> <span class="o">.</span><span class="na">run</span><span class="o">(()</span> <span class="o">-&gt;</span> <span class="o">{</span>
+    <span class="c1">// Tutto il codice qui dentro ha accesso a USER_CTX.get()</span>
+        <span class="n">orderService</span><span class="o">.</span><span class="na">findMyOrders</span><span class="o">()</span>
+    <span class="o">;</span>
+<span class="o">}</span>
+<span class="o">);</span>
 <span class="c1">// Nessun remove() necessario: il valore è automaticamente scoped alla chiamata</span>
-<span class="c1">// run()</span>
-<span class="o">*</span> <span class="nc">Rilevo</span> <span class="n">i</span> <span class="nc">ThreadLocal</span> <span class="n">leak</span> <span class="n">in</span> <span class="n">produzione</span> <span class="n">tramite</span> <span class="n">un</span> <span class="n">agente</span> <span class="n">di</span> <span class="n">monitoraggio</span> <span class="n">o</span>
-<span class="o">*</span> <span class="n">ispezionando</span> <span class="n">i</span> <span class="n">thread</span> <span class="n">con</span> <span class="nl">jstack:</span> <span class="o">*/</span>
- 
-<span class="c1">// jstack &lt;pid&gt; | grep -A 5 "http-nio" </span>
-<span class="c1">// Se vedo ThreadLocal con valori non null su thread idle, c'è un leak </span>
-<span class="o">*</span> <span class="nc">In</span> <span class="nc">Spring</span> <span class="nc">Boot</span><span class="o">,</span> <span class="n">registro</span> <span class="n">un</span> <span class="n">interceptor</span> <span class="n">che</span> <span class="n">verifica</span> <span class="n">che</span> <span class="n">il</span> <span class="nc">ThreadLocal</span> <span class="n">sia</span>
-<span class="o">*</span> <span class="n">stato</span> <span class="n">pulito</span> <span class="n">al</span> <span class="n">termine</span> <span class="n">di</span> <span class="n">ogni</span> <span class="nl">richiesta:</span> <span class="o">*/</span>
- <span class="nd">@Component</span> <span class="kd">public</span> <span class="kd">class</span> <span class="nc">ThreadLocalLeakDetector</span> <span class="kd">implements</span> <span class="nc">HandlerInterceptor</span> 
-<span class="o">{</span> <span class="nd">@Override</span> <span class="kd">public</span> <span class="kt">void</span> <span class="nf">afterCompletion</span><span class="o">(</span><span class="nc">HttpServletRequest</span> <span class="n">req</span><span class="o">,</span>
-<span class="nc">HttpServletResponse</span> <span class="n">res</span><span class="o">,</span> <span class="nc">Object</span> <span class="n">handler</span><span class="o">,</span> <span class="nc">Exception</span> <span class="n">ex</span><span class="o">)</span>
-<span class="o">{</span> <span class="k">if</span> <span class="o">(</span><span class="nc">UserContext</span><span class="o">.</span><span class="na">get</span><span class="o">()</span> <span class="o">!=</span> <span class="kc">null</span><span class="o">)</span> 
-<span class="o">{</span> <span class="n">log</span><span class="o">.</span><span class="na">error</span><span class="o">(</span><span class="s">"LEAK RILEVATO: UserContext non pulito per 
-{}
-"</span><span class="o">,</span> <span class="n">req</span><span class="o">.</span><span class="na">getRequestURI</span><span class="o">());</span> <span class="nc">UserContext</span><span class="o">.</span><span class="na">clear</span><span class="o">();</span> 
-<span class="c1">// Pulisco comunque per proteggere la richiesta successiva }</span>
- <span class="o">}</span>
- <span class="o">}</span>
+    <span class="n">run</span><span class="o">()</span> <span class="cm">/* Rilevo i ThreadLocal leak in produzione tramite un agente di
+    monitoraggio o ispezionando i thread con jstack: */</span> <span class="c1">// jstack &lt;pid&gt; | grep</span>
+    <span class="o">-</span><span class="no">A</span> <span class="mi">5</span> <span class="s">"http-nio"</span> <span class="c1">// Se vedo ThreadLocal con valori non null su thread idle,</span>
+    <span class="n">c</span><span class="err">'</span><span class="n">è</span> <span class="n">un</span> <span class="n">leak</span> <span class="cm">/* In Spring Boot, registro un interceptor che verifica che il
+    ThreadLocal sia stato pulito al termine di ogni richiesta: */</span> <span class="nd">@Component</span>
+    <span class="kd">public</span> <span class="kd">class</span> <span class="nc">ThreadLocalLeakDetector</span> <span class="kd">implements</span> <span class="nc">HandlerInterceptor</span>
+<span class="o">{</span>
+    <span class="nd">@Override</span> <span class="kd">public</span> <span class="kt">void</span> <span class="nf">afterCompletion</span><span class="o">(</span><span class="nc">HttpServletRequest</span> <span class="n">req</span><span class="o">,</span>
+        <span class="nc">HttpServletResponse</span> <span class="n">res</span><span class="o">,</span> <span class="nc">Object</span> <span class="n">handler</span><span class="o">,</span> <span class="nc">Exception</span> <span class="n">ex</span><span class="o">)</span> <span class="o">{</span>
+        <span class="k">if</span> <span class="o">(</span><span class="nc">UserContext</span><span class="o">.</span><span class="na">get</span><span class="o">()</span> <span class="o">!=</span> <span class="kc">null</span><span class="o">)</span> <span class="o">{</span>
+            <span class="n">log</span><span class="o">.</span><span class="na">error</span><span class="o">(</span><span class="s">"LEAK RILEVATO: UserContext non pulito per {
+            }
+            "</span><span class="o">,</span> <span class="n">req</span><span class="o">.</span><span class="na">getRequestURI</span><span class="o">());</span>
+            <span class="nc">UserContext</span><span class="o">.</span><span class="na">clear</span><span class="o">();</span>
+            <span class="c1">// Pulisco comunque per proteggere la richiesta successiva</span>
+        <span class="o">}</span>
+    <span class="o">}</span>
+<span class="o">}</span>
 </pre></td></tr></tbody></table></code></pre></div></div>
 
         </article>

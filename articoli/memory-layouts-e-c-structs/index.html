@@ -165,82 +165,90 @@
 74
 75
 76
-</pre></td><td class="rouge-code"><pre><span class="cm">/* Modello la struct C del pacchetto di rete: typedef struct 
-{ uint32_t timestamp; 
-// 4 byte uint16_t sensor_id; 
-// 2 byte uint16_t flags; 
-// 2 byte float temperature; 
-// 4 byte float humidity; 
-// 4 byte int32_t raw_value; 
-// 4 byte }
- SensorPacket; 
-// Totale: 20 byte, nessun padding necessario */</span>
- <span class="kd">public</span> <span class="kd">class</span> <span class="nc">SensorPacketLayout</span> 
-<span class="o">{</span> 
-<span class="c1">// Definisco il layout che corrisponde ESATTAMENTE alla struct C public static</span>
-<span class="c1">// final StructLayout LAYOUT = MemoryLayout.structLayout(</span>
-<span class="c1">// ValueLayout.JAVA_INT.withName("timestamp"),</span>
-<span class="c1">// 4 byte ValueLayout.JAVA_SHORT.withName("sensor_id"), </span>
-<span class="c1">// 2 byte ValueLayout.JAVA_SHORT.withName("flags"), </span>
-<span class="c1">// 2 byte ValueLayout.JAVA_FLOAT.withName("temperature"), </span>
-<span class="c1">// 4 byte ValueLayout.JAVA_FLOAT.withName("humidity"), </span>
-<span class="c1">// 4 byte ValueLayout.JAVA_INT.withName("raw_value") </span>
-<span class="c1">// 4 byte </span>
-<span class="c1">// Totale: 20 byte: coincide con sizeof(SensorPacket) in C ); </span>
-<span class="c1">// Genero VarHandle per ogni campo: la JVM calcola automaticamente gli offset</span>
-<span class="c1">// public static final VarHandle TIMESTAMP =</span>
-<span class="c1">// LAYOUT.varHandle(MemoryLayout.PathElement.groupElement("timestamp")); public</span>
-<span class="c1">// static final VarHandle SENSOR_ID =</span>
-<span class="c1">// LAYOUT.varHandle(MemoryLayout.PathElement.groupElement("sensor_id")); public</span>
-<span class="c1">// static final VarHandle FLAGS =</span>
-<span class="c1">// LAYOUT.varHandle(MemoryLayout.PathElement.groupElement("flags")); public</span>
-<span class="c1">// static final VarHandle TEMPERATURE =</span>
-<span class="c1">// LAYOUT.varHandle(MemoryLayout.PathElement.groupElement("temperature"));</span>
-<span class="c1">// public static final VarHandle HUMIDITY =</span>
-<span class="c1">// LAYOUT.varHandle(MemoryLayout.PathElement.groupElement("humidity")); public</span>
-<span class="c1">// static final VarHandle RAW_VALUE =</span>
-<span class="c1">// LAYOUT.varHandle(MemoryLayout.PathElement.groupElement("raw_value")); }</span>
- 
+77
+78
+79
+80
+</pre></td><td class="rouge-code"><pre><span class="cm">/* Modello la struct C del pacchetto di rete: typedef struct { uint32_t
+    timestamp; // 4 byte uint16_t sensor_id; // 2 byte uint16_t flags; // 2 byte
+    float temperature; // 4 byte float humidity; // 4 byte int32_t raw_value; //
+    4 byte } SensorPacket; // Totale: 20 byte, nessun padding necessario */</span>
+<span class="kd">public</span> <span class="kd">class</span> <span class="nc">SensorPacketLayout</span> <span class="o">{</span>
+    <span class="c1">// Definisco il layout che corrisponde ESATTAMENTE alla struct C public</span>
+        <span class="kd">static</span> <span class="kd">final</span> <span class="nc">StructLayout</span> <span class="no">LAYOUT</span> <span class="o">=</span> <span class="nc">MemoryLayout</span><span class="o">.</span><span class="na">structLayout</span><span class="o">(</span>
+        <span class="nc">ValueLayout</span><span class="o">.</span><span class="na">JAVA_INT</span><span class="o">.</span><span class="na">withName</span><span class="o">(</span><span class="s">"timestamp"</span><span class="o">),</span> <span class="c1">// 4 byte</span>
+        <span class="nc">ValueLayout</span><span class="o">.</span><span class="na">JAVA_SHORT</span><span class="o">.</span><span class="na">withName</span><span class="o">(</span><span class="s">"sensor_id"</span><span class="o">),</span> <span class="c1">// 2 byte</span>
+        <span class="nc">ValueLayout</span><span class="o">.</span><span class="na">JAVA_SHORT</span><span class="o">.</span><span class="na">withName</span><span class="o">(</span><span class="s">"flags"</span><span class="o">),</span> <span class="c1">// 2 byte</span>
+        <span class="nc">ValueLayout</span><span class="o">.</span><span class="na">JAVA_FLOAT</span><span class="o">.</span><span class="na">withName</span><span class="o">(</span><span class="s">"temperature"</span><span class="o">),</span> <span class="c1">// 4 byte</span>
+        <span class="nc">ValueLayout</span><span class="o">.</span><span class="na">JAVA_FLOAT</span><span class="o">.</span><span class="na">withName</span><span class="o">(</span><span class="s">"humidity"</span><span class="o">),</span> <span class="c1">// 4 byte</span>
+        <span class="nc">ValueLayout</span><span class="o">.</span><span class="na">JAVA_INT</span><span class="o">.</span><span class="na">withName</span><span class="o">(</span><span class="s">"raw_value"</span><span class="o">)</span> <span class="c1">// 4 byte // Totale: 20 byte:</span>
+        <span class="n">coincide</span> <span class="n">con</span> <span class="nf">sizeof</span><span class="o">(</span><span class="nc">SensorPacket</span><span class="o">)</span> <span class="n">in</span> <span class="no">C</span> <span class="o">)</span>
+    <span class="o">;</span>
+    <span class="c1">// Genero VarHandle per ogni campo: la JVM calcola automaticamente gli</span>
+        <span class="n">offset</span> <span class="kd">public</span> <span class="kd">static</span> <span class="kd">final</span> <span class="nc">VarHandle</span> <span class="no">TIMESTAMP</span> <span class="o">=</span>
+        <span class="no">LAYOUT</span><span class="o">.</span><span class="na">varHandle</span><span class="o">(</span><span class="nc">MemoryLayout</span><span class="o">.</span><span class="na">PathElement</span><span class="o">.</span><span class="na">groupElement</span><span class="o">(</span><span class="s">"timestamp"</span><span class="o">))</span>
+    <span class="o">;</span>
+    <span class="kd">public</span> <span class="kd">static</span> <span class="kd">final</span> <span class="nc">VarHandle</span> <span class="no">SENSOR_ID</span> <span class="o">=</span>
+        <span class="no">LAYOUT</span><span class="o">.</span><span class="na">varHandle</span><span class="o">(</span><span class="nc">MemoryLayout</span><span class="o">.</span><span class="na">PathElement</span><span class="o">.</span><span class="na">groupElement</span><span class="o">(</span><span class="s">"sensor_id"</span><span class="o">));</span>
+    <span class="kd">public</span> <span class="kd">static</span> <span class="kd">final</span> <span class="nc">VarHandle</span> <span class="no">FLAGS</span> <span class="o">=</span>
+        <span class="no">LAYOUT</span><span class="o">.</span><span class="na">varHandle</span><span class="o">(</span><span class="nc">MemoryLayout</span><span class="o">.</span><span class="na">PathElement</span><span class="o">.</span><span class="na">groupElement</span><span class="o">(</span><span class="s">"flags"</span><span class="o">));</span>
+    <span class="kd">public</span> <span class="kd">static</span> <span class="kd">final</span> <span class="nc">VarHandle</span> <span class="no">TEMPERATURE</span> <span class="o">=</span>
+        <span class="no">LAYOUT</span><span class="o">.</span><span class="na">varHandle</span><span class="o">(</span><span class="nc">MemoryLayout</span><span class="o">.</span><span class="na">PathElement</span><span class="o">.</span><span class="na">groupElement</span><span class="o">(</span><span class="s">"temperature"</span><span class="o">));</span>
+    <span class="kd">public</span> <span class="kd">static</span> <span class="kd">final</span> <span class="nc">VarHandle</span> <span class="no">HUMIDITY</span> <span class="o">=</span>
+        <span class="no">LAYOUT</span><span class="o">.</span><span class="na">varHandle</span><span class="o">(</span><span class="nc">MemoryLayout</span><span class="o">.</span><span class="na">PathElement</span><span class="o">.</span><span class="na">groupElement</span><span class="o">(</span><span class="s">"humidity"</span><span class="o">));</span>
+    <span class="kd">public</span> <span class="kd">static</span> <span class="kd">final</span> <span class="nc">VarHandle</span> <span class="no">RAW_VALUE</span> <span class="o">=</span>
+        <span class="no">LAYOUT</span><span class="o">.</span><span class="na">varHandle</span><span class="o">(</span><span class="nc">MemoryLayout</span><span class="o">.</span><span class="na">PathElement</span><span class="o">.</span><span class="na">groupElement</span><span class="o">(</span><span class="s">"raw_value"</span><span class="o">));</span>
+<span class="o">}</span>
 <span class="cm">/* Uso il layout per leggere un array di struct dal driver hardware: */</span>
- <span class="nd">@Service</span> <span class="kd">public</span> <span class="kd">class</span> <span class="nc">SensorDriverService</span> 
-<span class="o">{</span> <span class="kd">private</span> <span class="kd">final</span> <span class="nc">MethodHandle</span> <span class="n">readSensorBatchHandle</span><span class="o">;</span> <span class="kd">public</span> <span class="nc">List</span><span class="o">&lt;</span><span class="nc">SensorReading</span><span class="o">&gt;</span>
-<span class="nf">readBatch</span><span class="o">(</span><span class="kt">int</span> <span class="n">sensorCount</span><span class="o">)</span> <span class="kd">throws</span> <span class="nc">Throwable</span>
-<span class="o">{</span> <span class="k">try</span> <span class="o">(</span><span class="nc">Arena</span> <span class="n">arena</span> <span class="o">=</span> <span class="nc">Arena</span><span class="o">.</span><span class="na">ofConfined</span><span class="o">())</span> 
-<span class="o">{</span> 
-<span class="c1">// Alloco un array di N struct: la JVM sa che ogni elemento è LAYOUT.byteSize()</span>
-<span class="c1">// = 20 byte long arraySize = SensorPacketLayout.LAYOUT.byteSize() *</span>
-<span class="c1">// sensorCount; MemorySegment buffer = arena.allocate(arraySize);</span>
-<span class="c1">// Chiamo il driver C che riempie il buffer con le struct int readCount = (int)</span>
-<span class="c1">// readSensorBatchHandle.invokeExact(buffer, sensorCount);</span>
-<span class="c1">// Leggo ogni struct accedendo ai campi tramite VarHandle con offset calcolato</span>
-<span class="c1">// List&lt;SensorReading&gt; readings = new ArrayList&lt;&gt;(readCount); for (int i = 0; i</span>
-<span class="c1">// &lt; readCount; i++)</span>
-<span class="o">{</span> <span class="kt">long</span> <span class="n">baseOffset</span> <span class="o">=</span> <span class="nc">SensorPacketLayout</span><span class="o">.</span><span class="na">LAYOUT</span><span class="o">.</span><span class="na">byteSize</span><span class="o">()</span> <span class="o">*</span> <span class="n">i</span><span class="o">;</span> <span class="n">readings</span><span class="o">.</span><span class="na">add</span><span class="o">(</span><span class="k">new</span>
-<span class="nc">SensorReading</span><span class="o">(</span> <span class="o">(</span><span class="kt">int</span><span class="o">)</span> <span class="nc">SensorPacketLayout</span><span class="o">.</span><span class="na">TIMESTAMP</span><span class="o">.</span><span class="na">get</span><span class="o">(</span><span class="n">buffer</span><span class="o">,</span> <span class="n">baseOffset</span><span class="o">),</span>
-<span class="o">(</span><span class="kt">short</span><span class="o">)</span> <span class="nc">SensorPacketLayout</span><span class="o">.</span><span class="na">SENSOR_ID</span><span class="o">.</span><span class="na">get</span><span class="o">(</span><span class="n">buffer</span><span class="o">,</span> <span class="n">baseOffset</span><span class="o">),</span> <span class="o">(</span><span class="kt">float</span><span class="o">)</span>
-<span class="nc">SensorPacketLayout</span><span class="o">.</span><span class="na">TEMPERATURE</span><span class="o">.</span><span class="na">get</span><span class="o">(</span><span class="n">buffer</span><span class="o">,</span> <span class="n">baseOffset</span><span class="o">),</span> <span class="o">(</span><span class="kt">float</span><span class="o">)</span>
-<span class="nc">SensorPacketLayout</span><span class="o">.</span><span class="na">HUMIDITY</span><span class="o">.</span><span class="na">get</span><span class="o">(</span><span class="n">buffer</span><span class="o">,</span> <span class="n">baseOffset</span><span class="o">)</span> <span class="o">));</span> <span class="o">}</span>
- <span class="k">return</span> <span class="n">readings</span><span class="o">;</span> <span class="o">}</span>
- <span class="o">}</span>
- <span class="o">}</span>
- 
-<span class="o">*</span> <span class="nc">Verifico</span> <span class="n">che</span> <span class="n">il</span> <span class="n">layout</span> <span class="nc">Java</span> <span class="n">coincida</span> <span class="n">con</span> <span class="n">il</span> <span class="n">sizeof</span> <span class="no">C</span> <span class="n">tramite</span> <span class="n">un</span> <span class="n">test</span> <span class="n">di</span>
-<span class="o">*</span> <span class="nl">integrazione:</span> <span class="o">*/</span>
- <span class="nd">@Test</span> <span class="kd">public</span> <span class="kt">void</span> <span class="nf">verifyLayoutMatchesCStruct</span><span class="o">()</span> <span class="kd">throws</span> <span class="nc">Throwable</span> 
-<span class="o">{</span> 
-<span class="c1">// Chiamo la funzione C che restituisce sizeof(SensorPacket) long cSizeof =</span>
-<span class="c1">// (long) getSizeofHandle.invokeExact();</span>
-<span class="c1">// assertEquals(SensorPacketLayout.LAYOUT.byteSize(), cSizeof, "Layout Java non</span>
-<span class="c1">// coincide con la struct C: possibile errore di padding"); }</span>
- 
-<span class="o">*</span> <span class="nc">Per</span> <span class="n">struct</span> <span class="n">con</span> <span class="n">padding</span> <span class="nf">esplicito</span> <span class="o">(</span><span class="n">es</span><span class="o">.</span> <span class="n">allineamento</span> <span class="n">a</span> <span class="mi">8</span> <span class="kt">byte</span><span class="o">),</span> <span class="n">aggiungo</span>
-<span class="o">*</span> <span class="nc">MemoryLayout</span><span class="o">.</span><span class="na">paddingLayout</span><span class="o">():</span> <span class="o">*/</span>
- <span class="nc">StructLayout</span> <span class="n">paddedLayout</span> <span class="o">=</span> <span class="nc">MemoryLayout</span><span class="o">.</span><span class="na">structLayout</span><span class="o">(</span>
-<span class="nc">ValueLayout</span><span class="o">.</span><span class="na">JAVA_INT</span><span class="o">.</span><span class="na">withName</span><span class="o">(</span><span class="s">"id"</span><span class="o">),</span>
-<span class="c1">// 4 byte MemoryLayout.paddingLayout(4), </span>
-<span class="c1">// 4 byte di padding per allineare a 8 byte</span>
-<span class="c1">// ValueLayout.JAVA_LONG.withName("timestamp")</span>
-<span class="c1">// 8 byte );</span>
+<span class="nd">@Service</span> <span class="kd">public</span> <span class="kd">class</span> <span class="nc">SensorDriverService</span> <span class="o">{</span>
+    <span class="kd">private</span> <span class="kd">final</span> <span class="nc">MethodHandle</span> <span class="n">readSensorBatchHandle</span><span class="o">;</span>
+    <span class="kd">public</span> <span class="nc">List</span><span class="o">&lt;</span><span class="nc">SensorReading</span><span class="o">&gt;</span> <span class="nf">readBatch</span><span class="o">(</span><span class="kt">int</span> <span class="n">sensorCount</span><span class="o">)</span> <span class="kd">throws</span> <span class="nc">Throwable</span> <span class="o">{</span>
+        <span class="k">try</span> <span class="o">(</span><span class="nc">Arena</span> <span class="n">arena</span> <span class="o">=</span> <span class="nc">Arena</span><span class="o">.</span><span class="na">ofConfined</span><span class="o">())</span> <span class="o">{</span>
+            <span class="c1">// Alloco un array di N struct: la JVM sa che ogni elemento è</span>
+                <span class="no">LAYOUT</span><span class="o">.</span><span class="na">byteSize</span><span class="o">()</span> <span class="o">=</span> <span class="mi">20</span> <span class="kt">byte</span> <span class="kt">long</span> <span class="n">arraySize</span> <span class="o">=</span>
+                <span class="nc">SensorPacketLayout</span><span class="o">.</span><span class="na">LAYOUT</span><span class="o">.</span><span class="na">byteSize</span><span class="o">()</span> <span class="o">*</span> <span class="n">sensorCount</span>
+            <span class="o">;</span>
+            <span class="nc">MemorySegment</span> <span class="n">buffer</span> <span class="o">=</span> <span class="n">arena</span><span class="o">.</span><span class="na">allocate</span><span class="o">(</span><span class="n">arraySize</span><span class="o">);</span>
+            <span class="c1">// Chiamo il driver C che riempie il buffer con le struct int</span>
+                <span class="n">readCount</span> <span class="o">=</span> <span class="o">(</span><span class="kt">int</span><span class="o">)</span> <span class="n">readSensorBatchHandle</span><span class="o">.</span><span class="na">invokeExact</span><span class="o">(</span><span class="n">buffer</span><span class="o">,</span>
+                <span class="n">sensorCount</span><span class="o">)</span>
+            <span class="o">;</span>
+            <span class="c1">// Leggo ogni struct accedendo ai campi tramite VarHandle con offset</span>
+                <span class="n">calcolato</span> <span class="nc">List</span><span class="o">&lt;</span><span class="nc">SensorReading</span><span class="o">&gt;</span> <span class="n">readings</span> <span class="o">=</span> <span class="k">new</span>
+                <span class="nc">ArrayList</span><span class="o">&lt;&gt;(</span><span class="n">readCount</span><span class="o">)</span>
+            <span class="o">;</span>
+            <span class="k">for</span> <span class="o">(</span><span class="kt">int</span> <span class="n">i</span> <span class="o">=</span> <span class="mi">0</span><span class="o">;</span>
+            <span class="n">i</span> <span class="o">&lt;</span> <span class="n">readCount</span><span class="o">;</span>
+            <span class="n">i</span><span class="o">++)</span> <span class="o">{</span>
+                <span class="kt">long</span> <span class="n">baseOffset</span> <span class="o">=</span> <span class="nc">SensorPacketLayout</span><span class="o">.</span><span class="na">LAYOUT</span><span class="o">.</span><span class="na">byteSize</span><span class="o">()</span> <span class="o">*</span> <span class="n">i</span><span class="o">;</span>
+                <span class="n">readings</span><span class="o">.</span><span class="na">add</span><span class="o">(</span><span class="k">new</span> <span class="nc">SensorReading</span><span class="o">(</span> <span class="o">(</span><span class="kt">int</span><span class="o">)</span>
+                    <span class="nc">SensorPacketLayout</span><span class="o">.</span><span class="na">TIMESTAMP</span><span class="o">.</span><span class="na">get</span><span class="o">(</span><span class="n">buffer</span><span class="o">,</span> <span class="n">baseOffset</span><span class="o">),</span>
+                    <span class="o">(</span><span class="kt">short</span><span class="o">)</span> <span class="nc">SensorPacketLayout</span><span class="o">.</span><span class="na">SENSOR_ID</span><span class="o">.</span><span class="na">get</span><span class="o">(</span><span class="n">buffer</span><span class="o">,</span>
+                    <span class="n">baseOffset</span><span class="o">),</span> <span class="o">(</span><span class="kt">float</span><span class="o">)</span>
+                    <span class="nc">SensorPacketLayout</span><span class="o">.</span><span class="na">TEMPERATURE</span><span class="o">.</span><span class="na">get</span><span class="o">(</span><span class="n">buffer</span><span class="o">,</span> <span class="n">baseOffset</span><span class="o">),</span>
+                    <span class="o">(</span><span class="kt">float</span><span class="o">)</span> <span class="nc">SensorPacketLayout</span><span class="o">.</span><span class="na">HUMIDITY</span><span class="o">.</span><span class="na">get</span><span class="o">(</span><span class="n">buffer</span><span class="o">,</span> <span class="n">baseOffset</span><span class="o">)</span>
+                    <span class="o">));</span>
+            <span class="o">}</span>
+            <span class="k">return</span> <span class="n">readings</span><span class="o">;</span>
+        <span class="o">}</span>
+    <span class="o">}</span>
+<span class="o">}</span>
+<span class="cm">/* Verifico che il layout Java coincida con il sizeof C tramite un test di
+    integrazione: */</span>
+<span class="nd">@Test</span> <span class="kd">public</span> <span class="kt">void</span> <span class="nf">verifyLayoutMatchesCStruct</span><span class="o">()</span> <span class="kd">throws</span> <span class="nc">Throwable</span> <span class="o">{</span>
+    <span class="c1">// Chiamo la funzione C che restituisce sizeof(SensorPacket) long cSizeof =</span>
+        <span class="o">(</span><span class="kt">long</span><span class="o">)</span> <span class="n">getSizeofHandle</span><span class="o">.</span><span class="na">invokeExact</span><span class="o">()</span>
+    <span class="o">;</span>
+    <span class="n">assertEquals</span><span class="o">(</span><span class="nc">SensorPacketLayout</span><span class="o">.</span><span class="na">LAYOUT</span><span class="o">.</span><span class="na">byteSize</span><span class="o">(),</span> <span class="n">cSizeof</span><span class="o">,</span> <span class="s">"Layout Java non
+        coincide con la struct C: possibile errore di padding"</span><span class="o">);</span>
+<span class="o">}</span>
+<span class="cm">/* Per struct con padding esplicito (es. allineamento a 8 byte), aggiungo
+    MemoryLayout.paddingLayout(): */</span>
+<span class="nc">StructLayout</span> <span class="n">paddedLayout</span> <span class="o">=</span> <span class="nc">MemoryLayout</span><span class="o">.</span><span class="na">structLayout</span><span class="o">(</span>
+    <span class="nc">ValueLayout</span><span class="o">.</span><span class="na">JAVA_INT</span><span class="o">.</span><span class="na">withName</span><span class="o">(</span><span class="s">"id"</span><span class="o">),</span>
+<span class="c1">// 4 byte MemoryLayout.paddingLayout(4), // 4 byte di padding per allineare a 8</span>
+    <span class="kt">byte</span> <span class="nc">ValueLayout</span><span class="o">.</span><span class="na">JAVA_LONG</span><span class="o">.</span><span class="na">withName</span><span class="o">(</span><span class="s">"timestamp"</span><span class="o">)</span> <span class="c1">// 8 byte )</span>
+<span class="o">;</span>
 </pre></td></tr></tbody></table></code></pre></div></div>
 
         </article>

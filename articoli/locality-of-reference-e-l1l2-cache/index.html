@@ -156,72 +156,126 @@
 65
 66
 67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
 </pre></td><td class="rouge-code"><pre><span class="cm">/* Confronto il layout in memoria dei due approcci per renderlo concreto. */</span>
- 
-<span class="c1">// APPROCCIO CON SCARSA LOCALITÀ: array di oggetti </span>
-<span class="c1">// In memoria: [ptr-&gt;Point1][ptr-&gt;Point2]...[ptr-&gt;PointN] </span>
-<span class="c1">// Point1, Point2... sono sparsi nell'heap: ogni accesso è un potenziale cache</span>
-<span class="c1">// miss class Point</span>
-<span class="o">{</span> <span class="kt">int</span> <span class="n">x</span><span class="o">,</span> <span class="n">y</span><span class="o">;</span> <span class="o">}</span>
- <span class="nc">Point</span><span class="o">[]</span> <span class="n">points</span> <span class="o">=</span> <span class="k">new</span> <span class="nc">Point</span><span class="o">[</span><span class="mi">1_000_000</span><span class="o">];</span> 
-<span class="c1">// Array di riferimenti, non di dati </span>
-<span class="c1">// APPROCCIO CON ALTA LOCALITÀ: Structure of Arrays (SoA) </span>
-<span class="c1">// In memoria: [x0][x1][x2]...[xN][y0][y1]...[yN] </span>
-<span class="c1">// I dati x sono tutti contigui: la CPU li prefetcha automaticamente int[] xs =</span>
-<span class="c1">// new int[1_000_000]; int[] ys = new int[1_000_000];</span>
-<span class="o">*</span> <span class="nc">Implemento</span> <span class="n">un</span> <span class="n">motore</span> <span class="n">di</span> <span class="n">elaborazione</span> <span class="n">segnali</span> <span class="n">con</span> <span class="n">layout</span> <span class="nc">SoA</span> <span class="n">per</span> <span class="n">massimizzare</span>
-<span class="o">*</span> <span class="n">il</span> <span class="nl">prefetching:</span> <span class="o">*/</span>
- <span class="nd">@Component</span> <span class="kd">public</span> <span class="kd">class</span> <span class="nc">SignalProcessor</span> 
-<span class="o">{</span> 
-<span class="c1">// Structure of Arrays: ogni campo è un array separato e contiguo in memoria</span>
-<span class="c1">// private int[] timestamps; private float[] amplitudes; private float[]</span>
-<span class="c1">// frequencies; private int size; public void loadSignal(SignalData data)</span>
-<span class="o">{</span> <span class="k">this</span><span class="o">.</span><span class="na">size</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="na">getSampleCount</span><span class="o">();</span> <span class="k">this</span><span class="o">.</span><span class="na">timestamps</span> <span class="o">=</span>
-<span class="n">data</span><span class="o">.</span><span class="na">getTimestampsArray</span><span class="o">();</span>
-<span class="c1">// int[] contiguo this.amplitudes = data.getAmplitudesArray(); </span>
-<span class="c1">// float[] contiguo this.frequencies = data.getFrequenciesArray(); </span>
-<span class="c1">// float[] contiguo }</span>
- 
-<span class="o">*</span> <span class="nc">Questo</span> <span class="n">loop</span> <span class="n">ha</span> <span class="n">alta</span> <span class="nl">località:</span> <span class="n">scansiona</span> <span class="n">tre</span> <span class="n">array</span> <span class="n">contigui</span> <span class="n">in</span> <span class="n">parallelo</span><span class="o">.</span> <span class="nc">La</span>
-<span class="o">*</span> <span class="no">CPU</span> <span class="n">prefetcha</span> <span class="n">automaticamente</span> <span class="n">i</span> <span class="n">blocchi</span> <span class="n">successivi</span> <span class="n">di</span> <span class="n">ogni</span> <span class="n">array</span><span class="o">.</span> <span class="o">*/</span>
- <span class="kd">public</span> <span class="kt">float</span><span class="o">[]</span> <span class="nf">computeEnvelope</span><span class="o">()</span> 
-<span class="o">{</span> <span class="kt">float</span><span class="o">[]</span> <span class="n">envelope</span> <span class="o">=</span> <span class="k">new</span> <span class="kt">float</span><span class="o">[</span><span class="n">size</span><span class="o">];</span> <span class="k">for</span> <span class="o">(</span><span class="kt">int</span> <span class="n">i</span> <span class="o">=</span> <span class="mi">0</span><span class="o">;</span> <span class="n">i</span> <span class="o">&lt;</span> <span class="n">size</span><span class="o">;</span> <span class="n">i</span><span class="o">++)</span> 
-<span class="o">{</span> 
-<span class="c1">// Tutti gli accessi sono sequenziali: L1 cache hit quasi garantito envelope[i]</span>
-<span class="c1">// = amplitudes[i] * Math.abs(frequencies[i]); }</span>
- <span class="k">return</span> <span class="n">envelope</span><span class="o">;</span> <span class="o">}</span>
- 
-<span class="o">*</span> <span class="nc">Per</span> <span class="n">operazioni</span> <span class="n">su</span> <span class="n">matrici</span> <span class="mi">2</span><span class="no">D</span><span class="o">,</span> <span class="n">accedo</span> <span class="n">sempre</span> <span class="n">per</span> <span class="nf">riga</span> <span class="o">(</span><span class="n">row</span><span class="o">-</span><span class="n">major</span><span class="o">)</span> <span class="n">perché</span> <span class="nc">Java</span>
-<span class="o">*</span> <span class="n">memorizza</span> <span class="n">gli</span> <span class="n">array</span> <span class="n">per</span> <span class="nl">riga:</span> <span class="o">*/</span>
- <span class="kd">public</span> <span class="kt">void</span> <span class="nf">processMatrix</span><span class="o">(</span><span class="kt">float</span><span class="o">[][]</span> <span class="n">matrix</span><span class="o">,</span> <span class="kt">int</span> <span class="n">rows</span><span class="o">,</span> <span class="kt">int</span> <span class="n">cols</span><span class="o">)</span> 
-<span class="o">{</span> 
-<span class="c1">// CORRETTO: accesso per riga = sequenziale in memoria for (int r = 0; r &lt; rows;</span>
-<span class="c1">// r++)</span>
-<span class="o">{</span> <span class="k">for</span> <span class="o">(</span><span class="kt">int</span> <span class="n">c</span> <span class="o">=</span> <span class="mi">0</span><span class="o">;</span> <span class="n">c</span> <span class="o">&lt;</span> <span class="n">cols</span><span class="o">;</span> <span class="n">c</span><span class="o">++)</span> 
-<span class="o">{</span> <span class="n">matrix</span><span class="o">[</span><span class="n">r</span><span class="o">][</span><span class="n">c</span><span class="o">]</span> <span class="o">*=</span> <span class="mf">2.0f</span><span class="o">;</span> 
-<span class="c1">// Accesso sequenziale: prefetch automatico }</span>
- <span class="o">}</span>
- 
-<span class="c1">// SBAGLIATO: accesso per colonna = salti in memoria = cache miss ad ogni</span>
-<span class="c1">// accesso</span>
-<span class="c1">// for (int c = 0; c &lt; cols; c++) </span>
-<span class="c1">// for (int r = 0; r &lt; rows; r++) </span>
-<span class="c1">// matrix[r][c] *= 2.0f; </span>
-<span class="c1">// Salta tra righe diverse: ogni accesso è un cache miss }</span>
- <span class="o">}</span>
- 
-<span class="o">*</span> <span class="nc">Misuro</span> <span class="n">l</span><span class="err">'</span><span class="n">impatto</span> <span class="n">con</span> <span class="no">JMH</span><span class="o">,</span> <span class="n">abilitando</span> <span class="n">il</span> <span class="n">profiler</span> <span class="n">delle</span> <span class="n">performance</span> <span class="nl">hardware:</span>
-<span class="o">*</span> <span class="o">*/</span>
- <span class="nd">@Benchmark</span> <span class="nd">@Fork</span><span class="o">(</span><span class="n">jvmArgs</span> <span class="o">=</span> 
-<span class="o">{</span><span class="s">"-XX:+UnlockDiagnosticVMOptions"</span><span class="o">,</span> <span class="s">"-XX:+PrintInlining"</span><span class="o">}</span>
-<span class="o">)</span> <span class="kd">public</span> <span class="kt">float</span> <span class="nf">arrayOfObjects</span><span class="o">(</span><span class="nc">PointState</span> <span class="n">state</span><span class="o">)</span> 
-<span class="o">{</span> <span class="kt">float</span> <span class="n">sum</span> <span class="o">=</span> <span class="mi">0</span><span class="o">;</span> <span class="k">for</span> <span class="o">(</span><span class="nc">Point</span> <span class="n">p</span> <span class="o">:</span> <span class="n">state</span><span class="o">.</span><span class="na">points</span><span class="o">)</span> <span class="n">sum</span> <span class="o">+=</span> <span class="n">p</span><span class="o">.</span><span class="na">x</span> <span class="o">+</span> <span class="n">p</span><span class="o">.</span><span class="na">y</span><span class="o">;</span> 
-<span class="c1">// Ogni p.x/p.y è un potenziale cache miss return sum; }</span>
- <span class="nd">@Benchmark</span> <span class="kd">public</span> <span class="kt">float</span> <span class="nf">structOfArrays</span><span class="o">(</span><span class="nc">SoAState</span> <span class="n">state</span><span class="o">)</span> 
-<span class="o">{</span> <span class="kt">float</span> <span class="n">sum</span> <span class="o">=</span> <span class="mi">0</span><span class="o">;</span> <span class="k">for</span> <span class="o">(</span><span class="kt">int</span> <span class="n">i</span> <span class="o">=</span> <span class="mi">0</span><span class="o">;</span> <span class="n">i</span> <span class="o">&lt;</span> <span class="n">state</span><span class="o">.</span><span class="na">size</span><span class="o">;</span> <span class="n">i</span><span class="o">++)</span> <span class="n">sum</span> <span class="o">+=</span> <span class="n">state</span><span class="o">.</span><span class="na">xs</span><span class="o">[</span><span class="n">i</span><span class="o">]</span> <span class="o">+</span>
-<span class="n">state</span><span class="o">.</span><span class="na">ys</span><span class="o">[</span><span class="n">i</span><span class="o">];</span>
-<span class="c1">// Sequenziale: prefetch automatico return sum; }</span>
- 
+<span class="c1">// APPROCCIO CON SCARSA LOCALITÀ: array di oggetti // In memoria:</span>
+    <span class="o">[</span><span class="n">ptr</span><span class="o">-&gt;</span><span class="nc">Point1</span><span class="o">][</span><span class="n">ptr</span><span class="o">-&gt;</span><span class="nc">Point2</span><span class="o">]...[</span><span class="n">ptr</span><span class="o">-&gt;</span><span class="nc">PointN</span><span class="o">]</span> <span class="c1">// Point1, Point2... sono sparsi</span>
+    <span class="n">nell</span><span class="err">'</span><span class="nl">heap:</span> <span class="n">ogni</span> <span class="n">accesso</span> <span class="n">è</span> <span class="n">un</span> <span class="n">potenziale</span> <span class="n">cache</span> <span class="n">miss</span> <span class="kd">class</span> <span class="nc">Point</span>
+<span class="o">{</span>
+    <span class="kt">int</span> <span class="n">x</span><span class="o">,</span> <span class="n">y</span><span class="o">;</span>
+<span class="o">}</span>
+<span class="nc">Point</span><span class="o">[]</span> <span class="n">points</span> <span class="o">=</span> <span class="k">new</span> <span class="nc">Point</span><span class="o">[</span><span class="mi">1_000_000</span><span class="o">];</span>
+<span class="c1">// Array di riferimenti, non di dati // APPROCCIO CON ALTA LOCALITÀ: Structure</span>
+    <span class="n">of</span> <span class="nf">Arrays</span> <span class="o">(</span><span class="nc">SoA</span><span class="o">)</span> <span class="c1">// In memoria: [x0][x1][x2]...[xN][y0][y1]...[yN] // I dati</span>
+    <span class="n">x</span> <span class="n">sono</span> <span class="n">tutti</span> <span class="nl">contigui:</span> <span class="n">la</span> <span class="no">CPU</span> <span class="n">li</span> <span class="n">prefetcha</span> <span class="n">automaticamente</span> <span class="kt">int</span><span class="o">[]</span> <span class="n">xs</span> <span class="o">=</span> <span class="k">new</span>
+    <span class="kt">int</span><span class="o">[</span><span class="mi">1_000_000</span><span class="o">]</span>
+<span class="o">;</span>
+<span class="kt">int</span><span class="o">[]</span> <span class="n">ys</span> <span class="o">=</span> <span class="k">new</span> <span class="kt">int</span><span class="o">[</span><span class="mi">1_000_000</span><span class="o">];</span>
+<span class="cm">/* Implemento un motore di elaborazione segnali con layout SoA per massimizzare
+    il prefetching: */</span>
+<span class="nd">@Component</span> <span class="kd">public</span> <span class="kd">class</span> <span class="nc">SignalProcessor</span> <span class="o">{</span>
+    <span class="c1">// Structure of Arrays: ogni campo è un array separato e contiguo in memoria</span>
+        <span class="kd">private</span> <span class="kt">int</span><span class="o">[]</span> <span class="n">timestamps</span>
+    <span class="o">;</span>
+    <span class="kd">private</span> <span class="kt">float</span><span class="o">[]</span> <span class="n">amplitudes</span><span class="o">;</span>
+    <span class="kd">private</span> <span class="kt">float</span><span class="o">[]</span> <span class="n">frequencies</span><span class="o">;</span>
+    <span class="kd">private</span> <span class="kt">int</span> <span class="n">size</span><span class="o">;</span>
+    <span class="kd">public</span> <span class="kt">void</span> <span class="nf">loadSignal</span><span class="o">(</span><span class="nc">SignalData</span> <span class="n">data</span><span class="o">)</span> <span class="o">{</span>
+        <span class="k">this</span><span class="o">.</span><span class="na">size</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="na">getSampleCount</span><span class="o">();</span>
+        <span class="k">this</span><span class="o">.</span><span class="na">timestamps</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="na">getTimestampsArray</span><span class="o">();</span>
+        <span class="c1">// int[] contiguo this.amplitudes = data.getAmplitudesArray()</span>
+        <span class="o">;</span>
+        <span class="c1">// float[] contiguo this.frequencies = data.getFrequenciesArray()</span>
+        <span class="o">;</span>
+        <span class="c1">// float[] contiguo</span>
+    <span class="o">}</span>
+    <span class="cm">/* Questo loop ha alta località: scansiona tre array contigui in parallelo.
+        La CPU prefetcha automaticamente i blocchi successivi di ogni array. */</span>
+    <span class="kd">public</span> <span class="kt">float</span><span class="o">[]</span> <span class="nf">computeEnvelope</span><span class="o">()</span> <span class="o">{</span>
+        <span class="kt">float</span><span class="o">[]</span> <span class="n">envelope</span> <span class="o">=</span> <span class="k">new</span> <span class="kt">float</span><span class="o">[</span><span class="n">size</span><span class="o">];</span>
+        <span class="k">for</span> <span class="o">(</span><span class="kt">int</span> <span class="n">i</span> <span class="o">=</span> <span class="mi">0</span><span class="o">;</span>
+        <span class="n">i</span> <span class="o">&lt;</span> <span class="n">size</span><span class="o">;</span>
+        <span class="n">i</span><span class="o">++)</span> <span class="o">{</span>
+            <span class="c1">// Tutti gli accessi sono sequenziali: L1 cache hit quasi garantito</span>
+                <span class="n">envelope</span><span class="o">[</span><span class="n">i</span><span class="o">]</span> <span class="o">=</span> <span class="n">amplitudes</span><span class="o">[</span><span class="n">i</span><span class="o">]</span> <span class="o">*</span> <span class="nc">Math</span><span class="o">.</span><span class="na">abs</span><span class="o">(</span><span class="n">frequencies</span><span class="o">[</span><span class="n">i</span><span class="o">])</span>
+            <span class="o">;</span>
+        <span class="o">}</span>
+        <span class="k">return</span> <span class="n">envelope</span><span class="o">;</span>
+    <span class="o">}</span>
+    <span class="cm">/* Per operazioni su matrici 2D, accedo sempre per riga (row-major) perché
+        Java memorizza gli array per riga: */</span>
+    <span class="kd">public</span> <span class="kt">void</span> <span class="nf">processMatrix</span><span class="o">(</span><span class="kt">float</span><span class="o">[][]</span> <span class="n">matrix</span><span class="o">,</span> <span class="kt">int</span> <span class="n">rows</span><span class="o">,</span> <span class="kt">int</span> <span class="n">cols</span><span class="o">)</span> <span class="o">{</span>
+        <span class="c1">// CORRETTO: accesso per riga = sequenziale in memoria for (int r = 0</span>
+        <span class="o">;</span>
+        <span class="n">r</span> <span class="o">&lt;</span> <span class="n">rows</span><span class="o">;</span>
+        <span class="n">r</span><span class="o">++)</span> <span class="o">{</span>
+            <span class="k">for</span> <span class="o">(</span><span class="kt">int</span> <span class="n">c</span> <span class="o">=</span> <span class="mi">0</span><span class="o">;</span>
+            <span class="n">c</span> <span class="o">&lt;</span> <span class="n">cols</span><span class="o">;</span>
+            <span class="n">c</span><span class="o">++)</span> <span class="o">{</span>
+                <span class="n">matrix</span><span class="o">[</span><span class="n">r</span><span class="o">][</span><span class="n">c</span><span class="o">]</span> <span class="o">*=</span> <span class="mf">2.0f</span><span class="o">;</span>
+                <span class="c1">// Accesso sequenziale: prefetch automatico</span>
+            <span class="o">}</span>
+        <span class="o">}</span>
+        <span class="c1">// SBAGLIATO: accesso per colonna = salti in memoria = cache miss ad</span>
+            <span class="n">ogni</span> <span class="n">accesso</span> <span class="c1">// for (int c = 0</span>
+        <span class="o">;</span>
+        <span class="n">c</span> <span class="o">&lt;</span> <span class="n">cols</span><span class="o">;</span>
+        <span class="n">c</span><span class="o">++)</span>
+        <span class="c1">// for (int r = 0</span>
+        <span class="o">;</span>
+        <span class="n">r</span> <span class="o">&lt;</span> <span class="n">rows</span><span class="o">;</span>
+        <span class="n">r</span><span class="o">++)</span>
+        <span class="c1">// matrix[r][c] *= 2.0f</span>
+        <span class="o">;</span>
+        <span class="c1">// Salta tra righe diverse: ogni accesso è un cache miss</span>
+    <span class="o">}</span>
+<span class="o">}</span>
+<span class="cm">/* Misuro l'impatto con JMH, abilitando il profiler delle performance hardware:
+    */</span>
+<span class="nd">@Benchmark</span>
+<span class="nd">@Fork</span><span class="o">(</span><span class="n">jvmArgs</span> <span class="o">=</span> <span class="o">{</span>
+    <span class="s">"-XX:+UnlockDiagnosticVMOptions"</span><span class="o">,</span> <span class="s">"-XX:+PrintInlining"</span>
+<span class="o">}</span>
+<span class="o">)</span> <span class="kd">public</span> <span class="kt">float</span> <span class="nf">arrayOfObjects</span><span class="o">(</span><span class="nc">PointState</span> <span class="n">state</span><span class="o">)</span> <span class="o">{</span>
+    <span class="kt">float</span> <span class="n">sum</span> <span class="o">=</span> <span class="mi">0</span><span class="o">;</span>
+    <span class="k">for</span> <span class="o">(</span><span class="nc">Point</span> <span class="n">p</span> <span class="o">:</span> <span class="n">state</span><span class="o">.</span><span class="na">points</span><span class="o">)</span> <span class="n">sum</span> <span class="o">+=</span> <span class="n">p</span><span class="o">.</span><span class="na">x</span> <span class="o">+</span> <span class="n">p</span><span class="o">.</span><span class="na">y</span><span class="o">;</span>
+    <span class="c1">// Ogni p.x/p.y è un potenziale cache miss</span>
+    <span class="k">return</span> <span class="n">sum</span><span class="o">;</span>
+<span class="o">}</span>
+<span class="nd">@Benchmark</span> <span class="kd">public</span> <span class="kt">float</span> <span class="nf">structOfArrays</span><span class="o">(</span><span class="nc">SoAState</span> <span class="n">state</span><span class="o">)</span> <span class="o">{</span>
+    <span class="kt">float</span> <span class="n">sum</span> <span class="o">=</span> <span class="mi">0</span><span class="o">;</span>
+    <span class="k">for</span> <span class="o">(</span><span class="kt">int</span> <span class="n">i</span> <span class="o">=</span> <span class="mi">0</span><span class="o">;</span>
+    <span class="n">i</span> <span class="o">&lt;</span> <span class="n">state</span><span class="o">.</span><span class="na">size</span><span class="o">;</span>
+    <span class="n">i</span><span class="o">++)</span> <span class="n">sum</span> <span class="o">+=</span> <span class="n">state</span><span class="o">.</span><span class="na">xs</span><span class="o">[</span><span class="n">i</span><span class="o">]</span> <span class="o">+</span> <span class="n">state</span><span class="o">.</span><span class="na">ys</span><span class="o">[</span><span class="n">i</span><span class="o">];</span>
+    <span class="c1">// Sequenziale: prefetch automatico</span>
+    <span class="k">return</span> <span class="n">sum</span><span class="o">;</span>
+<span class="o">}</span>
 <span class="c1">// Risultato tipico: structOfArrays è 3-8x più veloce su array di 1M elementi</span>
 </pre></td></tr></tbody></table></code></pre></div></div>
 

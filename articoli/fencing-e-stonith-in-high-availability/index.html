@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Fencing e STONITH in High Availability — DevLog</title>
-    <meta name="description" content="In sistemi HA con failover automatico (es. Patroni), il rischio peggiore è lo 'Split Brain', dove due nodi credono di essere entrambi il Master. Il 'Fencing' isola il vecchio master mentre 'STONITH' (Shoot The Other Node In The Head) ne interrompe fi
+    <meta name="description" content="In sistemi HA con failover automatico (es. Patroni), il rischio peggiore è lo "Split Brain", dove due nodi credono di essere entrambi il Master. Il "Fencing" isola il vecchio master mentre "STONITH" (Shoot The Other Node In The Head) ne interrompe fi
 ">
     <link rel="stylesheet" href="/appuntidiprogrammazione/assets/css/style.css">
 
@@ -96,17 +96,13 @@
 5
 6
 7
-8
-9
-</pre></td><td class="rouge-code"><pre><span class="cm">/* patroni.yml — configurazione TTL e loop */</span>
- <span class="k">scope</span><span class="p">:</span> <span class="n">pg</span><span class="o">-</span><span class="k">cluster</span><span class="p">;</span> <span class="n">ttl</span><span class="p">:</span> <span class="mi">30</span><span class="p">;</span> <span class="n">loop_wait</span><span class="p">:</span> <span class="mi">10</span><span class="p">;</span> <span class="n">maximum_lag_on_failover</span><span class="p">:</span> <span class="mi">1048576</span><span class="p">;</span> 
-<span class="cm">/* Verifica del leader via etcd */</span>
- <span class="o">#</span> <span class="n">etcdctl</span> <span class="k">get</span> <span class="o">/</span><span class="n">service</span><span class="o">/</span><span class="n">pg</span><span class="o">-</span><span class="k">cluster</span><span class="o">/</span><span class="n">leader</span> 
-<span class="cm">/* Script STONITH chiamato da Patroni prima della promozione */</span>
- <span class="n">aws</span> <span class="n">ec2</span> <span class="k">revoke</span><span class="o">-</span><span class="k">security</span><span class="o">-</span><span class="k">group</span><span class="o">-</span><span class="n">ingress</span> <span class="c1">--group-id sg-xxx --protocol tcp --port</span>
-<span class="mi">5432</span> <span class="c1">--source-group sg-app-servers;</span>
-<span class="cm">/* Stato post-failover */</span>
- <span class="o">#</span> <span class="n">patronictl</span> <span class="o">-</span><span class="k">c</span> <span class="o">/</span><span class="n">etc</span><span class="o">/</span><span class="n">patroni</span><span class="o">/</span><span class="n">patroni</span><span class="p">.</span><span class="n">yml</span> <span class="n">list</span>
+</pre></td><td class="rouge-code"><pre>    <span class="cm">/* patroni.yml — configurazione TTL e loop */</span> <span class="k">scope</span><span class="p">:</span> <span class="n">pg</span><span class="o">-</span><span class="k">cluster</span><span class="p">;</span> <span class="n">ttl</span><span class="p">:</span> <span class="mi">30</span><span class="p">;</span>
+        <span class="n">loop_wait</span><span class="p">:</span> <span class="mi">10</span><span class="p">;</span> <span class="n">maximum_lag_on_failover</span><span class="p">:</span> <span class="mi">1048576</span><span class="p">;</span> <span class="cm">/* Verifica del leader
+        via etcd */</span> <span class="o">#</span> <span class="n">etcdctl</span> <span class="k">get</span> <span class="o">/</span><span class="n">service</span><span class="o">/</span><span class="n">pg</span><span class="o">-</span><span class="k">cluster</span><span class="o">/</span><span class="n">leader</span> <span class="cm">/* Script STONITH
+        chiamato da Patroni prima della promozione */</span> <span class="n">aws</span> <span class="n">ec2</span>
+        <span class="k">revoke</span><span class="o">-</span><span class="k">security</span><span class="o">-</span><span class="k">group</span><span class="o">-</span><span class="n">ingress</span> <span class="c1">--group-id sg-xxx --protocol tcp --port</span>
+        <span class="mi">5432</span> <span class="c1">--source-group sg-app-servers; /* Stato post-failover */ #</span>
+        <span class="n">patronictl</span> <span class="o">-</span><span class="k">c</span> <span class="o">/</span><span class="n">etc</span><span class="o">/</span><span class="n">patroni</span><span class="o">/</span><span class="n">patroni</span><span class="p">.</span><span class="n">yml</span> <span class="n">list</span>
 </pre></td></tr></tbody></table></code></pre></div></div>
 
         </article>

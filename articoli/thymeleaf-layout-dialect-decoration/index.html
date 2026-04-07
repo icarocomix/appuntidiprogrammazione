@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Thymeleaf Layout Dialect (Decoration) — DevLog</title>
-    <meta name="description" content="Il semplice th:replace causa duplicazione di intestazioni e meta-tag. Il pattern layout:decorate permette a un 'Base Layout' di definire punti di inserimento (layout:fragment) che le pagine figlie sovrascrivono. Le pagine non includono il layout, ma 
+    <meta name="description" content="Il semplice th:replace causa duplicazione di intestazioni e meta-tag. Il pattern layout:decorate permette a un "Base Layout" di definire punti di inserimento (layout:fragment) che le pagine figlie sovrascrivono. Le pagine non includono il layout, ma 
 ">
     <link rel="stylesheet" href="/appuntidiprogrammazione/assets/css/style.css">
 
@@ -90,77 +90,165 @@
 <h2 id="esempio-implementativo">Esempio Implementativo</h2>
 
 <pre><code class="language-thymeleaf">/* Aggiungo la dipendenza del Layout Dialect al pom.xml: */
- 
-// &lt;dependency&gt; 
-//   &lt;groupId&gt;nz.net.ultraq.thymeleaf&lt;/groupId&gt; 
-//   &lt;artifactId&gt;thymeleaf-layout-dialect&lt;/artifactId&gt; 
-//   &lt;version&gt;3.3.0&lt;/version&gt; 
-// &lt;/dependency&gt; 
-* Registro il dialetto in Spring Boot (auto-configurato se nel classpath, ma
-* rendo esplicito): */
- @Configuration public class ThymeleafLayoutConfig 
-{ @Bean public LayoutDialect layoutDialect() 
-{ return new LayoutDialect(); }
- }
- &lt;!-- LIVELLO 1: Layout base condiviso da tutto il sito
-(templates/layouts/base.html) --&gt; &lt;!DOCTYPE html&gt; &lt;html xmlns:th="http:
-//www.thymeleaf.org" xmlns:layout="http:
-// www.ultraq.net.nz/thymeleaf/layout"&gt; &lt;head&gt; &lt;!-- layout:title-pattern combina
-// il titolo della pagina con il nome del sito --&gt; &lt;title layout:title-
-// pattern="$CONTENT_TITLE | MyApp"&gt;MyApp&lt;/title&gt; &lt;!-- Meta-tag SEO di default:
-// sovrascrivibili dalla pagina --&gt; &lt;meta name="description"
-// layout:fragment="meta-description" content="MyApp - Piattaforma aziendale"&gt;
-// &lt;!-- CSS comune a tutte le pagine --&gt; &lt;link rel="stylesheet"
-// href="/css/bootstrap.min.css"&gt; &lt;link rel="stylesheet" href="/css/app.css"&gt;
-// &lt;!-- Punto di inserimento per CSS specifici della pagina --&gt; &lt;th:block
-// layout:fragment="page-css"&gt;&lt;/th:block&gt; &lt;/head&gt; &lt;body&gt; &lt;!-- Header comune: non
-// sovrascrivibile --&gt; &lt;header th:replace="~
-{fragments/header :: header}
-"&gt;&lt;/header&gt; &lt;!-- Breadcrumb: sovrascrivibile dalle pagine --&gt; &lt;nav
-layout:fragment="breadcrumb" aria-label="breadcrumb"&gt; &lt;ol class="breadcrumb"&gt;&lt;li
-class="breadcrumb-item"&gt;Home&lt;/li&gt;&lt;/ol&gt; &lt;/nav&gt; &lt;!-- Contenuto principale: DEVE
-essere sovrascrivitto dalla pagina figlia --&gt; &lt;main layout:fragment="content"&gt;
-&lt;p&gt;Contenuto di default (non dovrebbe mai apparire)&lt;/p&gt; &lt;/main&gt; &lt;!-- Footer
-comune: non sovrascrivibile --&gt; &lt;footer th:replace="~
-{fragments/footer :: footer}
-"&gt;&lt;/footer&gt; &lt;!-- JS comuni --&gt; &lt;script
-src="/js/bootstrap.bundle.min.js"&gt;&lt;/script&gt; &lt;!-- Punto di inserimento per JS
-specifici della pagina --&gt; &lt;th:block layout:fragment="page-scripts"&gt;&lt;/th:block&gt;
-&lt;/body&gt; &lt;/html&gt; &lt;!-- LIVELLO 2: Layout specifico per la sezione Admin
-(templates/layouts/admin.html) --&gt; &lt;!-- Decora il base layout aggiungendo
-sidebar e stili admin --&gt; &lt;html xmlns:layout="http:
-//www.ultraq.net.nz/thymeleaf/layout" layout:decorate="~
-{layouts/base}
-"&gt; &lt;head&gt; &lt;title&gt;Admin&lt;/title&gt; &lt;!-- Aggiunge CSS admin al blocco page-css del
-base layout --&gt; &lt;th:block layout:fragment="page-css"&gt; &lt;link rel="stylesheet"
-href="/css/admin.css"&gt; &lt;/th:block&gt; &lt;/head&gt; &lt;body&gt; &lt;th:block
-layout:fragment="breadcrumb"&gt; &lt;nav aria-label="breadcrumb"&gt; &lt;ol
-class="breadcrumb"&gt; &lt;li class="breadcrumb-item"&gt;&lt;a href="/"&gt;Home&lt;/a&gt;&lt;/li&gt; &lt;li
-class="breadcrumb-item"&gt;&lt;a href="/admin"&gt;Admin&lt;/a&gt;&lt;/li&gt; &lt;/ol&gt; &lt;/nav&gt; &lt;/th:block&gt;
-&lt;th:block layout:fragment="content"&gt; &lt;div class="admin-layout"&gt; &lt;aside
-th:replace="~
-{fragments/admin-sidebar :: sidebar}
-"&gt;&lt;/aside&gt; &lt;!-- Sotto-frammento: le pagine admin riempiono questo slot --&gt; &lt;main
-layout:fragment="admin-content"&gt; &lt;p&gt;Seleziona una sezione dal menu.&lt;/p&gt; &lt;/main&gt;
-&lt;/div&gt; &lt;/th:block&gt; &lt;/body&gt; &lt;/html&gt; &lt;!-- LIVELLO 3: Pagina concreta User List
-(templates/admin/users.html) --&gt; &lt;!-- Decora il layout admin, non il base:
-eredita l'intera gerarchia --&gt; &lt;html xmlns:layout="http:
-//www.ultraq.net.nz/thymeleaf/layout" layout:decorate="~
-{layouts/admin}
-"&gt; &lt;head&gt; &lt;title&gt;Gestione Utenti&lt;/title&gt; &lt;meta name="description"
-layout:fragment="meta-description" content="Gestione degli utenti della
-piattaforma"&gt; &lt;th:block layout:fragment="page-scripts"&gt; &lt;script
-src="/js/datatables.min.js"&gt;&lt;/script&gt; &lt;script src="/js/admin-users.js"&gt;&lt;/script&gt;
-&lt;/th:block&gt; &lt;/head&gt; &lt;body&gt; &lt;!-- Sovrascrive solo admin-content: breadcrumb e
-sidebar vengono dal layout admin --&gt; &lt;th:block layout:fragment="admin-content"&gt;
-&lt;h1&gt;Gestione Utenti&lt;/h1&gt; &lt;table id="users-table" class="table"&gt; &lt;tr
-th:each="user : $
-{users}
-"&gt; &lt;td th:text="$
-{user.name}
-"&gt;Nome&lt;/td&gt; &lt;td th:text="$
-{user.email}
-"&gt;Email&lt;/td&gt; &lt;/tr&gt; &lt;/table&gt; &lt;/th:block&gt; &lt;/body&gt; &lt;/html&gt;
+//
+&lt;dependency&gt;
+    //
+    &lt;groupId&gt;
+        nz.net.ultraq.thymeleaf
+    &lt;/groupId&gt;
+    //
+    &lt;artifactId&gt;
+        thymeleaf-layout-dialect
+    &lt;/artifactId&gt;
+    //
+    &lt;version&gt;
+        3.3.0
+    &lt;/version&gt;
+    //
+&lt;/dependency&gt;
+/* Registro il dialetto in Spring Boot (auto-configurato se nel classpath, ma
+    rendo esplicito): */
+@Configuration public class ThymeleafLayoutConfig { @Bean public LayoutDialect
+    layoutDialect() { return new LayoutDialect(); } }
+&lt;!-- LIVELLO 1: Layout base condiviso da tutto il sito
+    (templates/layouts/base.html) --&gt;
+&lt;!DOCTYPE html&gt;
+&lt;html xmlns:th="http://www.thymeleaf.org"
+    xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"&gt;
+    &lt;head&gt;
+        &lt;!-- layout:title-pattern combina il titolo della pagina con il nome del
+            sito --&gt;
+        &lt;title layout:title-pattern="$CONTENT_TITLE | MyApp"&gt;
+            MyApp
+        &lt;/title&gt;
+        &lt;!-- Meta-tag SEO di default: sovrascrivibili dalla pagina --&gt;
+        &lt;meta name="description" layout:fragment="meta-description"
+            content="MyApp - Piattaforma aziendale"&gt;
+            &lt;!-- CSS comune a tutte le pagine --&gt;
+            &lt;link rel="stylesheet" href="/css/bootstrap.min.css"&gt;
+                &lt;link rel="stylesheet" href="/css/app.css"&gt;
+                    &lt;!-- Punto di inserimento per CSS specifici della pagina --&gt;
+                    &lt;th:block layout:fragment="page-css"&gt;
+                    &lt;/th:block&gt;
+                &lt;/head&gt;
+                &lt;body&gt;
+                    &lt;!-- Header comune: non sovrascrivibile --&gt;
+                    &lt;header th:replace="~{fragments/header :: header}"&gt;
+                    &lt;/header&gt;
+                    &lt;!-- Breadcrumb: sovrascrivibile dalle pagine --&gt;
+                    &lt;nav layout:fragment="breadcrumb" aria-label="breadcrumb"&gt;
+                        &lt;ol class="breadcrumb"&gt;
+                            &lt;li class="breadcrumb-item"&gt;
+                                Home
+                            &lt;/li&gt;
+                        &lt;/ol&gt;
+                    &lt;/nav&gt;
+                    &lt;!-- Contenuto principale: DEVE essere sovrascrivitto dalla
+                        pagina figlia --&gt;
+                    &lt;main layout:fragment="content"&gt;
+                        &lt;p&gt;
+                            Contenuto di default (non dovrebbe mai apparire)
+                        &lt;/p&gt;
+                    &lt;/main&gt;
+                    &lt;!-- Footer comune: non sovrascrivibile --&gt;
+                    &lt;footer th:replace="~{fragments/footer :: footer}"&gt;
+                    &lt;/footer&gt;
+                    &lt;!-- JS comuni --&gt;
+                    &lt;script src="/js/bootstrap.bundle.min.js"&gt;
+                    &lt;/script&gt;
+                    &lt;!-- Punto di inserimento per JS specifici della pagina --&gt;
+                    &lt;th:block layout:fragment="page-scripts"&gt;
+                    &lt;/th:block&gt;
+                &lt;/body&gt;
+            &lt;/html&gt;
+            &lt;!-- LIVELLO 2: Layout specifico per la sezione Admin
+                (templates/layouts/admin.html) --&gt;
+            &lt;!-- Decora il base layout aggiungendo sidebar e stili admin --&gt;
+            &lt;html xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+                layout:decorate="~{layouts/base}"&gt;
+                &lt;head&gt;
+                    &lt;title&gt;
+                        Admin
+                    &lt;/title&gt;
+                    &lt;!-- Aggiunge CSS admin al blocco page-css del base layout
+                        --&gt;
+                    &lt;th:block layout:fragment="page-css"&gt;
+                        &lt;link rel="stylesheet" href="/css/admin.css"&gt;
+                        &lt;/th:block&gt;
+                    &lt;/head&gt;
+                    &lt;body&gt;
+                        &lt;th:block layout:fragment="breadcrumb"&gt;
+                            &lt;nav aria-label="breadcrumb"&gt;
+                                &lt;ol class="breadcrumb"&gt;
+                                    &lt;li class="breadcrumb-item"&gt;
+                                        &lt;a href="/"&gt;
+                                            Home
+                                        &lt;/a&gt;
+                                    &lt;/li&gt;
+                                    &lt;li class="breadcrumb-item"&gt;
+                                        &lt;a href="/admin"&gt;
+                                            Admin
+                                        &lt;/a&gt;
+                                    &lt;/li&gt;
+                                &lt;/ol&gt;
+                            &lt;/nav&gt;
+                        &lt;/th:block&gt;
+                        &lt;th:block layout:fragment="content"&gt;
+                            &lt;div class="admin-layout"&gt;
+                                &lt;aside th:replace="~{fragments/admin-sidebar ::
+                                    sidebar}"&gt;
+                                &lt;/aside&gt;
+                                &lt;!-- Sotto-frammento: le pagine admin riempiono
+                                    questo slot --&gt;
+                                &lt;main layout:fragment="admin-content"&gt;
+                                    &lt;p&gt;
+                                        Seleziona una sezione dal menu.
+                                    &lt;/p&gt;
+                                &lt;/main&gt;
+                            &lt;/div&gt;
+                        &lt;/th:block&gt;
+                    &lt;/body&gt;
+                &lt;/html&gt;
+                &lt;!-- LIVELLO 3: Pagina concreta User List
+                    (templates/admin/users.html) --&gt;
+                &lt;!-- Decora il layout admin, non il base: eredita l'intera
+                    gerarchia --&gt;
+                &lt;html xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+                    layout:decorate="~{layouts/admin}"&gt;
+                    &lt;head&gt;
+                        &lt;title&gt;
+                            Gestione Utenti
+                        &lt;/title&gt;
+                        &lt;meta name="description"
+                            layout:fragment="meta-description" content="Gestione
+                            degli utenti della piattaforma"&gt;
+                            &lt;th:block layout:fragment="page-scripts"&gt;
+                                &lt;script src="/js/datatables.min.js"&gt;
+                                &lt;/script&gt;
+                                &lt;script src="/js/admin-users.js"&gt;
+                                &lt;/script&gt;
+                            &lt;/th:block&gt;
+                        &lt;/head&gt;
+                        &lt;body&gt;
+                            &lt;!-- Sovrascrive solo admin-content: breadcrumb e
+                                sidebar vengono dal layout admin --&gt;
+                            &lt;th:block layout:fragment="admin-content"&gt;
+                                &lt;h1&gt;
+                                    Gestione Utenti
+                                &lt;/h1&gt;
+                                &lt;table id="users-table" class="table"&gt;
+                                    &lt;tr th:each="user : ${users}"&gt;
+                                        &lt;td th:text="${user.name}"&gt;
+                                            Nome
+                                        &lt;/td&gt;
+                                        &lt;td th:text="${user.email}"&gt;
+                                            Email
+                                        &lt;/td&gt;
+                                    &lt;/tr&gt;
+                                &lt;/table&gt;
+                            &lt;/th:block&gt;
+                        &lt;/body&gt;
+                    &lt;/html&gt;
 </code></pre>
 
         </article>

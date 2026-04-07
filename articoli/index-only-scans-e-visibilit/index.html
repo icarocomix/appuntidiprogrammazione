@@ -109,28 +109,26 @@
 18
 19
 20
-21
-</pre></td><td class="rouge-code"><pre><span class="o">*</span> <span class="n">Verifico</span> <span class="n">se</span> <span class="n">la</span> <span class="n">query</span> <span class="n">sta</span> <span class="n">davvero</span> <span class="n">usando</span> <span class="n">solo</span> <span class="n">l</span><span class="s1">'indice. Il valore "Heap
-* Fetches" nell'</span><span class="k">output</span> <span class="n">di</span> <span class="k">EXPLAIN</span> <span class="k">ANALYZE</span> <span class="err">è</span> <span class="n">il</span> <span class="n">mio</span> <span class="n">indicatore</span> <span class="n">chiave</span><span class="p">:</span> <span class="n">se</span> <span class="err">è</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">,</span>
-<span class="o">*</span> <span class="n">significa</span> <span class="n">che</span> <span class="n">la</span> <span class="n">Visibility</span> <span class="k">Map</span> <span class="n">non</span> <span class="err">è</span> <span class="n">aggiornata</span> <span class="n">per</span> <span class="n">alcune</span> <span class="n">pagine</span><span class="p">.</span> <span class="o">*/</span>
- <span class="k">EXPLAIN</span> <span class="p">(</span><span class="k">ANALYZE</span><span class="p">,</span> <span class="n">BUFFERS</span><span class="p">,</span> <span class="n">FORMAT</span> <span class="nb">TEXT</span><span class="p">)</span> <span class="k">SELECT</span> <span class="k">count</span><span class="p">(</span><span class="o">*</span><span class="p">)</span> <span class="k">FROM</span> <span class="n">users</span> <span class="k">WHERE</span> <span class="n">status</span>
-<span class="o">=</span> <span class="s1">'active'</span><span class="p">;</span>
-<span class="o">*</span> <span class="n">Creo</span> <span class="n">un</span> <span class="n">indice</span> <span class="n">covering</span> <span class="n">che</span> <span class="n">includa</span> <span class="n">tutte</span> <span class="n">le</span> <span class="n">colonne</span> <span class="n">necessarie</span> <span class="n">alla</span> <span class="n">query</span><span class="p">,</span>
-<span class="o">*</span> <span class="n">eliminando</span> <span class="n">qualsiasi</span> <span class="n">necessit</span><span class="err">à</span> <span class="n">di</span> <span class="n">accedere</span> <span class="n">alla</span> <span class="n">heap</span><span class="p">.</span> <span class="o">*/</span>
- <span class="k">CREATE</span> <span class="k">INDEX</span> <span class="n">CONCURRENTLY</span> <span class="n">idx_users_status_covering</span> <span class="k">ON</span> <span class="n">users</span> <span class="p">(</span><span class="n">status</span><span class="p">)</span> <span class="n">INCLUDE</span>
-<span class="p">(</span><span class="n">id</span><span class="p">,</span> <span class="n">email</span><span class="p">,</span> <span class="n">created_at</span><span class="p">);</span>
-<span class="o">*</span> <span class="n">Verifico</span> <span class="n">lo</span> <span class="n">stato</span> <span class="n">della</span> <span class="n">Visibility</span> <span class="k">Map</span> <span class="n">per</span> <span class="n">la</span> <span class="n">tabella</span><span class="p">:</span> <span class="n">le</span> <span class="n">pagine</span> <span class="nv">"all-visible"</span>
-<span class="o">*</span> <span class="n">sono</span> <span class="n">quelle</span> <span class="n">che</span> <span class="n">l</span><span class="s1">'Index-Only Scan può leggere senza toccare la heap. */
- SELECT relname, heap_blks_read, heap_blks_hit, idx_blks_read, idx_blks_hit,
-round(100.0 * heap_blks_hit / nullif(heap_blks_hit + heap_blks_read, 0), 2) AS
-heap_hit_pct FROM pg_statio_user_tables WHERE relname = '</span><span class="n">users</span><span class="s1">';
-* Configuro l'</span><span class="n">autovacuum</span> <span class="k">in</span> <span class="n">modo</span> <span class="n">aggressivo</span> <span class="n">per</span> <span class="n">la</span> <span class="n">tabella</span> <span class="n">specifica</span><span class="p">,</span> <span class="n">cos</span><span class="err">ì</span> <span class="n">la</span>
-<span class="o">*</span> <span class="n">Visibility</span> <span class="k">Map</span> <span class="n">rimane</span> <span class="n">sempre</span> <span class="n">fresca</span><span class="p">:</span> <span class="o">*/</span>
- <span class="k">ALTER</span> <span class="k">TABLE</span> <span class="n">users</span> <span class="k">SET</span> <span class="p">(</span> <span class="n">autovacuum_vacuum_scale_factor</span> <span class="o">=</span> <span class="mi">0</span><span class="p">.</span><span class="mi">01</span><span class="p">,</span> <span class="c1">-- Triggera dopo</span>
-<span class="n">l</span><span class="s1">'1% di righe modificate autovacuum_analyze_scale_factor = 0.005 );
-* Forzo un VACUUM per ripristinare immediatamente l'</span><span class="n">efficacia</span> <span class="n">degli</span> <span class="k">Index</span><span class="o">-</span><span class="k">Only</span>
-<span class="o">*</span> <span class="n">Scan</span> <span class="n">dopo</span> <span class="n">un</span> <span class="n">batch</span> <span class="n">massiccio</span> <span class="n">di</span> <span class="k">UPDATE</span><span class="p">.</span> <span class="o">*/</span>
- <span class="k">VACUUM</span> <span class="p">(</span><span class="k">ANALYZE</span><span class="p">)</span> <span class="n">users</span><span class="p">;</span>
+</pre></td><td class="rouge-code"><pre>    <span class="cm">/* Verifico se la query sta davvero usando solo l'indice. Il valore "Heap
+        Fetches" nell'output di EXPLAIN ANALYZE è il mio indicatore chiave: se è
+        &gt; 0, significa che la Visibility Map non è aggiornata per alcune pagine.
+        */</span> <span class="k">EXPLAIN</span> <span class="p">(</span><span class="k">ANALYZE</span><span class="p">,</span> <span class="n">BUFFERS</span><span class="p">,</span> <span class="n">FORMAT</span> <span class="nb">TEXT</span><span class="p">)</span> <span class="k">SELECT</span> <span class="k">count</span><span class="p">(</span><span class="o">*</span><span class="p">)</span> <span class="k">FROM</span> <span class="n">users</span>
+        <span class="k">WHERE</span> <span class="n">status</span> <span class="o">=</span> <span class="s1">'active'</span><span class="p">;</span> <span class="cm">/* Creo un indice covering che includa tutte le
+        colonne necessarie alla query, eliminando qualsiasi necessità di
+        accedere alla heap. */</span> <span class="k">CREATE</span> <span class="k">INDEX</span> <span class="n">CONCURRENTLY</span>
+        <span class="n">idx_users_status_covering</span> <span class="k">ON</span> <span class="n">users</span> <span class="p">(</span><span class="n">status</span><span class="p">)</span> <span class="n">INCLUDE</span> <span class="p">(</span><span class="n">id</span><span class="p">,</span> <span class="n">email</span><span class="p">,</span>
+        <span class="n">created_at</span><span class="p">);</span> <span class="cm">/* Verifico lo stato della Visibility Map per la tabella:
+        le pagine "all-visible" sono quelle che l'Index-Only Scan può leggere
+        senza toccare la heap. */</span> <span class="k">SELECT</span> <span class="n">relname</span><span class="p">,</span> <span class="n">heap_blks_read</span><span class="p">,</span> <span class="n">heap_blks_hit</span><span class="p">,</span>
+        <span class="n">idx_blks_read</span><span class="p">,</span> <span class="n">idx_blks_hit</span><span class="p">,</span> <span class="n">round</span><span class="p">(</span><span class="mi">100</span><span class="p">.</span><span class="mi">0</span> <span class="o">*</span> <span class="n">heap_blks_hit</span> <span class="o">/</span>
+        <span class="k">nullif</span><span class="p">(</span><span class="n">heap_blks_hit</span> <span class="o">+</span> <span class="n">heap_blks_read</span><span class="p">,</span> <span class="mi">0</span><span class="p">),</span> <span class="mi">2</span><span class="p">)</span> <span class="k">AS</span> <span class="n">heap_hit_pct</span> <span class="k">FROM</span>
+        <span class="n">pg_statio_user_tables</span> <span class="k">WHERE</span> <span class="n">relname</span> <span class="o">=</span> <span class="s1">'users'</span><span class="p">;</span> <span class="cm">/* Configuro l'autovacuum
+        in modo aggressivo per la tabella specifica, così la Visibility Map
+        rimane sempre fresca: */</span> <span class="k">ALTER</span> <span class="k">TABLE</span> <span class="n">users</span> <span class="k">SET</span> <span class="p">(</span>
+        <span class="n">autovacuum_vacuum_scale_factor</span> <span class="o">=</span> <span class="mi">0</span><span class="p">.</span><span class="mi">01</span><span class="p">,</span> <span class="c1">-- Triggera dopo l'1% di righe</span>
+        <span class="n">modificate</span> <span class="n">autovacuum_analyze_scale_factor</span> <span class="o">=</span> <span class="mi">0</span><span class="p">.</span><span class="mi">005</span> <span class="p">);</span> <span class="cm">/* Forzo un VACUUM
+        per ripristinare immediatamente l'efficacia degli Index-Only Scan dopo
+        un batch massiccio di UPDATE. */</span> <span class="k">VACUUM</span> <span class="p">(</span><span class="k">ANALYZE</span><span class="p">)</span> <span class="n">users</span><span class="p">;</span>
 </pre></td></tr></tbody></table></code></pre></div></div>
 
         </article>

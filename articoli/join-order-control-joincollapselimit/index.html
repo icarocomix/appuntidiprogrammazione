@@ -117,41 +117,35 @@
 26
 27
 28
-29
-30
-31
-</pre></td><td class="rouge-code"><pre><span class="o">*</span> <span class="n">Misuro</span> <span class="n">il</span> <span class="n">Planning</span> <span class="nb">Time</span> <span class="n">attuale</span><span class="p">.</span> <span class="n">Se</span> <span class="n">supera</span> <span class="n">il</span> <span class="n">Execution</span> <span class="nb">Time</span><span class="p">,</span> <span class="n">il</span> <span class="n">problema</span> <span class="err">è</span>
-<span class="o">*</span> <span class="n">nella</span> <span class="n">fase</span> <span class="n">di</span> <span class="n">pianificazione</span><span class="p">,</span> <span class="n">non</span> <span class="n">nell</span><span class="s1">'esecuzione. */
- EXPLAIN (ANALYZE, FORMAT TEXT) SELECT o.id, u.name, p.title, c.name AS category
-FROM orders o JOIN users u ON o.user_id = u.id JOIN order_items oi ON
-oi.order_id = o.id JOIN products p ON oi.product_id = p.id JOIN categories c ON
-p.category_id = c.id JOIN promotions pr ON pr.id = o.promotion_id JOIN
-warehouses w ON w.id = oi.warehouse_id JOIN shipping_methods sm ON sm.id =
-o.shipping_method_id;
-* Se il Planning Time è &gt;&gt; Execution Time, abbasso il limite per forzare il
-* Planner a rispettare l'</span><span class="n">ordine</span> <span class="n">scritto</span> <span class="n">nella</span> <span class="n">query</span><span class="p">.</span> <span class="n">Lo</span> <span class="n">scrivo</span> <span class="n">mettendo</span> <span class="n">le</span>
-<span class="o">*</span> <span class="n">tabelle</span> <span class="n">pi</span><span class="err">ù</span> <span class="n">selettive</span> <span class="n">per</span> <span class="n">prime</span><span class="p">.</span> <span class="o">*/</span>
- <span class="k">SET</span> <span class="n">join_collapse_limit</span> <span class="o">=</span> <span class="mi">1</span><span class="p">;</span> <span class="c1">-- Forza l'ordine esatto dei join come scritto</span>
-<span class="n">nella</span> <span class="n">query</span>
-<span class="o">*</span> <span class="n">Oppure</span> <span class="n">alzo</span> <span class="n">il</span> <span class="n">limite</span> <span class="n">per</span> <span class="n">dare</span> <span class="n">pi</span><span class="err">ù</span> <span class="n">libert</span><span class="err">à</span> <span class="n">al</span> <span class="n">Planner</span> <span class="n">su</span> <span class="n">query</span> <span class="n">con</span> <span class="n">pochi</span> <span class="k">join</span>
-<span class="o">*</span> <span class="n">ma</span> <span class="n">complesse</span><span class="p">:</span> <span class="o">*/</span>
- <span class="k">SET</span> <span class="n">join_collapse_limit</span> <span class="o">=</span> <span class="mi">12</span><span class="p">;</span> 
-<span class="o">*</span> <span class="n">Abbino</span> <span class="n">sempre</span> <span class="n">questo</span> <span class="n">parametro</span> <span class="n">a</span> <span class="n">from_collapse_limit</span><span class="p">,</span> <span class="n">che</span> <span class="n">controlla</span> <span class="n">il</span>
-<span class="o">*</span> <span class="n">collasso</span> <span class="n">delle</span> <span class="n">subquery</span> <span class="n">nelle</span> <span class="k">FROM</span> <span class="n">list</span><span class="p">:</span> <span class="o">*/</span>
- <span class="k">SET</span> <span class="n">from_collapse_limit</span> <span class="o">=</span> <span class="mi">8</span><span class="p">;</span> 
-<span class="o">*</span> <span class="k">In</span> <span class="n">Spring</span> <span class="n">Boot</span> <span class="n">con</span> <span class="n">Hibernate</span><span class="p">,</span> <span class="n">le</span> <span class="n">query</span> <span class="n">generate</span> <span class="n">automaticamente</span> <span class="n">spesso</span>
-<span class="o">*</span> <span class="n">producono</span> <span class="k">join</span> <span class="k">in</span> <span class="n">ordine</span> <span class="n">non</span> <span class="n">ottimale</span><span class="p">.</span> <span class="n">La</span> <span class="n">strategia</span> <span class="n">corretta</span> <span class="err">è</span> <span class="n">usare</span> <span class="n">le</span> <span class="n">query</span>
-<span class="o">*</span> <span class="n">native</span> <span class="n">per</span> <span class="n">le</span> <span class="n">operazioni</span> <span class="n">critiche</span> <span class="n">di</span> <span class="n">reporting</span><span class="p">:</span> <span class="o">*/</span>
- <span class="o">@</span><span class="n">Query</span><span class="p">(</span><span class="n">value</span> <span class="o">=</span> <span class="nv">"</span><span class="se">""</span><span class="nv"> SELECT o.id, u.name, p.title FROM orders o JOIN users u ON
-o.user_id = u.id JOIN order_items oi ON oi.order_id = o.id JOIN products p ON
-oi.product_id = p.id WHERE o.created_at &gt;= :from AND u.active = true </span><span class="se">""</span><span class="nv">"</span><span class="p">,</span>
-<span class="n">nativeQuery</span> <span class="o">=</span> <span class="k">true</span><span class="p">)</span> <span class="n">List</span><span class="o">&lt;</span><span class="n">OrderReportRow</span><span class="o">&gt;</span> <span class="n">findOrderReport</span><span class="p">(</span><span class="o">@</span><span class="n">Param</span><span class="p">(</span><span class="nv">"from"</span><span class="p">)</span>
-<span class="n">LocalDateTime</span> <span class="k">from</span><span class="p">);</span>
-<span class="o">*</span> <span class="n">Prima</span> <span class="n">di</span> <span class="n">modificare</span> <span class="n">join_collapse_limit</span> <span class="n">globalmente</span><span class="p">,</span> <span class="n">verifico</span> <span class="n">il</span> <span class="n">parametro</span>
-<span class="o">*</span> <span class="n">attuale</span> <span class="n">e</span> <span class="n">l</span><span class="s1">'impatto sulle query esistenti: */
- SELECT name, setting FROM pg_settings WHERE name IN ('</span><span class="n">join_collapse_limit</span><span class="s1">',
-'</span><span class="n">from_collapse_limit</span><span class="s1">');
-</span></pre></td></tr></tbody></table></code></pre></div></div>
+</pre></td><td class="rouge-code"><pre>    <span class="cm">/* Misuro il Planning Time attuale. Se supera il Execution Time, il problema
+        è nella fase di pianificazione, non nell'esecuzione. */</span> <span class="k">EXPLAIN</span>
+        <span class="p">(</span><span class="k">ANALYZE</span><span class="p">,</span> <span class="n">FORMAT</span> <span class="nb">TEXT</span><span class="p">)</span> <span class="k">SELECT</span> <span class="n">o</span><span class="p">.</span><span class="n">id</span><span class="p">,</span> <span class="n">u</span><span class="p">.</span><span class="n">name</span><span class="p">,</span> <span class="n">p</span><span class="p">.</span><span class="n">title</span><span class="p">,</span> <span class="k">c</span><span class="p">.</span><span class="n">name</span> <span class="k">AS</span> <span class="n">category</span>
+        <span class="k">FROM</span> <span class="n">orders</span> <span class="n">o</span> <span class="k">JOIN</span> <span class="n">users</span> <span class="n">u</span> <span class="k">ON</span> <span class="n">o</span><span class="p">.</span><span class="n">user_id</span> <span class="o">=</span> <span class="n">u</span><span class="p">.</span><span class="n">id</span> <span class="k">JOIN</span> <span class="n">order_items</span> <span class="n">oi</span> <span class="k">ON</span>
+        <span class="n">oi</span><span class="p">.</span><span class="n">order_id</span> <span class="o">=</span> <span class="n">o</span><span class="p">.</span><span class="n">id</span> <span class="k">JOIN</span> <span class="n">products</span> <span class="n">p</span> <span class="k">ON</span> <span class="n">oi</span><span class="p">.</span><span class="n">product_id</span> <span class="o">=</span> <span class="n">p</span><span class="p">.</span><span class="n">id</span> <span class="k">JOIN</span>
+        <span class="n">categories</span> <span class="k">c</span> <span class="k">ON</span> <span class="n">p</span><span class="p">.</span><span class="n">category_id</span> <span class="o">=</span> <span class="k">c</span><span class="p">.</span><span class="n">id</span> <span class="k">JOIN</span> <span class="n">promotions</span> <span class="n">pr</span> <span class="k">ON</span> <span class="n">pr</span><span class="p">.</span><span class="n">id</span> <span class="o">=</span>
+        <span class="n">o</span><span class="p">.</span><span class="n">promotion_id</span> <span class="k">JOIN</span> <span class="n">warehouses</span> <span class="n">w</span> <span class="k">ON</span> <span class="n">w</span><span class="p">.</span><span class="n">id</span> <span class="o">=</span> <span class="n">oi</span><span class="p">.</span><span class="n">warehouse_id</span> <span class="k">JOIN</span>
+        <span class="n">shipping_methods</span> <span class="n">sm</span> <span class="k">ON</span> <span class="n">sm</span><span class="p">.</span><span class="n">id</span> <span class="o">=</span> <span class="n">o</span><span class="p">.</span><span class="n">shipping_method_id</span><span class="p">;</span> <span class="cm">/* Se il Planning
+        Time è &gt;&gt; Execution Time, abbasso il limite per forzare il Planner a
+        rispettare l'ordine scritto nella query. Lo scrivo mettendo le tabelle
+        più selettive per prime. */</span> <span class="k">SET</span> <span class="n">join_collapse_limit</span> <span class="o">=</span> <span class="mi">1</span><span class="p">;</span> <span class="c1">-- Forza</span>
+        <span class="n">l</span><span class="s1">'ordine esatto dei join come scritto nella query /* Oppure alzo il
+        limite per dare più libertà al Planner su query con pochi join ma
+        complesse: */ SET join_collapse_limit = 12; /* Abbino sempre questo
+        parametro a from_collapse_limit, che controlla il collasso delle
+        subquery nelle FROM list: */ SET from_collapse_limit = 8; /* In Spring
+        Boot con Hibernate, le query generate automaticamente spesso producono
+        join in ordine non ottimale. La strategia corretta è usare le query
+        native per le operazioni critiche di reporting: */ @Query(value = """
+        SELECT o.id, u.name, p.title FROM orders o JOIN users u ON o.user_id =
+        u.id JOIN order_items oi ON oi.order_id = o.id JOIN products p ON
+        oi.product_id = p.id WHERE o.created_at &gt;= :from AND u.active = true
+        """, nativeQuery = true) List&lt;OrderReportRow&gt;
+        findOrderReport(@Param("from") LocalDateTime from); /* Prima di
+        modificare join_collapse_limit globalmente, verifico il parametro
+        attuale e l'</span><span class="n">impatto</span> <span class="n">sulle</span> <span class="n">query</span> <span class="n">esistenti</span><span class="p">:</span> <span class="o">*/</span> <span class="k">SELECT</span> <span class="n">name</span><span class="p">,</span> <span class="n">setting</span> <span class="k">FROM</span>
+        <span class="n">pg_settings</span> <span class="k">WHERE</span> <span class="n">name</span> <span class="k">IN</span> <span class="p">(</span><span class="s1">'join_collapse_limit'</span><span class="p">,</span>
+        <span class="s1">'from_collapse_limit'</span><span class="p">);</span>
+</pre></td></tr></tbody></table></code></pre></div></div>
 
         </article>
 

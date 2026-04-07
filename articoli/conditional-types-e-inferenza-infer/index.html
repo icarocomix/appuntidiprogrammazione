@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Conditional Types e Inferenza (infer) — DevLog</title>
-    <meta name="description" content="Creare utility types che si adattano dinamicamente alla struttura dei dati. La sintassi T extends U ? X : Y permette di creare logiche decisionali a livello di tipo. La keyword infer, usata all'interno di un conditional type, permette di 'estrarre' u
+    <meta name="description" content="Creare utility types che si adattano dinamicamente alla struttura dei dati. La sintassi T extends U ? X : Y permette di creare logiche decisionali a livello di tipo. La keyword infer, usata all'interno di un conditional type, permette di "estrarre" u
 ">
     <link rel="stylesheet" href="/appuntidiprogrammazione/assets/css/style.css">
 
@@ -158,75 +158,143 @@
 67
 68
 69
-</pre></td><td class="rouge-code"><pre><span class="o">*</span> <span class="nx">Utility</span> <span class="nx">fondamentali</span> <span class="nx">basate</span> <span class="nx">su</span> <span class="nx">infer</span><span class="p">:</span> <span class="nx">estraggo</span> <span class="nx">tipi</span> <span class="nx">da</span> <span class="nx">strutture</span> <span class="nx">complesse</span>
-<span class="o">*</span> <span class="nx">senza</span> <span class="nx">ridefinirli</span><span class="p">.</span> <span class="o">*</span><span class="sr">/</span><span class="err">
-</span> 
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+</pre></td><td class="rouge-code"><pre><span class="cm">/* Utility fondamentali basate su infer: estraggo tipi da strutture complesse
+    senza ridefinirli. */</span>
 <span class="c1">// Estrae il tipo contenuto in una Promise (ricorsivamente per Promise annidate)</span>
-<span class="c1">// type UnpackPromise&lt;T&gt; = T extends Promise&lt;infer U&gt; ? UnpackPromise&lt;U&gt; : T;</span>
+    <span class="nx">type</span> <span class="nx">UnpackPromise</span><span class="o">&lt;</span><span class="nx">T</span><span class="o">&gt;</span> <span class="o">=</span> <span class="nx">T</span> <span class="kd">extends</span> <span class="nb">Promise</span><span class="o">&lt;</span><span class="nx">infer</span> <span class="nx">U</span><span class="o">&gt;</span> <span class="p">?</span> <span class="nx">UnpackPromise</span><span class="o">&lt;</span><span class="nx">U</span><span class="o">&gt;</span> <span class="p">:</span> <span class="nx">T</span>
+<span class="p">;</span>
 <span class="c1">// Estrae il tipo di ritorno di una funzione (equivalente a ReturnType&lt;T&gt; della</span>
-<span class="c1">// stdlib) type MyReturnType&lt;T&gt; = T extends (...args: any[]) =&gt; infer R ? R :</span>
-<span class="c1">// never;</span>
+    <span class="nx">stdlib</span><span class="p">)</span> <span class="nx">type</span> <span class="nx">MyReturnType</span><span class="o">&lt;</span><span class="nx">T</span><span class="o">&gt;</span> <span class="o">=</span> <span class="nx">T</span> <span class="kd">extends</span> <span class="p">(...</span><span class="nx">args</span><span class="p">:</span> <span class="nx">any</span><span class="p">[])</span> <span class="o">=&gt;</span> <span class="nx">infer</span> <span class="nx">R</span> <span class="p">?</span> <span class="nx">R</span> <span class="p">:</span>
+    <span class="nx">never</span>
+<span class="p">;</span>
 <span class="c1">// Estrae il tipo del primo parametro di una funzione type FirstParam&lt;T&gt; = T</span>
-<span class="c1">// extends (first: infer P, ...rest: any[]) =&gt; any ? P : never;</span>
+    <span class="kd">extends</span> <span class="p">(</span><span class="nx">first</span><span class="p">:</span> <span class="nx">infer</span> <span class="nx">P</span><span class="p">,</span> <span class="p">...</span><span class="nx">rest</span><span class="p">:</span> <span class="nx">any</span><span class="p">[])</span> <span class="o">=&gt;</span> <span class="nx">any</span> <span class="p">?</span> <span class="nx">P</span> <span class="p">:</span> <span class="nx">never</span>
+<span class="p">;</span>
 <span class="c1">// Estrae il tipo degli elementi di un array type ArrayElement&lt;T&gt; = T extends</span>
-<span class="c1">// (infer E)[] ? E : never;</span>
+    <span class="p">(</span><span class="nx">infer</span> <span class="nx">E</span><span class="p">)[]</span> <span class="p">?</span> <span class="nx">E</span> <span class="p">:</span> <span class="nx">never</span>
+<span class="p">;</span>
 <span class="c1">// Estrae il tipo del valore di una Map type MapValue&lt;T&gt; = T extends Map&lt;any,</span>
-<span class="c1">// infer V&gt; ? V : never;</span>
+    <span class="nx">infer</span> <span class="nx">V</span><span class="o">&gt;</span> <span class="p">?</span> <span class="nx">V</span> <span class="p">:</span> <span class="nx">never</span>
+<span class="p">;</span>
 <span class="cm">/* Applico le utility a un'API reale per eliminare la duplicazione di tipi. */</span>
- 
 <span class="c1">// Definisco le funzioni API una sola volta async function fetchUser(id:</span>
-<span class="c1">// number): Promise&lt;</span>
-<span class="p">{</span> <span class="nl">id</span><span class="p">:</span> <span class="nx">number</span><span class="p">;</span> <span class="nl">name</span><span class="p">:</span> <span class="nx">string</span><span class="p">;</span> <span class="nl">email</span><span class="p">:</span> <span class="nx">string</span> <span class="p">}</span>
-<span class="o">&gt;</span> 
-<span class="p">{</span> <span class="kd">const</span> <span class="nx">res</span> <span class="o">=</span> <span class="k">await</span> <span class="nx">fetch</span><span class="p">(</span><span class="s2">`/api/users/$
-{id}
-`</span><span class="p">);</span> <span class="k">return</span> <span class="nx">res</span><span class="p">.</span><span class="nx">json</span><span class="p">();</span> <span class="p">}</span>
- <span class="k">async</span> <span class="kd">function</span> <span class="nx">fetchOrders</span><span class="p">(</span><span class="nx">userId</span><span class="p">:</span> <span class="nx">number</span><span class="p">):</span> <span class="nb">Promise</span><span class="o">&lt;</span>
-<span class="p">{</span> <span class="na">orderId</span><span class="p">:</span> <span class="nx">string</span><span class="p">;</span> <span class="nl">total</span><span class="p">:</span> <span class="nx">number</span><span class="p">;</span> <span class="nl">items</span><span class="p">:</span> <span class="nx">string</span><span class="p">[]</span> <span class="p">}</span>
-<span class="p">[]</span><span class="o">&gt;</span> 
-<span class="p">{</span> <span class="kd">const</span> <span class="nx">res</span> <span class="o">=</span> <span class="k">await</span> <span class="nx">fetch</span><span class="p">(</span><span class="s2">`/api/users/$
-{userId}
-/orders`</span><span class="p">);</span> <span class="k">return</span> <span class="nx">res</span><span class="p">.</span><span class="nx">json</span><span class="p">();</span> <span class="p">}</span>
- 
+    <span class="nx">number</span><span class="p">):</span> <span class="nb">Promise</span><span class="o">&lt;</span>
+<span class="p">{</span>
+    <span class="na">id</span><span class="p">:</span> <span class="nx">number</span><span class="p">;</span>
+    <span class="nl">name</span><span class="p">:</span> <span class="nx">string</span><span class="p">;</span>
+    <span class="nl">email</span><span class="p">:</span> <span class="nx">string</span>
+<span class="p">}</span>
+<span class="o">&gt;</span> <span class="p">{</span>
+    <span class="kd">const</span> <span class="nx">res</span> <span class="o">=</span> <span class="k">await</span> <span class="nx">fetch</span><span class="p">(</span><span class="s2">`/api/users/</span><span class="p">${</span>
+        <span class="nx">id</span>
+    <span class="p">}</span><span class="s2">
+    `</span><span class="p">);</span>
+    <span class="k">return</span> <span class="nx">res</span><span class="p">.</span><span class="nx">json</span><span class="p">();</span>
+<span class="p">}</span>
+<span class="k">async</span> <span class="kd">function</span> <span class="nx">fetchOrders</span><span class="p">(</span><span class="nx">userId</span><span class="p">:</span> <span class="nx">number</span><span class="p">):</span> <span class="nb">Promise</span><span class="o">&lt;</span><span class="p">{</span>
+    <span class="na">orderId</span><span class="p">:</span> <span class="nx">string</span><span class="p">;</span>
+    <span class="nl">total</span><span class="p">:</span> <span class="nx">number</span><span class="p">;</span>
+    <span class="nl">items</span><span class="p">:</span> <span class="nx">string</span><span class="p">[]</span>
+<span class="p">}</span>
+<span class="p">[]</span><span class="o">&gt;</span> <span class="p">{</span>
+    <span class="kd">const</span> <span class="nx">res</span> <span class="o">=</span> <span class="k">await</span> <span class="nx">fetch</span><span class="p">(</span><span class="s2">`/api/users/</span><span class="p">${</span>
+        <span class="nx">userId</span>
+    <span class="p">}</span><span class="s2">
+    /orders`</span><span class="p">);</span>
+    <span class="k">return</span> <span class="nx">res</span><span class="p">.</span><span class="nx">json</span><span class="p">();</span>
+<span class="p">}</span>
 <span class="c1">// Estraggo i tipi di ritorno SENZA ridefinirli: fonte unica di verità type User</span>
-<span class="c1">// = UnpackPromise&lt;ReturnType&lt;typeof fetchUser&gt;&gt;;</span>
-<span class="c1">// </span>
-<span class="p">{</span> <span class="na">id</span><span class="p">:</span> <span class="nx">number</span><span class="p">;</span> <span class="nl">name</span><span class="p">:</span> <span class="nx">string</span><span class="p">;</span> <span class="nl">email</span><span class="p">:</span> <span class="nx">string</span> <span class="p">}</span>
- <span class="nx">type</span> <span class="nx">Order</span> <span class="o">=</span> <span class="nx">ArrayElement</span><span class="o">&lt;</span><span class="nx">UnpackPromise</span><span class="o">&lt;</span><span class="nx">ReturnType</span><span class="o">&lt;</span><span class="k">typeof</span> <span class="nx">fetchOrders</span><span class="o">&gt;&gt;&gt;</span><span class="p">;</span> 
-<span class="c1">// </span>
-<span class="p">{</span> <span class="na">orderId</span><span class="p">:</span> <span class="nx">string</span><span class="p">;</span> <span class="nl">total</span><span class="p">:</span> <span class="nx">number</span><span class="p">;</span> <span class="nl">items</span><span class="p">:</span> <span class="nx">string</span><span class="p">[]</span> <span class="p">}</span>
- 
+    <span class="o">=</span> <span class="nx">UnpackPromise</span><span class="o">&lt;</span><span class="nx">ReturnType</span><span class="o">&lt;</span><span class="k">typeof</span> <span class="nx">fetchUser</span><span class="o">&gt;&gt;</span>
+<span class="p">;</span>
+<span class="c1">//</span>
+<span class="p">{</span>
+    <span class="na">id</span><span class="p">:</span> <span class="nx">number</span><span class="p">;</span>
+    <span class="nl">name</span><span class="p">:</span> <span class="nx">string</span><span class="p">;</span>
+    <span class="nl">email</span><span class="p">:</span> <span class="nx">string</span>
+<span class="p">}</span>
+<span class="nx">type</span> <span class="nx">Order</span> <span class="o">=</span> <span class="nx">ArrayElement</span><span class="o">&lt;</span><span class="nx">UnpackPromise</span><span class="o">&lt;</span><span class="nx">ReturnType</span><span class="o">&lt;</span><span class="k">typeof</span> <span class="nx">fetchOrders</span><span class="o">&gt;&gt;&gt;</span><span class="p">;</span>
+<span class="c1">//</span>
+<span class="p">{</span>
+    <span class="na">orderId</span><span class="p">:</span> <span class="nx">string</span><span class="p">;</span>
+    <span class="nl">total</span><span class="p">:</span> <span class="nx">number</span><span class="p">;</span>
+    <span class="nl">items</span><span class="p">:</span> <span class="nx">string</span><span class="p">[]</span>
+<span class="p">}</span>
 <span class="c1">// Se la firma di fetchUser cambia, User si aggiorna automaticamente: zero</span>
-<span class="c1">// disallineamenti</span>
-<span class="o">*</span> <span class="nx">Utility</span> <span class="nx">avanzata</span><span class="p">:</span> <span class="nx">estraggo</span> <span class="nx">i</span> <span class="nx">tipi</span> <span class="nx">dei</span> <span class="nx">parametri</span> <span class="nx">di</span> <span class="nx">una</span> <span class="nx">funzione</span> <span class="nx">per</span> <span class="nx">creare</span>
-<span class="o">*</span> <span class="nx">wrapper</span> <span class="nx">tipizzati</span><span class="p">.</span> <span class="o">*</span><span class="sr">/</span><span class="err">
-</span> <span class="nx">type</span> <span class="nx">Parameters</span><span class="o">&lt;</span><span class="nx">T</span> <span class="kd">extends</span> <span class="p">(...</span><span class="nx">args</span><span class="p">:</span> <span class="nx">any</span><span class="p">[])</span> <span class="o">=&gt;</span> <span class="nx">any</span><span class="o">&gt;</span> <span class="o">=</span> <span class="nx">T</span> <span class="kd">extends</span> <span class="p">(...</span><span class="nx">args</span><span class="p">:</span> <span class="nx">infer</span>
-<span class="nx">P</span><span class="p">)</span> <span class="o">=&gt;</span> <span class="nx">any</span> <span class="p">?</span> <span class="nx">P</span> <span class="p">:</span> <span class="nx">never</span><span class="p">;</span>
+    <span class="nx">disallineamenti</span> <span class="cm">/* Utility avanzata: estraggo i tipi dei parametri di una
+    funzione per creare wrapper tipizzati. */</span> <span class="nx">type</span> <span class="nx">Parameters</span><span class="o">&lt;</span><span class="nx">T</span> <span class="kd">extends</span>
+    <span class="p">(...</span><span class="nx">args</span><span class="p">:</span> <span class="nx">any</span><span class="p">[])</span> <span class="o">=&gt;</span> <span class="nx">any</span><span class="o">&gt;</span> <span class="o">=</span> <span class="nx">T</span> <span class="kd">extends</span> <span class="p">(...</span><span class="nx">args</span><span class="p">:</span> <span class="nx">infer</span> <span class="nx">P</span><span class="p">)</span> <span class="o">=&gt;</span> <span class="nx">any</span> <span class="p">?</span> <span class="nx">P</span> <span class="p">:</span> <span class="nx">never</span>
+<span class="p">;</span>
 <span class="c1">// Creo un wrapper con retry automatico che preserva la firma originale function</span>
-<span class="c1">// withRetry&lt;T extends (...args: any[]) =&gt; Promise&lt;any&gt;&gt;( fn: T, maxRetries:</span>
-<span class="c1">// number = 3 ): (...args: Parameters&lt;T&gt;) =&gt; ReturnType&lt;T&gt;</span>
-<span class="p">{</span> <span class="k">return</span> <span class="k">async</span> <span class="p">(...</span><span class="na">args</span><span class="p">:</span> <span class="nx">Parameters</span><span class="o">&lt;</span><span class="nx">T</span><span class="o">&gt;</span><span class="p">)</span> <span class="o">=&gt;</span> 
-<span class="p">{</span> <span class="kd">let</span> <span class="na">lastError</span><span class="p">:</span> <span class="nb">Error</span><span class="p">;</span> <span class="k">for</span> <span class="p">(</span><span class="kd">let</span> <span class="nx">attempt</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span> <span class="nx">attempt</span> <span class="o">&lt;=</span> <span class="nx">maxRetries</span><span class="p">;</span> <span class="nx">attempt</span><span class="o">++</span><span class="p">)</span> 
-<span class="p">{</span> <span class="k">try</span> 
-<span class="p">{</span> <span class="k">return</span> <span class="k">await</span> <span class="nx">fn</span><span class="p">(...</span><span class="nx">args</span><span class="p">);</span> <span class="p">}</span>
- <span class="k">catch</span> <span class="p">(</span><span class="nx">err</span><span class="p">)</span> 
-<span class="p">{</span> <span class="nx">lastError</span> <span class="o">=</span> <span class="nx">err</span> <span class="k">as</span> <span class="nb">Error</span><span class="p">;</span> <span class="k">if</span> <span class="p">(</span><span class="nx">attempt</span> <span class="o">&lt;</span> <span class="nx">maxRetries</span><span class="p">)</span> <span class="k">await</span> <span class="nx">sleep</span><span class="p">(</span><span class="nb">Math</span><span class="p">.</span><span class="nx">pow</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span>
-<span class="nx">attempt</span><span class="p">)</span> <span class="o">*</span> <span class="mi">100</span><span class="p">);</span> <span class="p">}</span>
- <span class="p">}</span>
- <span class="k">throw</span> <span class="nx">lastError</span><span class="o">!</span><span class="p">;</span> <span class="p">}</span>
-<span class="p">;</span> <span class="p">}</span>
- 
+    <span class="nx">withRetry</span><span class="o">&lt;</span><span class="nx">T</span> <span class="kd">extends</span> <span class="p">(...</span><span class="nx">args</span><span class="p">:</span> <span class="nx">any</span><span class="p">[])</span> <span class="o">=&gt;</span> <span class="nb">Promise</span><span class="o">&lt;</span><span class="nx">any</span><span class="o">&gt;&gt;</span><span class="p">(</span> <span class="nx">fn</span><span class="p">:</span> <span class="nx">T</span><span class="p">,</span> <span class="nx">maxRetries</span><span class="p">:</span>
+    <span class="nx">number</span> <span class="o">=</span> <span class="mi">3</span> <span class="p">):</span> <span class="p">(...</span><span class="nx">args</span><span class="p">:</span> <span class="nx">Parameters</span><span class="o">&lt;</span><span class="nx">T</span><span class="o">&gt;</span><span class="p">)</span> <span class="o">=&gt;</span> <span class="nx">ReturnType</span><span class="o">&lt;</span><span class="nx">T</span><span class="o">&gt;</span>
+<span class="p">{</span>
+    <span class="k">return</span> <span class="k">async</span> <span class="p">(...</span><span class="na">args</span><span class="p">:</span> <span class="nx">Parameters</span><span class="o">&lt;</span><span class="nx">T</span><span class="o">&gt;</span><span class="p">)</span> <span class="o">=&gt;</span> <span class="p">{</span>
+        <span class="kd">let</span> <span class="na">lastError</span><span class="p">:</span> <span class="nb">Error</span><span class="p">;</span>
+        <span class="k">for</span> <span class="p">(</span><span class="kd">let</span> <span class="nx">attempt</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
+        <span class="nx">attempt</span> <span class="o">&lt;=</span> <span class="nx">maxRetries</span><span class="p">;</span>
+        <span class="nx">attempt</span><span class="o">++</span><span class="p">)</span> <span class="p">{</span>
+            <span class="k">try</span> <span class="p">{</span>
+                <span class="k">return</span> <span class="k">await</span> <span class="nx">fn</span><span class="p">(...</span><span class="nx">args</span><span class="p">);</span>
+            <span class="p">}</span>
+            <span class="k">catch</span> <span class="p">(</span><span class="nx">err</span><span class="p">)</span> <span class="p">{</span>
+                <span class="nx">lastError</span> <span class="o">=</span> <span class="nx">err</span> <span class="k">as</span> <span class="nb">Error</span><span class="p">;</span>
+                <span class="k">if</span> <span class="p">(</span><span class="nx">attempt</span> <span class="o">&lt;</span> <span class="nx">maxRetries</span><span class="p">)</span> <span class="k">await</span> <span class="nx">sleep</span><span class="p">(</span><span class="nb">Math</span><span class="p">.</span><span class="nx">pow</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="nx">attempt</span><span class="p">)</span> <span class="o">*</span>
+                    <span class="mi">100</span><span class="p">);</span>
+            <span class="p">}</span>
+        <span class="p">}</span>
+        <span class="k">throw</span> <span class="nx">lastError</span><span class="o">!</span><span class="p">;</span>
+    <span class="p">}</span>
+    <span class="p">;</span>
+<span class="p">}</span>
 <span class="c1">// fetchUserWithRetry ha esattamente la stessa firma di fetchUser: type-safe al</span>
-<span class="c1">// 100% const fetchUserWithRetry = withRetry(fetchUser, 3); const user = await</span>
-<span class="c1">// fetchUserWithRetry(42);</span>
-<span class="c1">// user: </span>
-<span class="p">{</span> <span class="na">id</span><span class="p">:</span> <span class="nx">number</span><span class="p">;</span> <span class="nl">name</span><span class="p">:</span> <span class="nx">string</span><span class="p">;</span> <span class="nl">email</span><span class="p">:</span> <span class="nx">string</span> <span class="p">}</span>
- 
+    <span class="mi">100</span><span class="o">%</span> <span class="kd">const</span> <span class="nx">fetchUserWithRetry</span> <span class="o">=</span> <span class="nx">withRetry</span><span class="p">(</span><span class="nx">fetchUser</span><span class="p">,</span> <span class="mi">3</span><span class="p">)</span>
+<span class="p">;</span>
+<span class="kd">const</span> <span class="nx">user</span> <span class="o">=</span> <span class="k">await</span> <span class="nx">fetchUserWithRetry</span><span class="p">(</span><span class="mi">42</span><span class="p">);</span>
+<span class="c1">// user:</span>
+<span class="p">{</span>
+    <span class="na">id</span><span class="p">:</span> <span class="nx">number</span><span class="p">;</span>
+    <span class="nl">name</span><span class="p">:</span> <span class="nx">string</span><span class="p">;</span>
+    <span class="nl">email</span><span class="p">:</span> <span class="nx">string</span>
+<span class="p">}</span>
 <span class="cm">/* Conditional type per discriminare tra tipi sincroni e asincroni: */</span>
- <span class="nx">type</span> <span class="nx">Awaited</span><span class="o">&lt;</span><span class="nx">T</span><span class="o">&gt;</span> <span class="o">=</span> <span class="nx">T</span> <span class="kd">extends</span> <span class="nx">PromiseLike</span><span class="o">&lt;</span><span class="nx">infer</span> <span class="nx">U</span><span class="o">&gt;</span> <span class="p">?</span> <span class="nx">Awaited</span><span class="o">&lt;</span><span class="nx">U</span><span class="o">&gt;</span> <span class="p">:</span> <span class="nx">T</span><span class="p">;</span> <span class="nx">type</span>
-<span class="nx">IsAsync</span><span class="o">&lt;</span><span class="nx">T</span><span class="o">&gt;</span> <span class="o">=</span> <span class="nx">T</span> <span class="kd">extends</span> <span class="p">(...</span><span class="nx">args</span><span class="p">:</span> <span class="nx">any</span><span class="p">[])</span> <span class="o">=&gt;</span> <span class="nb">Promise</span><span class="o">&lt;</span><span class="nx">any</span><span class="o">&gt;</span> <span class="p">?</span> <span class="kc">true</span> <span class="p">:</span> <span class="kc">false</span><span class="p">;</span> <span class="nx">type</span>
-<span class="nx">SyncVersion</span><span class="o">&lt;</span><span class="nx">T</span> <span class="kd">extends</span> <span class="p">(...</span><span class="nx">args</span><span class="p">:</span> <span class="nx">any</span><span class="p">[])</span> <span class="o">=&gt;</span> <span class="nx">any</span><span class="o">&gt;</span> <span class="o">=</span> <span class="nx">IsAsync</span><span class="o">&lt;</span><span class="nx">T</span><span class="o">&gt;</span> <span class="kd">extends</span> <span class="kc">true</span> <span class="p">?</span>
-<span class="p">(...</span><span class="nx">args</span><span class="p">:</span> <span class="nx">Parameters</span><span class="o">&lt;</span><span class="nx">T</span><span class="o">&gt;</span><span class="p">)</span> <span class="o">=&gt;</span> <span class="nx">Awaited</span><span class="o">&lt;</span><span class="nx">ReturnType</span><span class="o">&lt;</span><span class="nx">T</span><span class="o">&gt;&gt;</span> <span class="p">:</span> <span class="nx">T</span><span class="p">;</span>
+<span class="nx">type</span> <span class="nx">Awaited</span><span class="o">&lt;</span><span class="nx">T</span><span class="o">&gt;</span> <span class="o">=</span> <span class="nx">T</span> <span class="kd">extends</span> <span class="nx">PromiseLike</span><span class="o">&lt;</span><span class="nx">infer</span> <span class="nx">U</span><span class="o">&gt;</span> <span class="p">?</span> <span class="nx">Awaited</span><span class="o">&lt;</span><span class="nx">U</span><span class="o">&gt;</span> <span class="p">:</span> <span class="nx">T</span><span class="p">;</span>
+<span class="nx">type</span> <span class="nx">IsAsync</span><span class="o">&lt;</span><span class="nx">T</span><span class="o">&gt;</span> <span class="o">=</span> <span class="nx">T</span> <span class="kd">extends</span> <span class="p">(...</span><span class="nx">args</span><span class="p">:</span> <span class="nx">any</span><span class="p">[])</span> <span class="o">=&gt;</span> <span class="nb">Promise</span><span class="o">&lt;</span><span class="nx">any</span><span class="o">&gt;</span> <span class="p">?</span> <span class="kc">true</span> <span class="p">:</span> <span class="kc">false</span><span class="p">;</span>
+<span class="nx">type</span> <span class="nx">SyncVersion</span><span class="o">&lt;</span><span class="nx">T</span> <span class="kd">extends</span> <span class="p">(...</span><span class="nx">args</span><span class="p">:</span> <span class="nx">any</span><span class="p">[])</span> <span class="o">=&gt;</span> <span class="nx">any</span><span class="o">&gt;</span> <span class="o">=</span> <span class="nx">IsAsync</span><span class="o">&lt;</span><span class="nx">T</span><span class="o">&gt;</span> <span class="kd">extends</span> <span class="kc">true</span> <span class="p">?</span>
+    <span class="p">(...</span><span class="nx">args</span><span class="p">:</span> <span class="nx">Parameters</span><span class="o">&lt;</span><span class="nx">T</span><span class="o">&gt;</span><span class="p">)</span> <span class="o">=&gt;</span> <span class="nx">Awaited</span><span class="o">&lt;</span><span class="nx">ReturnType</span><span class="o">&lt;</span><span class="nx">T</span><span class="o">&gt;&gt;</span> <span class="p">:</span> <span class="nx">T</span><span class="p">;</span>
 </pre></td></tr></tbody></table></code></pre></div></div>
 
         </article>

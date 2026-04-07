@@ -117,38 +117,34 @@
 26
 27
 28
-29
-30
-</pre></td><td class="rouge-code"><pre><span class="o">*</span> <span class="n">Creo</span> <span class="n">l</span><span class="s1">'indice GIN con l'</span><span class="n">opzione</span> <span class="n">fastupdate</span> <span class="n">abilitata</span> <span class="p">(</span><span class="err">è</span> <span class="n">il</span> <span class="k">default</span> <span class="n">ma</span> <span class="n">lo</span> <span class="n">rendo</span>
-<span class="o">*</span> <span class="n">esplicito</span><span class="p">)</span> <span class="n">e</span> <span class="n">aumento</span> <span class="n">il</span> <span class="n">buffer</span> <span class="n">della</span> <span class="n">pending</span> <span class="n">list</span> <span class="n">per</span> <span class="n">ridurre</span> <span class="n">la</span> <span class="n">frequenza</span> <span class="n">dei</span>
-<span class="o">*</span> <span class="n">merge</span> <span class="n">sull</span><span class="s1">'entry tree principale. */
- CREATE INDEX CONCURRENTLY idx_documents_fts ON documents USING GIN
-(to_tsvector('</span><span class="n">italian</span><span class="s1">', coalesce(title, </span><span class="se">''</span><span class="s1">) || '</span> <span class="s1">' || coalesce(body, </span><span class="se">''</span><span class="s1">))) WITH
-(fastupdate = on, gin_pending_list_limit = 8192); -- 8MB di buffer
-* Verifico la dimensione attuale della pending list per capire se il merge viene
-* triggerato troppo spesso. */
- SELECT indexrelid::regclass AS index_name,
-pg_size_pretty(pg_relation_size(indexrelid)) AS index_size FROM
-pg_stat_user_indexes WHERE indexrelname = '</span><span class="n">idx_documents_fts</span><span class="s1">';
-* Per inserimenti massivi in batch (es. importazione iniziale), disabilito
-* temporaneamente fastupdate e ricostruisco l'</span><span class="n">indice</span> <span class="n">alla</span> <span class="n">fine</span><span class="p">:</span> <span class="err">è</span> <span class="n">pi</span><span class="err">ù</span> <span class="n">veloce</span> <span class="n">che</span>
-<span class="o">*</span> <span class="n">gestire</span> <span class="n">migliaia</span> <span class="n">di</span> <span class="n">merge</span> <span class="n">intermedi</span><span class="p">.</span> <span class="o">*/</span>
- <span class="k">ALTER</span> <span class="k">INDEX</span> <span class="n">idx_documents_fts</span> <span class="k">SET</span> <span class="p">(</span><span class="n">fastupdate</span> <span class="o">=</span> <span class="k">off</span><span class="p">);</span> <span class="c1">-- Eseguo il bulk insert</span>
-<span class="k">INSERT</span> <span class="k">INTO</span> <span class="n">documents</span> <span class="p">(</span><span class="n">title</span><span class="p">,</span> <span class="n">body</span><span class="p">)</span> <span class="k">SELECT</span> <span class="n">title</span><span class="p">,</span> <span class="n">body</span> <span class="k">FROM</span> <span class="n">staging_documents</span><span class="p">;</span>
-<span class="c1">-- Riabilito fastupdate e forzo un reindex pulito ALTER INDEX idx_documents_fts</span>
-<span class="k">SET</span> <span class="p">(</span><span class="n">fastupdate</span> <span class="o">=</span> <span class="k">on</span><span class="p">);</span> <span class="k">REINDEX</span> <span class="k">INDEX</span> <span class="n">CONCURRENTLY</span> <span class="n">idx_documents_fts</span><span class="p">;</span>
-<span class="o">*</span> <span class="n">Monitoro</span> <span class="n">la</span> <span class="k">lock</span> <span class="n">contention</span> <span class="n">sull</span><span class="s1">'indice durante un inserimento concorrente per
-* verificare il miglioramento: */
- SELECT pid, wait_event_type, wait_event, query FROM pg_stat_activity WHERE
-wait_event_type = '</span><span class="k">Lock</span><span class="s1">' AND query ILIKE '</span><span class="o">%</span><span class="n">documents</span><span class="o">%</span><span class="s1">';
-* In Spring Boot, per l'</span><span class="n">inserimento</span> <span class="n">massivo</span> <span class="n">di</span> <span class="n">documenti</span> <span class="n">uso</span> <span class="n">un</span> <span class="n">executor</span> <span class="n">con</span>
-<span class="o">*</span> <span class="n">thread</span> <span class="n">pool</span> <span class="n">limitato</span> <span class="n">per</span> <span class="n">controllare</span> <span class="n">la</span> <span class="n">concorrenza</span> <span class="n">sui</span> <span class="k">lock</span> <span class="n">GIN</span><span class="p">:</span> <span class="o">@</span><span class="n">Autowired</span>
-<span class="o">*</span> <span class="n">private</span> <span class="n">ThreadPoolTaskExecutor</span> <span class="n">taskExecutor</span><span class="p">;</span> <span class="k">public</span> <span class="n">void</span>
-<span class="o">*</span> <span class="n">bulkIndex</span><span class="p">(</span><span class="n">List</span><span class="o">&lt;</span><span class="n">Document</span><span class="o">&gt;</span> <span class="n">docs</span><span class="p">)</span>
-<span class="p">{</span> <span class="n">List</span><span class="o">&lt;</span><span class="n">List</span><span class="o">&lt;</span><span class="n">Document</span><span class="o">&gt;&gt;</span> <span class="n">batches</span> <span class="o">=</span> <span class="n">Lists</span><span class="p">.</span><span class="k">partition</span><span class="p">(</span><span class="n">docs</span><span class="p">,</span> <span class="mi">500</span><span class="p">);</span>
-<span class="n">batches</span><span class="p">.</span><span class="n">forEach</span><span class="p">(</span><span class="n">batch</span> <span class="o">-&gt;</span> <span class="n">taskExecutor</span><span class="p">.</span><span class="k">execute</span><span class="p">(()</span> <span class="o">-&gt;</span>
-<span class="n">documentRepository</span><span class="p">.</span><span class="n">saveAll</span><span class="p">(</span><span class="n">batch</span><span class="p">)));</span> <span class="p">}</span>
- <span class="o">*/</span>
+</pre></td><td class="rouge-code"><pre>    <span class="cm">/* Creo l'indice GIN con l'opzione fastupdate abilitata (è il default ma lo
+        rendo esplicito) e aumento il buffer della pending list per ridurre la
+        frequenza dei merge sull'entry tree principale. */</span> <span class="k">CREATE</span> <span class="k">INDEX</span>
+        <span class="n">CONCURRENTLY</span> <span class="n">idx_documents_fts</span> <span class="k">ON</span> <span class="n">documents</span> <span class="k">USING</span> <span class="n">GIN</span>
+        <span class="p">(</span><span class="n">to_tsvector</span><span class="p">(</span><span class="s1">'italian'</span><span class="p">,</span> <span class="n">coalesce</span><span class="p">(</span><span class="n">title</span><span class="p">,</span> <span class="s1">''</span><span class="p">)</span> <span class="o">||</span> <span class="s1">' '</span> <span class="o">||</span> <span class="n">coalesce</span><span class="p">(</span><span class="n">body</span><span class="p">,</span>
+        <span class="s1">''</span><span class="p">)))</span> <span class="k">WITH</span> <span class="p">(</span><span class="n">fastupdate</span> <span class="o">=</span> <span class="k">on</span><span class="p">,</span> <span class="n">gin_pending_list_limit</span> <span class="o">=</span> <span class="mi">8192</span><span class="p">);</span> <span class="c1">-- 8MB di</span>
+        <span class="n">buffer</span> <span class="cm">/* Verifico la dimensione attuale della pending list per capire
+        se il merge viene triggerato troppo spesso. */</span> <span class="k">SELECT</span>
+        <span class="n">indexrelid</span><span class="p">::</span><span class="n">regclass</span> <span class="k">AS</span> <span class="n">index_name</span><span class="p">,</span>
+        <span class="n">pg_size_pretty</span><span class="p">(</span><span class="n">pg_relation_size</span><span class="p">(</span><span class="n">indexrelid</span><span class="p">))</span> <span class="k">AS</span> <span class="n">index_size</span> <span class="k">FROM</span>
+        <span class="n">pg_stat_user_indexes</span> <span class="k">WHERE</span> <span class="n">indexrelname</span> <span class="o">=</span> <span class="s1">'idx_documents_fts'</span><span class="p">;</span> <span class="cm">/* Per
+        inserimenti massivi in batch (es. importazione iniziale), disabilito
+        temporaneamente fastupdate e ricostruisco l'indice alla fine: è più
+        veloce che gestire migliaia di merge intermedi. */</span> <span class="k">ALTER</span> <span class="k">INDEX</span>
+        <span class="n">idx_documents_fts</span> <span class="k">SET</span> <span class="p">(</span><span class="n">fastupdate</span> <span class="o">=</span> <span class="k">off</span><span class="p">);</span> <span class="c1">-- Eseguo il bulk insert</span>
+        <span class="k">INSERT</span> <span class="k">INTO</span> <span class="n">documents</span> <span class="p">(</span><span class="n">title</span><span class="p">,</span> <span class="n">body</span><span class="p">)</span> <span class="k">SELECT</span> <span class="n">title</span><span class="p">,</span> <span class="n">body</span> <span class="k">FROM</span>
+        <span class="n">staging_documents</span><span class="p">;</span> <span class="c1">-- Riabilito fastupdate e forzo un reindex pulito</span>
+        <span class="k">ALTER</span> <span class="k">INDEX</span> <span class="n">idx_documents_fts</span> <span class="k">SET</span> <span class="p">(</span><span class="n">fastupdate</span> <span class="o">=</span> <span class="k">on</span><span class="p">);</span> <span class="k">REINDEX</span> <span class="k">INDEX</span>
+        <span class="n">CONCURRENTLY</span> <span class="n">idx_documents_fts</span><span class="p">;</span> <span class="cm">/* Monitoro la lock contention
+        sull'indice durante un inserimento concorrente per verificare il
+        miglioramento: */</span> <span class="k">SELECT</span> <span class="n">pid</span><span class="p">,</span> <span class="n">wait_event_type</span><span class="p">,</span> <span class="n">wait_event</span><span class="p">,</span> <span class="n">query</span> <span class="k">FROM</span>
+        <span class="n">pg_stat_activity</span> <span class="k">WHERE</span> <span class="n">wait_event_type</span> <span class="o">=</span> <span class="s1">'Lock'</span> <span class="k">AND</span> <span class="n">query</span> <span class="k">ILIKE</span>
+        <span class="s1">'%documents%'</span><span class="p">;</span> <span class="cm">/* In Spring Boot, per l'inserimento massivo di documenti
+        uso un executor con thread pool limitato per controllare la concorrenza
+        sui lock GIN: @Autowired private ThreadPoolTaskExecutor taskExecutor;
+        public void bulkIndex(List&lt;Document&gt; docs) { List&lt;List&lt;Document&gt;&gt;
+        batches = Lists.partition(docs, 500); batches.forEach(batch -&gt;
+        taskExecutor.execute(() -&gt; documentRepository.saveAll(batch))); } */</span>
 </pre></td></tr></tbody></table></code></pre></div></div>
 
         </article>

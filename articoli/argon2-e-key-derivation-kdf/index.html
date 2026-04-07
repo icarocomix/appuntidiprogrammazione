@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Argon2 e Key Derivation (KDF) — DevLog</title>
-    <meta name="description" content="Usare MD5 o SHA256 per le password è inutile contro le GPU moderne (Rainbow Tables). Argon2, vincitore della Password Hashing Competition, è progettato per essere 'Memory-Hard': i parametri di memoria, tempo e parallelismo costringono l'attaccante a 
+    <meta name="description" content="Usare MD5 o SHA256 per le password è inutile contro le GPU moderne (Rainbow Tables). Argon2, vincitore della Password Hashing Competition, è progettato per essere "Memory-Hard": i parametri di memoria, tempo e parallelismo costringono l'attaccante a 
 ">
     <link rel="stylesheet" href="/appuntidiprogrammazione/assets/css/style.css">
 
@@ -157,73 +157,109 @@
 66
 67
 68
-</pre></td><td class="rouge-code"><pre><span class="o">*</span> <span class="nx">Scelgo</span> <span class="nx">Argon2id</span><span class="p">:</span> <span class="nx">è</span> <span class="nx">la</span> <span class="nx">variante</span> <span class="nx">raccomandata</span> <span class="nx">dal</span> <span class="nx">RFC</span> <span class="mi">9106</span> <span class="nx">perché</span> <span class="nx">combina</span> <span class="nx">la</span>
-<span class="o">*</span> <span class="nx">protezione</span> <span class="nx">di</span> <span class="nx">Argon2i</span> <span class="p">(</span><span class="nx">side</span><span class="o">-</span><span class="nx">channel</span><span class="p">)</span> <span class="nx">con</span> <span class="nx">quella</span> <span class="nx">di</span> <span class="nx">Argon2d</span> <span class="p">(</span><span class="nx">GPU</span><span class="p">).</span> <span class="o">*</span><span class="sr">/</span><span class="err">
-</span> <span class="kd">const</span> <span class="nx">argon2</span> <span class="o">=</span> <span class="nx">require</span><span class="p">(</span><span class="dl">'</span><span class="s1">argon2</span><span class="dl">'</span><span class="p">);</span> 
-<span class="o">*</span> <span class="nx">Calibro</span> <span class="nx">i</span> <span class="nx">parametri</span> <span class="k">in</span> <span class="nx">base</span> <span class="nx">all</span><span class="dl">'</span><span class="s1">hardware del server. La regola: il costo deve
-* rendere ogni hash ~300ms sul server. Con hardware dedicato (100x più veloce),
-* ogni tentativo costa comunque 3ms -&gt; rendere il brute-force impraticabile. */
- const ARGON2_OPTIONS = 
-{ type: argon2.argon2id, memoryCost: 2 ** 16, 
-// 64MB: un attaccante con GPU da 8GB può fare solo ~128 hash in parallelo
-// timeCost: 3,
-// 3 iterazioni: aumenta il tempo senza aumentare la memoria parallelism: 1, 
-// Thread usati: 1 per evitare che un singolo utente esaurisca la CPU
-// saltLength: 32,
-// Salt casuale da 32 byte: generato automaticamente da argon2 hashLength: 32 
-// Output da 256 bit }
-; 
-* Funzione di hashing con gestione degli errori e logging dei tempi per
-* monitorare la calibrazione: */
- async function hashPassword(plainPassword) 
-{ const start = Date.now(); const hash = await argon2.hash(plainPassword,
-ARGON2_OPTIONS); const elapsed = Date.now() - start;
-// Monitoro il tempo per rilevare se il server è sovraccarico o se devo
-// ricalibrate if (elapsed &lt; 200) console.warn(`Hash troppo veloce ($
-{elapsed}
-ms): considera di aumentare i parametri`); if (elapsed &gt; 500) console.warn(`Hash
-lento ($
-{elapsed}
-ms): considera di ridurre i parametri`); return hash; }
- 
-* Verifica con re-hashing automatico se i parametri sono cambiati (upgrading
-* seamless): */
- async function verifyPassword(plainPassword, storedHash, userId) 
-{ const isValid = await argon2.verify(storedHash, plainPassword); if (isValid &amp;&amp;
-argon2.needsRehash(storedHash, ARGON2_OPTIONS))
-{ 
-// Il parametri sono stati aggiornati: re-hasho silenziosamente durante il login
-// const newHash = await hashPassword(plainPassword); await
-// userRepository.updatePasswordHash(userId, newHash); console.info(`Password
-// re-hashata per utente $
-{userId}
- con nuovi parametri Argon2`); }
- return isValid; }
- 
-* Endpoint Express con protezione completa: rate limiting + Argon2 + timing
-* jitter */
- const rateLimit = require(</span><span class="dl">'</span><span class="nx">express</span><span class="o">-</span><span class="nx">rate</span><span class="o">-</span><span class="nx">limit</span><span class="dl">'</span><span class="s1">); const loginLimiter =
-rateLimit(
-{ windowMs: 15 * 60 * 1000, 
-// 15 minuti max: 10, 
-// Max 10 tentativi per IP message: 
-{ error: </span><span class="dl">'</span><span class="nx">Troppi</span> <span class="nx">tentativi</span><span class="p">:</span> <span class="nx">riprova</span> <span class="nx">tra</span> <span class="mi">15</span> <span class="nx">minuti</span><span class="dl">'</span><span class="s1"> }
- }
-); app.post(</span><span class="dl">'</span><span class="o">/</span><span class="nx">auth</span><span class="o">/</span><span class="nx">login</span><span class="dl">'</span><span class="s1">, loginLimiter, async (req, res) =&gt; 
-{ const 
-{ email, password }
- = req.body; const user = await userRepository.findByEmail(email); 
-// Se l</span><span class="dl">'</span><span class="nx">utente</span> <span class="nx">non</span> <span class="nx">esiste</span><span class="p">,</span> <span class="nx">verifico</span> <span class="nx">un</span> <span class="nx">hash</span> <span class="nx">fittizio</span> <span class="nx">per</span> <span class="nx">evitare</span> <span class="nx">user</span>
-<span class="c1">// enumeration via timing const hashToVerify = user?.passwordHash ??</span>
-<span class="c1">// '$argon2id$v=19$m=65536,t=3,p=1$placeholder'; const isValid = user ? await</span>
-<span class="c1">// verifyPassword(password, hashToVerify, user.id) : (await</span>
-<span class="c1">// argon2.verify(hashToVerify, password), false); if (!isValid)</span>
-<span class="p">{</span> <span class="k">return</span> <span class="nx">res</span><span class="p">.</span><span class="nx">status</span><span class="p">(</span><span class="mi">401</span><span class="p">).</span><span class="nx">json</span><span class="p">(</span>
-<span class="p">{</span> <span class="na">error</span><span class="p">:</span> <span class="dl">'</span><span class="s1">Credenziali non valide</span><span class="dl">'</span> <span class="p">}</span>
-<span class="p">);</span> <span class="p">}</span>
- <span class="kd">const</span> <span class="nx">token</span> <span class="o">=</span> <span class="nx">generateJwt</span><span class="p">(</span><span class="nx">user</span><span class="p">);</span> <span class="nx">res</span><span class="p">.</span><span class="nx">json</span><span class="p">(</span>
-<span class="p">{</span> <span class="nx">token</span> <span class="p">}</span>
-<span class="p">);</span> <span class="p">}</span>
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+</pre></td><td class="rouge-code"><pre><span class="cm">/* Scelgo Argon2id: è la variante raccomandata dal RFC 9106 perché combina la
+    protezione di Argon2i (side-channel) con quella di Argon2d (GPU). */</span>
+<span class="kd">const</span> <span class="nx">argon2</span> <span class="o">=</span> <span class="nx">require</span><span class="p">(</span><span class="dl">'</span><span class="s1">argon2</span><span class="dl">'</span><span class="p">);</span>
+<span class="cm">/* Calibro i parametri in base all'hardware del server. La regola: il costo deve
+    rendere ogni hash ~300ms sul server. Con hardware dedicato (100x più
+    veloce), ogni tentativo costa comunque 3ms -&gt; rendere il brute-force
+    impraticabile. */</span>
+<span class="kd">const</span> <span class="nx">ARGON2_OPTIONS</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="na">type</span><span class="p">:</span> <span class="nx">argon2</span><span class="p">.</span><span class="nx">argon2id</span><span class="p">,</span> <span class="na">memoryCost</span><span class="p">:</span> <span class="mi">2</span> <span class="o">**</span> <span class="mi">16</span><span class="p">,</span>
+    <span class="c1">// 64MB: un attaccante con GPU da 8GB può fare solo ~128 hash in parallelo</span>
+        <span class="na">timeCost</span><span class="p">:</span> <span class="mi">3</span><span class="p">,</span> <span class="c1">// 3 iterazioni: aumenta il tempo senza aumentare la</span>
+        <span class="nx">memoria</span> <span class="na">parallelism</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span> <span class="c1">// Thread usati: 1 per evitare che un singolo</span>
+        <span class="nx">utente</span> <span class="nx">esaurisca</span> <span class="nx">la</span> <span class="nx">CPU</span> <span class="na">saltLength</span><span class="p">:</span> <span class="mi">32</span><span class="p">,</span> <span class="c1">// Salt casuale da 32 byte:</span>
+        <span class="nx">generato</span> <span class="nx">automaticamente</span> <span class="nx">da</span> <span class="nx">argon2</span> <span class="na">hashLength</span><span class="p">:</span> <span class="mi">32</span> <span class="c1">// Output da 256 bit</span>
+<span class="p">}</span>
+<span class="p">;</span>
+<span class="cm">/* Funzione di hashing con gestione degli errori e logging dei tempi per
+    monitorare la calibrazione: */</span>
+<span class="k">async</span> <span class="kd">function</span> <span class="nx">hashPassword</span><span class="p">(</span><span class="nx">plainPassword</span><span class="p">)</span> <span class="p">{</span>
+    <span class="kd">const</span> <span class="nx">start</span> <span class="o">=</span> <span class="nb">Date</span><span class="p">.</span><span class="nx">now</span><span class="p">();</span>
+    <span class="kd">const</span> <span class="nx">hash</span> <span class="o">=</span> <span class="k">await</span> <span class="nx">argon2</span><span class="p">.</span><span class="nx">hash</span><span class="p">(</span><span class="nx">plainPassword</span><span class="p">,</span> <span class="nx">ARGON2_OPTIONS</span><span class="p">);</span>
+    <span class="kd">const</span> <span class="nx">elapsed</span> <span class="o">=</span> <span class="nb">Date</span><span class="p">.</span><span class="nx">now</span><span class="p">()</span> <span class="o">-</span> <span class="nx">start</span><span class="p">;</span>
+    <span class="c1">// Monitoro il tempo per rilevare se il server è sovraccarico o se devo</span>
+        <span class="nx">ricalibrate</span> <span class="k">if</span> <span class="p">(</span><span class="nx">elapsed</span> <span class="o">&lt;</span> <span class="mi">200</span><span class="p">)</span> <span class="nx">console</span><span class="p">.</span><span class="nx">warn</span><span class="p">(</span><span class="s2">`Hash troppo veloce ($
+    {
+        elapsed
+    }
+    ms): considera di aumentare i parametri`</span><span class="p">);</span>
+    <span class="k">if</span> <span class="p">(</span><span class="nx">elapsed</span> <span class="o">&gt;</span> <span class="mi">500</span><span class="p">)</span> <span class="nx">console</span><span class="p">.</span><span class="nx">warn</span><span class="p">(</span><span class="s2">`Hash lento (</span><span class="p">${</span>
+        <span class="nx">elapsed</span>
+    <span class="p">}</span><span class="s2">
+    ms): considera di ridurre i parametri`</span><span class="p">);</span>
+    <span class="k">return</span> <span class="nx">hash</span><span class="p">;</span>
+<span class="p">}</span>
+<span class="cm">/* Verifica con re-hashing automatico se i parametri sono cambiati (upgrading
+    seamless): */</span>
+<span class="k">async</span> <span class="kd">function</span> <span class="nx">verifyPassword</span><span class="p">(</span><span class="nx">plainPassword</span><span class="p">,</span> <span class="nx">storedHash</span><span class="p">,</span> <span class="nx">userId</span><span class="p">)</span> <span class="p">{</span>
+    <span class="kd">const</span> <span class="nx">isValid</span> <span class="o">=</span> <span class="k">await</span> <span class="nx">argon2</span><span class="p">.</span><span class="nx">verify</span><span class="p">(</span><span class="nx">storedHash</span><span class="p">,</span> <span class="nx">plainPassword</span><span class="p">);</span>
+    <span class="k">if</span> <span class="p">(</span><span class="nx">isValid</span> <span class="o">&amp;&amp;</span> <span class="nx">argon2</span><span class="p">.</span><span class="nx">needsRehash</span><span class="p">(</span><span class="nx">storedHash</span><span class="p">,</span> <span class="nx">ARGON2_OPTIONS</span><span class="p">))</span> <span class="p">{</span>
+        <span class="c1">// Il parametri sono stati aggiornati: re-hasho silenziosamente durante</span>
+            <span class="nx">il</span> <span class="nx">login</span> <span class="kd">const</span> <span class="nx">newHash</span> <span class="o">=</span> <span class="k">await</span> <span class="nx">hashPassword</span><span class="p">(</span><span class="nx">plainPassword</span><span class="p">)</span>
+        <span class="p">;</span>
+        <span class="k">await</span> <span class="nx">userRepository</span><span class="p">.</span><span class="nx">updatePasswordHash</span><span class="p">(</span><span class="nx">userId</span><span class="p">,</span> <span class="nx">newHash</span><span class="p">);</span>
+        <span class="nx">console</span><span class="p">.</span><span class="nx">info</span><span class="p">(</span><span class="s2">`Password re-hashata per utente </span><span class="p">${</span>
+            <span class="nx">userId</span>
+        <span class="p">}</span><span class="s2">
+        con nuovi parametri Argon2`</span><span class="p">);</span>
+    <span class="p">}</span>
+    <span class="k">return</span> <span class="nx">isValid</span><span class="p">;</span>
+<span class="p">}</span>
+<span class="cm">/* Endpoint Express con protezione completa: rate limiting + Argon2 + timing
+    jitter */</span>
+<span class="kd">const</span> <span class="nx">rateLimit</span> <span class="o">=</span> <span class="nx">require</span><span class="p">(</span><span class="dl">'</span><span class="s1">express-rate-limit</span><span class="dl">'</span><span class="p">);</span>
+<span class="kd">const</span> <span class="nx">loginLimiter</span> <span class="o">=</span> <span class="nx">rateLimit</span><span class="p">({</span>
+    <span class="na">windowMs</span><span class="p">:</span> <span class="mi">15</span> <span class="o">*</span> <span class="mi">60</span> <span class="o">*</span> <span class="mi">1000</span><span class="p">,</span>
+    <span class="c1">// 15 minuti max: 10, // Max 10 tentativi per IP message:</span>
+    <span class="p">{</span>
+        <span class="na">error</span><span class="p">:</span> <span class="dl">'</span><span class="s1">Troppi tentativi: riprova tra 15 minuti</span><span class="dl">'</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+<span class="p">);</span>
+<span class="nx">app</span><span class="p">.</span><span class="nx">post</span><span class="p">(</span><span class="dl">'</span><span class="s1">/auth/login</span><span class="dl">'</span><span class="p">,</span> <span class="nx">loginLimiter</span><span class="p">,</span> <span class="k">async</span> <span class="p">(</span><span class="nx">req</span><span class="p">,</span> <span class="nx">res</span><span class="p">)</span> <span class="o">=&gt;</span> <span class="p">{</span>
+    <span class="kd">const</span> <span class="p">{</span>
+        <span class="nx">email</span><span class="p">,</span> <span class="nx">password</span>
+    <span class="p">}</span>
+    <span class="o">=</span> <span class="nx">req</span><span class="p">.</span><span class="nx">body</span><span class="p">;</span>
+    <span class="kd">const</span> <span class="nx">user</span> <span class="o">=</span> <span class="k">await</span> <span class="nx">userRepository</span><span class="p">.</span><span class="nx">findByEmail</span><span class="p">(</span><span class="nx">email</span><span class="p">);</span>
+    <span class="c1">// Se l'utente non esiste, verifico un hash fittizio per evitare user</span>
+        <span class="nx">enumeration</span> <span class="nx">via</span> <span class="nx">timing</span> <span class="kd">const</span> <span class="nx">hashToVerify</span> <span class="o">=</span> <span class="nx">user</span><span class="p">?.</span><span class="nx">passwordHash</span> <span class="o">??</span>
+        <span class="dl">'</span><span class="s1">$argon2id$v=19$m=65536,t=3,p=1$placeholder</span><span class="dl">'</span>
+    <span class="p">;</span>
+    <span class="kd">const</span> <span class="nx">isValid</span> <span class="o">=</span> <span class="nx">user</span> <span class="p">?</span> <span class="k">await</span> <span class="nx">verifyPassword</span><span class="p">(</span><span class="nx">password</span><span class="p">,</span> <span class="nx">hashToVerify</span><span class="p">,</span> <span class="nx">user</span><span class="p">.</span><span class="nx">id</span><span class="p">)</span>
+        <span class="p">:</span> <span class="p">(</span><span class="k">await</span> <span class="nx">argon2</span><span class="p">.</span><span class="nx">verify</span><span class="p">(</span><span class="nx">hashToVerify</span><span class="p">,</span> <span class="nx">password</span><span class="p">),</span> <span class="kc">false</span><span class="p">);</span>
+    <span class="k">if</span> <span class="p">(</span><span class="o">!</span><span class="nx">isValid</span><span class="p">)</span> <span class="p">{</span>
+        <span class="k">return</span> <span class="nx">res</span><span class="p">.</span><span class="nx">status</span><span class="p">(</span><span class="mi">401</span><span class="p">).</span><span class="nx">json</span><span class="p">({</span>
+            <span class="na">error</span><span class="p">:</span> <span class="dl">'</span><span class="s1">Credenziali non valide</span><span class="dl">'</span>
+        <span class="p">}</span>
+        <span class="p">);</span>
+    <span class="p">}</span>
+    <span class="kd">const</span> <span class="nx">token</span> <span class="o">=</span> <span class="nx">generateJwt</span><span class="p">(</span><span class="nx">user</span><span class="p">);</span>
+    <span class="nx">res</span><span class="p">.</span><span class="nx">json</span><span class="p">({</span>
+        <span class="nx">token</span>
+    <span class="p">}</span>
+    <span class="p">);</span>
+<span class="p">}</span>
 <span class="p">);</span>
 </pre></td></tr></tbody></table></code></pre></div></div>
 

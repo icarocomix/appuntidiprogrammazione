@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>JWT Signature Bypass e Algorithm none — DevLog</title>
-    <meta name="description" content="Molte librerie JWT accettano l'algoritmo 'none', permettendo a un utente di modificare il payload e rimuovere la firma. Il server deve forzare esplicitamente l'algoritmo atteso (es. HS256 o RS256) e rifiutare qualsiasi token che non corrisponda, igno
+    <meta name="description" content="Molte librerie JWT accettano l'algoritmo "none", permettendo a un utente di modificare il payload e rimuovere la firma. Il server deve forzare esplicitamente l'algoritmo atteso (es. HS256 o RS256) e rifiutare qualsiasi token che non corrisponda, igno
 ">
     <link rel="stylesheet" href="/appuntidiprogrammazione/assets/css/style.css">
 
@@ -162,80 +162,128 @@
 71
 72
 73
-</pre></td><td class="rouge-code"><pre><span class="o">*</span> <span class="nx">Dimostro</span> <span class="nx">l</span><span class="dl">'</span><span class="s1">attacco "alg:none" per capire cosa stiamo proteggendo. Un
-* attaccante prende un token valido, decodifica l</span><span class="dl">'</span><span class="nx">header</span> <span class="nx">e</span> <span class="nx">il</span> <span class="nx">payload</span> <span class="p">(</span><span class="nx">Base64</span><span class="p">,</span>
-<span class="o">*</span> <span class="nx">non</span> <span class="nx">cifrato</span><span class="p">),</span> <span class="nx">modifica</span> <span class="nx">il</span> <span class="nx">payload</span> <span class="p">(</span><span class="nx">es</span><span class="p">.</span> <span class="nx">ruolo</span> <span class="dl">'</span><span class="s1">admin</span><span class="dl">'</span><span class="p">)</span> <span class="nx">e</span> <span class="nx">ricostruisce</span> <span class="nx">il</span> <span class="nx">token</span>
-<span class="o">*</span> <span class="nx">con</span> <span class="nx">header</span>
-<span class="p">{</span><span class="dl">"</span><span class="s2">alg</span><span class="dl">"</span><span class="p">:</span><span class="dl">"</span><span class="s2">none</span><span class="dl">"</span><span class="p">}</span>
- <span class="nx">e</span> <span class="nx">firma</span> <span class="nx">vuota</span><span class="p">.</span> <span class="o">*</span><span class="sr">/</span><span class="err">
-</span> <span class="kd">function</span> <span class="nx">demonstrateAlgNoneAttack</span><span class="p">(</span><span class="nx">validToken</span><span class="p">)</span> 
-<span class="p">{</span> <span class="kd">const</span> <span class="p">[</span><span class="nx">header</span><span class="p">,</span> <span class="nx">payload</span><span class="p">,</span> <span class="nx">signature</span><span class="p">]</span> <span class="o">=</span> <span class="nx">validToken</span><span class="p">.</span><span class="nx">split</span><span class="p">(</span><span class="dl">'</span><span class="s1">.</span><span class="dl">'</span><span class="p">);</span> 
-<span class="c1">// Decodifico e modifico il payload const decodedPayload =</span>
-<span class="c1">// JSON.parse(atob(payload)); decodedPayload.role = 'admin';</span>
-<span class="c1">// Escalation di privilegi decodedPayload.userId = 1; </span>
-<span class="c1">// Impersonificazione </span>
-<span class="c1">// Costruisco l'header con alg:none const maliciousHeader = btoa(JSON.stringify(</span>
-<span class="p">{</span> <span class="na">alg</span><span class="p">:</span> <span class="dl">'</span><span class="s1">none</span><span class="dl">'</span><span class="p">,</span> <span class="na">typ</span><span class="p">:</span> <span class="dl">'</span><span class="s1">JWT</span><span class="dl">'</span> <span class="p">}</span>
-<span class="p">));</span> <span class="kd">const</span> <span class="nx">maliciousPayload</span> <span class="o">=</span> <span class="nx">btoa</span><span class="p">(</span><span class="nx">JSON</span><span class="p">.</span><span class="nx">stringify</span><span class="p">(</span><span class="nx">decodedPayload</span><span class="p">));</span> 
-<span class="c1">// Firma vuota: alcune librerie vulnerabili accettano questo token! return `$</span>
-<span class="p">{</span><span class="nx">maliciousHeader</span><span class="p">}</span>
-<span class="p">.</span><span class="nx">$</span>
-<span class="p">{</span><span class="nx">maliciousPayload</span><span class="p">}</span>
-<span class="p">.</span><span class="s2">`; }
- 
-* PROTEZIONE CORRETTA: forzo l'algoritmo e ignoro completamente l'header del
-* token. */
- const jwt = require('jsonwebtoken'); 
-// Middleware Express per la validazione sicura dei JWT function
-// authenticateToken(req, res, next)
-{ const authHeader = req.headers['authorization']; const token =
-authHeader?.split(' ')[1]; if (!token) return res.status(401).json(
-{ error: 'Token mancante' }
-); jwt.verify( token, process.env.JWT_PUBLIC_KEY, 
-{ algorithms: ['RS256'], 
-// Allow-list ESPLICITA: 'none' e 'HS256' vengono rifiutati issuer:
-// 'auth.myapp.com',
-// Verifico anche issuer audience: 'api.myapp.com', 
-// e audience clockTolerance: 30 
-// 30 secondi di tolleranza per skew dell'orologio }
-, (err, decoded) =&gt; 
-{ if (err) 
-{ 
-// Loggo il tentativo ma non espongo dettagli all'attaccante console.warn('JWT
-// validation failed:', err.name, 'from IP:', req.ip); return
-// res.status(403).json(
-{ error: 'Token non valido' }
-); }
- req.user = decoded; next(); }
- ); }
- 
-* Per architetture a microservizi, implemento la validazione JWT in un
-* middleware centralizzato con rotazione delle chiavi: */
- class JwtValidator 
-{ constructor(jwksUri) 
-{ 
-// Carico le chiavi pubbliche dal JWKS endpoint (rotazione automatica)
-// this.jwksClient = jwks(
-{ jwksUri, cache: true, cacheMaxAge: 600_000, 
-// 10 minuti rateLimit: true }
-); }
- async validate(token) 
-{ 
-// Decodifico l'header SENZA verificarlo per ottenere il kid (key ID) const
-// decoded = jwt.decode(token,
-{ complete: true }
-); if (!decoded) throw new Error('Token malformato'); 
-// Recupero la chiave pubblica corrispondente al kid dichiarato const key =
-// await this.jwksClient.getSigningKey(decoded.header.kid); const publicKey =
-// key.getPublicKey();
-// Verifico con algoritmo forzato: il kid è solo un hint, l'algoritmo è nostro
-// return jwt.verify(token, publicKey,
-{ algorithms: ['RS256', 'ES256'], 
-// Solo algoritmi asimmetrici forti issuer: process.env.JWT_ISSUER, audience:
-// process.env.JWT_AUDIENCE }
-); }
- }
-</span></pre></td></tr></tbody></table></code></pre></div></div>
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+</pre></td><td class="rouge-code"><pre><span class="cm">/* Dimostro l'attacco "alg:none" per capire cosa stiamo proteggendo. Un
+    attaccante prende un token valido, decodifica l'header e il payload (Base64,
+    non cifrato), modifica il payload (es. ruolo 'admin') e ricostruisce il
+    token con header {"alg":"none"} e firma vuota. */</span>
+<span class="kd">function</span> <span class="nx">demonstrateAlgNoneAttack</span><span class="p">(</span><span class="nx">validToken</span><span class="p">)</span> <span class="p">{</span>
+    <span class="kd">const</span> <span class="p">[</span><span class="nx">header</span><span class="p">,</span> <span class="nx">payload</span><span class="p">,</span> <span class="nx">signature</span><span class="p">]</span> <span class="o">=</span> <span class="nx">validToken</span><span class="p">.</span><span class="nx">split</span><span class="p">(</span><span class="dl">'</span><span class="s1">.</span><span class="dl">'</span><span class="p">);</span>
+    <span class="c1">// Decodifico e modifico il payload const decodedPayload =</span>
+        <span class="nx">JSON</span><span class="p">.</span><span class="nx">parse</span><span class="p">(</span><span class="nx">atob</span><span class="p">(</span><span class="nx">payload</span><span class="p">))</span>
+    <span class="p">;</span>
+    <span class="nx">decodedPayload</span><span class="p">.</span><span class="nx">role</span> <span class="o">=</span> <span class="dl">'</span><span class="s1">admin</span><span class="dl">'</span><span class="p">;</span>
+    <span class="c1">// Escalation di privilegi decodedPayload.userId = 1</span>
+    <span class="p">;</span>
+    <span class="c1">// Impersonificazione // Costruisco l'header con alg:none const</span>
+        <span class="nx">maliciousHeader</span> <span class="o">=</span> <span class="nx">btoa</span><span class="p">(</span><span class="nx">JSON</span><span class="p">.</span><span class="nx">stringify</span><span class="p">(</span>
+    <span class="p">{</span>
+        <span class="na">alg</span><span class="p">:</span> <span class="dl">'</span><span class="s1">none</span><span class="dl">'</span><span class="p">,</span> <span class="na">typ</span><span class="p">:</span> <span class="dl">'</span><span class="s1">JWT</span><span class="dl">'</span>
+    <span class="p">}</span>
+    <span class="p">));</span>
+    <span class="kd">const</span> <span class="nx">maliciousPayload</span> <span class="o">=</span> <span class="nx">btoa</span><span class="p">(</span><span class="nx">JSON</span><span class="p">.</span><span class="nx">stringify</span><span class="p">(</span><span class="nx">decodedPayload</span><span class="p">));</span>
+    <span class="c1">// Firma vuota: alcune librerie vulnerabili accettano questo token!</span>
+    <span class="k">return</span> <span class="s2">`</span><span class="p">${</span>
+        <span class="nx">maliciousHeader</span>
+    <span class="p">}</span><span class="s2">
+    .</span><span class="p">${</span>
+        <span class="nx">maliciousPayload</span>
+    <span class="p">}</span><span class="s2">
+    .`</span><span class="p">;</span>
+<span class="p">}</span>
+<span class="cm">/* PROTEZIONE CORRETTA: forzo l'algoritmo e ignoro completamente l'header del
+    token. */</span>
+<span class="kd">const</span> <span class="nx">jwt</span> <span class="o">=</span> <span class="nx">require</span><span class="p">(</span><span class="dl">'</span><span class="s1">jsonwebtoken</span><span class="dl">'</span><span class="p">);</span>
+<span class="c1">// Middleware Express per la validazione sicura dei JWT function</span>
+    <span class="nx">authenticateToken</span><span class="p">(</span><span class="nx">req</span><span class="p">,</span> <span class="nx">res</span><span class="p">,</span> <span class="nx">next</span><span class="p">)</span>
+<span class="p">{</span>
+    <span class="kd">const</span> <span class="nx">authHeader</span> <span class="o">=</span> <span class="nx">req</span><span class="p">.</span><span class="nx">headers</span><span class="p">[</span><span class="dl">'</span><span class="s1">authorization</span><span class="dl">'</span><span class="p">];</span>
+    <span class="kd">const</span> <span class="nx">token</span> <span class="o">=</span> <span class="nx">authHeader</span><span class="p">?.</span><span class="nx">split</span><span class="p">(</span><span class="dl">'</span><span class="s1"> </span><span class="dl">'</span><span class="p">)[</span><span class="mi">1</span><span class="p">];</span>
+    <span class="k">if</span> <span class="p">(</span><span class="o">!</span><span class="nx">token</span><span class="p">)</span> <span class="k">return</span> <span class="nx">res</span><span class="p">.</span><span class="nx">status</span><span class="p">(</span><span class="mi">401</span><span class="p">).</span><span class="nx">json</span><span class="p">({</span>
+        <span class="na">error</span><span class="p">:</span> <span class="dl">'</span><span class="s1">Token mancante</span><span class="dl">'</span>
+    <span class="p">}</span>
+    <span class="p">);</span>
+    <span class="nx">jwt</span><span class="p">.</span><span class="nx">verify</span><span class="p">(</span> <span class="nx">token</span><span class="p">,</span> <span class="nx">process</span><span class="p">.</span><span class="nx">env</span><span class="p">.</span><span class="nx">JWT_PUBLIC_KEY</span><span class="p">,</span> <span class="p">{</span>
+        <span class="na">algorithms</span><span class="p">:</span> <span class="p">[</span><span class="dl">'</span><span class="s1">RS256</span><span class="dl">'</span><span class="p">],</span>
+        <span class="c1">// Allow-list ESPLICITA: 'none' e 'HS256' vengono rifiutati issuer:</span>
+            <span class="dl">'</span><span class="s1">auth.myapp.com</span><span class="dl">'</span><span class="p">,</span> <span class="c1">// Verifico anche issuer audience:</span>
+            <span class="dl">'</span><span class="s1">api.myapp.com</span><span class="dl">'</span><span class="p">,</span> <span class="c1">// e audience clockTolerance: 30 // 30 secondi di</span>
+            <span class="nx">tolleranza</span> <span class="nx">per</span> <span class="nx">skew</span> <span class="nx">dell</span><span class="dl">'</span><span class="s1">orologio
+    }
+    , (err, decoded) =&gt; {
+        if (err) {
+            // Loggo il tentativo ma non espongo dettagli all</span><span class="dl">'</span><span class="nx">attaccante</span>
+                <span class="nx">console</span><span class="p">.</span><span class="nx">warn</span><span class="p">(</span><span class="dl">'</span><span class="s1">JWT validation failed:</span><span class="dl">'</span><span class="p">,</span> <span class="nx">err</span><span class="p">.</span><span class="nx">name</span><span class="p">,</span> <span class="dl">'</span><span class="s1">from IP:</span><span class="dl">'</span><span class="p">,</span>
+                <span class="nx">req</span><span class="p">.</span><span class="nx">ip</span><span class="p">)</span>
+            <span class="p">;</span>
+            <span class="k">return</span> <span class="nx">res</span><span class="p">.</span><span class="nx">status</span><span class="p">(</span><span class="mi">403</span><span class="p">).</span><span class="nx">json</span><span class="p">({</span>
+                <span class="na">error</span><span class="p">:</span> <span class="dl">'</span><span class="s1">Token non valido</span><span class="dl">'</span>
+            <span class="p">}</span>
+            <span class="p">);</span>
+        <span class="p">}</span>
+        <span class="nx">req</span><span class="p">.</span><span class="nx">user</span> <span class="o">=</span> <span class="nx">decoded</span><span class="p">;</span>
+        <span class="nx">next</span><span class="p">();</span>
+    <span class="p">}</span>
+    <span class="p">);</span>
+<span class="p">}</span>
+<span class="cm">/* Per architetture a microservizi, implemento la validazione JWT in un
+    middleware centralizzato con rotazione delle chiavi: */</span>
+<span class="kd">class</span> <span class="nx">JwtValidator</span> <span class="p">{</span>
+    <span class="kd">constructor</span><span class="p">(</span><span class="nx">jwksUri</span><span class="p">)</span> <span class="p">{</span>
+        <span class="c1">// Carico le chiavi pubbliche dal JWKS endpoint (rotazione automatica)</span>
+            <span class="k">this</span><span class="p">.</span><span class="nx">jwksClient</span> <span class="o">=</span> <span class="nx">jwks</span><span class="p">(</span>
+        <span class="p">{</span>
+            <span class="nx">jwksUri</span><span class="p">,</span> <span class="na">cache</span><span class="p">:</span> <span class="kc">true</span><span class="p">,</span> <span class="na">cacheMaxAge</span><span class="p">:</span> <span class="mi">600</span><span class="nx">_000</span><span class="p">,</span>
+            <span class="c1">// 10 minuti rateLimit: true</span>
+        <span class="p">}</span>
+        <span class="p">);</span>
+    <span class="p">}</span>
+    <span class="k">async</span> <span class="nx">validate</span><span class="p">(</span><span class="nx">token</span><span class="p">)</span> <span class="p">{</span>
+        <span class="c1">// Decodifico l'header SENZA verificarlo per ottenere il kid (key ID)</span>
+            <span class="kd">const</span> <span class="nx">decoded</span> <span class="o">=</span> <span class="nx">jwt</span><span class="p">.</span><span class="nx">decode</span><span class="p">(</span><span class="nx">token</span><span class="p">,</span>
+        <span class="p">{</span>
+            <span class="na">complete</span><span class="p">:</span> <span class="kc">true</span>
+        <span class="p">}</span>
+        <span class="p">);</span>
+        <span class="k">if</span> <span class="p">(</span><span class="o">!</span><span class="nx">decoded</span><span class="p">)</span> <span class="k">throw</span> <span class="k">new</span> <span class="nb">Error</span><span class="p">(</span><span class="dl">'</span><span class="s1">Token malformato</span><span class="dl">'</span><span class="p">);</span>
+        <span class="c1">// Recupero la chiave pubblica corrispondente al kid dichiarato const</span>
+            <span class="nx">key</span> <span class="o">=</span> <span class="k">await</span> <span class="k">this</span><span class="p">.</span><span class="nx">jwksClient</span><span class="p">.</span><span class="nx">getSigningKey</span><span class="p">(</span><span class="nx">decoded</span><span class="p">.</span><span class="nx">header</span><span class="p">.</span><span class="nx">kid</span><span class="p">)</span>
+        <span class="p">;</span>
+        <span class="kd">const</span> <span class="nx">publicKey</span> <span class="o">=</span> <span class="nx">key</span><span class="p">.</span><span class="nx">getPublicKey</span><span class="p">();</span>
+        <span class="c1">// Verifico con algoritmo forzato: il kid è solo un hint, l'algoritmo è</span>
+            <span class="nx">nostro</span>
+        <span class="k">return</span> <span class="nx">jwt</span><span class="p">.</span><span class="nx">verify</span><span class="p">(</span><span class="nx">token</span><span class="p">,</span> <span class="nx">publicKey</span><span class="p">,</span> <span class="p">{</span>
+            <span class="na">algorithms</span><span class="p">:</span> <span class="p">[</span><span class="dl">'</span><span class="s1">RS256</span><span class="dl">'</span><span class="p">,</span> <span class="dl">'</span><span class="s1">ES256</span><span class="dl">'</span><span class="p">],</span>
+            <span class="c1">// Solo algoritmi asimmetrici forti issuer: process.env.JWT_ISSUER,</span>
+                <span class="na">audience</span><span class="p">:</span> <span class="nx">process</span><span class="p">.</span><span class="nx">env</span><span class="p">.</span><span class="nx">JWT_AUDIENCE</span>
+        <span class="p">}</span>
+        <span class="p">);</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+</pre></td></tr></tbody></table></code></pre></div></div>
 
         </article>
 

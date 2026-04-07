@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Covering Indexes (Clausola INCLUDE) — DevLog</title>
-    <meta name="description" content="Introdotta in Postgres 11, la clausola INCLUDE permette di creare indici 'coprenti'. Questo permette di aggiungere colonne extra ai nodi foglia dell'indice che non fanno parte della chiave di ricerca. Il vantaggio tecnico è rilevante: permette gli 'I
+    <meta name="description" content="Introdotta in Postgres 11, la clausola INCLUDE permette di creare indici "coprenti". Questo permette di aggiungere colonne extra ai nodi foglia dell'indice che non fanno parte della chiave di ricerca. Il vantaggio tecnico è rilevante: permette gli "I
 ">
     <link rel="stylesheet" href="/appuntidiprogrammazione/assets/css/style.css">
 
@@ -123,52 +123,40 @@
 32
 33
 34
-35
-36
-37
-38
-39
-40
-</pre></td><td class="rouge-code"><pre><span class="o">*</span> <span class="n">Creo</span> <span class="n">l</span><span class="s1">'indice coprente. user_id è la chiave di ricerca; email, username e
-* status sono payload disponibili per la SELECT senza toccare la heap. */
- CREATE INDEX idx_users_id_covering ON users (user_id) INCLUDE (email, username,
-status);
-* Verifico che il Planner usi un Index-Only Scan e non un Index Scan + Heap
-* Fetch: */
- EXPLAIN (ANALYZE, BUFFERS) SELECT email, username, status FROM users WHERE
-user_id = 550;
-* Nell'</span><span class="k">output</span> <span class="n">cerco</span><span class="p">:</span> <span class="k">Index</span> <span class="k">Only</span> <span class="n">Scan</span> <span class="k">using</span> <span class="n">idx_users_id_covering</span> <span class="k">on</span> <span class="n">users</span> <span class="n">Heap</span>
-<span class="o">*</span> <span class="n">Fetches</span><span class="p">:</span> <span class="mi">0</span> <span class="c1">-- Se è 0, la Visibility Map è aggiornata e l'indice lavora al 100%</span>
-<span class="o">*</span> <span class="o">*/</span>
- 
-<span class="cm">/* Se Heap Fetches &gt; 0, forzo un VACUUM per aggiornare la Visibility Map: */</span>
- <span class="k">VACUUM</span> <span class="p">(</span><span class="k">ANALYZE</span><span class="p">)</span> <span class="n">users</span><span class="p">;</span> 
-<span class="o">*</span> <span class="n">Applico</span> <span class="n">la</span> <span class="n">stessa</span> <span class="n">tecnica</span> <span class="n">a</span> <span class="n">una</span> <span class="n">query</span> <span class="n">di</span> <span class="n">reportistica</span> <span class="n">frequente</span> <span class="n">che</span> <span class="n">recupera</span>
-<span class="o">*</span> <span class="n">dati</span> <span class="n">di</span> <span class="n">riepilogo</span> <span class="n">degli</span> <span class="n">ordini</span> <span class="n">per</span> <span class="n">un</span> <span class="n">cliente</span><span class="p">:</span> <span class="o">*/</span>
- <span class="k">CREATE</span> <span class="k">INDEX</span> <span class="n">idx_orders_customer_covering</span> <span class="k">ON</span> <span class="n">orders</span> <span class="p">(</span><span class="n">customer_id</span><span class="p">,</span> <span class="n">created_at</span>
-<span class="k">DESC</span><span class="p">)</span> <span class="n">INCLUDE</span> <span class="p">(</span><span class="n">total_amount</span><span class="p">,</span> <span class="n">status</span><span class="p">,</span> <span class="n">shipping_address_id</span><span class="p">);</span>
-<span class="cm">/* La query seguente non toccherà mai la tabella orders: */</span>
- <span class="k">EXPLAIN</span> <span class="p">(</span><span class="k">ANALYZE</span><span class="p">,</span> <span class="n">BUFFERS</span><span class="p">)</span> <span class="k">SELECT</span> <span class="n">created_at</span><span class="p">,</span> <span class="n">total_amount</span><span class="p">,</span> <span class="n">status</span> <span class="k">FROM</span> <span class="n">orders</span>
-<span class="k">WHERE</span> <span class="n">customer_id</span> <span class="o">=</span> <span class="mi">1042</span> <span class="k">ORDER</span> <span class="k">BY</span> <span class="n">created_at</span> <span class="k">DESC</span> <span class="k">LIMIT</span> <span class="mi">20</span><span class="p">;</span>
-<span class="o">*</span> <span class="n">Confronto</span> <span class="n">la</span> <span class="n">dimensione</span> <span class="n">dell</span><span class="s1">'indice coprente con quella di un indice semplice
-* per valutare il tradeoff storage vs performance: */
- SELECT indexrelname, pg_size_pretty(pg_relation_size(indexrelid)) AS size FROM
-pg_stat_user_indexes WHERE relname = '</span><span class="n">orders</span><span class="s1">';
-* Regola pratica: includo in INCLUDE solo le colonne selezionate frequentemente,
-* non tutte. Le colonne INCLUDE non possono essere usate come chiave di ricerca
-* o di ordinamento, quindi non appesantiscono la struttura ad albero, solo i
-* nodi foglia. */
- 
-* In Spring Boot, la query JPA che beneficia dell'</span><span class="n">indice</span> <span class="n">coprente</span> <span class="n">deve</span>
-<span class="o">*</span> <span class="n">selezionare</span> <span class="n">esattamente</span> <span class="n">le</span> <span class="n">colonne</span> <span class="n">presenti</span> <span class="n">nell</span><span class="s1">'indice. Uso una Projection
-* per evitare di caricare l'</span><span class="n">intera</span> <span class="n">entity</span><span class="p">:</span> <span class="o">*/</span>
- <span class="k">public</span> <span class="n">interface</span> <span class="n">OrderSummary</span> 
-<span class="p">{</span> <span class="n">LocalDateTime</span> <span class="n">getCreatedAt</span><span class="p">();</span> <span class="n">BigDecimal</span> <span class="n">getTotalAmount</span><span class="p">();</span> <span class="n">String</span> <span class="n">getStatus</span><span class="p">();</span>
-<span class="p">}</span>
- <span class="o">@</span><span class="n">Query</span><span class="p">(</span><span class="nv">"SELECT o.createdAt as createdAt, o.totalAmount as totalAmount, o.status
-as status FROM Order o WHERE o.customerId = :customerId ORDER BY o.createdAt
-DESC"</span><span class="p">)</span> <span class="n">List</span><span class="o">&lt;</span><span class="n">OrderSummary</span><span class="o">&gt;</span> <span class="n">findOrderSummaries</span><span class="p">(</span><span class="o">@</span><span class="n">Param</span><span class="p">(</span><span class="nv">"customerId"</span><span class="p">)</span> <span class="n">Long</span>
-<span class="n">customerId</span><span class="p">,</span> <span class="n">Pageable</span> <span class="n">pageable</span><span class="p">);</span>
+</pre></td><td class="rouge-code"><pre>    <span class="cm">/* Creo l'indice coprente. user_id è la chiave di ricerca; email, username e
+        status sono payload disponibili per la SELECT senza toccare la heap. */</span>
+        <span class="k">CREATE</span> <span class="k">INDEX</span> <span class="n">idx_users_id_covering</span> <span class="k">ON</span> <span class="n">users</span> <span class="p">(</span><span class="n">user_id</span><span class="p">)</span> <span class="n">INCLUDE</span> <span class="p">(</span><span class="n">email</span><span class="p">,</span>
+        <span class="n">username</span><span class="p">,</span> <span class="n">status</span><span class="p">);</span> <span class="cm">/* Verifico che il Planner usi un Index-Only Scan e
+        non un Index Scan + Heap Fetch: */</span> <span class="k">EXPLAIN</span> <span class="p">(</span><span class="k">ANALYZE</span><span class="p">,</span> <span class="n">BUFFERS</span><span class="p">)</span> <span class="k">SELECT</span>
+        <span class="n">email</span><span class="p">,</span> <span class="n">username</span><span class="p">,</span> <span class="n">status</span> <span class="k">FROM</span> <span class="n">users</span> <span class="k">WHERE</span> <span class="n">user_id</span> <span class="o">=</span> <span class="mi">550</span><span class="p">;</span> <span class="cm">/* Nell'output
+        cerco: Index Only Scan using idx_users_id_covering on users Heap
+        Fetches: 0 -- Se è 0, la Visibility Map è aggiornata e l'indice lavora
+        al 100% */</span> <span class="cm">/* Se Heap Fetches &gt; 0, forzo un VACUUM per aggiornare la
+        Visibility Map: */</span> <span class="k">VACUUM</span> <span class="p">(</span><span class="k">ANALYZE</span><span class="p">)</span> <span class="n">users</span><span class="p">;</span> <span class="cm">/* Applico la stessa tecnica
+        a una query di reportistica frequente che recupera dati di riepilogo
+        degli ordini per un cliente: */</span> <span class="k">CREATE</span> <span class="k">INDEX</span>
+        <span class="n">idx_orders_customer_covering</span> <span class="k">ON</span> <span class="n">orders</span> <span class="p">(</span><span class="n">customer_id</span><span class="p">,</span> <span class="n">created_at</span> <span class="k">DESC</span><span class="p">)</span>
+        <span class="n">INCLUDE</span> <span class="p">(</span><span class="n">total_amount</span><span class="p">,</span> <span class="n">status</span><span class="p">,</span> <span class="n">shipping_address_id</span><span class="p">);</span> <span class="cm">/* La query
+        seguente non toccherà mai la tabella orders: */</span> <span class="k">EXPLAIN</span> <span class="p">(</span><span class="k">ANALYZE</span><span class="p">,</span>
+        <span class="n">BUFFERS</span><span class="p">)</span> <span class="k">SELECT</span> <span class="n">created_at</span><span class="p">,</span> <span class="n">total_amount</span><span class="p">,</span> <span class="n">status</span> <span class="k">FROM</span> <span class="n">orders</span> <span class="k">WHERE</span>
+        <span class="n">customer_id</span> <span class="o">=</span> <span class="mi">1042</span> <span class="k">ORDER</span> <span class="k">BY</span> <span class="n">created_at</span> <span class="k">DESC</span> <span class="k">LIMIT</span> <span class="mi">20</span><span class="p">;</span> <span class="cm">/* Confronto la
+        dimensione dell'indice coprente con quella di un indice semplice per
+        valutare il tradeoff storage vs performance: */</span> <span class="k">SELECT</span> <span class="n">indexrelname</span><span class="p">,</span>
+        <span class="n">pg_size_pretty</span><span class="p">(</span><span class="n">pg_relation_size</span><span class="p">(</span><span class="n">indexrelid</span><span class="p">))</span> <span class="k">AS</span> <span class="k">size</span> <span class="k">FROM</span>
+        <span class="n">pg_stat_user_indexes</span> <span class="k">WHERE</span> <span class="n">relname</span> <span class="o">=</span> <span class="s1">'orders'</span><span class="p">;</span> <span class="cm">/* Regola pratica:
+        includo in INCLUDE solo le colonne selezionate frequentemente, non
+        tutte. Le colonne INCLUDE non possono essere usate come chiave di
+        ricerca o di ordinamento, quindi non appesantiscono la struttura ad
+        albero, solo i nodi foglia. */</span> <span class="cm">/* In Spring Boot, la query JPA che
+        beneficia dell'indice coprente deve selezionare esattamente le colonne
+        presenti nell'indice. Uso una Projection per evitare di caricare
+        l'intera entity: */</span> <span class="k">public</span> <span class="n">interface</span> <span class="n">OrderSummary</span> <span class="p">{</span> <span class="n">LocalDateTime</span>
+        <span class="n">getCreatedAt</span><span class="p">();</span> <span class="n">BigDecimal</span> <span class="n">getTotalAmount</span><span class="p">();</span> <span class="n">String</span> <span class="n">getStatus</span><span class="p">();</span> <span class="p">}</span>
+        <span class="o">@</span><span class="n">Query</span><span class="p">(</span><span class="nv">"SELECT o.createdAt as createdAt, o.totalAmount as totalAmount,
+        o.status as status FROM Order o WHERE o.customerId = :customerId ORDER
+        BY o.createdAt DESC"</span><span class="p">)</span> <span class="n">List</span><span class="o">&lt;</span><span class="n">OrderSummary</span><span class="o">&gt;</span>
+        <span class="n">findOrderSummaries</span><span class="p">(</span><span class="o">@</span><span class="n">Param</span><span class="p">(</span><span class="nv">"customerId"</span><span class="p">)</span> <span class="n">Long</span> <span class="n">customerId</span><span class="p">,</span> <span class="n">Pageable</span>
+        <span class="n">pageable</span><span class="p">);</span>
 </pre></td></tr></tbody></table></code></pre></div></div>
 
         </article>

@@ -118,39 +118,35 @@
 27
 28
 29
-30
-31
-</pre></td><td class="rouge-code"><pre><span class="o">*</span> <span class="n">Creo</span> <span class="n">l</span><span class="s1">'indice funzionale sul cast a DATE. Le parentesi attorno all'</span><span class="n">espressione</span>
-<span class="o">*</span> <span class="n">sono</span> <span class="n">obbligatorie</span> <span class="n">per</span> <span class="n">distinguerla</span> <span class="n">da</span> <span class="n">un</span> <span class="n">nome</span> <span class="n">di</span> <span class="n">colonna</span><span class="p">.</span> <span class="o">*/</span>
- <span class="k">CREATE</span> <span class="k">INDEX</span> <span class="n">idx_orders_day</span> <span class="k">ON</span> <span class="n">orders</span> <span class="p">((</span><span class="n">created_at</span><span class="p">::</span><span class="nb">DATE</span><span class="p">));</span> 
-<span class="o">*</span> <span class="n">Verifico</span> <span class="n">che</span> <span class="n">il</span> <span class="n">Planner</span> <span class="n">usi</span> <span class="n">l</span><span class="s1">'indice. La query deve usare esattamente la
-* stessa espressione presente nell'</span><span class="n">indice</span><span class="p">:</span> <span class="o">*/</span>
- <span class="k">EXPLAIN</span> <span class="p">(</span><span class="k">ANALYZE</span><span class="p">,</span> <span class="n">BUFFERS</span><span class="p">)</span> <span class="k">SELECT</span> <span class="n">id</span><span class="p">,</span> <span class="n">customer_id</span><span class="p">,</span> <span class="n">total_amount</span> <span class="k">FROM</span> <span class="n">orders</span>
-<span class="k">WHERE</span> <span class="n">created_at</span><span class="p">::</span><span class="nb">DATE</span> <span class="o">=</span> <span class="s1">'2026-03-15'</span><span class="p">;</span>
-<span class="o">*</span> <span class="n">Creo</span> <span class="n">un</span> <span class="n">indice</span> <span class="n">funzionale</span> <span class="n">per</span> <span class="n">ricerche</span> <span class="k">case</span><span class="o">-</span><span class="k">insensitive</span> <span class="n">sul</span> <span class="n">cognome</span><span class="p">.</span> <span class="n">Uso</span>
-<span class="o">*</span> <span class="k">lower</span><span class="p">()</span> <span class="n">che</span> <span class="err">è</span> <span class="k">IMMUTABLE</span><span class="p">:</span> <span class="o">*/</span>
- <span class="k">CREATE</span> <span class="k">INDEX</span> <span class="n">idx_customers_lastname_lower</span> <span class="k">ON</span> <span class="n">customers</span> <span class="p">(</span><span class="k">lower</span><span class="p">(</span><span class="n">last_name</span><span class="p">));</span> 
-<span class="cm">/* La query deve usare la stessa funzione nella WHERE per sfruttare l'indice: */</span>
- <span class="k">SELECT</span> <span class="n">id</span><span class="p">,</span> <span class="n">first_name</span><span class="p">,</span> <span class="n">last_name</span> <span class="k">FROM</span> <span class="n">customers</span> <span class="k">WHERE</span> <span class="k">lower</span><span class="p">(</span><span class="n">last_name</span><span class="p">)</span> <span class="o">=</span>
-<span class="s1">'rossi'</span><span class="p">;</span>
-<span class="o">*</span> <span class="n">Creo</span> <span class="n">un</span> <span class="n">indice</span> <span class="n">funzionale</span> <span class="n">su</span> <span class="n">un</span><span class="s1">'espressione più complessa: estraggo l'</span><span class="n">anno</span> <span class="n">e</span>
-<span class="o">*</span> <span class="n">il</span> <span class="n">mese</span> <span class="n">da</span> <span class="n">un</span> <span class="nb">timestamp</span> <span class="n">per</span> <span class="n">raggruppamenti</span> <span class="n">mensili</span> <span class="n">frequenti</span> <span class="n">nei</span> <span class="n">report</span><span class="p">:</span> <span class="o">*/</span>
- <span class="k">CREATE</span> <span class="k">INDEX</span> <span class="n">idx_orders_year_month</span> <span class="k">ON</span> <span class="n">orders</span> <span class="p">(</span><span class="n">date_trunc</span><span class="p">(</span><span class="s1">'month'</span><span class="p">,</span> <span class="n">created_at</span><span class="p">));</span>
-<span class="k">EXPLAIN</span> <span class="p">(</span><span class="k">ANALYZE</span><span class="p">)</span> <span class="k">SELECT</span> <span class="n">date_trunc</span><span class="p">(</span><span class="s1">'month'</span><span class="p">,</span> <span class="n">created_at</span><span class="p">)</span> <span class="k">AS</span> <span class="k">month</span><span class="p">,</span>
-<span class="k">sum</span><span class="p">(</span><span class="n">total_amount</span><span class="p">)</span> <span class="k">FROM</span> <span class="n">orders</span> <span class="k">WHERE</span> <span class="n">date_trunc</span><span class="p">(</span><span class="s1">'month'</span><span class="p">,</span> <span class="n">created_at</span><span class="p">)</span> <span class="o">=</span>
-<span class="s1">'2026-03-01'</span> <span class="k">GROUP</span> <span class="k">BY</span> <span class="mi">1</span><span class="p">;</span>
-<span class="o">*</span> <span class="n">Verifico</span> <span class="n">che</span> <span class="n">tutte</span> <span class="n">le</span> <span class="n">funzioni</span> <span class="n">usate</span> <span class="n">negli</span> <span class="n">indici</span> <span class="n">siano</span> <span class="n">effettivamente</span>
-<span class="o">*</span> <span class="k">IMMUTABLE</span><span class="p">,</span> <span class="n">altrimenti</span> <span class="n">Postgres</span> <span class="n">rifiuta</span> <span class="n">la</span> <span class="n">creazione</span> <span class="n">dell</span><span class="s1">'indice: */
- SELECT proname, provolatile FROM pg_proc WHERE proname IN ('</span><span class="k">lower</span><span class="s1">',
-'</span><span class="n">date_trunc</span><span class="s1">', '</span><span class="n">to_tsvector</span><span class="s1">') AND pronamespace = '</span><span class="n">pg_catalog</span><span class="s1">'::regnamespace;
-* In Spring Boot con Spring Data JPA, per sfruttare l'</span><span class="n">indice</span> <span class="n">funzionale</span> <span class="n">la</span> <span class="n">query</span>
-<span class="o">*</span> <span class="n">nativa</span> <span class="n">deve</span> <span class="n">replicare</span> <span class="n">esattamente</span> <span class="n">l</span><span class="s1">'espressione: */
- @Query(value = "SELECT * FROM orders WHERE created_at::DATE = :targetDate",
-nativeQuery = true) List&lt;Order&gt; findByDate(@Param("targetDate") LocalDate
-targetDate);
-* Con JPQL standard non è possibile replicare espressioni SQL custom: in questi
-* casi la query nativa è l'</span><span class="n">unica</span> <span class="n">strada</span> <span class="n">per</span> <span class="n">garantire</span> <span class="n">l</span><span class="s1">'uso dell'</span><span class="n">indice</span>
-<span class="o">*</span> <span class="n">funzionale</span><span class="p">.</span> <span class="o">*/</span>
+</pre></td><td class="rouge-code"><pre>    <span class="cm">/* Creo l'indice funzionale sul cast a DATE. Le parentesi attorno
+        all'espressione sono obbligatorie per distinguerla da un nome di
+        colonna. */</span> <span class="k">CREATE</span> <span class="k">INDEX</span> <span class="n">idx_orders_day</span> <span class="k">ON</span> <span class="n">orders</span> <span class="p">((</span><span class="n">created_at</span><span class="p">::</span><span class="nb">DATE</span><span class="p">));</span>
+        <span class="cm">/* Verifico che il Planner usi l'indice. La query deve usare esattamente
+        la stessa espressione presente nell'indice: */</span> <span class="k">EXPLAIN</span> <span class="p">(</span><span class="k">ANALYZE</span><span class="p">,</span>
+        <span class="n">BUFFERS</span><span class="p">)</span> <span class="k">SELECT</span> <span class="n">id</span><span class="p">,</span> <span class="n">customer_id</span><span class="p">,</span> <span class="n">total_amount</span> <span class="k">FROM</span> <span class="n">orders</span> <span class="k">WHERE</span>
+        <span class="n">created_at</span><span class="p">::</span><span class="nb">DATE</span> <span class="o">=</span> <span class="s1">'2026-03-15'</span><span class="p">;</span> <span class="cm">/* Creo un indice funzionale per
+        ricerche case-insensitive sul cognome. Uso lower() che è IMMUTABLE: */</span>
+        <span class="k">CREATE</span> <span class="k">INDEX</span> <span class="n">idx_customers_lastname_lower</span> <span class="k">ON</span> <span class="n">customers</span>
+        <span class="p">(</span><span class="k">lower</span><span class="p">(</span><span class="n">last_name</span><span class="p">));</span> <span class="cm">/* La query deve usare la stessa funzione nella
+        WHERE per sfruttare l'indice: */</span> <span class="k">SELECT</span> <span class="n">id</span><span class="p">,</span> <span class="n">first_name</span><span class="p">,</span> <span class="n">last_name</span> <span class="k">FROM</span>
+        <span class="n">customers</span> <span class="k">WHERE</span> <span class="k">lower</span><span class="p">(</span><span class="n">last_name</span><span class="p">)</span> <span class="o">=</span> <span class="s1">'rossi'</span><span class="p">;</span> <span class="cm">/* Creo un indice funzionale
+        su un'espressione più complessa: estraggo l'anno e il mese da un
+        timestamp per raggruppamenti mensili frequenti nei report: */</span> <span class="k">CREATE</span>
+        <span class="k">INDEX</span> <span class="n">idx_orders_year_month</span> <span class="k">ON</span> <span class="n">orders</span> <span class="p">(</span><span class="n">date_trunc</span><span class="p">(</span><span class="s1">'month'</span><span class="p">,</span> <span class="n">created_at</span><span class="p">));</span>
+        <span class="k">EXPLAIN</span> <span class="p">(</span><span class="k">ANALYZE</span><span class="p">)</span> <span class="k">SELECT</span> <span class="n">date_trunc</span><span class="p">(</span><span class="s1">'month'</span><span class="p">,</span> <span class="n">created_at</span><span class="p">)</span> <span class="k">AS</span> <span class="k">month</span><span class="p">,</span>
+        <span class="k">sum</span><span class="p">(</span><span class="n">total_amount</span><span class="p">)</span> <span class="k">FROM</span> <span class="n">orders</span> <span class="k">WHERE</span> <span class="n">date_trunc</span><span class="p">(</span><span class="s1">'month'</span><span class="p">,</span> <span class="n">created_at</span><span class="p">)</span> <span class="o">=</span>
+        <span class="s1">'2026-03-01'</span> <span class="k">GROUP</span> <span class="k">BY</span> <span class="mi">1</span><span class="p">;</span> <span class="cm">/* Verifico che tutte le funzioni usate negli
+        indici siano effettivamente IMMUTABLE, altrimenti Postgres rifiuta la
+        creazione dell'indice: */</span> <span class="k">SELECT</span> <span class="n">proname</span><span class="p">,</span> <span class="n">provolatile</span> <span class="k">FROM</span> <span class="n">pg_proc</span> <span class="k">WHERE</span>
+        <span class="n">proname</span> <span class="k">IN</span> <span class="p">(</span><span class="s1">'lower'</span><span class="p">,</span> <span class="s1">'date_trunc'</span><span class="p">,</span> <span class="s1">'to_tsvector'</span><span class="p">)</span> <span class="k">AND</span> <span class="n">pronamespace</span> <span class="o">=</span>
+        <span class="s1">'pg_catalog'</span><span class="p">::</span><span class="n">regnamespace</span><span class="p">;</span> <span class="cm">/* In Spring Boot con Spring Data JPA, per
+        sfruttare l'indice funzionale la query nativa deve replicare esattamente
+        l'espressione: */</span> <span class="o">@</span><span class="n">Query</span><span class="p">(</span><span class="n">value</span> <span class="o">=</span> <span class="nv">"SELECT * FROM orders WHERE
+        created_at::DATE = :targetDate"</span><span class="p">,</span> <span class="n">nativeQuery</span> <span class="o">=</span> <span class="k">true</span><span class="p">)</span> <span class="n">List</span><span class="o">&lt;</span><span class="k">Order</span><span class="o">&gt;</span>
+        <span class="n">findByDate</span><span class="p">(</span><span class="o">@</span><span class="n">Param</span><span class="p">(</span><span class="nv">"targetDate"</span><span class="p">)</span> <span class="n">LocalDate</span> <span class="n">targetDate</span><span class="p">);</span> <span class="cm">/* Con JPQL
+        standard non è possibile replicare espressioni SQL custom: in questi
+        casi la query nativa è l'unica strada per garantire l'uso dell'indice
+        funzionale. */</span>
 </pre></td></tr></tbody></table></code></pre></div></div>
 
         </article>

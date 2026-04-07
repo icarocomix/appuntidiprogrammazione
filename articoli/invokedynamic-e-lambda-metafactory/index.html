@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Invokedynamic e Lambda Metafactory — DevLog</title>
-    <meta name="description" content="Le Lambda in Java non sono semplici classi anonime, ma usano l'istruzione invokedynamic. La LambdaMetafactory permette di generare 'al volo' un'implementazione di un'interfaccia funzionale collegandola a un metodo esistente. Questo evita la creazione
+    <meta name="description" content="Le Lambda in Java non sono semplici classi anonime, ma usano l'istruzione invokedynamic. La LambdaMetafactory permette di generare "al volo" un'implementazione di un'interfaccia funzionale collegandola a un metodo esistente. Questo evita la creazione
 ">
     <link rel="stylesheet" href="/appuntidiprogrammazione/assets/css/style.css">
 
@@ -159,76 +159,98 @@
 68
 69
 70
-</pre></td><td class="rouge-code"><pre><span class="o">*</span> <span class="nc">Trasformo</span> <span class="n">un</span> <span class="nc">MethodHandle</span> <span class="n">in</span> <span class="n">una</span> <span class="nc">Function</span><span class="o">&lt;</span><span class="nc">String</span><span class="o">,</span> <span class="nc">String</span><span class="o">&gt;</span> <span class="n">tramite</span>
-<span class="o">*</span> <span class="nc">LambdaMetafactory</span><span class="o">.</span> <span class="nc">Il</span> <span class="n">risultato</span> <span class="n">è</span> <span class="n">un</span><span class="err">'</span><span class="n">implementazione</span> <span class="n">dell</span><span class="err">'</span><span class="n">interfaccia</span>
-<span class="o">*</span> <span class="n">funzionale</span> <span class="n">generata</span> <span class="n">a</span> <span class="n">runtime</span> <span class="n">e</span> <span class="n">ottimizzata</span> <span class="n">dalla</span> <span class="no">JVM</span> <span class="n">come</span> <span class="n">una</span> <span class="n">lambda</span> <span class="n">normale</span><span class="o">.</span>
-<span class="o">*</span> <span class="o">*/</span>
- <span class="kd">public</span> <span class="kd">class</span> <span class="nc">DynamicFunctionFactory</span> 
-<span class="o">{</span> <span class="kd">public</span> <span class="kd">static</span> <span class="nc">Function</span><span class="o">&lt;</span><span class="nc">String</span><span class="o">,</span> <span class="nc">String</span><span class="o">&gt;</span> <span class="nf">createFunction</span><span class="o">(</span><span class="nc">Class</span><span class="o">&lt;?&gt;</span> <span class="n">targetClass</span><span class="o">,</span>
-<span class="nc">String</span> <span class="n">methodName</span><span class="o">)</span> <span class="kd">throws</span> <span class="nc">Throwable</span>
-<span class="o">{</span> <span class="nc">MethodHandles</span><span class="o">.</span><span class="na">Lookup</span> <span class="n">lookup</span> <span class="o">=</span> <span class="nc">MethodHandles</span><span class="o">.</span><span class="na">lookup</span><span class="o">();</span> 
-<span class="c1">// Trovo il metodo target MethodHandle targetHandle = lookup.findVirtual(</span>
-<span class="c1">// targetClass, methodName, MethodType.methodType(String.class, String.class));</span>
-<span class="c1">// Genero un'implementazione di Function&lt;String,String&gt; che delega al metodo</span>
-<span class="c1">// target CallSite callSite = LambdaMetafactory.metafactory( lookup, "apply",</span>
-<span class="c1">// Il metodo dell'interfaccia funzionale da implementare</span>
-<span class="c1">// MethodType.methodType(Function.class, targetClass),</span>
-<span class="c1">// Tipo del factory MethodType.methodType(Object.class, Object.class), </span>
-<span class="c1">// Firma erased della SAM targetHandle, </span>
-<span class="c1">// Il metodo reale da invocare MethodType.methodType(String.class, String.class)</span>
-<span class="c1">// Firma specializzata ); </span>
-<span class="c1">// Ottengo il factory e lo invoco con l'istanza target</span>
-<span class="c1">// @SuppressWarnings("unchecked") Function&lt;String, String&gt; fn =</span>
-<span class="c1">// (Function&lt;String, String&gt;)</span>
-<span class="c1">// callSite.getTarget().invoke(targetClass.getDeclaredConstructor().newInstance());</span>
-<span class="c1">// return fn; }</span>
- <span class="o">}</span>
- 
-<span class="o">*</span> <span class="nc">Implemento</span> <span class="n">un</span> <span class="n">motore</span> <span class="n">di</span> <span class="n">regole</span> <span class="n">basato</span> <span class="n">su</span> <span class="nc">LambdaMetafactory</span> <span class="n">per</span> <span class="n">una</span> <span class="n">pipeline</span> <span class="n">di</span>
-<span class="o">*</span> <span class="nl">trasformazione:</span> <span class="o">*/</span>
- <span class="nd">@Component</span> <span class="kd">public</span> <span class="kd">class</span> <span class="nc">RuleEngine</span> 
-<span class="o">{</span> 
-<span class="c1">// Mappa nome-regola -&gt; Function generata via LambdaMetafactory private final</span>
-<span class="c1">// Map&lt;String, Function&lt;String, String&gt;&gt; rules = new ConcurrentHashMap&lt;&gt;();</span>
-<span class="c1">// @PostConstruct public void loadRules() throws Throwable</span>
-<span class="o">{</span> 
-<span class="c1">// Carico le regole da configurazione e genero le Function dinamicamente for</span>
-<span class="c1">// (RuleConfig config : ruleConfigRepository.findAll())</span>
-<span class="o">{</span> <span class="nc">Function</span><span class="o">&lt;</span><span class="nc">String</span><span class="o">,</span> <span class="nc">String</span><span class="o">&gt;</span> <span class="n">fn</span> <span class="o">=</span> <span class="nc">DynamicFunctionFactory</span><span class="o">.</span><span class="na">createFunction</span><span class="o">(</span>
-<span class="nc">Class</span><span class="o">.</span><span class="na">forName</span><span class="o">(</span><span class="n">config</span><span class="o">.</span><span class="na">getClassName</span><span class="o">()),</span> <span class="n">config</span><span class="o">.</span><span class="na">getMethodName</span><span class="o">()</span> <span class="o">);</span>
-<span class="n">rules</span><span class="o">.</span><span class="na">put</span><span class="o">(</span><span class="n">config</span><span class="o">.</span><span class="na">getRuleName</span><span class="o">(),</span> <span class="n">fn</span><span class="o">);</span> <span class="n">log</span><span class="o">.</span><span class="na">info</span><span class="o">(</span><span class="s">"Regola '
-{}
-' caricata come lambda dinamica"</span><span class="o">,</span> <span class="n">config</span><span class="o">.</span><span class="na">getRuleName</span><span class="o">());</span> <span class="o">}</span>
- <span class="o">}</span>
- <span class="kd">public</span> <span class="nc">String</span> <span class="nf">applyRule</span><span class="o">(</span><span class="nc">String</span> <span class="n">ruleName</span><span class="o">,</span> <span class="nc">String</span> <span class="n">input</span><span class="o">)</span> 
-<span class="o">{</span> <span class="nc">Function</span><span class="o">&lt;</span><span class="nc">String</span><span class="o">,</span> <span class="nc">String</span><span class="o">&gt;</span> <span class="n">rule</span> <span class="o">=</span> <span class="n">rules</span><span class="o">.</span><span class="na">get</span><span class="o">(</span><span class="n">ruleName</span><span class="o">);</span> <span class="k">if</span> <span class="o">(</span><span class="n">rule</span> <span class="o">==</span> <span class="kc">null</span><span class="o">)</span> <span class="k">throw</span>
-<span class="k">new</span> <span class="nf">IllegalArgumentException</span><span class="o">(</span><span class="s">"Regola non trovata: "</span> <span class="o">+</span> <span class="n">ruleName</span><span class="o">);</span> <span class="k">return</span>
-<span class="n">rule</span><span class="o">.</span><span class="na">apply</span><span class="o">(</span><span class="n">input</span><span class="o">);</span>
-<span class="c1">// Il JIT ottimizza questa chiamata come una lambda normale }</span>
- <span class="o">}</span>
- 
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+</pre></td><td class="rouge-code"><pre><span class="cm">/* Trasformo un MethodHandle in una Function&lt;String, String&gt; tramite
+    LambdaMetafactory. Il risultato è un'implementazione dell'interfaccia
+    funzionale generata a runtime e ottimizzata dalla JVM come una lambda
+    normale. */</span>
+<span class="kd">public</span> <span class="kd">class</span> <span class="nc">DynamicFunctionFactory</span> <span class="o">{</span>
+    <span class="kd">public</span> <span class="kd">static</span> <span class="nc">Function</span><span class="o">&lt;</span><span class="nc">String</span><span class="o">,</span> <span class="nc">String</span><span class="o">&gt;</span> <span class="nf">createFunction</span><span class="o">(</span><span class="nc">Class</span><span class="o">&lt;?&gt;</span> <span class="n">targetClass</span><span class="o">,</span>
+        <span class="nc">String</span> <span class="n">methodName</span><span class="o">)</span> <span class="kd">throws</span> <span class="nc">Throwable</span> <span class="o">{</span>
+        <span class="nc">MethodHandles</span><span class="o">.</span><span class="na">Lookup</span> <span class="n">lookup</span> <span class="o">=</span> <span class="nc">MethodHandles</span><span class="o">.</span><span class="na">lookup</span><span class="o">();</span>
+        <span class="c1">// Trovo il metodo target MethodHandle targetHandle =</span>
+            <span class="n">lookup</span><span class="o">.</span><span class="na">findVirtual</span><span class="o">(</span> <span class="n">targetClass</span><span class="o">,</span> <span class="n">methodName</span><span class="o">,</span>
+            <span class="nc">MethodType</span><span class="o">.</span><span class="na">methodType</span><span class="o">(</span><span class="nc">String</span><span class="o">.</span><span class="na">class</span><span class="o">,</span> <span class="nc">String</span><span class="o">.</span><span class="na">class</span><span class="o">))</span>
+        <span class="o">;</span>
+        <span class="c1">// Genero un'implementazione di Function&lt;String,String&gt; che delega al</span>
+            <span class="n">metodo</span> <span class="n">target</span> <span class="nc">CallSite</span> <span class="n">callSite</span> <span class="o">=</span> <span class="nc">LambdaMetafactory</span><span class="o">.</span><span class="na">metafactory</span><span class="o">(</span>
+            <span class="n">lookup</span><span class="o">,</span> <span class="s">"apply"</span><span class="o">,</span> <span class="c1">// Il metodo dell'interfaccia funzionale da</span>
+            <span class="n">implementare</span> <span class="nc">MethodType</span><span class="o">.</span><span class="na">methodType</span><span class="o">(</span><span class="nc">Function</span><span class="o">.</span><span class="na">class</span><span class="o">,</span> <span class="n">targetClass</span><span class="o">),</span> <span class="c1">//</span>
+            <span class="nc">Tipo</span> <span class="n">del</span> <span class="n">factory</span> <span class="nc">MethodType</span><span class="o">.</span><span class="na">methodType</span><span class="o">(</span><span class="nc">Object</span><span class="o">.</span><span class="na">class</span><span class="o">,</span> <span class="nc">Object</span><span class="o">.</span><span class="na">class</span><span class="o">),</span>
+            <span class="c1">// Firma erased della SAM targetHandle, // Il metodo reale da</span>
+            <span class="n">invocare</span> <span class="nc">MethodType</span><span class="o">.</span><span class="na">methodType</span><span class="o">(</span><span class="nc">String</span><span class="o">.</span><span class="na">class</span><span class="o">,</span> <span class="nc">String</span><span class="o">.</span><span class="na">class</span><span class="o">)</span> <span class="c1">// Firma</span>
+            <span class="n">specializzata</span> <span class="o">)</span>
+        <span class="o">;</span>
+        <span class="c1">// Ottengo il factory e lo invoco con l'istanza target</span>
+            <span class="nd">@SuppressWarnings</span><span class="o">(</span><span class="s">"unchecked"</span><span class="o">)</span> <span class="nc">Function</span><span class="o">&lt;</span><span class="nc">String</span><span class="o">,</span> <span class="nc">String</span><span class="o">&gt;</span> <span class="n">fn</span> <span class="o">=</span>
+            <span class="o">(</span><span class="nc">Function</span><span class="o">&lt;</span><span class="nc">String</span><span class="o">,</span> <span class="nc">String</span><span class="o">&gt;)</span> <span class="n">callSite</span><span class="o">.</span><span class="na">getTarget</span><span class="o">().</span><span class="na">invoke</span><span class="o">(</span><span class="n">targetClass</span><span class="o">.</span><span class="na">g</span>
+            <span class="nf">etDeclaredConstructor</span><span class="o">().</span><span class="na">newInstance</span><span class="o">())</span>
+        <span class="o">;</span>
+        <span class="k">return</span> <span class="n">fn</span><span class="o">;</span>
+    <span class="o">}</span>
+<span class="o">}</span>
+<span class="cm">/* Implemento un motore di regole basato su LambdaMetafactory per una pipeline
+    di trasformazione: */</span>
+<span class="nd">@Component</span> <span class="kd">public</span> <span class="kd">class</span> <span class="nc">RuleEngine</span> <span class="o">{</span>
+    <span class="c1">// Mappa nome-regola -&gt; Function generata via LambdaMetafactory private</span>
+        <span class="kd">final</span> <span class="nc">Map</span><span class="o">&lt;</span><span class="nc">String</span><span class="o">,</span> <span class="nc">Function</span><span class="o">&lt;</span><span class="nc">String</span><span class="o">,</span> <span class="nc">String</span><span class="o">&gt;&gt;</span> <span class="n">rules</span> <span class="o">=</span> <span class="k">new</span>
+        <span class="nc">ConcurrentHashMap</span><span class="o">&lt;&gt;()</span>
+    <span class="o">;</span>
+    <span class="nd">@PostConstruct</span> <span class="kd">public</span> <span class="kt">void</span> <span class="nf">loadRules</span><span class="o">()</span> <span class="kd">throws</span> <span class="nc">Throwable</span> <span class="o">{</span>
+        <span class="c1">// Carico le regole da configurazione e genero le Function dinamicamente</span>
+            <span class="k">for</span> <span class="o">(</span><span class="nc">RuleConfig</span> <span class="n">config</span> <span class="o">:</span> <span class="n">ruleConfigRepository</span><span class="o">.</span><span class="na">findAll</span><span class="o">())</span>
+        <span class="o">{</span>
+            <span class="nc">Function</span><span class="o">&lt;</span><span class="nc">String</span><span class="o">,</span> <span class="nc">String</span><span class="o">&gt;</span> <span class="n">fn</span> <span class="o">=</span> <span class="nc">DynamicFunctionFactory</span><span class="o">.</span><span class="na">createFunction</span><span class="o">(</span>
+                <span class="nc">Class</span><span class="o">.</span><span class="na">forName</span><span class="o">(</span><span class="n">config</span><span class="o">.</span><span class="na">getClassName</span><span class="o">()),</span> <span class="n">config</span><span class="o">.</span><span class="na">getMethodName</span><span class="o">()</span> <span class="o">);</span>
+            <span class="n">rules</span><span class="o">.</span><span class="na">put</span><span class="o">(</span><span class="n">config</span><span class="o">.</span><span class="na">getRuleName</span><span class="o">(),</span> <span class="n">fn</span><span class="o">);</span>
+            <span class="n">log</span><span class="o">.</span><span class="na">info</span><span class="o">(</span><span class="s">"Regola '{
+            }
+            ' caricata come lambda dinamica"</span><span class="o">,</span> <span class="n">config</span><span class="o">.</span><span class="na">getRuleName</span><span class="o">());</span>
+        <span class="o">}</span>
+    <span class="o">}</span>
+    <span class="kd">public</span> <span class="nc">String</span> <span class="nf">applyRule</span><span class="o">(</span><span class="nc">String</span> <span class="n">ruleName</span><span class="o">,</span> <span class="nc">String</span> <span class="n">input</span><span class="o">)</span> <span class="o">{</span>
+        <span class="nc">Function</span><span class="o">&lt;</span><span class="nc">String</span><span class="o">,</span> <span class="nc">String</span><span class="o">&gt;</span> <span class="n">rule</span> <span class="o">=</span> <span class="n">rules</span><span class="o">.</span><span class="na">get</span><span class="o">(</span><span class="n">ruleName</span><span class="o">);</span>
+        <span class="k">if</span> <span class="o">(</span><span class="n">rule</span> <span class="o">==</span> <span class="kc">null</span><span class="o">)</span> <span class="k">throw</span> <span class="k">new</span> <span class="nc">IllegalArgumentException</span><span class="o">(</span><span class="s">"Regola non
+            trovata: "</span> <span class="o">+</span> <span class="n">ruleName</span><span class="o">);</span>
+        <span class="k">return</span> <span class="n">rule</span><span class="o">.</span><span class="na">apply</span><span class="o">(</span><span class="n">input</span><span class="o">);</span>
+        <span class="c1">// Il JIT ottimizza questa chiamata come una lambda normale</span>
+    <span class="o">}</span>
+<span class="o">}</span>
 <span class="cm">/* Confronto con la reflection classica per quantificare il guadagno: */</span>
- <span class="nd">@Benchmark</span> <span class="kd">public</span> <span class="nc">String</span> <span class="nf">withReflection</span><span class="o">(</span><span class="nc">BenchState</span> <span class="n">state</span><span class="o">)</span> <span class="kd">throws</span> <span class="nc">Exception</span> 
-<span class="o">{</span> <span class="k">return</span> <span class="o">(</span><span class="nc">String</span><span class="o">)</span> <span class="n">state</span><span class="o">.</span><span class="na">method</span><span class="o">.</span><span class="na">invoke</span><span class="o">(</span><span class="n">state</span><span class="o">.</span><span class="na">instance</span><span class="o">,</span> <span class="n">state</span><span class="o">.</span><span class="na">input</span><span class="o">);</span> 
-<span class="c1">// Overhead ad ogni chiamata }</span>
- <span class="nd">@Benchmark</span> <span class="kd">public</span> <span class="nc">String</span> <span class="nf">withLambdaMetafactory</span><span class="o">(</span><span class="nc">BenchState</span> <span class="n">state</span><span class="o">)</span> 
-<span class="o">{</span> <span class="k">return</span> <span class="n">state</span><span class="o">.</span><span class="na">dynamicFunction</span><span class="o">.</span><span class="na">apply</span><span class="o">(</span><span class="n">state</span><span class="o">.</span><span class="na">input</span><span class="o">);</span> 
-<span class="c1">// Ottimizzato dal JIT come lambda normale }</span>
- 
+<span class="nd">@Benchmark</span> <span class="kd">public</span> <span class="nc">String</span> <span class="nf">withReflection</span><span class="o">(</span><span class="nc">BenchState</span> <span class="n">state</span><span class="o">)</span> <span class="kd">throws</span> <span class="nc">Exception</span> <span class="o">{</span>
+    <span class="k">return</span> <span class="o">(</span><span class="nc">String</span><span class="o">)</span> <span class="n">state</span><span class="o">.</span><span class="na">method</span><span class="o">.</span><span class="na">invoke</span><span class="o">(</span><span class="n">state</span><span class="o">.</span><span class="na">instance</span><span class="o">,</span> <span class="n">state</span><span class="o">.</span><span class="na">input</span><span class="o">);</span>
+    <span class="c1">// Overhead ad ogni chiamata</span>
+<span class="o">}</span>
+<span class="nd">@Benchmark</span> <span class="kd">public</span> <span class="nc">String</span> <span class="nf">withLambdaMetafactory</span><span class="o">(</span><span class="nc">BenchState</span> <span class="n">state</span><span class="o">)</span> <span class="o">{</span>
+    <span class="k">return</span> <span class="n">state</span><span class="o">.</span><span class="na">dynamicFunction</span><span class="o">.</span><span class="na">apply</span><span class="o">(</span><span class="n">state</span><span class="o">.</span><span class="na">input</span><span class="o">);</span>
+    <span class="c1">// Ottimizzato dal JIT come lambda normale</span>
+<span class="o">}</span>
 <span class="c1">// LambdaMetafactory è tipicamente 5-20x più veloce della reflection su call</span>
-<span class="c1">// site caldi</span>
-<span class="o">*</span> <span class="nc">In</span> <span class="nc">Spring</span> <span class="nc">Boot</span><span class="o">,</span> <span class="n">uso</span> <span class="n">questo</span> <span class="n">pattern</span> <span class="n">per</span> <span class="n">un</span> <span class="n">sistema</span> <span class="n">di</span> <span class="n">validazione</span>
-<span class="o">*</span> <span class="nl">configurabile:</span> <span class="o">*/</span>
- <span class="nd">@Service</span> <span class="kd">public</span> <span class="kd">class</span> <span class="nc">DynamicValidatorService</span> 
-<span class="o">{</span> <span class="kd">private</span> <span class="kd">final</span> <span class="nc">Map</span><span class="o">&lt;</span><span class="nc">String</span><span class="o">,</span> <span class="nc">Predicate</span><span class="o">&lt;</span><span class="nc">String</span><span class="o">&gt;&gt;</span> <span class="n">validators</span> <span class="o">=</span> <span class="k">new</span>
-<span class="nc">ConcurrentHashMap</span><span class="o">&lt;&gt;();</span> <span class="kd">public</span> <span class="kt">void</span> <span class="nf">registerValidator</span><span class="o">(</span><span class="nc">String</span> <span class="n">name</span><span class="o">,</span> <span class="nc">Class</span><span class="o">&lt;?&gt;</span> <span class="n">cls</span><span class="o">,</span>
-<span class="nc">String</span> <span class="n">methodName</span><span class="o">)</span> <span class="kd">throws</span> <span class="nc">Throwable</span>
-<span class="o">{</span> 
-<span class="c1">// Genero un Predicate&lt;String&gt; dinamico che delega al metodo del validatore</span>
-<span class="c1">// validators.put(name, createPredicate(cls, methodName)); }</span>
- <span class="kd">public</span> <span class="kt">boolean</span> <span class="nf">validate</span><span class="o">(</span><span class="nc">String</span> <span class="n">validatorName</span><span class="o">,</span> <span class="nc">String</span> <span class="n">value</span><span class="o">)</span> 
-<span class="o">{</span> <span class="k">return</span> <span class="n">validators</span><span class="o">.</span><span class="na">getOrDefault</span><span class="o">(</span><span class="n">validatorName</span><span class="o">,</span> <span class="n">s</span> <span class="o">-&gt;</span> <span class="kc">true</span><span class="o">).</span><span class="na">test</span><span class="o">(</span><span class="n">value</span><span class="o">);</span> <span class="o">}</span>
- <span class="o">}</span>
+    <span class="n">site</span> <span class="n">caldi</span> <span class="cm">/* In Spring Boot, uso questo pattern per un sistema di
+    validazione configurabile: */</span> <span class="nd">@Service</span> <span class="kd">public</span> <span class="kd">class</span> <span class="nc">DynamicValidatorService</span>
+<span class="o">{</span>
+    <span class="kd">private</span> <span class="kd">final</span> <span class="nc">Map</span><span class="o">&lt;</span><span class="nc">String</span><span class="o">,</span> <span class="nc">Predicate</span><span class="o">&lt;</span><span class="nc">String</span><span class="o">&gt;&gt;</span> <span class="n">validators</span> <span class="o">=</span> <span class="k">new</span>
+        <span class="nc">ConcurrentHashMap</span><span class="o">&lt;&gt;();</span>
+    <span class="kd">public</span> <span class="kt">void</span> <span class="nf">registerValidator</span><span class="o">(</span><span class="nc">String</span> <span class="n">name</span><span class="o">,</span> <span class="nc">Class</span><span class="o">&lt;?&gt;</span> <span class="n">cls</span><span class="o">,</span> <span class="nc">String</span> <span class="n">methodName</span><span class="o">)</span>
+        <span class="kd">throws</span> <span class="nc">Throwable</span> <span class="o">{</span>
+        <span class="c1">// Genero un Predicate&lt;String&gt; dinamico che delega al metodo del</span>
+            <span class="n">validatore</span> <span class="n">validators</span><span class="o">.</span><span class="na">put</span><span class="o">(</span><span class="n">name</span><span class="o">,</span> <span class="n">createPredicate</span><span class="o">(</span><span class="n">cls</span><span class="o">,</span> <span class="n">methodName</span><span class="o">))</span>
+        <span class="o">;</span>
+    <span class="o">}</span>
+    <span class="kd">public</span> <span class="kt">boolean</span> <span class="nf">validate</span><span class="o">(</span><span class="nc">String</span> <span class="n">validatorName</span><span class="o">,</span> <span class="nc">String</span> <span class="n">value</span><span class="o">)</span> <span class="o">{</span>
+        <span class="k">return</span> <span class="n">validators</span><span class="o">.</span><span class="na">getOrDefault</span><span class="o">(</span><span class="n">validatorName</span><span class="o">,</span> <span class="n">s</span> <span class="o">-&gt;</span> <span class="kc">true</span><span class="o">).</span><span class="na">test</span><span class="o">(</span><span class="n">value</span><span class="o">);</span>
+    <span class="o">}</span>
+<span class="o">}</span>
 </pre></td></tr></tbody></table></code></pre></div></div>
 
         </article>

@@ -168,85 +168,153 @@
 77
 78
 79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+106
+107
+108
+109
+110
+111
+112
+113
 </pre></td><td class="rouge-code"><pre><span class="cm">/* Confronto l'approccio naive con quello ottimizzato per renderlo concreto. */</span>
- 
 <span class="c1">// APPROCCIO NAIVE: ogni substring alloca una nuova copia dell'array di</span>
-<span class="c1">// caratteri String logLine = "2026-03-25T10:15:03 ERROR OrderService User 42</span>
-<span class="c1">// not found"; String timestamp = logLine.substring(0, 23);</span>
+    <span class="n">caratteri</span> <span class="nc">String</span> <span class="n">logLine</span> <span class="o">=</span> <span class="s">"2026-03-25T10:15:03 ERROR OrderService User 42
+    not found"</span>
+<span class="o">;</span>
+<span class="nc">String</span> <span class="n">timestamp</span> <span class="o">=</span> <span class="n">logLine</span><span class="o">.</span><span class="na">substring</span><span class="o">(</span><span class="mi">0</span><span class="o">,</span> <span class="mi">23</span><span class="o">);</span>
 <span class="c1">// Nuova allocazione: 23 caratteri copiati String level = logLine.substring(24,</span>
-<span class="c1">// 29);</span>
-<span class="c1">// Nuova allocazione: 5 caratteri copiati String message =</span>
-<span class="c1">// logLine.substring(30);</span>
-<span class="c1">// Nuova allocazione: N caratteri copiati </span>
-<span class="c1">// Su 1 milione di log, questo alloca 3 milioni di oggetti String inutili </span>
-<span class="o">*</span> <span class="nc">Implemento</span> <span class="n">una</span> <span class="n">vista</span> <span class="n">zero</span><span class="o">-</span><span class="n">copy</span> <span class="n">su</span> <span class="nc">CharSequence</span> <span class="n">che</span> <span class="n">non</span> <span class="n">alloca</span> <span class="n">finché</span> <span class="n">non</span> <span class="n">serve</span>
-<span class="o">*</span> <span class="n">la</span> <span class="nc">String</span> <span class="nl">vera:</span> <span class="o">*/</span>
- <span class="kd">public</span> <span class="kd">final</span> <span class="kd">class</span> <span class="nc">CharSequenceView</span> <span class="kd">implements</span> <span class="nc">CharSequence</span> 
-<span class="o">{</span> <span class="kd">private</span> <span class="kd">final</span> <span class="nc">CharSequence</span> <span class="n">source</span><span class="o">;</span> <span class="kd">private</span> <span class="kd">final</span> <span class="kt">int</span> <span class="n">start</span><span class="o">;</span> <span class="kd">private</span> <span class="kd">final</span> <span class="kt">int</span>
-<span class="n">end</span><span class="o">;</span> <span class="kd">public</span> <span class="nf">CharSequenceView</span><span class="o">(</span><span class="nc">CharSequence</span> <span class="n">source</span><span class="o">,</span> <span class="kt">int</span> <span class="n">start</span><span class="o">,</span> <span class="kt">int</span> <span class="n">end</span><span class="o">)</span>
-<span class="o">{</span> <span class="k">this</span><span class="o">.</span><span class="na">source</span> <span class="o">=</span> <span class="n">source</span><span class="o">;</span> <span class="k">this</span><span class="o">.</span><span class="na">start</span> <span class="o">=</span> <span class="n">start</span><span class="o">;</span> <span class="k">this</span><span class="o">.</span><span class="na">end</span> <span class="o">=</span> <span class="n">end</span><span class="o">;</span> <span class="o">}</span>
- <span class="nd">@Override</span> <span class="kd">public</span> <span class="kt">int</span> <span class="nf">length</span><span class="o">()</span> 
-<span class="o">{</span> <span class="k">return</span> <span class="n">end</span> <span class="o">-</span> <span class="n">start</span><span class="o">;</span> <span class="o">}</span>
- <span class="nd">@Override</span> <span class="kd">public</span> <span class="kt">char</span> <span class="nf">charAt</span><span class="o">(</span><span class="kt">int</span> <span class="n">index</span><span class="o">)</span> 
-<span class="o">{</span> <span class="k">return</span> <span class="n">source</span><span class="o">.</span><span class="na">charAt</span><span class="o">(</span><span class="n">start</span> <span class="o">+</span> <span class="n">index</span><span class="o">);</span> <span class="o">}</span>
- <span class="nd">@Override</span> <span class="kd">public</span> <span class="nc">CharSequence</span> <span class="nf">subSequence</span><span class="o">(</span><span class="kt">int</span> <span class="n">start</span><span class="o">,</span> <span class="kt">int</span> <span class="n">end</span><span class="o">)</span> 
-<span class="o">{</span> 
-<span class="c1">// Creo un'altra vista, non una copia: zero allocazione return new</span>
-<span class="c1">// CharSequenceView(source, this.start + start, this.start + end); }</span>
- <span class="nd">@Override</span> <span class="kd">public</span> <span class="nc">String</span> <span class="nf">toString</span><span class="o">()</span> 
-<span class="o">{</span> 
-<span class="c1">// Alloco la String SOLO quando è strettamente necessario (es. per salvare su</span>
-<span class="c1">// DB) return source.toString().substring(start, end); }</span>
- <span class="o">}</span>
- 
+    <span class="mi">29</span><span class="o">)</span>
+<span class="o">;</span>
+<span class="c1">// Nuova allocazione: 5 caratteri copiati String message = logLine.substring(30)</span>
+<span class="o">;</span>
+<span class="c1">// Nuova allocazione: N caratteri copiati // Su 1 milione di log, questo alloca</span>
+    <span class="mi">3</span> <span class="n">milioni</span> <span class="n">di</span> <span class="n">oggetti</span> <span class="nc">String</span> <span class="n">inutili</span> <span class="cm">/* Implemento una vista zero-copy su
+    CharSequence che non alloca finché non serve la String vera: */</span> <span class="kd">public</span> <span class="kd">final</span>
+    <span class="kd">class</span> <span class="nc">CharSequenceView</span> <span class="kd">implements</span> <span class="nc">CharSequence</span>
+<span class="o">{</span>
+    <span class="kd">private</span> <span class="kd">final</span> <span class="nc">CharSequence</span> <span class="n">source</span><span class="o">;</span>
+    <span class="kd">private</span> <span class="kd">final</span> <span class="kt">int</span> <span class="n">start</span><span class="o">;</span>
+    <span class="kd">private</span> <span class="kd">final</span> <span class="kt">int</span> <span class="n">end</span><span class="o">;</span>
+    <span class="kd">public</span> <span class="nf">CharSequenceView</span><span class="o">(</span><span class="nc">CharSequence</span> <span class="n">source</span><span class="o">,</span> <span class="kt">int</span> <span class="n">start</span><span class="o">,</span> <span class="kt">int</span> <span class="n">end</span><span class="o">)</span> <span class="o">{</span>
+        <span class="k">this</span><span class="o">.</span><span class="na">source</span> <span class="o">=</span> <span class="n">source</span><span class="o">;</span>
+        <span class="k">this</span><span class="o">.</span><span class="na">start</span> <span class="o">=</span> <span class="n">start</span><span class="o">;</span>
+        <span class="k">this</span><span class="o">.</span><span class="na">end</span> <span class="o">=</span> <span class="n">end</span><span class="o">;</span>
+    <span class="o">}</span>
+    <span class="nd">@Override</span> <span class="kd">public</span> <span class="kt">int</span> <span class="nf">length</span><span class="o">()</span> <span class="o">{</span>
+        <span class="k">return</span> <span class="n">end</span> <span class="o">-</span> <span class="n">start</span><span class="o">;</span>
+    <span class="o">}</span>
+    <span class="nd">@Override</span> <span class="kd">public</span> <span class="kt">char</span> <span class="nf">charAt</span><span class="o">(</span><span class="kt">int</span> <span class="n">index</span><span class="o">)</span> <span class="o">{</span>
+        <span class="k">return</span> <span class="n">source</span><span class="o">.</span><span class="na">charAt</span><span class="o">(</span><span class="n">start</span> <span class="o">+</span> <span class="n">index</span><span class="o">);</span>
+    <span class="o">}</span>
+    <span class="nd">@Override</span> <span class="kd">public</span> <span class="nc">CharSequence</span> <span class="nf">subSequence</span><span class="o">(</span><span class="kt">int</span> <span class="n">start</span><span class="o">,</span> <span class="kt">int</span> <span class="n">end</span><span class="o">)</span> <span class="o">{</span>
+        <span class="c1">// Creo un'altra vista, non una copia: zero allocazione</span>
+        <span class="k">return</span> <span class="k">new</span> <span class="nf">CharSequenceView</span><span class="o">(</span><span class="n">source</span><span class="o">,</span> <span class="k">this</span><span class="o">.</span><span class="na">start</span> <span class="o">+</span> <span class="n">start</span><span class="o">,</span> <span class="k">this</span><span class="o">.</span><span class="na">start</span> <span class="o">+</span>
+            <span class="n">end</span><span class="o">);</span>
+    <span class="o">}</span>
+    <span class="nd">@Override</span> <span class="kd">public</span> <span class="nc">String</span> <span class="nf">toString</span><span class="o">()</span> <span class="o">{</span>
+        <span class="c1">// Alloco la String SOLO quando è strettamente necessario (es. per</span>
+            <span class="n">salvare</span> <span class="n">su</span> <span class="no">DB</span><span class="o">)</span>
+        <span class="k">return</span> <span class="n">source</span><span class="o">.</span><span class="na">toString</span><span class="o">().</span><span class="na">substring</span><span class="o">(</span><span class="n">start</span><span class="o">,</span> <span class="n">end</span><span class="o">);</span>
+    <span class="o">}</span>
+<span class="o">}</span>
 <span class="cm">/* Parser di log che usa viste zero-copy: */</span>
- <span class="nd">@Component</span> <span class="kd">public</span> <span class="kd">class</span> <span class="nc">LogLineParser</span> 
-<span class="o">{</span> <span class="kd">public</span> <span class="nc">ParsedLogLine</span> <span class="nf">parse</span><span class="o">(</span><span class="nc">CharSequence</span> <span class="n">line</span><span class="o">)</span> 
-<span class="o">{</span> 
-<span class="c1">// Trovo gli indici dei separatori senza allocare substring int firstSpace =</span>
-<span class="c1">// indexOf(line, ' ', 0); int secondSpace = indexOf(line, ' ', firstSpace + 1);</span>
-<span class="c1">// Creo viste sul buffer originale: zero allocazioni CharSequence timestamp =</span>
-<span class="c1">// new CharSequenceView(line, 0, firstSpace); CharSequence level = new</span>
-<span class="c1">// CharSequenceView(line, firstSpace + 1, secondSpace); CharSequence message =</span>
-<span class="c1">// new CharSequenceView(line, secondSpace + 1, line.length());</span>
-<span class="c1">// Confronto il livello senza allocare String: uso equals su CharSequence if</span>
-<span class="c1">// (charSequenceEquals(level, "ERROR"))</span>
-<span class="o">{</span> 
-<span class="c1">// Alloco la String solo per il messaggio di errore che viene salvato return new</span>
-<span class="c1">// ParsedLogLine(timestamp.toString(), "ERROR", message.toString()); }</span>
- <span class="k">return</span> <span class="k">new</span> <span class="nf">ParsedLogLine</span><span class="o">(</span><span class="n">timestamp</span><span class="o">.</span><span class="na">toString</span><span class="o">(),</span> <span class="n">level</span><span class="o">.</span><span class="na">toString</span><span class="o">(),</span> <span class="kc">null</span><span class="o">);</span> <span class="o">}</span>
- <span class="kd">private</span> <span class="kt">int</span> <span class="nf">indexOf</span><span class="o">(</span><span class="nc">CharSequence</span> <span class="n">cs</span><span class="o">,</span> <span class="kt">char</span> <span class="n">target</span><span class="o">,</span> <span class="kt">int</span> <span class="n">fromIndex</span><span class="o">)</span> 
-<span class="o">{</span> <span class="k">for</span> <span class="o">(</span><span class="kt">int</span> <span class="n">i</span> <span class="o">=</span> <span class="n">fromIndex</span><span class="o">;</span> <span class="n">i</span> <span class="o">&lt;</span> <span class="n">cs</span><span class="o">.</span><span class="na">length</span><span class="o">();</span> <span class="n">i</span><span class="o">++)</span> 
-<span class="o">{</span> <span class="k">if</span> <span class="o">(</span><span class="n">cs</span><span class="o">.</span><span class="na">charAt</span><span class="o">(</span><span class="n">i</span><span class="o">)</span> <span class="o">==</span> <span class="n">target</span><span class="o">)</span> <span class="k">return</span> <span class="n">i</span><span class="o">;</span> <span class="o">}</span>
- <span class="k">return</span> <span class="o">-</span><span class="mi">1</span><span class="o">;</span> <span class="o">}</span>
- <span class="kd">private</span> <span class="kt">boolean</span> <span class="nf">charSequenceEquals</span><span class="o">(</span><span class="nc">CharSequence</span> <span class="n">a</span><span class="o">,</span> <span class="nc">String</span> <span class="n">b</span><span class="o">)</span> 
-<span class="o">{</span> <span class="k">if</span> <span class="o">(</span><span class="n">a</span><span class="o">.</span><span class="na">length</span><span class="o">()</span> <span class="o">!=</span> <span class="n">b</span><span class="o">.</span><span class="na">length</span><span class="o">())</span> <span class="k">return</span> <span class="kc">false</span><span class="o">;</span> <span class="k">for</span> <span class="o">(</span><span class="kt">int</span> <span class="n">i</span> <span class="o">=</span> <span class="mi">0</span><span class="o">;</span> <span class="n">i</span> <span class="o">&lt;</span> <span class="n">a</span><span class="o">.</span><span class="na">length</span><span class="o">();</span>
-<span class="n">i</span><span class="o">++)</span>
-<span class="o">{</span> <span class="k">if</span> <span class="o">(</span><span class="n">a</span><span class="o">.</span><span class="na">charAt</span><span class="o">(</span><span class="n">i</span><span class="o">)</span> <span class="o">!=</span> <span class="n">b</span><span class="o">.</span><span class="na">charAt</span><span class="o">(</span><span class="n">i</span><span class="o">))</span> <span class="k">return</span> <span class="kc">false</span><span class="o">;</span> <span class="o">}</span>
- <span class="k">return</span> <span class="kc">true</span><span class="o">;</span> <span class="o">}</span>
- <span class="o">}</span>
- 
-<span class="o">*</span> <span class="nc">Per</span> <span class="n">il</span> <span class="n">parsing</span> <span class="n">di</span> <span class="n">protocolli</span> <span class="no">FIX</span> <span class="n">o</span> <span class="no">HL7</span><span class="o">,</span> <span class="n">uso</span> <span class="n">direttamente</span> <span class="nc">ByteBuffer</span> <span class="n">per</span>
-<span class="o">*</span> <span class="n">evitare</span> <span class="n">anche</span> <span class="n">la</span> <span class="n">conversione</span> <span class="n">da</span> <span class="kt">byte</span> <span class="n">a</span> <span class="kt">char</span><span class="o">:</span> <span class="o">*/</span>
- <span class="nd">@Component</span> <span class="kd">public</span> <span class="kd">class</span> <span class="nc">FixMessageParser</span> 
-<span class="o">{</span> <span class="kd">public</span> <span class="nc">Map</span><span class="o">&lt;</span><span class="nc">Integer</span><span class="o">,</span> <span class="nc">CharSequence</span><span class="o">&gt;</span> <span class="nf">parse</span><span class="o">(</span><span class="nc">ByteBuffer</span> <span class="n">rawMessage</span><span class="o">)</span> 
-<span class="o">{</span> 
-<span class="c1">// Lavoro direttamente sul ByteBuffer senza convertire in String Map&lt;Integer,</span>
-<span class="c1">// CharSequence&gt; fields = new HashMap&lt;&gt;(); CharBuffer charView =</span>
-<span class="c1">// StandardCharsets.US_ASCII.decode(rawMessage);</span>
-<span class="c1">// Una sola conversione int start = 0; for (int i = 0; i &lt; charView.length();</span>
-<span class="c1">// i++)</span>
-<span class="o">{</span> <span class="k">if</span> <span class="o">(</span><span class="n">charView</span><span class="o">.</span><span class="na">charAt</span><span class="o">(</span><span class="n">i</span><span class="o">)</span> <span class="o">==</span> <span class="sc">'\u0001'</span><span class="o">)</span> 
-<span class="o">{</span> 
-<span class="c1">// SOH separator CharSequence field = new CharSequenceView(charView, start, i);</span>
-<span class="c1">// int eq = indexOf(field, '=', 0); if (eq &gt; 0)</span>
-<span class="o">{</span> <span class="kt">int</span> <span class="n">tag</span> <span class="o">=</span> <span class="nc">Integer</span><span class="o">.</span><span class="na">parseInt</span><span class="o">(</span><span class="n">field</span><span class="o">.</span><span class="na">subSequence</span><span class="o">(</span><span class="mi">0</span><span class="o">,</span> <span class="n">eq</span><span class="o">).</span><span class="na">toString</span><span class="o">());</span>
-<span class="n">fields</span><span class="o">.</span><span class="na">put</span><span class="o">(</span><span class="n">tag</span><span class="o">,</span> <span class="n">field</span><span class="o">.</span><span class="na">subSequence</span><span class="o">(</span><span class="n">eq</span> <span class="o">+</span> <span class="mi">1</span><span class="o">,</span> <span class="n">field</span><span class="o">.</span><span class="na">length</span><span class="o">()));</span>
-<span class="c1">// Vista, non copia }</span>
- <span class="n">start</span> <span class="o">=</span> <span class="n">i</span> <span class="o">+</span> <span class="mi">1</span><span class="o">;</span> <span class="o">}</span>
- <span class="o">}</span>
- <span class="k">return</span> <span class="n">fields</span><span class="o">;</span> <span class="o">}</span>
- <span class="o">}</span>
+<span class="nd">@Component</span> <span class="kd">public</span> <span class="kd">class</span> <span class="nc">LogLineParser</span> <span class="o">{</span>
+    <span class="kd">public</span> <span class="nc">ParsedLogLine</span> <span class="nf">parse</span><span class="o">(</span><span class="nc">CharSequence</span> <span class="n">line</span><span class="o">)</span> <span class="o">{</span>
+        <span class="c1">// Trovo gli indici dei separatori senza allocare substring int</span>
+            <span class="n">firstSpace</span> <span class="o">=</span> <span class="n">indexOf</span><span class="o">(</span><span class="n">line</span><span class="o">,</span> <span class="sc">' '</span><span class="o">,</span> <span class="mi">0</span><span class="o">)</span>
+        <span class="o">;</span>
+        <span class="kt">int</span> <span class="n">secondSpace</span> <span class="o">=</span> <span class="n">indexOf</span><span class="o">(</span><span class="n">line</span><span class="o">,</span> <span class="sc">' '</span><span class="o">,</span> <span class="n">firstSpace</span> <span class="o">+</span> <span class="mi">1</span><span class="o">);</span>
+        <span class="c1">// Creo viste sul buffer originale: zero allocazioni CharSequence</span>
+            <span class="n">timestamp</span> <span class="o">=</span> <span class="k">new</span> <span class="nc">CharSequenceView</span><span class="o">(</span><span class="n">line</span><span class="o">,</span> <span class="mi">0</span><span class="o">,</span> <span class="n">firstSpace</span><span class="o">)</span>
+        <span class="o">;</span>
+        <span class="nc">CharSequence</span> <span class="n">level</span> <span class="o">=</span> <span class="k">new</span> <span class="nc">CharSequenceView</span><span class="o">(</span><span class="n">line</span><span class="o">,</span> <span class="n">firstSpace</span> <span class="o">+</span> <span class="mi">1</span><span class="o">,</span>
+            <span class="n">secondSpace</span><span class="o">);</span>
+        <span class="nc">CharSequence</span> <span class="n">message</span> <span class="o">=</span> <span class="k">new</span> <span class="nc">CharSequenceView</span><span class="o">(</span><span class="n">line</span><span class="o">,</span> <span class="n">secondSpace</span> <span class="o">+</span> <span class="mi">1</span><span class="o">,</span>
+            <span class="n">line</span><span class="o">.</span><span class="na">length</span><span class="o">());</span>
+        <span class="c1">// Confronto il livello senza allocare String: uso equals su</span>
+            <span class="nc">CharSequence</span> <span class="nf">if</span> <span class="o">(</span><span class="n">charSequenceEquals</span><span class="o">(</span><span class="n">level</span><span class="o">,</span> <span class="s">"ERROR"</span><span class="o">))</span>
+        <span class="o">{</span>
+            <span class="c1">// Alloco la String solo per il messaggio di errore che viene</span>
+                <span class="n">salvato</span>
+            <span class="k">return</span> <span class="k">new</span> <span class="nf">ParsedLogLine</span><span class="o">(</span><span class="n">timestamp</span><span class="o">.</span><span class="na">toString</span><span class="o">(),</span> <span class="s">"ERROR"</span><span class="o">,</span>
+                <span class="n">message</span><span class="o">.</span><span class="na">toString</span><span class="o">());</span>
+        <span class="o">}</span>
+        <span class="k">return</span> <span class="k">new</span> <span class="nf">ParsedLogLine</span><span class="o">(</span><span class="n">timestamp</span><span class="o">.</span><span class="na">toString</span><span class="o">(),</span> <span class="n">level</span><span class="o">.</span><span class="na">toString</span><span class="o">(),</span> <span class="kc">null</span><span class="o">);</span>
+    <span class="o">}</span>
+    <span class="kd">private</span> <span class="kt">int</span> <span class="nf">indexOf</span><span class="o">(</span><span class="nc">CharSequence</span> <span class="n">cs</span><span class="o">,</span> <span class="kt">char</span> <span class="n">target</span><span class="o">,</span> <span class="kt">int</span> <span class="n">fromIndex</span><span class="o">)</span> <span class="o">{</span>
+        <span class="k">for</span> <span class="o">(</span><span class="kt">int</span> <span class="n">i</span> <span class="o">=</span> <span class="n">fromIndex</span><span class="o">;</span>
+        <span class="n">i</span> <span class="o">&lt;</span> <span class="n">cs</span><span class="o">.</span><span class="na">length</span><span class="o">();</span>
+        <span class="n">i</span><span class="o">++)</span> <span class="o">{</span>
+            <span class="k">if</span> <span class="o">(</span><span class="n">cs</span><span class="o">.</span><span class="na">charAt</span><span class="o">(</span><span class="n">i</span><span class="o">)</span> <span class="o">==</span> <span class="n">target</span><span class="o">)</span> <span class="k">return</span> <span class="n">i</span><span class="o">;</span>
+        <span class="o">}</span>
+        <span class="k">return</span> <span class="o">-</span><span class="mi">1</span><span class="o">;</span>
+    <span class="o">}</span>
+    <span class="kd">private</span> <span class="kt">boolean</span> <span class="nf">charSequenceEquals</span><span class="o">(</span><span class="nc">CharSequence</span> <span class="n">a</span><span class="o">,</span> <span class="nc">String</span> <span class="n">b</span><span class="o">)</span> <span class="o">{</span>
+        <span class="k">if</span> <span class="o">(</span><span class="n">a</span><span class="o">.</span><span class="na">length</span><span class="o">()</span> <span class="o">!=</span> <span class="n">b</span><span class="o">.</span><span class="na">length</span><span class="o">())</span> <span class="k">return</span> <span class="kc">false</span><span class="o">;</span>
+        <span class="k">for</span> <span class="o">(</span><span class="kt">int</span> <span class="n">i</span> <span class="o">=</span> <span class="mi">0</span><span class="o">;</span>
+        <span class="n">i</span> <span class="o">&lt;</span> <span class="n">a</span><span class="o">.</span><span class="na">length</span><span class="o">();</span>
+        <span class="n">i</span><span class="o">++)</span> <span class="o">{</span>
+            <span class="k">if</span> <span class="o">(</span><span class="n">a</span><span class="o">.</span><span class="na">charAt</span><span class="o">(</span><span class="n">i</span><span class="o">)</span> <span class="o">!=</span> <span class="n">b</span><span class="o">.</span><span class="na">charAt</span><span class="o">(</span><span class="n">i</span><span class="o">))</span> <span class="k">return</span> <span class="kc">false</span><span class="o">;</span>
+        <span class="o">}</span>
+        <span class="k">return</span> <span class="kc">true</span><span class="o">;</span>
+    <span class="o">}</span>
+<span class="o">}</span>
+<span class="cm">/* Per il parsing di protocolli FIX o HL7, uso direttamente ByteBuffer per
+    evitare anche la conversione da byte a char: */</span>
+<span class="nd">@Component</span> <span class="kd">public</span> <span class="kd">class</span> <span class="nc">FixMessageParser</span> <span class="o">{</span>
+    <span class="kd">public</span> <span class="nc">Map</span><span class="o">&lt;</span><span class="nc">Integer</span><span class="o">,</span> <span class="nc">CharSequence</span><span class="o">&gt;</span> <span class="nf">parse</span><span class="o">(</span><span class="nc">ByteBuffer</span> <span class="n">rawMessage</span><span class="o">)</span> <span class="o">{</span>
+        <span class="c1">// Lavoro direttamente sul ByteBuffer senza convertire in String</span>
+            <span class="nc">Map</span><span class="o">&lt;</span><span class="nc">Integer</span><span class="o">,</span> <span class="nc">CharSequence</span><span class="o">&gt;</span> <span class="n">fields</span> <span class="o">=</span> <span class="k">new</span> <span class="nc">HashMap</span><span class="o">&lt;&gt;()</span>
+        <span class="o">;</span>
+        <span class="nc">CharBuffer</span> <span class="n">charView</span> <span class="o">=</span> <span class="nc">StandardCharsets</span><span class="o">.</span><span class="na">US_ASCII</span><span class="o">.</span><span class="na">decode</span><span class="o">(</span><span class="n">rawMessage</span><span class="o">);</span>
+        <span class="c1">// Una sola conversione int start = 0</span>
+        <span class="o">;</span>
+        <span class="k">for</span> <span class="o">(</span><span class="kt">int</span> <span class="n">i</span> <span class="o">=</span> <span class="mi">0</span><span class="o">;</span>
+        <span class="n">i</span> <span class="o">&lt;</span> <span class="n">charView</span><span class="o">.</span><span class="na">length</span><span class="o">();</span>
+        <span class="n">i</span><span class="o">++)</span> <span class="o">{</span>
+            <span class="k">if</span> <span class="o">(</span><span class="n">charView</span><span class="o">.</span><span class="na">charAt</span><span class="o">(</span><span class="n">i</span><span class="o">)</span> <span class="o">==</span> <span class="sc">'\u0001'</span><span class="o">)</span> <span class="o">{</span>
+                <span class="c1">// SOH separator CharSequence field = new</span>
+                    <span class="nc">CharSequenceView</span><span class="o">(</span><span class="n">charView</span><span class="o">,</span> <span class="n">start</span><span class="o">,</span> <span class="n">i</span><span class="o">)</span>
+                <span class="o">;</span>
+                <span class="kt">int</span> <span class="n">eq</span> <span class="o">=</span> <span class="n">indexOf</span><span class="o">(</span><span class="n">field</span><span class="o">,</span> <span class="sc">'='</span><span class="o">,</span> <span class="mi">0</span><span class="o">);</span>
+                <span class="k">if</span> <span class="o">(</span><span class="n">eq</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="o">)</span> <span class="o">{</span>
+                    <span class="kt">int</span> <span class="n">tag</span> <span class="o">=</span> <span class="nc">Integer</span><span class="o">.</span><span class="na">parseInt</span><span class="o">(</span><span class="n">field</span><span class="o">.</span><span class="na">subSequence</span><span class="o">(</span><span class="mi">0</span><span class="o">,</span>
+                        <span class="n">eq</span><span class="o">).</span><span class="na">toString</span><span class="o">());</span>
+                    <span class="n">fields</span><span class="o">.</span><span class="na">put</span><span class="o">(</span><span class="n">tag</span><span class="o">,</span> <span class="n">field</span><span class="o">.</span><span class="na">subSequence</span><span class="o">(</span><span class="n">eq</span> <span class="o">+</span> <span class="mi">1</span><span class="o">,</span> <span class="n">field</span><span class="o">.</span><span class="na">length</span><span class="o">()));</span>
+                    <span class="c1">// Vista, non copia</span>
+                <span class="o">}</span>
+                <span class="n">start</span> <span class="o">=</span> <span class="n">i</span> <span class="o">+</span> <span class="mi">1</span><span class="o">;</span>
+            <span class="o">}</span>
+        <span class="o">}</span>
+        <span class="k">return</span> <span class="n">fields</span><span class="o">;</span>
+    <span class="o">}</span>
+<span class="o">}</span>
 </pre></td></tr></tbody></table></code></pre></div></div>
 
         </article>

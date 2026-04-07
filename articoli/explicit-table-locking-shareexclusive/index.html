@@ -105,27 +105,23 @@
 14
 15
 16
-17
-18
-</pre></td><td class="rouge-code"><pre><span class="o">*</span> <span class="n">Acquisisco</span> <span class="n">il</span> <span class="k">lock</span> <span class="n">pi</span><span class="err">ù</span> <span class="n">debole</span> <span class="n">che</span> <span class="n">soddisfa</span> <span class="n">il</span> <span class="n">mio</span> <span class="n">requisito</span><span class="p">.</span> <span class="k">SHARE</span> <span class="n">blocca</span>
-<span class="o">*</span> <span class="k">INSERT</span><span class="o">/</span><span class="k">UPDATE</span><span class="o">/</span><span class="k">DELETE</span> <span class="n">ma</span> <span class="n">non</span> <span class="n">i</span> <span class="k">SELECT</span> <span class="n">degli</span> <span class="n">altri</span> <span class="n">utenti</span><span class="p">,</span> <span class="n">minimizzando</span>
-<span class="o">*</span> <span class="n">l</span><span class="s1">'impatto sulla concorrenza in lettura. */
- BEGIN; LOCK TABLE votes IN SHARE MODE; 
-* Ricalcolo la classifica in modo atomico partendo dai dati "congelati". Nessun
-* voto può essere inserito mentre sono qui. */
- TRUNCATE user_rankings; INSERT INTO user_rankings (user_id, score, rank) SELECT
-user_id, sum(points) AS score, rank() OVER (ORDER BY sum(points) DESC) AS rank
-FROM votes GROUP BY user_id;
-* Rilascio il lock implicitamente con il COMMIT. La durata del lock deve essere
-* la minima possibile: preparo i dati in una tabella temporanea prima di
-* acquisirlo, ed eseguo solo la TRUNCATE + INSERT finale dentro la transazione.
-* */
- COMMIT; 
-* Per confronto, ecco la gerarchia dei lock dal meno al più restrittivo: ACCESS
-* SHARE -&gt; ROW SHARE -&gt; ROW EXCLUSIVE -&gt; SHARE UPDATE EXCLUSIVE -&gt; SHARE -&gt;
-* SHARE ROW EXCLUSIVE -&gt; EXCLUSIVE -&gt; ACCESS EXCLUSIVE Uso ACCESS EXCLUSIVE solo
-* per DDL (ALTER TABLE, DROP, TRUNCATE). */
-</span></pre></td></tr></tbody></table></code></pre></div></div>
+</pre></td><td class="rouge-code"><pre>    <span class="cm">/* Acquisisco il lock più debole che soddisfa il mio requisito. SHARE blocca
+        INSERT/UPDATE/DELETE ma non i SELECT degli altri utenti, minimizzando
+        l'impatto sulla concorrenza in lettura. */</span> <span class="k">BEGIN</span><span class="p">;</span> <span class="k">LOCK</span> <span class="k">TABLE</span> <span class="n">votes</span> <span class="k">IN</span>
+        <span class="k">SHARE</span> <span class="k">MODE</span><span class="p">;</span> <span class="cm">/* Ricalcolo la classifica in modo atomico partendo dai dati
+        "congelati". Nessun voto può essere inserito mentre sono qui. */</span>
+        <span class="k">TRUNCATE</span> <span class="n">user_rankings</span><span class="p">;</span> <span class="k">INSERT</span> <span class="k">INTO</span> <span class="n">user_rankings</span> <span class="p">(</span><span class="n">user_id</span><span class="p">,</span> <span class="n">score</span><span class="p">,</span> <span class="n">rank</span><span class="p">)</span>
+        <span class="k">SELECT</span> <span class="n">user_id</span><span class="p">,</span> <span class="k">sum</span><span class="p">(</span><span class="n">points</span><span class="p">)</span> <span class="k">AS</span> <span class="n">score</span><span class="p">,</span> <span class="n">rank</span><span class="p">()</span> <span class="n">OVER</span> <span class="p">(</span><span class="k">ORDER</span> <span class="k">BY</span> <span class="k">sum</span><span class="p">(</span><span class="n">points</span><span class="p">)</span>
+        <span class="k">DESC</span><span class="p">)</span> <span class="k">AS</span> <span class="n">rank</span> <span class="k">FROM</span> <span class="n">votes</span> <span class="k">GROUP</span> <span class="k">BY</span> <span class="n">user_id</span><span class="p">;</span> <span class="cm">/* Rilascio il lock
+        implicitamente con il COMMIT. La durata del lock deve essere la minima
+        possibile: preparo i dati in una tabella temporanea prima di acquisirlo,
+        ed eseguo solo la TRUNCATE + INSERT finale dentro la transazione. */</span>
+        <span class="k">COMMIT</span><span class="p">;</span> <span class="cm">/* Per confronto, ecco la gerarchia dei lock dal meno al più
+        restrittivo: ACCESS SHARE -&gt; ROW SHARE -&gt; ROW EXCLUSIVE -&gt; SHARE UPDATE
+        EXCLUSIVE -&gt; SHARE -&gt; SHARE ROW EXCLUSIVE -&gt; EXCLUSIVE -&gt; ACCESS
+        EXCLUSIVE Uso ACCESS EXCLUSIVE solo per DDL (ALTER TABLE, DROP,
+        TRUNCATE). */</span>
+</pre></td></tr></tbody></table></code></pre></div></div>
 
         </article>
 

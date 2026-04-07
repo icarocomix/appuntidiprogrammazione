@@ -105,25 +105,23 @@
 14
 15
 16
-17
-</pre></td><td class="rouge-code"><pre><span class="o">*</span> <span class="n">Configuro</span> <span class="n">la</span> <span class="n">sessione</span> <span class="n">per</span> <span class="n">non</span> <span class="n">attendere</span> <span class="k">all</span><span class="s1">'infinito. Preferisco che la
-* migrazione fallisca e venga ritentata più tardi, piuttosto che creare un
-* ingorgo che svuota il connection pool. */
- SET lock_timeout = '</span><span class="mi">2</span><span class="n">s</span><span class="s1">'; SET statement_timeout = '</span><span class="mi">30</span><span class="n">s</span><span class="s1">'; 
-* Eseguo la migrazione con una strategia di retry esplicita. Se non ottengo il
-* lock, aspetto un momento e riprovo, idealmente in una finestra di bassa
-* attività. */
- DO $$ DECLARE max_attempts INT := 5; attempt INT := 0; BEGIN LOOP BEGIN SET
-LOCAL lock_timeout = '</span><span class="mi">2</span><span class="n">s</span><span class="s1">'; ALTER TABLE users ADD COLUMN last_login_ip INET;
-EXIT; -- Se arrivo qui, il lock è stato acquisito e l'</span><span class="k">ALTER</span> <span class="err">è</span> <span class="n">riuscito</span> <span class="n">EXCEPTION</span>
-<span class="k">WHEN</span> <span class="n">lock_not_available</span> <span class="k">THEN</span> <span class="n">attempt</span> <span class="p">:</span><span class="o">=</span> <span class="n">attempt</span> <span class="o">+</span> <span class="mi">1</span><span class="p">;</span> <span class="n">IF</span> <span class="n">attempt</span> <span class="o">&gt;=</span> <span class="n">max_attempts</span>
-<span class="k">THEN</span> <span class="n">RAISE</span> <span class="n">EXCEPTION</span> <span class="s1">'Impossibile acquisire il lock dopo % tentativi'</span><span class="p">,</span>
-<span class="n">max_attempts</span><span class="p">;</span> <span class="k">END</span> <span class="n">IF</span><span class="p">;</span> <span class="n">RAISE</span> <span class="n">NOTICE</span> <span class="s1">'Tentativo % fallito, aspetto 5 secondi...'</span><span class="p">,</span>
-<span class="n">attempt</span><span class="p">;</span> <span class="n">PERFORM</span> <span class="n">pg_sleep</span><span class="p">(</span><span class="mi">5</span><span class="p">);</span> <span class="k">END</span><span class="p">;</span> <span class="k">END</span> <span class="n">LOOP</span><span class="p">;</span> <span class="k">END</span> <span class="err">$$</span><span class="p">;</span>
-<span class="o">*</span> <span class="n">Per</span> <span class="n">le</span> <span class="n">migrazioni</span> <span class="n">critiche</span> <span class="k">in</span> <span class="n">produzione</span><span class="p">,</span> <span class="n">la</span> <span class="n">tecnica</span> <span class="n">pi</span><span class="err">ù</span> <span class="n">sicura</span> <span class="err">è</span> <span class="n">usare</span> <span class="k">ADD</span>
-<span class="o">*</span> <span class="k">COLUMN</span> <span class="n">con</span> <span class="n">un</span> <span class="k">DEFAULT</span> <span class="n">non</span> <span class="k">volatile</span><span class="p">:</span> <span class="k">in</span> <span class="n">Postgres</span> <span class="mi">11</span><span class="o">+</span> <span class="n">questa</span> <span class="n">operazione</span> <span class="err">è</span>
-<span class="o">*</span> <span class="n">istantanea</span> <span class="n">e</span> <span class="n">non</span> <span class="n">riscrive</span> <span class="n">l</span><span class="s1">'intera tabella. */
-</span></pre></td></tr></tbody></table></code></pre></div></div>
+</pre></td><td class="rouge-code"><pre>    <span class="cm">/* Configuro la sessione per non attendere all'infinito. Preferisco che la
+        migrazione fallisca e venga ritentata più tardi, piuttosto che creare un
+        ingorgo che svuota il connection pool. */</span> <span class="k">SET</span> <span class="n">lock_timeout</span> <span class="o">=</span> <span class="s1">'2s'</span><span class="p">;</span> <span class="k">SET</span>
+        <span class="n">statement_timeout</span> <span class="o">=</span> <span class="s1">'30s'</span><span class="p">;</span> <span class="cm">/* Eseguo la migrazione con una strategia di
+        retry esplicita. Se non ottengo il lock, aspetto un momento e riprovo,
+        idealmente in una finestra di bassa attività. */</span> <span class="k">DO</span> <span class="err">$$</span> <span class="k">DECLARE</span>
+        <span class="n">max_attempts</span> <span class="nb">INT</span> <span class="p">:</span><span class="o">=</span> <span class="mi">5</span><span class="p">;</span> <span class="n">attempt</span> <span class="nb">INT</span> <span class="p">:</span><span class="o">=</span> <span class="mi">0</span><span class="p">;</span> <span class="k">BEGIN</span> <span class="n">LOOP</span> <span class="k">BEGIN</span> <span class="k">SET</span> <span class="k">LOCAL</span>
+        <span class="n">lock_timeout</span> <span class="o">=</span> <span class="s1">'2s'</span><span class="p">;</span> <span class="k">ALTER</span> <span class="k">TABLE</span> <span class="n">users</span> <span class="k">ADD</span> <span class="k">COLUMN</span> <span class="n">last_login_ip</span> <span class="n">INET</span><span class="p">;</span>
+        <span class="n">EXIT</span><span class="p">;</span> <span class="c1">-- Se arrivo qui, il lock è stato acquisito e l'ALTER è riuscito</span>
+        <span class="n">EXCEPTION</span> <span class="k">WHEN</span> <span class="n">lock_not_available</span> <span class="k">THEN</span> <span class="n">attempt</span> <span class="p">:</span><span class="o">=</span> <span class="n">attempt</span> <span class="o">+</span> <span class="mi">1</span><span class="p">;</span> <span class="n">IF</span>
+        <span class="n">attempt</span> <span class="o">&gt;=</span> <span class="n">max_attempts</span> <span class="k">THEN</span> <span class="n">RAISE</span> <span class="n">EXCEPTION</span> <span class="s1">'Impossibile acquisire il
+        lock dopo % tentativi'</span><span class="p">,</span> <span class="n">max_attempts</span><span class="p">;</span> <span class="k">END</span> <span class="n">IF</span><span class="p">;</span> <span class="n">RAISE</span> <span class="n">NOTICE</span> <span class="s1">'Tentativo %
+        fallito, aspetto 5 secondi...'</span><span class="p">,</span> <span class="n">attempt</span><span class="p">;</span> <span class="n">PERFORM</span> <span class="n">pg_sleep</span><span class="p">(</span><span class="mi">5</span><span class="p">);</span> <span class="k">END</span><span class="p">;</span> <span class="k">END</span>
+        <span class="n">LOOP</span><span class="p">;</span> <span class="k">END</span> <span class="err">$$</span><span class="p">;</span> <span class="cm">/* Per le migrazioni critiche in produzione, la tecnica
+        più sicura è usare ADD COLUMN con un DEFAULT non volatile: in Postgres
+        11+ questa operazione è istantanea e non riscrive l'intera tabella. */</span>
+</pre></td></tr></tbody></table></code></pre></div></div>
 
         </article>
 

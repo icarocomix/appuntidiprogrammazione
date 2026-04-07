@@ -119,55 +119,37 @@
 28
 29
 30
-31
-32
-33
-34
-35
-36
-37
-38
-39
-</pre></td><td class="rouge-code"><pre><span class="o">*</span> <span class="n">Nel</span> <span class="n">postgresql</span><span class="p">.</span><span class="n">conf</span> <span class="n">abilito</span> <span class="n">l</span><span class="s1">'archiviazione WAL verso una destinazione remota
-* sicura. */
- -- archive_mode = on -- archive_command = '</span><span class="n">pgbackrest</span> <span class="c1">--stanza=myapp archive-</span>
-<span class="n">push</span> <span class="o">%</span><span class="n">p</span><span class="s1">' -- wal_level = replica -- Minimo necessario per l'</span><span class="n">archiviazione</span>
-<span class="cm">/* Eseguo il base backup iniziale con pgBackRest: */</span>
- <span class="c1">-- pgbackrest --stanza=myapp --type=full backup </span>
-<span class="cm">/* Verifico che l'archivio WAL sia continuo e integro: */</span>
- <span class="c1">-- pgbackrest --stanza=myapp info </span>
-<span class="o">*</span> <span class="k">In</span> <span class="n">caso</span> <span class="n">di</span> <span class="n">corruzione</span> <span class="n">dei</span> <span class="n">dati</span><span class="p">,</span> <span class="n">avvio</span> <span class="n">il</span> <span class="n">ripristino</span> <span class="n">su</span> <span class="n">un</span> <span class="n">server</span> <span class="n">separato</span>
-<span class="o">*</span> <span class="n">specificando</span> <span class="n">il</span> <span class="n">target</span> <span class="n">temporale</span> <span class="p">(</span><span class="n">un</span> <span class="n">minuto</span> <span class="n">prima</span> <span class="n">del</span> <span class="n">disastro</span><span class="p">):</span> <span class="o">*/</span>
- <span class="c1">-- pgbackrest --stanza=myapp --type=time "--target=2026-03-25 10:14:00+01"</span>
-<span class="n">restore</span>
-<span class="o">*</span> <span class="n">Creo</span> <span class="n">il</span> <span class="n">file</span> <span class="n">recovery</span><span class="p">.</span><span class="n">signal</span> <span class="n">per</span> <span class="n">attivare</span> <span class="n">la</span> <span class="n">modalit</span><span class="err">à</span> <span class="n">di</span> <span class="n">recovery</span> <span class="n">e</span> <span class="n">specifico</span>
-<span class="o">*</span> <span class="n">il</span> <span class="n">target</span> <span class="n">nel</span> <span class="n">postgresql</span><span class="p">.</span><span class="n">conf</span> <span class="n">del</span> <span class="n">server</span> <span class="n">di</span> <span class="n">ripristino</span><span class="p">:</span> <span class="o">*/</span>
- <span class="c1">-- recovery_target_time = '2026-03-25 10:14:00+01' -- recovery_target_action =</span>
-<span class="s1">'promote'</span> <span class="c1">-- Una volta raggiunto il target, promuove il DB a primario</span>
-<span class="o">*</span> <span class="n">Verifico</span> <span class="n">la</span> <span class="n">continuit</span><span class="err">à</span> <span class="n">della</span> <span class="n">catena</span> <span class="n">WAL</span> <span class="n">controllando</span> <span class="n">che</span> <span class="n">non</span> <span class="n">ci</span> <span class="n">siano</span> <span class="n">buchi</span>
-<span class="o">*</span> <span class="n">nella</span> <span class="n">sequenza</span> <span class="n">dei</span> <span class="n">file</span> <span class="n">archiviati</span><span class="p">:</span> <span class="o">*/</span>
- <span class="k">SELECT</span> <span class="n">wal_filename</span><span class="p">,</span> <span class="n">archived_count</span><span class="p">,</span> <span class="n">failed_count</span><span class="p">,</span> <span class="n">last_archived_wal</span><span class="p">,</span>
-<span class="n">last_archived_time</span><span class="p">,</span> <span class="n">last_failed_wal</span><span class="p">,</span> <span class="n">last_failed_time</span> <span class="k">FROM</span> <span class="n">pg_stat_archiver</span><span class="p">;</span>
-<span class="o">*</span> <span class="n">Se</span> <span class="n">last_failed_wal</span> <span class="err">è</span> <span class="n">valorizzato</span><span class="p">,</span> <span class="n">l</span><span class="s1">'archiviazione ha avuto problemi: forzo
-* manualmente il retry sull'</span><span class="n">ultimo</span> <span class="n">WAL</span> <span class="n">fallito</span><span class="p">.</span> <span class="o">*/</span>
- <span class="k">SELECT</span> <span class="n">pg_switch_wal</span><span class="p">();</span> <span class="c1">-- Forza la chiusura del WAL segment corrente e il</span>
-<span class="n">tentativo</span> <span class="n">di</span> <span class="n">archiviazione</span>
-<span class="o">*</span> <span class="k">In</span> <span class="n">Spring</span> <span class="n">Boot</span><span class="p">,</span> <span class="n">schedulo</span> <span class="n">un</span> <span class="n">job</span> <span class="n">che</span> <span class="n">verifica</span> <span class="n">quotidianamente</span> <span class="n">l</span><span class="s1">'integrità
-* dell'</span><span class="n">archivio</span> <span class="n">e</span> <span class="n">la</span> <span class="n">freschezza</span> <span class="n">dell</span><span class="s1">'ultimo backup: @Scheduled(cron = "0 0 6 * *
-* *")
-// Ogni mattina alle 06:00 public void verifyBackupHealth() 
-{ try 
-{ Process p = Runtime.getRuntime().exec("pgbackrest --stanza=myapp check"); int
-exit = p.waitFor(); if (exit != 0)
-{ alertService.sendCritical("pgBackRest check fallito: backup PITR non
-affidabile"); }
- }
- catch (Exception e) 
-{ alertService.sendCritical("Impossibile verificare il backup: " +
-e.getMessage()); }
- }
- */
-</span></pre></td></tr></tbody></table></code></pre></div></div>
+</pre></td><td class="rouge-code"><pre>    <span class="cm">/* Nel postgresql.conf abilito l'archiviazione WAL verso una destinazione
+        remota sicura. */</span> <span class="c1">-- archive_mode = on -- archive_command = 'pgbackrest</span>
+        <span class="c1">--stanza=myapp archive-push %p' -- wal_level = replica -- Minimo</span>
+        <span class="n">necessario</span> <span class="n">per</span> <span class="n">l</span><span class="s1">'archiviazione /* Eseguo il base backup iniziale con
+        pgBackRest: */ -- pgbackrest --stanza=myapp --type=full backup /*
+        Verifico che l'</span><span class="n">archivio</span> <span class="n">WAL</span> <span class="n">sia</span> <span class="n">continuo</span> <span class="n">e</span> <span class="n">integro</span><span class="p">:</span> <span class="o">*/</span> <span class="c1">-- pgbackrest</span>
+        <span class="c1">--stanza=myapp info /* In caso di corruzione dei dati, avvio il</span>
+        <span class="n">ripristino</span> <span class="n">su</span> <span class="n">un</span> <span class="n">server</span> <span class="n">separato</span> <span class="n">specificando</span> <span class="n">il</span> <span class="n">target</span> <span class="n">temporale</span> <span class="p">(</span><span class="n">un</span>
+        <span class="n">minuto</span> <span class="n">prima</span> <span class="n">del</span> <span class="n">disastro</span><span class="p">):</span> <span class="o">*/</span> <span class="c1">-- pgbackrest --stanza=myapp --type=time</span>
+        <span class="nv">"--target=2026-03-25 10:14:00+01"</span> <span class="n">restore</span> <span class="cm">/* Creo il file
+        recovery.signal per attivare la modalità di recovery e specifico il
+        target nel postgresql.conf del server di ripristino: */</span> <span class="c1">--</span>
+        <span class="n">recovery_target_time</span> <span class="o">=</span> <span class="s1">'2026-03-25 10:14:00+01'</span> <span class="c1">--</span>
+        <span class="n">recovery_target_action</span> <span class="o">=</span> <span class="s1">'promote'</span> <span class="c1">-- Una volta raggiunto il target,</span>
+        <span class="n">promuove</span> <span class="n">il</span> <span class="n">DB</span> <span class="n">a</span> <span class="n">primario</span> <span class="cm">/* Verifico la continuità della catena WAL
+        controllando che non ci siano buchi nella sequenza dei file archiviati:
+        */</span> <span class="k">SELECT</span> <span class="n">wal_filename</span><span class="p">,</span> <span class="n">archived_count</span><span class="p">,</span> <span class="n">failed_count</span><span class="p">,</span> <span class="n">last_archived_wal</span><span class="p">,</span>
+        <span class="n">last_archived_time</span><span class="p">,</span> <span class="n">last_failed_wal</span><span class="p">,</span> <span class="n">last_failed_time</span> <span class="k">FROM</span>
+        <span class="n">pg_stat_archiver</span><span class="p">;</span> <span class="cm">/* Se last_failed_wal è valorizzato, l'archiviazione
+        ha avuto problemi: forzo manualmente il retry sull'ultimo WAL fallito.
+        */</span> <span class="k">SELECT</span> <span class="n">pg_switch_wal</span><span class="p">();</span> <span class="c1">-- Forza la chiusura del WAL segment corrente</span>
+        <span class="n">e</span> <span class="n">il</span> <span class="n">tentativo</span> <span class="n">di</span> <span class="n">archiviazione</span> <span class="cm">/* In Spring Boot, schedulo un job che
+        verifica quotidianamente l'integrità dell'archivio e la freschezza
+        dell'ultimo backup: @Scheduled(cron = "0 0 6 * * *") // Ogni mattina
+        alle 06:00 public void verifyBackupHealth() { try { Process p =
+        Runtime.getRuntime().exec("pgbackrest --stanza=myapp check"); int exit =
+        p.waitFor(); if (exit != 0) { alertService.sendCritical("pgBackRest
+        check fallito: backup PITR non affidabile"); } } catch (Exception e) {
+        alertService.sendCritical("Impossibile verificare il backup: " +
+        e.getMessage()); } } */</span>
+</pre></td></tr></tbody></table></code></pre></div></div>
 
         </article>
 

@@ -89,80 +89,122 @@
 
 <h2 id="esempio-implementativo">Esempio Implementativo</h2>
 
-<pre><code class="language-thymeleaf">* Controller WebFlux che espone due endpoint: 1) La pagina HTML iniziale con il
-* container vuoto 2) Lo stream SSE che invia frammenti HTML al client */
- @Controller @RequestMapping("/monitoring") public class MonitoringController 
-{ @Autowired private MetricsService metricsService; @Autowired private
-TemplateEngine templateEngine;
-* Endpoint per la pagina iniziale: renderizza il layout con il container vuoto.
-* */
- @GetMapping public String dashboardPage(Model model) 
-{ 
-// Dati iniziali sincroni: gli aggiornamenti arrivano via SSE
-// model.addAttribute("title", "Monitoring Dashboard"); return
-// "monitoring/dashboard"; }
- 
-* Endpoint SSE: restituisce frammenti HTML renderizzati lato server. Il client
-* (HTMX o EventSource) riceve HTML pronto da inserire nel DOM. */
- @GetMapping(value = "/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
-public Flux&lt;ServerSentEvent&lt;String&gt;&gt; streamMetrics()
-{ return metricsService.getMetricsStream() 
-// Flux&lt;MetricEvent&gt; da Kafka/Redis/DB .map(metric -&gt; 
-{ 
-// Renderizzo il frammento Thymeleaf per ogni evento Context ctx = new
-// Context(); ctx.setVariable("metric", metric); ctx.setVariable("timestamp",
-// LocalDateTime.now()); String html = templateEngine.process(
-// "monitoring/fragments/metric-row",
-// Frammento specifico ctx ); return ServerSentEvent.&lt;String&gt;builder()
-// .id(metric.getId().toString()) .event("metric-update")
-// Tipo evento: il client filtra per tipo .data(html) 
-// HTML pre-renderizzato .build(); }
-) .onErrorResume(e -&gt; 
-{ log.error("Errore nello stream metriche", e); return
-Flux.just(ServerSentEvent.&lt;String&gt;builder() .event("error") .data("&lt;div
-class='alert alert-danger'&gt;Connessione persa&lt;/div&gt;") .build()); }
-); }
- 
-* Per stream con backpressure: limito la frequenza di emissione per non
-* sovraccaricare il client. */
- @GetMapping(value = "/logs", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
-public Flux&lt;ServerSentEvent&lt;String&gt;&gt; streamLogs()
-{ return logService.getLogStream() .sample(Duration.ofMillis(500)) 
-// Massimo 2 aggiornamenti al secondo .window(10) 
-// Raggruppo in batch da 10 log .flatMap(batch -&gt; batch.collectList()) .map(logs
-// -&gt;
-{ Context ctx = new Context(); ctx.setVariable("logs", logs); String html =
-templateEngine.process("monitoring/fragments/log-batch", ctx); return
-ServerSentEvent.&lt;String&gt;builder() .event("log-batch") .data(html) .build(); }
-); }
- }
- &lt;!-- Template monitoring/dashboard.html: container che riceve gli aggiornamenti
-SSE via HTMX. --&gt; &lt;!DOCTYPE html&gt; &lt;html xmlns:th="http:
-//www.thymeleaf.org"&gt; &lt;head&gt; &lt;title th:text="$
-{title}
-"&gt;Dashboard&lt;/title&gt; &lt;!-- HTMX gestisce la connessione SSE e l'inserimento degli
-HTML fragments --&gt; &lt;script src="https:
-//unpkg.com/htmx.org@1.9.10"&gt;&lt;/script&gt; &lt;script src="https:
-// unpkg.com/htmx.org/dist/ext/sse.js"&gt;&lt;/script&gt; &lt;/head&gt; &lt;body&gt; &lt;h1&gt;Monitoring
-// in Tempo Reale&lt;/h1&gt; &lt;!-- Container metriche: HTMX apre la connessione SSE e
-// inserisce gli update --&gt; &lt;div hx-ext="sse" sse-connect="/monitoring/stream"
-// sse-swap="metric-update" &lt;!-- Reagisce all'evento "metric-update" --&gt; hx-
-// swap="afterbegin" &lt;!-- Aggiunge nuove righe in cima --&gt; id="metrics-
-// container"&gt; &lt;p class="text-muted"&gt;In attesa di dati...&lt;/p&gt; &lt;/div&gt; &lt;!--
-// Container log: stream separato con evento diverso --&gt; &lt;div hx-ext="sse" sse-
-// connect="/monitoring/logs" sse-swap="log-batch" hx-swap="beforeend" hx-
-// target="#log-list"&gt; &lt;ul id="log-list"&gt;&lt;/ul&gt; &lt;/div&gt; &lt;/body&gt; &lt;/html&gt; &lt;!--
-// Frammento monitoring/fragments/metric-row.html: renderizzato lato server per
-// ogni evento. --&gt; &lt;!-- &lt;div th:fragment="metric-row" class="metric-card"&gt; --&gt;
-// &lt;!--   &lt;span th:text="$
-{metric.name}
-"&gt;CPU Usage&lt;/span&gt; --&gt; &lt;!--   &lt;span th:class="'badge ' + ($
-{metric.value &gt; 80}
- ? 'bg-danger' : 'bg-success')" --&gt; &lt;!--         th:text="$
-{metric.value + '%'}
-"&gt;0%&lt;/span&gt; --&gt; &lt;!--   &lt;small th:text="$
-{#temporals.format(timestamp, 'HH:mm:ss')}
-"&gt;00:00:00&lt;/small&gt; --&gt; &lt;!-- &lt;/div&gt; --&gt;
+<pre><code class="language-thymeleaf">/* Controller WebFlux che espone due endpoint: 1) La pagina HTML iniziale con il
+    container vuoto 2) Lo stream SSE che invia frammenti HTML al client */
+@Controller @RequestMapping("/monitoring") public class MonitoringController {
+    @Autowired private MetricsService metricsService; @Autowired private
+    TemplateEngine templateEngine;
+/* Endpoint per la pagina iniziale: renderizza il layout con il container vuoto.
+    */
+@GetMapping public String dashboardPage(Model model) { // Dati iniziali
+    sincroni: gli aggiornamenti arrivano via SSE model.addAttribute("title",
+    "Monitoring Dashboard"); return "monitoring/dashboard"; }
+/* Endpoint SSE: restituisce frammenti HTML renderizzati lato server. Il client
+    (HTMX o EventSource) riceve HTML pronto da inserire nel DOM. */
+@GetMapping(value = "/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
+    public Flux
+&lt;ServerSentEvent&lt;String&gt;
+    &gt; streamMetrics() { return metricsService.getMetricsStream() // Flux
+    &lt;MetricEvent&gt;
+        da Kafka/Redis/DB .map(metric -&gt; { // Renderizzo il frammento Thymeleaf
+            per ogni evento Context ctx = new Context();
+            ctx.setVariable("metric", metric); ctx.setVariable("timestamp",
+            LocalDateTime.now()); String html = templateEngine.process(
+            "monitoring/fragments/metric-row", // Frammento specifico ctx );
+            return ServerSentEvent.
+        &lt;String&gt;
+            builder() .id(metric.getId().toString()) .event("metric-update") //
+                Tipo evento: il client filtra per tipo .data(html) // HTML
+                pre-renderizzato .build(); }) .onErrorResume(e -&gt; {
+                log.error("Errore nello stream metriche", e); return
+                Flux.just(ServerSentEvent.
+            &lt;String&gt;
+                builder() .event("error") .data("
+                &lt;div class='alert alert-danger'&gt;
+                    Connessione persa
+                &lt;/div&gt;
+                ") .build()); }); }
+                /* Per stream con backpressure: limito la frequenza di emissione
+                    per non sovraccaricare il client. */
+                @GetMapping(value = "/logs", produces =
+                    MediaType.TEXT_EVENT_STREAM_VALUE) public Flux
+                &lt;ServerSentEvent&lt;String&gt;
+                    &gt; streamLogs() { return logService.getLogStream()
+                        .sample(Duration.ofMillis(500)) // Massimo 2
+                        aggiornamenti al secondo .window(10) // Raggruppo in
+                        batch da 10 log .flatMap(batch -&gt; batch.collectList())
+                        .map(logs -&gt; { Context ctx = new Context();
+                        ctx.setVariable("logs", logs); String html =
+                        templateEngine.process("monitoring/fragments/log-batch",
+                        ctx); return ServerSentEvent.
+                    &lt;String&gt;
+                        builder() .event("log-batch") .data(html) .build(); });
+                            } }
+                        &lt;!-- Template monitoring/dashboard.html: container che
+                            riceve gli aggiornamenti SSE via HTMX. --&gt;
+                        &lt;!DOCTYPE html&gt;
+                        &lt;html xmlns:th="http://www.thymeleaf.org"&gt;
+                            &lt;head&gt;
+                                &lt;title th:text="${title}"&gt;
+                                    Dashboard
+                                &lt;/title&gt;
+                                &lt;!-- HTMX gestisce la connessione SSE e
+                                    l'inserimento degli HTML fragments --&gt;
+                                &lt;script src="https://unpkg.com/htmx.org@1.9.10"&gt;
+                                &lt;/script&gt;
+                                &lt;script
+                                    src="https://unpkg.com/htmx.org/dist/ext/sse
+                                    .js"&gt;
+                                &lt;/script&gt;
+                            &lt;/head&gt;
+                            &lt;body&gt;
+                                &lt;h1&gt;
+                                    Monitoring in Tempo Reale
+                                &lt;/h1&gt;
+                                &lt;!-- Container metriche: HTMX apre la
+                                    connessione SSE e inserisce gli update --&gt;
+                                &lt;div hx-ext="sse"
+                                    sse-connect="/monitoring/stream"
+                                    sse-swap="metric-update" &lt;!-- Reagisce
+                                    all'evento "metric-update" --&gt;
+                                    hx-swap="afterbegin"
+                                    &lt;!-- Aggiunge nuove righe in cima --&gt;
+                                    id="metrics-container"&gt;
+                                    &lt;p class="text-muted"&gt;
+                                        In attesa di dati...
+                                    &lt;/p&gt;
+                                &lt;/div&gt;
+                                &lt;!-- Container log: stream separato con evento
+                                    diverso --&gt;
+                                &lt;div hx-ext="sse" sse-connect="/monitoring/logs"
+                                    sse-swap="log-batch" hx-swap="beforeend"
+                                    hx-target="#log-list"&gt;
+                                    &lt;ul id="log-list"&gt;
+                                    &lt;/ul&gt;
+                                &lt;/div&gt;
+                            &lt;/body&gt;
+                        &lt;/html&gt;
+                        &lt;!-- Frammento monitoring/fragments/metric-row.html:
+                            renderizzato lato server per ogni evento. --&gt;
+                        &lt;!-- &lt;div th:fragment="metric-row" class="metric-card"&gt;
+                        --&gt;
+                        &lt;!--   &lt;span th:text="${metric.name}"&gt;
+                        CPU Usage
+                    &lt;/span&gt;
+                    --&gt;
+                    &lt;!--   &lt;span th:class="'badge ' + (${metric.value &gt;
+                    80} ? 'bg-danger' : 'bg-success')" --&gt;
+                    &lt;!--         th:text="${metric.value + '%'}"&gt;
+                    0%
+                &lt;/span&gt;
+                --&gt;
+                &lt;!--   &lt;small th:text="${#temporals.format(timestamp,
+                    'HH:mm:ss')}"&gt;
+                00:00:00
+            &lt;/small&gt;
+            --&gt;
+            &lt;!-- &lt;/div&gt;
+            --&gt;
 </code></pre>
 
         </article>

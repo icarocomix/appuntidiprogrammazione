@@ -141,68 +141,58 @@
 50
 51
 52
-53
-54
-55
-56
-57
-</pre></td><td class="rouge-code"><pre><span class="o">*</span> <span class="nc">Forzo</span> <span class="n">l</span><span class="err">'</span><span class="n">allocazione</span> <span class="n">fisica</span> <span class="n">immediata</span> <span class="n">di</span> <span class="n">tutto</span> <span class="n">l</span><span class="err">'</span><span class="n">heap</span> <span class="n">dichiarato</span><span class="o">.</span> <span class="nc">Con</span> <span class="o">-</span><span class="nc">Xms</span> <span class="o">=</span>
-<span class="o">*</span> <span class="o">-</span><span class="nc">Xmx</span> <span class="n">e</span> <span class="nc">AlwaysPreTouch</span><span class="o">,</span> <span class="n">la</span> <span class="no">JVM</span> <span class="n">scrive</span> <span class="n">un</span> <span class="kt">byte</span> <span class="n">in</span> <span class="n">ogni</span> <span class="n">pagina</span> <span class="n">da</span> <span class="mi">4</span><span class="no">KB</span> <span class="n">dell</span><span class="err">'</span><span class="n">heap</span>
-<span class="o">*</span> <span class="n">durante</span> <span class="n">lo</span> <span class="n">startup</span><span class="o">,</span> <span class="n">causando</span> <span class="n">il</span> <span class="n">page</span><span class="o">-</span><span class="n">fault</span> <span class="n">in</span> <span class="n">modo</span> <span class="n">controllato</span> <span class="n">prima</span> <span class="n">che</span>
-<span class="o">*</span> <span class="n">arrivi</span> <span class="n">traffico</span> <span class="n">reale</span><span class="o">.</span> <span class="o">*/</span>
- <span class="n">java</span> <span class="o">-</span><span class="nc">Xms8G</span> <span class="o">-</span><span class="nc">Xmx8G</span> <span class="err">\</span> <span class="o">-</span><span class="nl">XX:</span><span class="o">+</span><span class="nc">AlwaysPreTouch</span> <span class="err">\</span> <span class="o">-</span><span class="nl">XX:</span><span class="o">+</span><span class="nc">UseZGC</span> <span class="err">\</span> <span class="o">-</span><span class="n">jar</span> <span class="n">latency</span><span class="o">-</span>
-<span class="n">sensitive</span><span class="o">-</span><span class="n">app</span><span class="o">.</span><span class="na">jar</span>
+</pre></td><td class="rouge-code"><pre><span class="cm">/* Forzo l'allocazione fisica immediata di tutto l'heap dichiarato. Con -Xms =
+    -Xmx e AlwaysPreTouch, la JVM scrive un byte in ogni pagina da 4KB dell'heap
+    durante lo startup, causando il page-fault in modo controllato prima che
+    arrivi traffico reale. */</span>
+<span class="n">java</span> <span class="o">-</span><span class="nc">Xms8G</span> <span class="o">-</span><span class="nc">Xmx8G</span> <span class="err">\</span> <span class="o">-</span><span class="nl">XX:</span><span class="o">+</span><span class="nc">AlwaysPreTouch</span> <span class="err">\</span> <span class="o">-</span><span class="nl">XX:</span><span class="o">+</span><span class="nc">UseZGC</span> <span class="err">\</span> <span class="o">-</span><span class="n">jar</span>
+    <span class="n">latency</span><span class="o">-</span><span class="n">sensitive</span><span class="o">-</span><span class="n">app</span><span class="o">.</span><span class="na">jar</span>
 <span class="cm">/* Misuro l'impatto sul tempo di avvio prima e dopo: */</span>
- 
 <span class="c1">// Senza AlwaysPreTouch: avvio in 3.2s, prima richiesta in 45ms, p99 prime 100</span>
-<span class="c1">// richieste: 320ms</span>
-<span class="c1">// Con AlwaysPreTouch: avvio in 8.1s, prima richiesta in 8ms, p99 prime 100</span>
-<span class="c1">// richieste: 12ms</span>
-<span class="o">*</span> <span class="nc">In</span> <span class="nc">Kubernetes</span><span class="o">,</span> <span class="nc">AlwaysPreTouch</span> <span class="n">interagisce</span> <span class="n">con</span> <span class="n">i</span> <span class="nl">readinessProbe:</span> <span class="n">devo</span>
-<span class="o">*</span> <span class="n">assicurarmi</span> <span class="n">che</span> <span class="n">il</span> <span class="n">probe</span> <span class="n">non</span> <span class="n">scatti</span> <span class="n">prima</span> <span class="n">che</span> <span class="n">il</span> <span class="nc">PreTouch</span> <span class="n">sia</span> <span class="n">completato</span><span class="o">,</span>
-<span class="o">*</span> <span class="n">altrimenti</span> <span class="nc">K8s</span> <span class="n">riceve</span> <span class="n">traffico</span> <span class="n">su</span> <span class="n">un</span> <span class="n">pod</span> <span class="n">non</span> <span class="n">ancora</span> <span class="s">"caldo"</span><span class="o">.</span> <span class="o">*/</span>
- 
-<span class="c1">// readinessProbe: </span>
-<span class="c1">// httpGet: </span>
-<span class="c1">// path: /actuator/health/readiness </span>
-<span class="c1">// port: 8080 </span>
-<span class="c1">// initialDelaySeconds: 30 </span>
-<span class="c1">// Aspetto che il PreTouch sia completato </span>
-<span class="c1">// periodSeconds: 5 </span>
-<span class="o">*</span> <span class="nc">In</span> <span class="nc">Spring</span> <span class="nc">Boot</span><span class="o">,</span> <span class="n">posso</span> <span class="n">segnalare</span> <span class="n">esplicitamente</span> <span class="n">la</span> <span class="n">readiness</span> <span class="n">solo</span> <span class="n">dopo</span> <span class="n">che</span>
-<span class="o">*</span> <span class="n">l</span><span class="err">'</span><span class="n">applicazione</span> <span class="n">è</span> <span class="n">davvero</span> <span class="n">pronta</span><span class="o">,</span> <span class="n">includendo</span> <span class="n">un</span> <span class="n">warm</span><span class="o">-</span><span class="n">up</span> <span class="n">delle</span> <span class="nl">cache:</span> <span class="o">*/</span>
- <span class="nd">@Component</span> <span class="kd">public</span> <span class="kd">class</span> <span class="nc">WarmupReadinessIndicator</span> <span class="kd">implements</span>
-<span class="nc">ReadinessHealthContributor</span>
-<span class="o">{</span> <span class="kd">private</span> <span class="kd">final</span> <span class="nc">AtomicBoolean</span> <span class="n">warmedUp</span> <span class="o">=</span> <span class="k">new</span> <span class="nc">AtomicBoolean</span><span class="o">(</span><span class="kc">false</span><span class="o">);</span>
-<span class="nd">@EventListener</span><span class="o">(</span><span class="nc">ApplicationReadyEvent</span><span class="o">.</span><span class="na">class</span><span class="o">)</span> <span class="kd">public</span> <span class="kt">void</span> <span class="nf">onApplicationReady</span><span class="o">()</span>
-<span class="o">{</span> 
-<span class="c1">// Eseguo query di warm-up per portare i dati in cache warmupCriticalCaches();</span>
-<span class="c1">// warmedUp.set(true); }</span>
- <span class="nd">@Override</span> <span class="kd">public</span> <span class="nc">HealthComponent</span> <span class="nf">getHealth</span><span class="o">(</span><span class="kt">boolean</span> <span class="n">includeDetails</span><span class="o">)</span> 
-<span class="o">{</span> <span class="k">return</span> <span class="n">warmedUp</span><span class="o">.</span><span class="na">get</span><span class="o">()</span> <span class="o">?</span> <span class="nc">Health</span><span class="o">.</span><span class="na">up</span><span class="o">().</span><span class="na">build</span><span class="o">()</span> <span class="o">:</span>
-<span class="nc">Health</span><span class="o">.</span><span class="na">down</span><span class="o">().</span><span class="na">withDetail</span><span class="o">(</span><span class="s">"reason"</span><span class="o">,</span> <span class="s">"Warm-up in corso"</span><span class="o">).</span><span class="na">build</span><span class="o">();</span> <span class="o">}</span>
- <span class="kd">private</span> <span class="kt">void</span> <span class="nf">warmupCriticalCaches</span><span class="o">()</span> 
-<span class="o">{</span> <span class="n">log</span><span class="o">.</span><span class="na">info</span><span class="o">(</span><span class="s">"Avvio warm-up cache critiche..."</span><span class="o">);</span> 
-<span class="c1">// Pre-carico le configurazioni più accedute</span>
-<span class="c1">// configRepository.findAll().forEach(configCache::put);</span>
-<span class="c1">// Pre-carico gli utenti VIP per evitare cache miss nelle prime richieste</span>
-<span class="c1">// userRepository.findVipUsers().forEach(userCache::put); log.info("Warm-up</span>
-<span class="c1">// completato:</span>
-<span class="o">{}</span>
- <span class="n">config</span><span class="o">,</span> 
-<span class="o">{}</span>
- <span class="n">utenti</span> <span class="no">VIP</span> <span class="n">in</span> <span class="n">cache</span><span class="s">", configCache.size(), userCache.size()); }
- }
- 
-* Per ambienti con autoscaling orizzontale, combino AlwaysPreTouch con un
-* lifecycle hook preStop per dare tempo al pod di drenare le connessioni prima
-* dello spegnimento: */
- 
-// lifecycle: 
-// preStop: 
-// exec: 
-// command: ["</span><span class="n">sh</span><span class="s">", "</span><span class="o">-</span><span class="n">c</span><span class="s">", "</span><span class="n">sleep</span> <span class="mi">15</span><span class="err">"</span><span class="o">]</span> 
-<span class="c1">// 15 secondi per drenare le connessioni in corso</span>
+    <span class="nl">richieste:</span> <span class="mi">320</span><span class="n">ms</span> <span class="c1">// Con AlwaysPreTouch: avvio in 8.1s, prima richiesta in</span>
+    <span class="mi">8</span><span class="n">ms</span><span class="o">,</span> <span class="n">p99</span> <span class="n">prime</span> <span class="mi">100</span> <span class="nl">richieste:</span> <span class="mi">12</span><span class="n">ms</span> <span class="cm">/* In Kubernetes, AlwaysPreTouch
+    interagisce con i readinessProbe: devo assicurarmi che il probe non scatti
+    prima che il PreTouch sia completato, altrimenti K8s riceve traffico su un
+    pod non ancora "caldo". */</span> <span class="c1">// readinessProbe: // httpGet: // path:</span>
+    <span class="o">/</span><span class="n">actuator</span><span class="o">/</span><span class="n">health</span><span class="o">/</span><span class="n">readiness</span> <span class="c1">// port: 8080 // initialDelaySeconds: 30 //</span>
+    <span class="nc">Aspetto</span> <span class="n">che</span> <span class="n">il</span> <span class="nc">PreTouch</span> <span class="n">sia</span> <span class="n">completato</span> <span class="c1">// periodSeconds: 5 /* In Spring</span>
+    <span class="nc">Boot</span><span class="o">,</span> <span class="n">posso</span> <span class="n">segnalare</span> <span class="n">esplicitamente</span> <span class="n">la</span> <span class="n">readiness</span> <span class="n">solo</span> <span class="n">dopo</span> <span class="n">che</span>
+    <span class="n">l</span><span class="err">'</span><span class="n">applicazione</span> <span class="n">è</span> <span class="n">davvero</span> <span class="n">pronta</span><span class="o">,</span> <span class="n">includendo</span> <span class="n">un</span> <span class="n">warm</span><span class="o">-</span><span class="n">up</span> <span class="n">delle</span> <span class="nl">cache:</span> <span class="o">*/</span>
+    <span class="nd">@Component</span> <span class="kd">public</span> <span class="kd">class</span> <span class="nc">WarmupReadinessIndicator</span> <span class="kd">implements</span>
+    <span class="nc">ReadinessHealthContributor</span>
+<span class="o">{</span>
+    <span class="kd">private</span> <span class="kd">final</span> <span class="nc">AtomicBoolean</span> <span class="n">warmedUp</span> <span class="o">=</span> <span class="k">new</span> <span class="nc">AtomicBoolean</span><span class="o">(</span><span class="kc">false</span><span class="o">);</span>
+    <span class="nd">@EventListener</span><span class="o">(</span><span class="nc">ApplicationReadyEvent</span><span class="o">.</span><span class="na">class</span><span class="o">)</span> <span class="kd">public</span> <span class="kt">void</span> <span class="nf">onApplicationReady</span><span class="o">()</span>
+        <span class="o">{</span>
+        <span class="c1">// Eseguo query di warm-up per portare i dati in cache</span>
+            <span class="n">warmupCriticalCaches</span><span class="o">()</span>
+        <span class="o">;</span>
+        <span class="n">warmedUp</span><span class="o">.</span><span class="na">set</span><span class="o">(</span><span class="kc">true</span><span class="o">);</span>
+    <span class="o">}</span>
+    <span class="nd">@Override</span> <span class="kd">public</span> <span class="nc">HealthComponent</span> <span class="nf">getHealth</span><span class="o">(</span><span class="kt">boolean</span> <span class="n">includeDetails</span><span class="o">)</span> <span class="o">{</span>
+        <span class="k">return</span> <span class="n">warmedUp</span><span class="o">.</span><span class="na">get</span><span class="o">()</span> <span class="o">?</span> <span class="nc">Health</span><span class="o">.</span><span class="na">up</span><span class="o">().</span><span class="na">build</span><span class="o">()</span> <span class="o">:</span>
+            <span class="nc">Health</span><span class="o">.</span><span class="na">down</span><span class="o">().</span><span class="na">withDetail</span><span class="o">(</span><span class="s">"reason"</span><span class="o">,</span> <span class="s">"Warm-up in corso"</span><span class="o">).</span><span class="na">build</span><span class="o">();</span>
+    <span class="o">}</span>
+    <span class="kd">private</span> <span class="kt">void</span> <span class="nf">warmupCriticalCaches</span><span class="o">()</span> <span class="o">{</span>
+        <span class="n">log</span><span class="o">.</span><span class="na">info</span><span class="o">(</span><span class="s">"Avvio warm-up cache critiche..."</span><span class="o">);</span>
+        <span class="c1">// Pre-carico le configurazioni più accedute</span>
+            <span class="n">configRepository</span><span class="o">.</span><span class="na">findAll</span><span class="o">().</span><span class="na">forEach</span><span class="o">(</span><span class="nl">configCache:</span><span class="o">:</span><span class="n">put</span><span class="o">)</span>
+        <span class="o">;</span>
+        <span class="c1">// Pre-carico gli utenti VIP per evitare cache miss nelle prime</span>
+            <span class="n">richieste</span> <span class="n">userRepository</span><span class="o">.</span><span class="na">findVipUsers</span><span class="o">().</span><span class="na">forEach</span><span class="o">(</span><span class="nl">userCache:</span><span class="o">:</span><span class="n">put</span><span class="o">)</span>
+        <span class="o">;</span>
+        <span class="n">log</span><span class="o">.</span><span class="na">info</span><span class="o">(</span><span class="s">"Warm-up completato: {
+        }
+        config, {
+        }
+        utenti VIP in cache"</span><span class="o">,</span> <span class="n">configCache</span><span class="o">.</span><span class="na">size</span><span class="o">(),</span> <span class="n">userCache</span><span class="o">.</span><span class="na">size</span><span class="o">());</span>
+    <span class="o">}</span>
+<span class="o">}</span>
+<span class="cm">/* Per ambienti con autoscaling orizzontale, combino AlwaysPreTouch con un
+    lifecycle hook preStop per dare tempo al pod di drenare le connessioni prima
+    dello spegnimento: */</span>
+<span class="c1">// lifecycle: // preStop: // exec: // command: ["sh", "-c", "sleep 15"] // 15</span>
+    <span class="n">secondi</span> <span class="n">per</span> <span class="n">drenare</span> <span class="n">le</span> <span class="n">connessioni</span> <span class="n">in</span> <span class="n">corso</span>
 </pre></td></tr></tbody></table></code></pre></div></div>
 
         </article>

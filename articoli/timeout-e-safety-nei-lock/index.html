@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Timeout e Safety nei Lock — DevLog</title>
-    <meta name="description" content="L'uso di synchronized o lock() senza parametri può portare a deadlock infiniti se un thread non rilascia mai la risorsa. L'uso sistematico di tryLock(timeout, unit) permette al thread di 'arrendersi' se non ottiene il lock entro un tempo ragionevole,
+    <meta name="description" content="L'uso di synchronized o lock() senza parametri può portare a deadlock infiniti se un thread non rilascia mai la risorsa. L'uso sistematico di tryLock(timeout, unit) permette al thread di "arrendersi" se non ottiene il lock entro un tempo ragionevole,
 ">
     <link rel="stylesheet" href="/appuntidiprogrammazione/assets/css/style.css">
 
@@ -194,111 +194,167 @@
 103
 104
 105
-</pre></td><td class="rouge-code"><pre><span class="o">*</span> <span class="nc">Confronto</span> <span class="n">i</span> <span class="n">tre</span> <span class="n">approcci</span> <span class="n">per</span> <span class="n">evidenziare</span> <span class="n">perché</span> <span class="n">tryLock</span> <span class="n">è</span> <span class="n">preferibile</span> <span class="n">in</span>
-<span class="o">*</span> <span class="n">produzione</span><span class="o">.</span> <span class="o">*/</span>
- 
+106
+107
+108
+109
+110
+111
+112
+113
+114
+115
+116
+117
+118
+119
+120
+121
+122
+123
+124
+125
+126
+127
+128
+129
+130
+131
+132
+133
+</pre></td><td class="rouge-code"><pre><span class="cm">/* Confronto i tre approcci per evidenziare perché tryLock è preferibile in
+    produzione. */</span>
 <span class="c1">// APPROCCIO 1 - PERICOLOSO: synchronized blocca il thread indefinitamente</span>
-<span class="c1">// public synchronized void dangerousMethod()</span>
-<span class="o">{</span> <span class="n">externalService</span><span class="o">.</span><span class="na">call</span><span class="o">();</span> 
-<span class="c1">// Se il servizio si blocca, il thread aspetta per sempre }</span>
- 
+    <span class="kd">public</span> <span class="kd">synchronized</span> <span class="kt">void</span> <span class="nf">dangerousMethod</span><span class="o">()</span>
+<span class="o">{</span>
+    <span class="n">externalService</span><span class="o">.</span><span class="na">call</span><span class="o">();</span>
+    <span class="c1">// Se il servizio si blocca, il thread aspetta per sempre</span>
+<span class="o">}</span>
 <span class="c1">// APPROCCIO 2 - MIGLIORE MA ANCORA RISCHIOSA: lock() senza timeout private</span>
-<span class="c1">// final ReentrantLock lock = new ReentrantLock(); public void stillDangerous()</span>
-<span class="o">{</span> <span class="n">lock</span><span class="o">.</span><span class="na">lock</span><span class="o">();</span> 
-<span class="c1">// Blocco infinito se qualcuno tiene il lock try </span>
-<span class="o">{</span> <span class="n">externalService</span><span class="o">.</span><span class="na">call</span><span class="o">();</span> <span class="o">}</span>
- <span class="k">finally</span> 
-<span class="o">{</span> <span class="n">lock</span><span class="o">.</span><span class="na">unlock</span><span class="o">();</span> <span class="o">}</span>
- <span class="o">}</span>
- 
+    <span class="kd">final</span> <span class="nc">ReentrantLock</span> <span class="n">lock</span> <span class="o">=</span> <span class="k">new</span> <span class="nc">ReentrantLock</span><span class="o">()</span>
+<span class="o">;</span>
+<span class="kd">public</span> <span class="kt">void</span> <span class="nf">stillDangerous</span><span class="o">()</span> <span class="o">{</span>
+    <span class="n">lock</span><span class="o">.</span><span class="na">lock</span><span class="o">();</span>
+    <span class="c1">// Blocco infinito se qualcuno tiene il lock try</span>
+    <span class="o">{</span>
+        <span class="n">externalService</span><span class="o">.</span><span class="na">call</span><span class="o">();</span>
+    <span class="o">}</span>
+    <span class="k">finally</span> <span class="o">{</span>
+        <span class="n">lock</span><span class="o">.</span><span class="na">unlock</span><span class="o">();</span>
+    <span class="o">}</span>
+<span class="o">}</span>
 <span class="c1">// APPROCCIO 3 - CORRETTO: tryLock con timeout e gestione esplicita del</span>
-<span class="c1">// fallimento public void safeMethod() throws InterruptedException</span>
-<span class="o">{</span> <span class="kt">boolean</span> <span class="n">acquired</span> <span class="o">=</span> <span class="n">lock</span><span class="o">.</span><span class="na">tryLock</span><span class="o">(</span><span class="mi">2</span><span class="o">,</span> <span class="nc">TimeUnit</span><span class="o">.</span><span class="na">SECONDS</span><span class="o">);</span> <span class="k">if</span> <span class="o">(!</span><span class="n">acquired</span><span class="o">)</span> 
-<span class="o">{</span> <span class="n">log</span><span class="o">.</span><span class="na">warn</span><span class="o">(</span><span class="s">"Impossibile acquisire il lock entro 2 secondi. Thread: 
-{}
-"</span><span class="o">,</span> <span class="nc">Thread</span><span class="o">.</span><span class="na">currentThread</span><span class="o">().</span><span class="na">getName</span><span class="o">());</span> <span class="k">throw</span> <span class="k">new</span>
-<span class="nc">ServiceUnavailableException</span><span class="o">(</span><span class="s">"Risorsa occupata, riprova più tardi"</span><span class="o">);</span> <span class="o">}</span>
- <span class="k">try</span> 
-<span class="o">{</span> <span class="n">externalService</span><span class="o">.</span><span class="na">call</span><span class="o">();</span> <span class="o">}</span>
- <span class="k">finally</span> 
-<span class="o">{</span> <span class="n">lock</span><span class="o">.</span><span class="na">unlock</span><span class="o">();</span> 
-<span class="c1">// Sempre nel finally: garantito anche in caso di eccezione }</span>
- <span class="o">}</span>
- 
-<span class="o">*</span> <span class="nc">In</span> <span class="nc">Spring</span> <span class="nc">Boot</span><span class="o">,</span> <span class="n">applico</span> <span class="n">il</span> <span class="n">pattern</span> <span class="n">a</span> <span class="n">un</span> <span class="n">service</span> <span class="n">che</span> <span class="n">gestisce</span> <span class="n">l</span><span class="err">'</span><span class="n">accesso</span> <span class="n">a</span> <span class="n">una</span>
-<span class="o">*</span> <span class="n">risorsa</span> <span class="nf">condivisa</span> <span class="o">(</span><span class="n">es</span><span class="o">.</span> <span class="n">un</span> <span class="n">file</span> <span class="n">di</span> <span class="n">configurazione</span> <span class="n">o</span> <span class="n">un</span> <span class="n">device</span> <span class="n">hardware</span><span class="o">):</span> <span class="o">*/</span>
- <span class="nd">@Service</span> <span class="kd">public</span> <span class="kd">class</span> <span class="nc">SharedResourceService</span> 
-<span class="o">{</span> <span class="kd">private</span> <span class="kd">final</span> <span class="nc">ReentrantLock</span> <span class="n">resourceLock</span> <span class="o">=</span> <span class="k">new</span> <span class="nc">ReentrantLock</span><span class="o">(</span><span class="kc">true</span><span class="o">);</span> 
-<span class="c1">// fair=true: FIFO tra i thread in attesa private static final long</span>
-<span class="c1">// LOCK_TIMEOUT_MS = 500; public &lt;T&gt; T executeWithLock(Supplier&lt;T&gt; operation)</span>
-<span class="o">{</span> <span class="kt">boolean</span> <span class="n">acquired</span> <span class="o">=</span> <span class="kc">false</span><span class="o">;</span> <span class="k">try</span> 
-<span class="o">{</span> <span class="n">acquired</span> <span class="o">=</span> <span class="n">resourceLock</span><span class="o">.</span><span class="na">tryLock</span><span class="o">(</span><span class="no">LOCK_TIMEOUT_MS</span><span class="o">,</span> <span class="nc">TimeUnit</span><span class="o">.</span><span class="na">MILLISECONDS</span><span class="o">);</span> <span class="k">if</span>
-<span class="o">(!</span><span class="n">acquired</span><span class="o">)</span>
-<span class="o">{</span> 
-<span class="c1">// Monitoro il numero di timeout per rilevare saturazione della risorsa</span>
-<span class="c1">// meterRegistry.counter("lock.timeout", "resource", "shared").increment();</span>
-<span class="c1">// throw new ResourceBusyException("Risorsa occupata dopo " + LOCK_TIMEOUT_MS +</span>
-<span class="c1">// "ms"); }</span>
- <span class="k">return</span> <span class="n">operation</span><span class="o">.</span><span class="na">get</span><span class="o">();</span> <span class="o">}</span>
- <span class="k">catch</span> <span class="o">(</span><span class="nc">InterruptedException</span> <span class="n">e</span><span class="o">)</span> 
-<span class="o">{</span> <span class="nc">Thread</span><span class="o">.</span><span class="na">currentThread</span><span class="o">().</span><span class="na">interrupt</span><span class="o">();</span> <span class="k">throw</span> <span class="k">new</span>
-<span class="nc">ServiceUnavailableException</span><span class="o">(</span><span class="s">"Thread interrotto durante l'attesa del lock"</span><span class="o">);</span> <span class="o">}</span>
- <span class="k">finally</span> 
-<span class="o">{</span> <span class="k">if</span> <span class="o">(</span><span class="n">acquired</span><span class="o">)</span> 
-<span class="o">{</span> <span class="n">resourceLock</span><span class="o">.</span><span class="na">unlock</span><span class="o">();</span> <span class="o">}</span>
- <span class="o">}</span>
- <span class="o">}</span>
- <span class="o">}</span>
- 
-<span class="o">*</span> <span class="nc">Rilevazione</span> <span class="n">di</span> <span class="n">potenziali</span> <span class="n">deadlock</span> <span class="n">in</span> <span class="n">sviluppo</span> <span class="n">tramite</span> <span class="n">il</span> <span class="nc">ThreadMXBean</span> <span class="n">della</span>
-<span class="o">*</span> <span class="nl">JVM:</span> <span class="o">*/</span>
- <span class="nc">ThreadMXBean</span> <span class="n">tmx</span> <span class="o">=</span> <span class="nc">ManagementFactory</span><span class="o">.</span><span class="na">getThreadMXBean</span><span class="o">();</span> <span class="kt">long</span><span class="o">[]</span>
-<span class="n">deadlockedThreads</span> <span class="o">=</span> <span class="n">tmx</span><span class="o">.</span><span class="na">findDeadlockedThreads</span><span class="o">();</span> <span class="k">if</span> <span class="o">(</span><span class="n">deadlockedThreads</span> <span class="o">!=</span> <span class="kc">null</span><span class="o">)</span>
-<span class="o">{</span> <span class="nc">ThreadInfo</span><span class="o">[]</span> <span class="n">infos</span> <span class="o">=</span> <span class="n">tmx</span><span class="o">.</span><span class="na">getThreadInfo</span><span class="o">(</span><span class="n">deadlockedThreads</span><span class="o">,</span> <span class="kc">true</span><span class="o">,</span> <span class="kc">true</span><span class="o">);</span> <span class="k">for</span>
-<span class="o">(</span><span class="nc">ThreadInfo</span> <span class="n">info</span> <span class="o">:</span> <span class="n">infos</span><span class="o">)</span>
-<span class="o">{</span> <span class="n">log</span><span class="o">.</span><span class="na">error</span><span class="o">(</span><span class="s">"DEADLOCK rilevato su thread: 
-{}
- in stato: 
-{}
-"</span><span class="o">,</span> <span class="n">info</span><span class="o">.</span><span class="na">getThreadName</span><span class="o">(),</span> <span class="n">info</span><span class="o">.</span><span class="na">getThreadState</span><span class="o">());</span> <span class="n">log</span><span class="o">.</span><span class="na">error</span><span class="o">(</span><span class="s">"Lock che il thread
-aspetta:
-{}
-"</span><span class="o">,</span> <span class="n">info</span><span class="o">.</span><span class="na">getLockName</span><span class="o">());</span> <span class="n">log</span><span class="o">.</span><span class="na">error</span><span class="o">(</span><span class="s">"Lock owner: 
-{}
-"</span><span class="o">,</span> <span class="n">info</span><span class="o">.</span><span class="na">getLockOwnerName</span><span class="o">());</span> <span class="o">}</span>
- <span class="o">}</span>
- 
-<span class="o">*</span> <span class="nc">In</span> <span class="n">produzione</span><span class="o">,</span> <span class="n">schedulo</span> <span class="n">questo</span> <span class="n">controllo</span> <span class="n">ogni</span> <span class="n">minuto</span> <span class="n">per</span> <span class="n">rilevare</span> <span class="n">deadlock</span>
-<span class="o">*</span> <span class="n">prima</span> <span class="n">che</span> <span class="n">l</span><span class="err">'</span><span class="n">utente</span> <span class="n">li</span> <span class="nl">segnali:</span> <span class="o">*/</span>
- <span class="nd">@Scheduled</span><span class="o">(</span><span class="n">fixedDelay</span> <span class="o">=</span> <span class="mi">60_000</span><span class="o">)</span> <span class="kd">public</span> <span class="kt">void</span> <span class="nf">detectDeadlocks</span><span class="o">()</span> 
-<span class="o">{</span> <span class="kt">long</span><span class="o">[]</span> <span class="n">deadlocked</span> <span class="o">=</span>
-<span class="nc">ManagementFactory</span><span class="o">.</span><span class="na">getThreadMXBean</span><span class="o">().</span><span class="na">findDeadlockedThreads</span><span class="o">();</span> <span class="k">if</span> <span class="o">(</span><span class="n">deadlocked</span> <span class="o">!=</span>
-<span class="kc">null</span><span class="o">)</span>
-<span class="o">{</span> <span class="n">alertService</span><span class="o">.</span><span class="na">sendCritical</span><span class="o">(</span><span class="s">"DEADLOCK rilevato su "</span> <span class="o">+</span> <span class="n">deadlocked</span><span class="o">.</span><span class="na">length</span> <span class="o">+</span> <span class="s">"
-thread. Riavvio necessario."</span><span class="o">);</span> <span class="o">}</span>
- <span class="o">}</span>
- 
-<span class="o">*</span> <span class="nc">Strategia</span> <span class="n">di</span> <span class="n">lock</span> <span class="n">ordering</span> <span class="n">per</span> <span class="n">prevenire</span> <span class="n">i</span> <span class="n">deadlock</span> <span class="nl">strutturalmente:</span> <span class="n">acquisire</span>
-<span class="o">*</span> <span class="n">sempre</span> <span class="n">i</span> <span class="n">lock</span> <span class="n">nello</span> <span class="n">stesso</span> <span class="n">ordine</span> <span class="n">globale</span><span class="o">.</span> <span class="o">*/</span>
- <span class="kd">public</span> <span class="kt">void</span> <span class="nf">transferFunds</span><span class="o">(</span><span class="nc">Account</span> <span class="n">from</span><span class="o">,</span> <span class="nc">Account</span> <span class="n">to</span><span class="o">,</span> <span class="nc">BigDecimal</span> <span class="n">amount</span><span class="o">)</span> 
-<span class="o">{</span> 
-<span class="c1">// Ordino i lock per ID per garantire che due thread che trasferiscono tra gli</span>
-<span class="c1">// stessi account</span>
-<span class="c1">// acquisiscano sempre i lock nello stesso ordine, prevenendo il deadlock.</span>
-<span class="c1">// Account first = from.getId() &lt; to.getId() ? from : to; Account second =</span>
-<span class="c1">// from.getId() &lt; to.getId() ? to : from; boolean firstAcquired = false; boolean</span>
-<span class="c1">// secondAcquired = false; try</span>
-<span class="o">{</span> <span class="n">firstAcquired</span> <span class="o">=</span> <span class="n">first</span><span class="o">.</span><span class="na">getLock</span><span class="o">().</span><span class="na">tryLock</span><span class="o">(</span><span class="mi">1</span><span class="o">,</span> <span class="nc">TimeUnit</span><span class="o">.</span><span class="na">SECONDS</span><span class="o">);</span> <span class="k">if</span>
-<span class="o">(!</span><span class="n">firstAcquired</span><span class="o">)</span> <span class="k">throw</span> <span class="k">new</span> <span class="nc">ResourceBusyException</span><span class="o">(</span><span class="s">"Account "</span> <span class="o">+</span> <span class="n">first</span><span class="o">.</span><span class="na">getId</span><span class="o">()</span> <span class="o">+</span> <span class="s">"
-occupato"</span><span class="o">);</span> <span class="n">secondAcquired</span> <span class="o">=</span> <span class="n">second</span><span class="o">.</span><span class="na">getLock</span><span class="o">().</span><span class="na">tryLock</span><span class="o">(</span><span class="mi">1</span><span class="o">,</span> <span class="nc">TimeUnit</span><span class="o">.</span><span class="na">SECONDS</span><span class="o">);</span> <span class="k">if</span>
-<span class="o">(!</span><span class="n">secondAcquired</span><span class="o">)</span> <span class="k">throw</span> <span class="k">new</span> <span class="nc">ResourceBusyException</span><span class="o">(</span><span class="s">"Account "</span> <span class="o">+</span> <span class="n">second</span><span class="o">.</span><span class="na">getId</span><span class="o">()</span> <span class="o">+</span>
-<span class="s">" occupato"</span><span class="o">);</span> <span class="n">from</span><span class="o">.</span><span class="na">debit</span><span class="o">(</span><span class="n">amount</span><span class="o">);</span> <span class="n">to</span><span class="o">.</span><span class="na">credit</span><span class="o">(</span><span class="n">amount</span><span class="o">);</span> <span class="o">}</span>
- <span class="k">catch</span> <span class="o">(</span><span class="nc">InterruptedException</span> <span class="n">e</span><span class="o">)</span> 
-<span class="o">{</span> <span class="nc">Thread</span><span class="o">.</span><span class="na">currentThread</span><span class="o">().</span><span class="na">interrupt</span><span class="o">();</span> <span class="o">}</span>
- <span class="k">finally</span> 
-<span class="o">{</span> <span class="k">if</span> <span class="o">(</span><span class="n">secondAcquired</span><span class="o">)</span> <span class="n">second</span><span class="o">.</span><span class="na">getLock</span><span class="o">().</span><span class="na">unlock</span><span class="o">();</span> <span class="k">if</span> <span class="o">(</span><span class="n">firstAcquired</span><span class="o">)</span>
-<span class="n">first</span><span class="o">.</span><span class="na">getLock</span><span class="o">().</span><span class="na">unlock</span><span class="o">();</span> <span class="o">}</span>
- <span class="o">}</span>
+    <span class="n">fallimento</span> <span class="kd">public</span> <span class="kt">void</span> <span class="nf">safeMethod</span><span class="o">()</span> <span class="kd">throws</span> <span class="nc">InterruptedException</span>
+<span class="o">{</span>
+    <span class="kt">boolean</span> <span class="n">acquired</span> <span class="o">=</span> <span class="n">lock</span><span class="o">.</span><span class="na">tryLock</span><span class="o">(</span><span class="mi">2</span><span class="o">,</span> <span class="nc">TimeUnit</span><span class="o">.</span><span class="na">SECONDS</span><span class="o">);</span>
+    <span class="k">if</span> <span class="o">(!</span><span class="n">acquired</span><span class="o">)</span> <span class="o">{</span>
+        <span class="n">log</span><span class="o">.</span><span class="na">warn</span><span class="o">(</span><span class="s">"Impossibile acquisire il lock entro 2 secondi. Thread: {
+        }
+        "</span><span class="o">,</span> <span class="nc">Thread</span><span class="o">.</span><span class="na">currentThread</span><span class="o">().</span><span class="na">getName</span><span class="o">());</span>
+        <span class="k">throw</span> <span class="k">new</span> <span class="nf">ServiceUnavailableException</span><span class="o">(</span><span class="s">"Risorsa occupata, riprova più
+            tardi"</span><span class="o">);</span>
+    <span class="o">}</span>
+    <span class="k">try</span> <span class="o">{</span>
+        <span class="n">externalService</span><span class="o">.</span><span class="na">call</span><span class="o">();</span>
+    <span class="o">}</span>
+    <span class="k">finally</span> <span class="o">{</span>
+        <span class="n">lock</span><span class="o">.</span><span class="na">unlock</span><span class="o">();</span>
+        <span class="c1">// Sempre nel finally: garantito anche in caso di eccezione</span>
+    <span class="o">}</span>
+<span class="o">}</span>
+<span class="cm">/* In Spring Boot, applico il pattern a un service che gestisce l'accesso a una
+    risorsa condivisa (es. un file di configurazione o un device hardware): */</span>
+<span class="nd">@Service</span> <span class="kd">public</span> <span class="kd">class</span> <span class="nc">SharedResourceService</span> <span class="o">{</span>
+    <span class="kd">private</span> <span class="kd">final</span> <span class="nc">ReentrantLock</span> <span class="n">resourceLock</span> <span class="o">=</span> <span class="k">new</span> <span class="nc">ReentrantLock</span><span class="o">(</span><span class="kc">true</span><span class="o">);</span>
+    <span class="c1">// fair=true: FIFO tra i thread in attesa private static final long</span>
+        <span class="no">LOCK_TIMEOUT_MS</span> <span class="o">=</span> <span class="mi">500</span>
+    <span class="o">;</span>
+    <span class="kd">public</span> <span class="o">&lt;</span><span class="no">T</span><span class="o">&gt;</span> <span class="no">T</span> <span class="nf">executeWithLock</span><span class="o">(</span><span class="nc">Supplier</span><span class="o">&lt;</span><span class="no">T</span><span class="o">&gt;</span> <span class="n">operation</span><span class="o">)</span> <span class="o">{</span>
+        <span class="kt">boolean</span> <span class="n">acquired</span> <span class="o">=</span> <span class="kc">false</span><span class="o">;</span>
+        <span class="k">try</span> <span class="o">{</span>
+            <span class="n">acquired</span> <span class="o">=</span> <span class="n">resourceLock</span><span class="o">.</span><span class="na">tryLock</span><span class="o">(</span><span class="no">LOCK_TIMEOUT_MS</span><span class="o">,</span>
+                <span class="nc">TimeUnit</span><span class="o">.</span><span class="na">MILLISECONDS</span><span class="o">);</span>
+            <span class="k">if</span> <span class="o">(!</span><span class="n">acquired</span><span class="o">)</span> <span class="o">{</span>
+                <span class="c1">// Monitoro il numero di timeout per rilevare saturazione della</span>
+                    <span class="n">risorsa</span> <span class="n">meterRegistry</span><span class="o">.</span><span class="na">counter</span><span class="o">(</span><span class="s">"lock.timeout"</span><span class="o">,</span> <span class="s">"resource"</span><span class="o">,</span>
+                    <span class="s">"shared"</span><span class="o">).</span><span class="na">increment</span><span class="o">()</span>
+                <span class="o">;</span>
+                <span class="k">throw</span> <span class="k">new</span> <span class="nf">ResourceBusyException</span><span class="o">(</span><span class="s">"Risorsa occupata dopo "</span> <span class="o">+</span>
+                    <span class="no">LOCK_TIMEOUT_MS</span> <span class="o">+</span> <span class="s">"ms"</span><span class="o">);</span>
+            <span class="o">}</span>
+            <span class="k">return</span> <span class="n">operation</span><span class="o">.</span><span class="na">get</span><span class="o">();</span>
+        <span class="o">}</span>
+        <span class="k">catch</span> <span class="o">(</span><span class="nc">InterruptedException</span> <span class="n">e</span><span class="o">)</span> <span class="o">{</span>
+            <span class="nc">Thread</span><span class="o">.</span><span class="na">currentThread</span><span class="o">().</span><span class="na">interrupt</span><span class="o">();</span>
+            <span class="k">throw</span> <span class="k">new</span> <span class="nf">ServiceUnavailableException</span><span class="o">(</span><span class="s">"Thread interrotto durante
+                l'attesa del lock"</span><span class="o">);</span>
+        <span class="o">}</span>
+        <span class="k">finally</span> <span class="o">{</span>
+            <span class="k">if</span> <span class="o">(</span><span class="n">acquired</span><span class="o">)</span> <span class="o">{</span>
+                <span class="n">resourceLock</span><span class="o">.</span><span class="na">unlock</span><span class="o">();</span>
+            <span class="o">}</span>
+        <span class="o">}</span>
+    <span class="o">}</span>
+<span class="o">}</span>
+<span class="cm">/* Rilevazione di potenziali deadlock in sviluppo tramite il ThreadMXBean della
+    JVM: */</span>
+<span class="nc">ThreadMXBean</span> <span class="n">tmx</span> <span class="o">=</span> <span class="nc">ManagementFactory</span><span class="o">.</span><span class="na">getThreadMXBean</span><span class="o">();</span>
+<span class="kt">long</span><span class="o">[]</span> <span class="n">deadlockedThreads</span> <span class="o">=</span> <span class="n">tmx</span><span class="o">.</span><span class="na">findDeadlockedThreads</span><span class="o">();</span>
+<span class="k">if</span> <span class="o">(</span><span class="n">deadlockedThreads</span> <span class="o">!=</span> <span class="kc">null</span><span class="o">)</span> <span class="o">{</span>
+    <span class="nc">ThreadInfo</span><span class="o">[]</span> <span class="n">infos</span> <span class="o">=</span> <span class="n">tmx</span><span class="o">.</span><span class="na">getThreadInfo</span><span class="o">(</span><span class="n">deadlockedThreads</span><span class="o">,</span> <span class="kc">true</span><span class="o">,</span> <span class="kc">true</span><span class="o">);</span>
+    <span class="k">for</span> <span class="o">(</span><span class="nc">ThreadInfo</span> <span class="n">info</span> <span class="o">:</span> <span class="n">infos</span><span class="o">)</span> <span class="o">{</span>
+        <span class="n">log</span><span class="o">.</span><span class="na">error</span><span class="o">(</span><span class="s">"DEADLOCK rilevato su thread: {
+        }
+        in stato: {
+        }
+        "</span><span class="o">,</span> <span class="n">info</span><span class="o">.</span><span class="na">getThreadName</span><span class="o">(),</span> <span class="n">info</span><span class="o">.</span><span class="na">getThreadState</span><span class="o">());</span>
+        <span class="n">log</span><span class="o">.</span><span class="na">error</span><span class="o">(</span><span class="s">"Lock che il thread aspetta: {
+        }
+        "</span><span class="o">,</span> <span class="n">info</span><span class="o">.</span><span class="na">getLockName</span><span class="o">());</span>
+        <span class="n">log</span><span class="o">.</span><span class="na">error</span><span class="o">(</span><span class="s">"Lock owner: {
+        }
+        "</span><span class="o">,</span> <span class="n">info</span><span class="o">.</span><span class="na">getLockOwnerName</span><span class="o">());</span>
+    <span class="o">}</span>
+<span class="o">}</span>
+<span class="cm">/* In produzione, schedulo questo controllo ogni minuto per rilevare deadlock
+    prima che l'utente li segnali: */</span>
+<span class="nd">@Scheduled</span><span class="o">(</span><span class="n">fixedDelay</span> <span class="o">=</span> <span class="mi">60_000</span><span class="o">)</span> <span class="kd">public</span> <span class="kt">void</span> <span class="nf">detectDeadlocks</span><span class="o">()</span> <span class="o">{</span>
+    <span class="kt">long</span><span class="o">[]</span> <span class="n">deadlocked</span> <span class="o">=</span>
+        <span class="nc">ManagementFactory</span><span class="o">.</span><span class="na">getThreadMXBean</span><span class="o">().</span><span class="na">findDeadlockedThreads</span><span class="o">();</span>
+    <span class="k">if</span> <span class="o">(</span><span class="n">deadlocked</span> <span class="o">!=</span> <span class="kc">null</span><span class="o">)</span> <span class="o">{</span>
+        <span class="n">alertService</span><span class="o">.</span><span class="na">sendCritical</span><span class="o">(</span><span class="s">"DEADLOCK rilevato su "</span> <span class="o">+</span> <span class="n">deadlocked</span><span class="o">.</span><span class="na">length</span> <span class="o">+</span>
+            <span class="s">" thread. Riavvio necessario."</span><span class="o">);</span>
+    <span class="o">}</span>
+<span class="o">}</span>
+<span class="cm">/* Strategia di lock ordering per prevenire i deadlock strutturalmente:
+    acquisire sempre i lock nello stesso ordine globale. */</span>
+<span class="kd">public</span> <span class="kt">void</span> <span class="nf">transferFunds</span><span class="o">(</span><span class="nc">Account</span> <span class="n">from</span><span class="o">,</span> <span class="nc">Account</span> <span class="n">to</span><span class="o">,</span> <span class="nc">BigDecimal</span> <span class="n">amount</span><span class="o">)</span> <span class="o">{</span>
+    <span class="c1">// Ordino i lock per ID per garantire che due thread che trasferiscono tra</span>
+        <span class="n">gli</span> <span class="n">stessi</span> <span class="n">account</span> <span class="c1">// acquisiscano sempre i lock nello stesso ordine,</span>
+        <span class="n">prevenendo</span> <span class="n">il</span> <span class="n">deadlock</span><span class="o">.</span> <span class="nc">Account</span> <span class="n">first</span> <span class="o">=</span> <span class="n">from</span><span class="o">.</span><span class="na">getId</span><span class="o">()</span> <span class="o">&lt;</span> <span class="n">to</span><span class="o">.</span><span class="na">getId</span><span class="o">()</span> <span class="o">?</span> <span class="n">from</span>
+        <span class="o">:</span> <span class="n">to</span>
+    <span class="o">;</span>
+    <span class="nc">Account</span> <span class="n">second</span> <span class="o">=</span> <span class="n">from</span><span class="o">.</span><span class="na">getId</span><span class="o">()</span> <span class="o">&lt;</span> <span class="n">to</span><span class="o">.</span><span class="na">getId</span><span class="o">()</span> <span class="o">?</span> <span class="n">to</span> <span class="o">:</span> <span class="n">from</span><span class="o">;</span>
+    <span class="kt">boolean</span> <span class="n">firstAcquired</span> <span class="o">=</span> <span class="kc">false</span><span class="o">;</span>
+    <span class="kt">boolean</span> <span class="n">secondAcquired</span> <span class="o">=</span> <span class="kc">false</span><span class="o">;</span>
+    <span class="k">try</span> <span class="o">{</span>
+        <span class="n">firstAcquired</span> <span class="o">=</span> <span class="n">first</span><span class="o">.</span><span class="na">getLock</span><span class="o">().</span><span class="na">tryLock</span><span class="o">(</span><span class="mi">1</span><span class="o">,</span> <span class="nc">TimeUnit</span><span class="o">.</span><span class="na">SECONDS</span><span class="o">);</span>
+        <span class="k">if</span> <span class="o">(!</span><span class="n">firstAcquired</span><span class="o">)</span> <span class="k">throw</span> <span class="k">new</span> <span class="nc">ResourceBusyException</span><span class="o">(</span><span class="s">"Account "</span> <span class="o">+</span>
+            <span class="n">first</span><span class="o">.</span><span class="na">getId</span><span class="o">()</span> <span class="o">+</span> <span class="s">" occupato"</span><span class="o">);</span>
+        <span class="n">secondAcquired</span> <span class="o">=</span> <span class="n">second</span><span class="o">.</span><span class="na">getLock</span><span class="o">().</span><span class="na">tryLock</span><span class="o">(</span><span class="mi">1</span><span class="o">,</span> <span class="nc">TimeUnit</span><span class="o">.</span><span class="na">SECONDS</span><span class="o">);</span>
+        <span class="k">if</span> <span class="o">(!</span><span class="n">secondAcquired</span><span class="o">)</span> <span class="k">throw</span> <span class="k">new</span> <span class="nc">ResourceBusyException</span><span class="o">(</span><span class="s">"Account "</span> <span class="o">+</span>
+            <span class="n">second</span><span class="o">.</span><span class="na">getId</span><span class="o">()</span> <span class="o">+</span> <span class="s">" occupato"</span><span class="o">);</span>
+        <span class="n">from</span><span class="o">.</span><span class="na">debit</span><span class="o">(</span><span class="n">amount</span><span class="o">);</span>
+        <span class="n">to</span><span class="o">.</span><span class="na">credit</span><span class="o">(</span><span class="n">amount</span><span class="o">);</span>
+    <span class="o">}</span>
+    <span class="k">catch</span> <span class="o">(</span><span class="nc">InterruptedException</span> <span class="n">e</span><span class="o">)</span> <span class="o">{</span>
+        <span class="nc">Thread</span><span class="o">.</span><span class="na">currentThread</span><span class="o">().</span><span class="na">interrupt</span><span class="o">();</span>
+    <span class="o">}</span>
+    <span class="k">finally</span> <span class="o">{</span>
+        <span class="k">if</span> <span class="o">(</span><span class="n">secondAcquired</span><span class="o">)</span> <span class="n">second</span><span class="o">.</span><span class="na">getLock</span><span class="o">().</span><span class="na">unlock</span><span class="o">();</span>
+        <span class="k">if</span> <span class="o">(</span><span class="n">firstAcquired</span><span class="o">)</span> <span class="n">first</span><span class="o">.</span><span class="na">getLock</span><span class="o">().</span><span class="na">unlock</span><span class="o">();</span>
+    <span class="o">}</span>
+<span class="o">}</span>
 </pre></td></tr></tbody></table></code></pre></div></div>
 
         </article>

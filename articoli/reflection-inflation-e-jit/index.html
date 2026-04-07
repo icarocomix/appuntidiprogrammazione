@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Reflection Inflation e JIT — DevLog</title>
-    <meta name="description" content="La JVM ha un'ottimizzazione interna: per le prime 15 chiamate a un metodo via reflection, usa il codice nativo (lento), poi genera una classe bytecode dedicata (veloce). Questo processo si chiama 'Inflation'. Non bisogna preoccuparsi troppo della len
+    <meta name="description" content="La JVM ha un'ottimizzazione interna: per le prime 15 chiamate a un metodo via reflection, usa il codice nativo (lento), poi genera una classe bytecode dedicata (veloce). Questo processo si chiama "Inflation". Non bisogna preoccuparsi troppo della len
 ">
     <link rel="stylesheet" href="/appuntidiprogrammazione/assets/css/style.css">
 
@@ -162,79 +162,103 @@
 71
 72
 73
-</pre></td><td class="rouge-code"><pre><span class="o">*</span> <span class="nc">Regolo</span> <span class="n">la</span> <span class="n">soglia</span> <span class="n">dopo</span> <span class="n">la</span> <span class="n">quale</span> <span class="n">la</span> <span class="n">reflection</span> <span class="n">viene</span> <span class="s">"gonfiata"</span> <span class="n">in</span> <span class="n">bytecode</span>
-<span class="o">*</span> <span class="n">generato</span><span class="o">.</span> <span class="nc">Il</span> <span class="k">default</span> <span class="n">è</span> <span class="mi">15</span><span class="o">:</span> <span class="n">dopo</span> <span class="mi">15</span> <span class="n">invocazioni</span><span class="o">,</span> <span class="n">la</span> <span class="no">JVM</span> <span class="n">genera</span> <span class="n">una</span> <span class="n">classe</span>
-<span class="o">*</span> <span class="n">accessor</span> <span class="n">dedicata</span><span class="o">.</span> <span class="o">*/</span>
- 
-<span class="c1">// java -Dsun.reflect.inflationThreshold=5 -jar app.jar </span>
-<span class="c1">// Con threshold=5, la JVM genera il bytecode ottimizzato prima, riducendo il</span>
-<span class="c1">// jitter iniziale</span>
-<span class="o">*</span> <span class="nc">Visualizzo</span> <span class="n">il</span> <span class="n">comportamento</span> <span class="n">della</span> <span class="nc">Inflation</span> <span class="n">con</span> <span class="n">un</span> <span class="n">benchmark</span> <span class="no">JMH</span> <span class="n">che</span> <span class="n">misura</span> <span class="n">il</span>
-<span class="o">*</span> <span class="n">jitter</span> <span class="n">delle</span> <span class="n">prime</span> <span class="nl">invocazioni:</span> <span class="o">*/</span>
- <span class="nd">@State</span><span class="o">(</span><span class="nc">Scope</span><span class="o">.</span><span class="na">Thread</span><span class="o">)</span> <span class="kd">public</span> <span class="kd">class</span> <span class="nc">ReflectionInflationBenchmark</span> 
-<span class="o">{</span> <span class="kd">private</span> <span class="nc">Method</span> <span class="n">method</span><span class="o">;</span> <span class="kd">private</span> <span class="nc">Object</span> <span class="n">instance</span><span class="o">;</span> <span class="nd">@Setup</span> <span class="kd">public</span> <span class="kt">void</span> <span class="nf">setup</span><span class="o">()</span>
-<span class="kd">throws</span> <span class="nc">Exception</span>
-<span class="o">{</span> <span class="n">instance</span> <span class="o">=</span> <span class="k">new</span> <span class="nc">MyService</span><span class="o">();</span> <span class="n">method</span> <span class="o">=</span> <span class="nc">MyService</span><span class="o">.</span><span class="na">class</span><span class="o">.</span><span class="na">getMethod</span><span class="o">(</span><span class="s">"process"</span><span class="o">,</span>
-<span class="nc">String</span><span class="o">.</span><span class="na">class</span><span class="o">);</span> <span class="o">}</span>
- <span class="nd">@Benchmark</span> <span class="nd">@BenchmarkMode</span><span class="o">(</span><span class="nc">Mode</span><span class="o">.</span><span class="na">SingleShotTime</span><span class="o">)</span> 
-<span class="c1">// Misuro ogni singola invocazione @Fork(value = 1, warmups = 0) </span>
-<span class="c1">// Nessun warmup: voglio vedere le prime invocazioni fredde public Object</span>
-<span class="c1">// firstInvocations() throws Exception</span>
-<span class="o">{</span> <span class="k">return</span> <span class="n">method</span><span class="o">.</span><span class="na">invoke</span><span class="o">(</span><span class="n">instance</span><span class="o">,</span> <span class="s">"payload"</span><span class="o">);</span> 
-<span class="c1">// Le prime 15 usano codice nativo, poi scatta l'inflation }</span>
- <span class="o">}</span>
- 
-<span class="o">*</span> <span class="nc">Monitoro</span> <span class="n">le</span> <span class="n">classi</span> <span class="n">accessor</span> <span class="n">generate</span> <span class="n">dalla</span> <span class="nc">Inflation</span> <span class="n">per</span> <span class="n">evitare</span> <span class="n">che</span> <span class="n">saturino</span>
-<span class="o">*</span> <span class="n">il</span> <span class="nl">Metaspace:</span> <span class="o">*/</span>
- <span class="nd">@Scheduled</span><span class="o">(</span><span class="n">fixedDelay</span> <span class="o">=</span> <span class="mi">30_000</span><span class="o">)</span> <span class="kd">public</span> <span class="kt">void</span> <span class="nf">monitorReflectionClasses</span><span class="o">()</span> 
-<span class="o">{</span> <span class="nc">ClassLoadingMXBean</span> <span class="n">classBean</span> <span class="o">=</span> <span class="nc">ManagementFactory</span><span class="o">.</span><span class="na">getClassLoadingMXBean</span><span class="o">();</span> <span class="kt">long</span>
-<span class="n">totalLoaded</span> <span class="o">=</span> <span class="n">classBean</span><span class="o">.</span><span class="na">getTotalLoadedClassCount</span><span class="o">();</span>
-<span class="c1">// Le classi generate dalla Inflation hanno nomi come</span>
-<span class="c1">// "sun.reflect.GeneratedMethodAccessor123" long generatedAccessors =</span>
-<span class="c1">// Thread.getAllStackTraces().keySet().stream() .flatMap(t -&gt;</span>
-<span class="c1">// Arrays.stream(t.getStackTrace())) .filter(frame -&gt;</span>
-<span class="c1">// frame.getClassName().startsWith("sun.reflect.GeneratedMethodAccessor") ||</span>
-<span class="c1">// frame.getClassName().startsWith("jdk.internal.reflect.GeneratedMethodAccessor"))</span>
-<span class="c1">// .map(StackTraceElement::getClassName) .distinct() .count(); log.info("Classi</span>
-<span class="c1">// totali caricate:</span>
-<span class="o">{}</span>
-<span class="o">,</span> <span class="nc">Accessor</span> <span class="n">generati</span> <span class="nl">attivi:</span> 
-<span class="o">{}</span>
-<span class="s">", totalLoaded, generatedAccessors); if (generatedAccessors &gt; 1000) 
-{ log.warn("</span><span class="nc">Troppi</span> <span class="n">accessor</span> <span class="n">reflection</span> <span class="nl">generati:</span> <span class="n">possibile</span> <span class="n">leak</span> <span class="n">di</span> <span class="nc">ClassLoader</span> <span class="n">o</span>
-<span class="n">abuso</span> <span class="n">di</span> <span class="n">reflection</span><span class="s">"); }
- }
- 
-* In Java 17+, il meccanismo di Inflation è cambiato: usa MethodHandle
-* internamente invece di generare classi. Verifico quale meccanismo è attivo: */
- @Test public void verifyInflationMechanism() throws Exception 
-{ Method method = MyService.class.getMethod("</span><span class="n">process</span><span class="s">", String.class); Object
-instance = new MyService();
-// Invoco 20 volte per attraversare la soglia di Inflation per (int i = 0; i &lt;
-// 20; i++)
-{ method.invoke(instance, "</span><span class="n">test</span><span class="s">"); }
- 
-// Dopo la soglia, la reflection usa bytecode generato o MethodHandle: 
-// in entrambi i casi le performance sono paragonabili a MethodHandle diretto
-// long start = System.nanoTime(); for (int i = 0; i &lt; 100_000; i++)
-{ method.invoke(instance, "</span><span class="n">test</span><span class="s">"); }
- long avgNs = (System.nanoTime() - start) / 100_000; log.info("</span><span class="nc">Invocazione</span> <span class="n">media</span>
-<span class="n">post</span><span class="o">-</span><span class="nl">inflation:</span>
-<span class="o">{}</span>
-<span class="n">ns</span> <span class="o">(</span><span class="n">atteso</span> <span class="o">&lt;</span> <span class="mi">200</span><span class="n">ns</span><span class="o">)</span><span class="s">", avgNs); assertTrue(avgNs &lt; 500, "</span><span class="nc">Reflection</span> <span class="n">ancora</span> <span class="n">lenta</span>
-<span class="n">dopo</span> <span class="nl">inflation:</span> <span class="s">" + avgNs + "</span><span class="n">ns</span><span class="err">"</span><span class="o">);</span> <span class="o">}</span>
- 
-<span class="o">*</span> <span class="nc">Strategia</span> <span class="n">consigliata</span> <span class="n">per</span> <span class="n">sistemi</span> <span class="n">con</span> <span class="n">chiamate</span> <span class="n">reflection</span> <span class="n">rare</span> <span class="n">ma</span> <span class="nl">critiche:</span> <span class="o">*/</span>
- 
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+</pre></td><td class="rouge-code"><pre><span class="cm">/* Regolo la soglia dopo la quale la reflection viene "gonfiata" in bytecode
+    generato. Il default è 15: dopo 15 invocazioni, la JVM genera una classe
+    accessor dedicata. */</span>
+<span class="c1">// java -Dsun.reflect.inflationThreshold=5 -jar app.jar // Con threshold=5, la</span>
+    <span class="no">JVM</span> <span class="n">genera</span> <span class="n">il</span> <span class="n">bytecode</span> <span class="n">ottimizzato</span> <span class="n">prima</span><span class="o">,</span> <span class="n">riducendo</span> <span class="n">il</span> <span class="n">jitter</span> <span class="n">iniziale</span> <span class="cm">/*
+    Visualizzo il comportamento della Inflation con un benchmark JMH che misura
+    il jitter delle prime invocazioni: */</span> <span class="nd">@State</span><span class="o">(</span><span class="nc">Scope</span><span class="o">.</span><span class="na">Thread</span><span class="o">)</span> <span class="kd">public</span> <span class="kd">class</span>
+    <span class="nc">ReflectionInflationBenchmark</span>
+<span class="o">{</span>
+    <span class="kd">private</span> <span class="nc">Method</span> <span class="n">method</span><span class="o">;</span>
+    <span class="kd">private</span> <span class="nc">Object</span> <span class="n">instance</span><span class="o">;</span>
+    <span class="nd">@Setup</span> <span class="kd">public</span> <span class="kt">void</span> <span class="nf">setup</span><span class="o">()</span> <span class="kd">throws</span> <span class="nc">Exception</span> <span class="o">{</span>
+        <span class="n">instance</span> <span class="o">=</span> <span class="k">new</span> <span class="nc">MyService</span><span class="o">();</span>
+        <span class="n">method</span> <span class="o">=</span> <span class="nc">MyService</span><span class="o">.</span><span class="na">class</span><span class="o">.</span><span class="na">getMethod</span><span class="o">(</span><span class="s">"process"</span><span class="o">,</span> <span class="nc">String</span><span class="o">.</span><span class="na">class</span><span class="o">);</span>
+    <span class="o">}</span>
+    <span class="nd">@Benchmark</span>
+    <span class="nd">@BenchmarkMode</span><span class="o">(</span><span class="nc">Mode</span><span class="o">.</span><span class="na">SingleShotTime</span><span class="o">)</span>
+    <span class="c1">// Misuro ogni singola invocazione @Fork(value = 1, warmups = 0) // Nessun</span>
+        <span class="nl">warmup:</span> <span class="n">voglio</span> <span class="n">vedere</span> <span class="n">le</span> <span class="n">prime</span> <span class="n">invocazioni</span> <span class="n">fredde</span> <span class="kd">public</span> <span class="nc">Object</span>
+        <span class="nf">firstInvocations</span><span class="o">()</span> <span class="kd">throws</span> <span class="nc">Exception</span>
+    <span class="o">{</span>
+        <span class="k">return</span> <span class="n">method</span><span class="o">.</span><span class="na">invoke</span><span class="o">(</span><span class="n">instance</span><span class="o">,</span> <span class="s">"payload"</span><span class="o">);</span>
+        <span class="c1">// Le prime 15 usano codice nativo, poi scatta l'inflation</span>
+    <span class="o">}</span>
+<span class="o">}</span>
+<span class="cm">/* Monitoro le classi accessor generate dalla Inflation per evitare che saturino
+    il Metaspace: */</span>
+<span class="nd">@Scheduled</span><span class="o">(</span><span class="n">fixedDelay</span> <span class="o">=</span> <span class="mi">30_000</span><span class="o">)</span> <span class="kd">public</span> <span class="kt">void</span> <span class="nf">monitorReflectionClasses</span><span class="o">()</span> <span class="o">{</span>
+    <span class="nc">ClassLoadingMXBean</span> <span class="n">classBean</span> <span class="o">=</span> <span class="nc">ManagementFactory</span><span class="o">.</span><span class="na">getClassLoadingMXBean</span><span class="o">();</span>
+    <span class="kt">long</span> <span class="n">totalLoaded</span> <span class="o">=</span> <span class="n">classBean</span><span class="o">.</span><span class="na">getTotalLoadedClassCount</span><span class="o">();</span>
+    <span class="c1">// Le classi generate dalla Inflation hanno nomi come</span>
+        <span class="s">"sun.reflect.GeneratedMethodAccessor123"</span> <span class="kt">long</span> <span class="n">generatedAccessors</span> <span class="o">=</span>
+        <span class="nc">Thread</span><span class="o">.</span><span class="na">getAllStackTraces</span><span class="o">().</span><span class="na">keySet</span><span class="o">().</span><span class="na">stream</span><span class="o">()</span> <span class="o">.</span><span class="na">flatMap</span><span class="o">(</span><span class="n">t</span> <span class="o">-&gt;</span>
+        <span class="nc">Arrays</span><span class="o">.</span><span class="na">stream</span><span class="o">(</span><span class="n">t</span><span class="o">.</span><span class="na">getStackTrace</span><span class="o">()))</span> <span class="o">.</span><span class="na">filter</span><span class="o">(</span><span class="n">frame</span> <span class="o">-&gt;</span>
+        <span class="n">frame</span><span class="o">.</span><span class="na">getClassName</span><span class="o">().</span><span class="na">startsWith</span><span class="o">(</span><span class="s">"sun.reflect.GeneratedMethodAccessor"</span><span class="o">)</span>
+        <span class="o">||</span> <span class="n">frame</span><span class="o">.</span><span class="na">getClassName</span><span class="o">().</span><span class="na">startsWith</span><span class="o">(</span><span class="s">"jdk.internal.reflect.GeneratedMethod
+        Accessor"</span><span class="o">))</span> <span class="o">.</span><span class="na">map</span><span class="o">(</span><span class="nl">StackTraceElement:</span><span class="o">:</span><span class="n">getClassName</span><span class="o">)</span> <span class="o">.</span><span class="na">distinct</span><span class="o">()</span> <span class="o">.</span><span class="na">count</span><span class="o">()</span>
+    <span class="o">;</span>
+    <span class="n">log</span><span class="o">.</span><span class="na">info</span><span class="o">(</span><span class="s">"Classi totali caricate: {
+    }
+    , Accessor generati attivi: {
+    }
+    "</span><span class="o">,</span> <span class="n">totalLoaded</span><span class="o">,</span> <span class="n">generatedAccessors</span><span class="o">);</span>
+    <span class="k">if</span> <span class="o">(</span><span class="n">generatedAccessors</span> <span class="o">&gt;</span> <span class="mi">1000</span><span class="o">)</span> <span class="o">{</span>
+        <span class="n">log</span><span class="o">.</span><span class="na">warn</span><span class="o">(</span><span class="s">"Troppi accessor reflection generati: possibile leak di
+            ClassLoader o abuso di reflection"</span><span class="o">);</span>
+    <span class="o">}</span>
+<span class="o">}</span>
+<span class="cm">/* In Java 17+, il meccanismo di Inflation è cambiato: usa MethodHandle
+    internamente invece di generare classi. Verifico quale meccanismo è attivo:
+    */</span>
+<span class="nd">@Test</span> <span class="kd">public</span> <span class="kt">void</span> <span class="nf">verifyInflationMechanism</span><span class="o">()</span> <span class="kd">throws</span> <span class="nc">Exception</span> <span class="o">{</span>
+    <span class="nc">Method</span> <span class="n">method</span> <span class="o">=</span> <span class="nc">MyService</span><span class="o">.</span><span class="na">class</span><span class="o">.</span><span class="na">getMethod</span><span class="o">(</span><span class="s">"process"</span><span class="o">,</span> <span class="nc">String</span><span class="o">.</span><span class="na">class</span><span class="o">);</span>
+    <span class="nc">Object</span> <span class="n">instance</span> <span class="o">=</span> <span class="k">new</span> <span class="nc">MyService</span><span class="o">();</span>
+    <span class="c1">// Invoco 20 volte per attraversare la soglia di Inflation per (int i = 0</span>
+    <span class="o">;</span>
+    <span class="n">i</span> <span class="o">&lt;</span> <span class="mi">20</span><span class="o">;</span>
+    <span class="n">i</span><span class="o">++)</span> <span class="o">{</span>
+        <span class="n">method</span><span class="o">.</span><span class="na">invoke</span><span class="o">(</span><span class="n">instance</span><span class="o">,</span> <span class="s">"test"</span><span class="o">);</span>
+    <span class="o">}</span>
+    <span class="c1">// Dopo la soglia, la reflection usa bytecode generato o MethodHandle: // in</span>
+        <span class="n">entrambi</span> <span class="n">i</span> <span class="n">casi</span> <span class="n">le</span> <span class="n">performance</span> <span class="n">sono</span> <span class="n">paragonabili</span> <span class="n">a</span> <span class="nc">MethodHandle</span> <span class="n">diretto</span>
+        <span class="kt">long</span> <span class="n">start</span> <span class="o">=</span> <span class="nc">System</span><span class="o">.</span><span class="na">nanoTime</span><span class="o">()</span>
+    <span class="o">;</span>
+    <span class="k">for</span> <span class="o">(</span><span class="kt">int</span> <span class="n">i</span> <span class="o">=</span> <span class="mi">0</span><span class="o">;</span>
+    <span class="n">i</span> <span class="o">&lt;</span> <span class="mi">100_000</span><span class="o">;</span>
+    <span class="n">i</span><span class="o">++)</span> <span class="o">{</span>
+        <span class="n">method</span><span class="o">.</span><span class="na">invoke</span><span class="o">(</span><span class="n">instance</span><span class="o">,</span> <span class="s">"test"</span><span class="o">);</span>
+    <span class="o">}</span>
+    <span class="kt">long</span> <span class="n">avgNs</span> <span class="o">=</span> <span class="o">(</span><span class="nc">System</span><span class="o">.</span><span class="na">nanoTime</span><span class="o">()</span> <span class="o">-</span> <span class="n">start</span><span class="o">)</span> <span class="o">/</span> <span class="mi">100_000</span><span class="o">;</span>
+    <span class="n">log</span><span class="o">.</span><span class="na">info</span><span class="o">(</span><span class="s">"Invocazione media post-inflation: {
+    }
+    ns (atteso &lt; 200ns)"</span><span class="o">,</span> <span class="n">avgNs</span><span class="o">);</span>
+    <span class="n">assertTrue</span><span class="o">(</span><span class="n">avgNs</span> <span class="o">&lt;</span> <span class="mi">500</span><span class="o">,</span> <span class="s">"Reflection ancora lenta dopo inflation: "</span> <span class="o">+</span> <span class="n">avgNs</span> <span class="o">+</span>
+        <span class="s">"ns"</span><span class="o">);</span>
+<span class="o">}</span>
+<span class="cm">/* Strategia consigliata per sistemi con chiamate reflection rare ma critiche:
+    */</span>
 <span class="c1">// 1. Se le chiamate sono &lt; 15 totali: usare MethodHandle direttamente (nessuna</span>
-<span class="c1">// inflation)</span>
-<span class="c1">// 2. Se le chiamate sono frequenti: lasciare che la JVM gestisca la transizione</span>
-<span class="c1">// 3. Se il jitter delle prime chiamate è inaccettabile: abbassare</span>
-<span class="c1">// inflationThreshold a 0</span>
-<span class="c1">// java -Dsun.reflect.inflationThreshold=0 </span>
-<span class="c1">// Genera bytecode immediamente, senza passare per il codice nativo </span>
-<span class="c1">// 4. Per Java 17+: preferire MethodHandle o VarHandle che bypassano</span>
-<span class="c1">// completamente la Inflation</span>
+    <span class="n">inflation</span><span class="o">)</span> <span class="c1">// 2. Se le chiamate sono frequenti: lasciare che la JVM gestisca</span>
+    <span class="n">la</span> <span class="n">transizione</span> <span class="c1">// 3. Se il jitter delle prime chiamate è inaccettabile:</span>
+    <span class="n">abbassare</span> <span class="n">inflationThreshold</span> <span class="n">a</span> <span class="mi">0</span> <span class="c1">// java -Dsun.reflect.inflationThreshold=0</span>
+    <span class="c1">// Genera bytecode immediamente, senza passare per il codice nativo // 4.</span>
+    <span class="nc">Per</span> <span class="nc">Java</span> <span class="mi">17</span><span class="o">+:</span> <span class="n">preferire</span> <span class="nc">MethodHandle</span> <span class="n">o</span> <span class="nc">VarHandle</span> <span class="n">che</span> <span class="n">bypassano</span> <span class="n">completamente</span>
+    <span class="n">la</span> <span class="nc">Inflation</span>
 </pre></td></tr></tbody></table></code></pre></div></div>
 
         </article>

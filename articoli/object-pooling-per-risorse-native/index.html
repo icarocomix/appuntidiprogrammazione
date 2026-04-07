@@ -142,59 +142,101 @@
 51
 52
 53
-</pre></td><td class="rouge-code"><pre><span class="o">*</span> <span class="nc">Implemento</span> <span class="n">un</span> <span class="n">pool</span> <span class="n">robusto</span> <span class="n">usando</span> <span class="nc">Apache</span> <span class="nc">Commons</span> <span class="nc">Pool2</span><span class="o">,</span> <span class="n">che</span> <span class="n">gestisce</span>
-<span class="o">*</span> <span class="n">nativamente</span> <span class="n">la</span> <span class="n">validazione</span><span class="o">,</span> <span class="n">l</span><span class="err">'</span><span class="n">eviction</span> <span class="n">degli</span> <span class="n">oggetti</span> <span class="n">scaduti</span> <span class="n">e</span> <span class="n">il</span>
-<span class="o">*</span> <span class="n">dimensionamento</span> <span class="n">dinamico</span><span class="o">.</span> <span class="o">*/</span>
- <span class="kd">public</span> <span class="kd">class</span> <span class="nc">CipherEngineFactory</span> <span class="kd">extends</span> <span class="nc">BasePooledObjectFactory</span><span class="o">&lt;</span><span class="nc">Cipher</span><span class="o">&gt;</span> 
-<span class="o">{</span> <span class="nd">@Override</span> <span class="kd">public</span> <span class="nc">Cipher</span> <span class="nf">create</span><span class="o">()</span> <span class="kd">throws</span> <span class="nc">Exception</span> 
-<span class="o">{</span> 
-<span class="c1">// Inizializzazione costosa: eseguita solo quando il pool è vuoto Cipher cipher</span>
-<span class="c1">// = Cipher.getInstance("AES/GCM/NoPadding"); log.debug("Creato nuovo Cipher</span>
-<span class="c1">// engine: pool era esaurito"); return cipher; }</span>
- <span class="nd">@Override</span> <span class="kd">public</span> <span class="nc">PooledObject</span><span class="o">&lt;</span><span class="nc">Cipher</span><span class="o">&gt;</span> <span class="nf">wrap</span><span class="o">(</span><span class="nc">Cipher</span> <span class="n">cipher</span><span class="o">)</span> 
-<span class="o">{</span> <span class="k">return</span> <span class="k">new</span> <span class="nc">DefaultPooledObject</span><span class="o">&lt;&gt;(</span><span class="n">cipher</span><span class="o">);</span> <span class="o">}</span>
- <span class="nd">@Override</span> <span class="kd">public</span> <span class="kt">boolean</span> <span class="nf">validateObject</span><span class="o">(</span><span class="nc">PooledObject</span><span class="o">&lt;</span><span class="nc">Cipher</span><span class="o">&gt;</span> <span class="n">p</span><span class="o">)</span> 
-<span class="o">{</span> 
-<span class="c1">// Verifico che l'oggetto sia ancora usabile prima di darlo in prestito return</span>
-<span class="c1">// p.getObject() != null; }</span>
- <span class="nd">@Override</span> <span class="kd">public</span> <span class="kt">void</span> <span class="nf">passivateObject</span><span class="o">(</span><span class="nc">PooledObject</span><span class="o">&lt;</span><span class="nc">Cipher</span><span class="o">&gt;</span> <span class="n">p</span><span class="o">)</span> 
-<span class="o">{</span> 
-<span class="c1">// Resetto lo stato prima di restituire al pool (pulizia dell'IV/nonce usato)</span>
-<span class="c1">// p.getObject().getParameters();</span>
-<span class="c1">// Force state reset }</span>
- <span class="o">}</span>
- <span class="nd">@Service</span> <span class="kd">public</span> <span class="kd">class</span> <span class="nc">EncryptionService</span> 
-<span class="o">{</span> <span class="kd">private</span> <span class="kd">final</span> <span class="nc">GenericObjectPool</span><span class="o">&lt;</span><span class="nc">Cipher</span><span class="o">&gt;</span> <span class="n">pool</span><span class="o">;</span> <span class="kd">public</span> <span class="nf">EncryptionService</span><span class="o">()</span> 
-<span class="o">{</span> <span class="nc">GenericObjectPoolConfig</span><span class="o">&lt;</span><span class="nc">Cipher</span><span class="o">&gt;</span> <span class="n">config</span> <span class="o">=</span> <span class="k">new</span> <span class="nc">GenericObjectPoolConfig</span><span class="o">&lt;&gt;();</span>
-<span class="n">config</span><span class="o">.</span><span class="na">setMaxTotal</span><span class="o">(</span><span class="mi">20</span><span class="o">);</span>
-<span class="c1">// Massimo 20 cipher engine contemporaneamente config.setMaxIdle(10); </span>
-<span class="c1">// Mantengo 10 pronti in standby config.setMinIdle(5); </span>
-<span class="c1">// Pre-alloco 5 all'avvio config.setMaxWait(Duration.ofSeconds(2)); </span>
-<span class="c1">// Timeout se il pool è esaurito config.setTestOnBorrow(true); </span>
-<span class="c1">// Valido l'oggetto prima del checkout this.pool = new GenericObjectPool&lt;&gt;(new</span>
-<span class="c1">// CipherEngineFactory(), config); }</span>
- <span class="kd">public</span> <span class="kt">byte</span><span class="o">[]</span> <span class="nf">encrypt</span><span class="o">(</span><span class="kt">byte</span><span class="o">[]</span> <span class="n">data</span><span class="o">,</span> <span class="nc">SecretKey</span> <span class="n">key</span><span class="o">)</span> <span class="kd">throws</span> <span class="nc">Exception</span> 
-<span class="o">{</span> <span class="nc">Cipher</span> <span class="n">cipher</span> <span class="o">=</span> <span class="n">pool</span><span class="o">.</span><span class="na">borrowObject</span><span class="o">();</span> 
-<span class="c1">// Checkout: se il pool è vuoto aspetto max 2s try </span>
-<span class="o">{</span> <span class="kt">byte</span><span class="o">[]</span> <span class="n">iv</span> <span class="o">=</span> <span class="n">generateIv</span><span class="o">();</span> <span class="n">cipher</span><span class="o">.</span><span class="na">init</span><span class="o">(</span><span class="nc">Cipher</span><span class="o">.</span><span class="na">ENCRYPT_MODE</span><span class="o">,</span> <span class="n">key</span><span class="o">,</span> <span class="k">new</span>
-<span class="nc">GCMParameterSpec</span><span class="o">(</span><span class="mi">128</span><span class="o">,</span> <span class="n">iv</span><span class="o">));</span> <span class="k">return</span> <span class="n">cipher</span><span class="o">.</span><span class="na">doFinal</span><span class="o">(</span><span class="n">data</span><span class="o">);</span> <span class="o">}</span>
- <span class="k">finally</span> 
-<span class="o">{</span> <span class="n">pool</span><span class="o">.</span><span class="na">returnObject</span><span class="o">(</span><span class="n">cipher</span><span class="o">);</span> 
-<span class="c1">// Sempre nel finally: garantito anche in caso di eccezione }</span>
- <span class="o">}</span>
- 
-<span class="o">*</span> <span class="nc">Espongo</span> <span class="n">le</span> <span class="n">metriche</span> <span class="n">del</span> <span class="n">pool</span> <span class="n">tramite</span> <span class="nc">Micrometer</span> <span class="n">per</span> <span class="n">monitorare</span> <span class="n">il</span>
-<span class="o">*</span> <span class="nl">dimensionamento:</span> <span class="o">*/</span>
- <span class="nd">@Bean</span> <span class="kd">public</span> <span class="nc">MeterBinder</span> <span class="nf">cipherPoolMetrics</span><span class="o">()</span> 
-<span class="o">{</span> <span class="k">return</span> <span class="n">registry</span> <span class="o">-&gt;</span> 
-<span class="o">{</span> <span class="nc">Gauge</span><span class="o">.</span><span class="na">builder</span><span class="o">(</span><span class="s">"cipher.pool.active"</span><span class="o">,</span> <span class="n">pool</span><span class="o">,</span> <span class="nl">GenericObjectPool:</span><span class="o">:</span><span class="n">getNumActive</span><span class="o">)</span>
-<span class="o">.</span><span class="na">description</span><span class="o">(</span><span class="s">"Cipher engine in uso"</span><span class="o">).</span><span class="na">register</span><span class="o">(</span><span class="n">registry</span><span class="o">);</span>
-<span class="nc">Gauge</span><span class="o">.</span><span class="na">builder</span><span class="o">(</span><span class="s">"cipher.pool.idle"</span><span class="o">,</span> <span class="n">pool</span><span class="o">,</span> <span class="nl">GenericObjectPool:</span><span class="o">:</span><span class="n">getNumIdle</span><span class="o">)</span>
-<span class="o">.</span><span class="na">description</span><span class="o">(</span><span class="s">"Cipher engine disponibili"</span><span class="o">).</span><span class="na">register</span><span class="o">(</span><span class="n">registry</span><span class="o">);</span>
-<span class="nc">Gauge</span><span class="o">.</span><span class="na">builder</span><span class="o">(</span><span class="s">"cipher.pool.waiters"</span><span class="o">,</span> <span class="n">pool</span><span class="o">,</span> <span class="nl">GenericObjectPool:</span><span class="o">:</span><span class="n">getNumWaiters</span><span class="o">)</span>
-<span class="o">.</span><span class="na">description</span><span class="o">(</span><span class="s">"Thread in attesa di un Cipher"</span><span class="o">).</span><span class="na">register</span><span class="o">(</span><span class="n">registry</span><span class="o">);</span> <span class="o">}</span>
-<span class="o">;</span> <span class="o">}</span>
- <span class="o">}</span>
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+</pre></td><td class="rouge-code"><pre><span class="cm">/* Implemento un pool robusto usando Apache Commons Pool2, che gestisce
+    nativamente la validazione, l'eviction degli oggetti scaduti e il
+    dimensionamento dinamico. */</span>
+<span class="kd">public</span> <span class="kd">class</span> <span class="nc">CipherEngineFactory</span> <span class="kd">extends</span> <span class="nc">BasePooledObjectFactory</span><span class="o">&lt;</span><span class="nc">Cipher</span><span class="o">&gt;</span> <span class="o">{</span>
+    <span class="nd">@Override</span> <span class="kd">public</span> <span class="nc">Cipher</span> <span class="nf">create</span><span class="o">()</span> <span class="kd">throws</span> <span class="nc">Exception</span> <span class="o">{</span>
+        <span class="c1">// Inizializzazione costosa: eseguita solo quando il pool è vuoto Cipher</span>
+            <span class="n">cipher</span> <span class="o">=</span> <span class="nc">Cipher</span><span class="o">.</span><span class="na">getInstance</span><span class="o">(</span><span class="s">"AES/GCM/NoPadding"</span><span class="o">)</span>
+        <span class="o">;</span>
+        <span class="n">log</span><span class="o">.</span><span class="na">debug</span><span class="o">(</span><span class="s">"Creato nuovo Cipher engine: pool era esaurito"</span><span class="o">);</span>
+        <span class="k">return</span> <span class="n">cipher</span><span class="o">;</span>
+    <span class="o">}</span>
+    <span class="nd">@Override</span> <span class="kd">public</span> <span class="nc">PooledObject</span><span class="o">&lt;</span><span class="nc">Cipher</span><span class="o">&gt;</span> <span class="nf">wrap</span><span class="o">(</span><span class="nc">Cipher</span> <span class="n">cipher</span><span class="o">)</span> <span class="o">{</span>
+        <span class="k">return</span> <span class="k">new</span> <span class="nc">DefaultPooledObject</span><span class="o">&lt;&gt;(</span><span class="n">cipher</span><span class="o">);</span>
+    <span class="o">}</span>
+    <span class="nd">@Override</span> <span class="kd">public</span> <span class="kt">boolean</span> <span class="nf">validateObject</span><span class="o">(</span><span class="nc">PooledObject</span><span class="o">&lt;</span><span class="nc">Cipher</span><span class="o">&gt;</span> <span class="n">p</span><span class="o">)</span> <span class="o">{</span>
+        <span class="c1">// Verifico che l'oggetto sia ancora usabile prima di darlo in prestito</span>
+        <span class="k">return</span> <span class="n">p</span><span class="o">.</span><span class="na">getObject</span><span class="o">()</span> <span class="o">!=</span> <span class="kc">null</span><span class="o">;</span>
+    <span class="o">}</span>
+    <span class="nd">@Override</span> <span class="kd">public</span> <span class="kt">void</span> <span class="nf">passivateObject</span><span class="o">(</span><span class="nc">PooledObject</span><span class="o">&lt;</span><span class="nc">Cipher</span><span class="o">&gt;</span> <span class="n">p</span><span class="o">)</span> <span class="o">{</span>
+        <span class="c1">// Resetto lo stato prima di restituire al pool (pulizia dell'IV/nonce</span>
+            <span class="n">usato</span><span class="o">)</span> <span class="n">p</span><span class="o">.</span><span class="na">getObject</span><span class="o">().</span><span class="na">getParameters</span><span class="o">()</span>
+        <span class="o">;</span>
+        <span class="c1">// Force state reset</span>
+    <span class="o">}</span>
+<span class="o">}</span>
+<span class="nd">@Service</span> <span class="kd">public</span> <span class="kd">class</span> <span class="nc">EncryptionService</span> <span class="o">{</span>
+    <span class="kd">private</span> <span class="kd">final</span> <span class="nc">GenericObjectPool</span><span class="o">&lt;</span><span class="nc">Cipher</span><span class="o">&gt;</span> <span class="n">pool</span><span class="o">;</span>
+    <span class="kd">public</span> <span class="nf">EncryptionService</span><span class="o">()</span> <span class="o">{</span>
+        <span class="nc">GenericObjectPoolConfig</span><span class="o">&lt;</span><span class="nc">Cipher</span><span class="o">&gt;</span> <span class="n">config</span> <span class="o">=</span> <span class="k">new</span>
+            <span class="nc">GenericObjectPoolConfig</span><span class="o">&lt;&gt;();</span>
+        <span class="n">config</span><span class="o">.</span><span class="na">setMaxTotal</span><span class="o">(</span><span class="mi">20</span><span class="o">);</span>
+        <span class="c1">// Massimo 20 cipher engine contemporaneamente config.setMaxIdle(10)</span>
+        <span class="o">;</span>
+        <span class="c1">// Mantengo 10 pronti in standby config.setMinIdle(5)</span>
+        <span class="o">;</span>
+        <span class="c1">// Pre-alloco 5 all'avvio config.setMaxWait(Duration.ofSeconds(2))</span>
+        <span class="o">;</span>
+        <span class="c1">// Timeout se il pool è esaurito config.setTestOnBorrow(true)</span>
+        <span class="o">;</span>
+        <span class="c1">// Valido l'oggetto prima del checkout this.pool = new</span>
+            <span class="nc">GenericObjectPool</span><span class="o">&lt;&gt;(</span><span class="k">new</span> <span class="nc">CipherEngineFactory</span><span class="o">(),</span> <span class="n">config</span><span class="o">)</span>
+        <span class="o">;</span>
+    <span class="o">}</span>
+    <span class="kd">public</span> <span class="kt">byte</span><span class="o">[]</span> <span class="nf">encrypt</span><span class="o">(</span><span class="kt">byte</span><span class="o">[]</span> <span class="n">data</span><span class="o">,</span> <span class="nc">SecretKey</span> <span class="n">key</span><span class="o">)</span> <span class="kd">throws</span> <span class="nc">Exception</span> <span class="o">{</span>
+        <span class="nc">Cipher</span> <span class="n">cipher</span> <span class="o">=</span> <span class="n">pool</span><span class="o">.</span><span class="na">borrowObject</span><span class="o">();</span>
+        <span class="c1">// Checkout: se il pool è vuoto aspetto max 2s try</span>
+        <span class="o">{</span>
+            <span class="kt">byte</span><span class="o">[]</span> <span class="n">iv</span> <span class="o">=</span> <span class="n">generateIv</span><span class="o">();</span>
+            <span class="n">cipher</span><span class="o">.</span><span class="na">init</span><span class="o">(</span><span class="nc">Cipher</span><span class="o">.</span><span class="na">ENCRYPT_MODE</span><span class="o">,</span> <span class="n">key</span><span class="o">,</span> <span class="k">new</span> <span class="nc">GCMParameterSpec</span><span class="o">(</span><span class="mi">128</span><span class="o">,</span>
+                <span class="n">iv</span><span class="o">));</span>
+            <span class="k">return</span> <span class="n">cipher</span><span class="o">.</span><span class="na">doFinal</span><span class="o">(</span><span class="n">data</span><span class="o">);</span>
+        <span class="o">}</span>
+        <span class="k">finally</span> <span class="o">{</span>
+            <span class="n">pool</span><span class="o">.</span><span class="na">returnObject</span><span class="o">(</span><span class="n">cipher</span><span class="o">);</span>
+            <span class="c1">// Sempre nel finally: garantito anche in caso di eccezione</span>
+        <span class="o">}</span>
+    <span class="o">}</span>
+    <span class="cm">/* Espongo le metriche del pool tramite Micrometer per monitorare il
+        dimensionamento: */</span>
+    <span class="nd">@Bean</span> <span class="kd">public</span> <span class="nc">MeterBinder</span> <span class="nf">cipherPoolMetrics</span><span class="o">()</span> <span class="o">{</span>
+        <span class="k">return</span> <span class="n">registry</span> <span class="o">-&gt;</span> <span class="o">{</span>
+            <span class="nc">Gauge</span><span class="o">.</span><span class="na">builder</span><span class="o">(</span><span class="s">"cipher.pool.active"</span><span class="o">,</span> <span class="n">pool</span><span class="o">,</span>
+                <span class="nl">GenericObjectPool:</span><span class="o">:</span><span class="n">getNumActive</span><span class="o">)</span> <span class="o">.</span><span class="na">description</span><span class="o">(</span><span class="s">"Cipher engine in
+                uso"</span><span class="o">).</span><span class="na">register</span><span class="o">(</span><span class="n">registry</span><span class="o">);</span>
+            <span class="nc">Gauge</span><span class="o">.</span><span class="na">builder</span><span class="o">(</span><span class="s">"cipher.pool.idle"</span><span class="o">,</span> <span class="n">pool</span><span class="o">,</span>
+                <span class="nl">GenericObjectPool:</span><span class="o">:</span><span class="n">getNumIdle</span><span class="o">)</span> <span class="o">.</span><span class="na">description</span><span class="o">(</span><span class="s">"Cipher engine
+                disponibili"</span><span class="o">).</span><span class="na">register</span><span class="o">(</span><span class="n">registry</span><span class="o">);</span>
+            <span class="nc">Gauge</span><span class="o">.</span><span class="na">builder</span><span class="o">(</span><span class="s">"cipher.pool.waiters"</span><span class="o">,</span> <span class="n">pool</span><span class="o">,</span>
+                <span class="nl">GenericObjectPool:</span><span class="o">:</span><span class="n">getNumWaiters</span><span class="o">)</span> <span class="o">.</span><span class="na">description</span><span class="o">(</span><span class="s">"Thread in attesa
+                di un Cipher"</span><span class="o">).</span><span class="na">register</span><span class="o">(</span><span class="n">registry</span><span class="o">);</span>
+        <span class="o">}</span>
+        <span class="o">;</span>
+    <span class="o">}</span>
+<span class="o">}</span>
 </pre></td></tr></tbody></table></code></pre></div></div>
 
         </article>

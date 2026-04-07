@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Bloat Analysis & pg_repack — DevLog</title>
-    <meta name="description" content="Il Vacuum recupera lo spazio all'interno del file, ma non lo restituisce al sistema operativo. Una tabella con molto 'bloat' è come una spugna con troppi buchi: occupa molto spazio ma contiene pochi dati utili. Se il bloat è eccessivo (es. >30%), le 
+    <meta name="description" content="Il Vacuum recupera lo spazio all'interno del file, ma non lo restituisce al sistema operativo. Una tabella con molto "bloat" è come una spugna con troppi buchi: occupa molto spazio ma contiene pochi dati utili. Se il bloat è eccessivo (es. >30%), le 
 ">
     <link rel="stylesheet" href="/appuntidiprogrammazione/assets/css/style.css">
 
@@ -102,23 +102,19 @@
 11
 12
 13
-14
-15
-</pre></td><td class="rouge-code"><pre><span class="cm">/* Stimo il bloat confrontando dimensione reale e dimensione attesa */</span>
- <span class="k">SELECT</span> <span class="n">relname</span><span class="p">,</span> <span class="n">pg_size_pretty</span><span class="p">(</span><span class="n">pg_total_relation_size</span><span class="p">(</span><span class="n">relid</span><span class="p">))</span> <span class="k">AS</span> <span class="n">total_size</span><span class="p">,</span>
-<span class="n">n_live_tup</span><span class="p">,</span> <span class="n">n_dead_tup</span><span class="p">,</span> <span class="n">round</span><span class="p">(</span><span class="n">n_dead_tup</span><span class="p">::</span><span class="nb">numeric</span> <span class="o">/</span> <span class="k">NULLIF</span><span class="p">(</span><span class="n">n_live_tup</span> <span class="o">+</span>
-<span class="n">n_dead_tup</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span> <span class="o">*</span> <span class="mi">100</span><span class="p">,</span> <span class="mi">2</span><span class="p">)</span> <span class="k">AS</span> <span class="n">bloat_pct</span> <span class="k">FROM</span> <span class="n">pg_stat_user_tables</span> <span class="k">WHERE</span> <span class="n">n_dead_tup</span>
-<span class="o">&gt;</span> <span class="mi">10000</span> <span class="k">ORDER</span> <span class="k">BY</span> <span class="n">bloat_pct</span> <span class="k">DESC</span><span class="p">;</span>
-<span class="cm">/* Se bloat_pct &gt; 30%, procedo con pg_repack invece di VACUUM FULL */</span>
- 
-<span class="cm">/* Installo pg_repack come estensione */</span>
- <span class="k">CREATE</span> <span class="n">EXTENSION</span> <span class="n">pg_repack</span><span class="p">;</span> 
-<span class="cm">/* Eseguo la ricostruzione online: nessun lock esclusivo sulla tabella */</span>
- <span class="n">pg_repack</span> <span class="o">-</span><span class="n">h</span> <span class="n">localhost</span> <span class="o">-</span><span class="n">d</span> <span class="n">mydb</span> <span class="o">-</span><span class="n">t</span> <span class="n">bloated_table</span> 
-<span class="cm">/* Verifico la riduzione di spazio dopo il repack */</span>
- <span class="k">SELECT</span> <span class="n">pg_size_pretty</span><span class="p">(</span><span class="n">pg_total_relation_size</span><span class="p">(</span><span class="s1">'bloated_table'</span><span class="p">))</span> <span class="k">AS</span> <span class="n">size_after</span><span class="p">;</span> 
-<span class="cm">/* Ricostruisco anche gli indici della tabella in un unico passaggio */</span>
- <span class="n">pg_repack</span> <span class="o">-</span><span class="n">h</span> <span class="n">localhost</span> <span class="o">-</span><span class="n">d</span> <span class="n">mydb</span> <span class="o">-</span><span class="n">t</span> <span class="n">bloated_table</span> <span class="c1">--only-indexes</span>
+</pre></td><td class="rouge-code"><pre>    <span class="cm">/* Stimo il bloat confrontando dimensione reale e dimensione attesa */</span>
+        <span class="k">SELECT</span> <span class="n">relname</span><span class="p">,</span> <span class="n">pg_size_pretty</span><span class="p">(</span><span class="n">pg_total_relation_size</span><span class="p">(</span><span class="n">relid</span><span class="p">))</span> <span class="k">AS</span>
+        <span class="n">total_size</span><span class="p">,</span> <span class="n">n_live_tup</span><span class="p">,</span> <span class="n">n_dead_tup</span><span class="p">,</span> <span class="n">round</span><span class="p">(</span><span class="n">n_dead_tup</span><span class="p">::</span><span class="nb">numeric</span> <span class="o">/</span>
+        <span class="k">NULLIF</span><span class="p">(</span><span class="n">n_live_tup</span> <span class="o">+</span> <span class="n">n_dead_tup</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span> <span class="o">*</span> <span class="mi">100</span><span class="p">,</span> <span class="mi">2</span><span class="p">)</span> <span class="k">AS</span> <span class="n">bloat_pct</span> <span class="k">FROM</span>
+        <span class="n">pg_stat_user_tables</span> <span class="k">WHERE</span> <span class="n">n_dead_tup</span> <span class="o">&gt;</span> <span class="mi">10000</span> <span class="k">ORDER</span> <span class="k">BY</span> <span class="n">bloat_pct</span> <span class="k">DESC</span><span class="p">;</span> <span class="cm">/*
+        Se bloat_pct &gt; 30%, procedo con pg_repack invece di VACUUM FULL */</span> <span class="cm">/*
+        Installo pg_repack come estensione */</span> <span class="k">CREATE</span> <span class="n">EXTENSION</span> <span class="n">pg_repack</span><span class="p">;</span> <span class="cm">/*
+        Eseguo la ricostruzione online: nessun lock esclusivo sulla tabella */</span>
+        <span class="n">pg_repack</span> <span class="o">-</span><span class="n">h</span> <span class="n">localhost</span> <span class="o">-</span><span class="n">d</span> <span class="n">mydb</span> <span class="o">-</span><span class="n">t</span> <span class="n">bloated_table</span> <span class="cm">/* Verifico la riduzione
+        di spazio dopo il repack */</span> <span class="k">SELECT</span>
+        <span class="n">pg_size_pretty</span><span class="p">(</span><span class="n">pg_total_relation_size</span><span class="p">(</span><span class="s1">'bloated_table'</span><span class="p">))</span> <span class="k">AS</span> <span class="n">size_after</span><span class="p">;</span>
+        <span class="cm">/* Ricostruisco anche gli indici della tabella in un unico passaggio */</span>
+        <span class="n">pg_repack</span> <span class="o">-</span><span class="n">h</span> <span class="n">localhost</span> <span class="o">-</span><span class="n">d</span> <span class="n">mydb</span> <span class="o">-</span><span class="n">t</span> <span class="n">bloated_table</span> <span class="c1">--only-indexes</span>
 </pre></td></tr></tbody></table></code></pre></div></div>
 
         </article>

@@ -154,71 +154,101 @@
 63
 64
 65
-</pre></td><td class="rouge-code"><pre><span class="o">*</span> <span class="nc">Implemento</span> <span class="n">un</span> <span class="n">hashCode</span> <span class="n">di</span> <span class="n">qualità</span> <span class="n">per</span> <span class="n">una</span> <span class="n">chiave</span> <span class="n">composita</span><span class="o">.</span> <span class="nc">Il</span> <span class="n">coefficiente</span> <span class="mi">31</span>
-<span class="o">*</span> <span class="n">è</span> <span class="n">un</span> <span class="n">numero</span> <span class="n">primo</span> <span class="n">che</span> <span class="n">massimizza</span> <span class="n">la</span> <span class="n">distribuzione</span> <span class="n">dei</span> <span class="n">bit</span> <span class="n">e</span> <span class="n">viene</span> <span class="n">ottimizzato</span>
-<span class="o">*</span> <span class="n">dal</span> <span class="no">JIT</span> <span class="n">in</span> <span class="n">shift</span> <span class="o">+</span> <span class="n">subtract</span><span class="o">.</span> <span class="o">*/</span>
- <span class="kd">public</span> <span class="kd">final</span> <span class="kd">class</span> <span class="nc">CacheKey</span> 
-<span class="o">{</span> <span class="kd">private</span> <span class="kd">final</span> <span class="nc">String</span> <span class="n">tenantId</span><span class="o">;</span> <span class="kd">private</span> <span class="kd">final</span> <span class="nc">String</span> <span class="n">resourceType</span><span class="o">;</span> <span class="kd">private</span>
-<span class="kd">final</span> <span class="kt">long</span> <span class="n">resourceId</span><span class="o">;</span> <span class="kd">private</span> <span class="kd">final</span> <span class="kt">int</span> <span class="n">hash</span><span class="o">;</span>
-<span class="c1">// Cache del hash: calcolato una sola volta, la chiave è immutabile public</span>
-<span class="c1">// CacheKey(String tenantId, String resourceType, long resourceId)</span>
-<span class="o">{</span> <span class="k">this</span><span class="o">.</span><span class="na">tenantId</span> <span class="o">=</span> <span class="n">tenantId</span><span class="o">;</span> <span class="k">this</span><span class="o">.</span><span class="na">resourceType</span> <span class="o">=</span> <span class="n">resourceType</span><span class="o">;</span> <span class="k">this</span><span class="o">.</span><span class="na">resourceId</span> <span class="o">=</span>
-<span class="n">resourceId</span><span class="o">;</span>
-<span class="c1">// Calcolo il hash nel costruttore: evito di rifarlo ad ogni put/get nella</span>
-<span class="c1">// HashMap this.hash = computeHash(); }</span>
- <span class="kd">private</span> <span class="kt">int</span> <span class="nf">computeHash</span><span class="o">()</span> 
-<span class="o">{</span> <span class="kt">int</span> <span class="n">h</span> <span class="o">=</span> <span class="mi">17</span><span class="o">;</span> 
-<span class="c1">// Primo diverso da 0 come seed h = 31 * h + (tenantId != null ?</span>
-<span class="c1">// tenantId.hashCode() : 0); h = 31 * h + (resourceType != null ?</span>
-<span class="c1">// resourceType.hashCode() : 0); h = 31 * h + Long.hashCode(resourceId);</span>
-<span class="c1">// Long.hashCode fa XOR dei 32 bit alti con i 32 bassi return h; }</span>
- <span class="nd">@Override</span> <span class="kd">public</span> <span class="kt">int</span> <span class="nf">hashCode</span><span class="o">()</span> 
-<span class="o">{</span> <span class="k">return</span> <span class="n">hash</span><span class="o">;</span> 
-<span class="c1">// Lettura del campo: nessun calcolo }</span>
- <span class="nd">@Override</span> <span class="kd">public</span> <span class="kt">boolean</span> <span class="nf">equals</span><span class="o">(</span><span class="nc">Object</span> <span class="n">obj</span><span class="o">)</span> 
-<span class="o">{</span> <span class="k">if</span> <span class="o">(</span><span class="k">this</span> <span class="o">==</span> <span class="n">obj</span><span class="o">)</span> <span class="k">return</span> <span class="kc">true</span><span class="o">;</span> <span class="k">if</span> <span class="o">(!(</span><span class="n">obj</span> <span class="k">instanceof</span> <span class="nc">CacheKey</span> <span class="n">other</span><span class="o">))</span> <span class="k">return</span>
-<span class="kc">false</span><span class="o">;</span> <span class="k">return</span> <span class="n">resourceId</span> <span class="o">==</span> <span class="n">other</span><span class="o">.</span><span class="na">resourceId</span> <span class="o">&amp;&amp;</span> <span class="nc">Objects</span><span class="o">.</span><span class="na">equals</span><span class="o">(</span><span class="n">tenantId</span><span class="o">,</span>
-<span class="n">other</span><span class="o">.</span><span class="na">tenantId</span><span class="o">)</span> <span class="o">&amp;&amp;</span> <span class="nc">Objects</span><span class="o">.</span><span class="na">equals</span><span class="o">(</span><span class="n">resourceType</span><span class="o">,</span> <span class="n">other</span><span class="o">.</span><span class="na">resourceType</span><span class="o">);</span> <span class="o">}</span>
- <span class="o">}</span>
- 
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+</pre></td><td class="rouge-code"><pre><span class="cm">/* Implemento un hashCode di qualità per una chiave composita. Il coefficiente
+    31 è un numero primo che massimizza la distribuzione dei bit e viene
+    ottimizzato dal JIT in shift + subtract. */</span>
+<span class="kd">public</span> <span class="kd">final</span> <span class="kd">class</span> <span class="nc">CacheKey</span> <span class="o">{</span>
+    <span class="kd">private</span> <span class="kd">final</span> <span class="nc">String</span> <span class="n">tenantId</span><span class="o">;</span>
+    <span class="kd">private</span> <span class="kd">final</span> <span class="nc">String</span> <span class="n">resourceType</span><span class="o">;</span>
+    <span class="kd">private</span> <span class="kd">final</span> <span class="kt">long</span> <span class="n">resourceId</span><span class="o">;</span>
+    <span class="kd">private</span> <span class="kd">final</span> <span class="kt">int</span> <span class="n">hash</span><span class="o">;</span>
+    <span class="c1">// Cache del hash: calcolato una sola volta, la chiave è immutabile public</span>
+        <span class="nc">CacheKey</span><span class="o">(</span><span class="nc">String</span> <span class="n">tenantId</span><span class="o">,</span> <span class="nc">String</span> <span class="n">resourceType</span><span class="o">,</span> <span class="kt">long</span> <span class="n">resourceId</span><span class="o">)</span>
+    <span class="o">{</span>
+        <span class="k">this</span><span class="o">.</span><span class="na">tenantId</span> <span class="o">=</span> <span class="n">tenantId</span><span class="o">;</span>
+        <span class="k">this</span><span class="o">.</span><span class="na">resourceType</span> <span class="o">=</span> <span class="n">resourceType</span><span class="o">;</span>
+        <span class="k">this</span><span class="o">.</span><span class="na">resourceId</span> <span class="o">=</span> <span class="n">resourceId</span><span class="o">;</span>
+        <span class="c1">// Calcolo il hash nel costruttore: evito di rifarlo ad ogni put/get</span>
+            <span class="n">nella</span> <span class="nc">HashMap</span> <span class="k">this</span><span class="o">.</span><span class="na">hash</span> <span class="o">=</span> <span class="n">computeHash</span><span class="o">()</span>
+        <span class="o">;</span>
+    <span class="o">}</span>
+    <span class="kd">private</span> <span class="kt">int</span> <span class="nf">computeHash</span><span class="o">()</span> <span class="o">{</span>
+        <span class="kt">int</span> <span class="n">h</span> <span class="o">=</span> <span class="mi">17</span><span class="o">;</span>
+        <span class="c1">// Primo diverso da 0 come seed h = 31 * h + (tenantId != null ?</span>
+            <span class="n">tenantId</span><span class="o">.</span><span class="na">hashCode</span><span class="o">()</span> <span class="o">:</span> <span class="mi">0</span><span class="o">)</span>
+        <span class="o">;</span>
+        <span class="n">h</span> <span class="o">=</span> <span class="mi">31</span> <span class="o">*</span> <span class="n">h</span> <span class="o">+</span> <span class="o">(</span><span class="n">resourceType</span> <span class="o">!=</span> <span class="kc">null</span> <span class="o">?</span> <span class="n">resourceType</span><span class="o">.</span><span class="na">hashCode</span><span class="o">()</span> <span class="o">:</span> <span class="mi">0</span><span class="o">);</span>
+        <span class="n">h</span> <span class="o">=</span> <span class="mi">31</span> <span class="o">*</span> <span class="n">h</span> <span class="o">+</span> <span class="nc">Long</span><span class="o">.</span><span class="na">hashCode</span><span class="o">(</span><span class="n">resourceId</span><span class="o">);</span>
+        <span class="c1">// Long.hashCode fa XOR dei 32 bit alti con i 32 bassi</span>
+        <span class="k">return</span> <span class="n">h</span><span class="o">;</span>
+    <span class="o">}</span>
+    <span class="nd">@Override</span> <span class="kd">public</span> <span class="kt">int</span> <span class="nf">hashCode</span><span class="o">()</span> <span class="o">{</span>
+        <span class="k">return</span> <span class="n">hash</span><span class="o">;</span>
+        <span class="c1">// Lettura del campo: nessun calcolo</span>
+    <span class="o">}</span>
+    <span class="nd">@Override</span> <span class="kd">public</span> <span class="kt">boolean</span> <span class="nf">equals</span><span class="o">(</span><span class="nc">Object</span> <span class="n">obj</span><span class="o">)</span> <span class="o">{</span>
+        <span class="k">if</span> <span class="o">(</span><span class="k">this</span> <span class="o">==</span> <span class="n">obj</span><span class="o">)</span> <span class="k">return</span> <span class="kc">true</span><span class="o">;</span>
+        <span class="k">if</span> <span class="o">(!(</span><span class="n">obj</span> <span class="k">instanceof</span> <span class="nc">CacheKey</span> <span class="n">other</span><span class="o">))</span> <span class="k">return</span> <span class="kc">false</span><span class="o">;</span>
+        <span class="k">return</span> <span class="n">resourceId</span> <span class="o">==</span> <span class="n">other</span><span class="o">.</span><span class="na">resourceId</span> <span class="o">&amp;&amp;</span> <span class="nc">Objects</span><span class="o">.</span><span class="na">equals</span><span class="o">(</span><span class="n">tenantId</span><span class="o">,</span>
+            <span class="n">other</span><span class="o">.</span><span class="na">tenantId</span><span class="o">)</span> <span class="o">&amp;&amp;</span> <span class="nc">Objects</span><span class="o">.</span><span class="na">equals</span><span class="o">(</span><span class="n">resourceType</span><span class="o">,</span> <span class="n">other</span><span class="o">.</span><span class="na">resourceType</span><span class="o">);</span>
+    <span class="o">}</span>
+<span class="o">}</span>
 <span class="cm">/* Verifico la distribuzione del hash su un campione reale di chiavi: */</span>
- <span class="nd">@Test</span> <span class="kd">public</span> <span class="kt">void</span> <span class="nf">verifyHashDistribution</span><span class="o">()</span> 
-<span class="o">{</span> <span class="kt">int</span> <span class="n">buckets</span> <span class="o">=</span> <span class="mi">1024</span><span class="o">;</span> <span class="kt">int</span><span class="o">[]</span> <span class="n">distribution</span> <span class="o">=</span> <span class="k">new</span> <span class="kt">int</span><span class="o">[</span><span class="n">buckets</span><span class="o">];</span> <span class="nc">List</span><span class="o">&lt;</span><span class="nc">CacheKey</span><span class="o">&gt;</span> <span class="n">keys</span>
-<span class="o">=</span> <span class="n">generateSampleKeys</span><span class="o">(</span><span class="mi">100_000</span><span class="o">);</span> <span class="k">for</span> <span class="o">(</span><span class="nc">CacheKey</span> <span class="n">key</span> <span class="o">:</span> <span class="n">keys</span><span class="o">)</span>
-<span class="o">{</span> <span class="kt">int</span> <span class="n">bucket</span> <span class="o">=</span> <span class="o">(</span><span class="n">key</span><span class="o">.</span><span class="na">hashCode</span><span class="o">()</span> <span class="o">^</span> <span class="o">(</span><span class="n">key</span><span class="o">.</span><span class="na">hashCode</span><span class="o">()</span> <span class="o">&gt;&gt;&gt;</span> <span class="mi">16</span><span class="o">))</span> <span class="o">&amp;</span> <span class="o">(</span><span class="n">buckets</span> <span class="o">-</span> <span class="mi">1</span><span class="o">);</span>
-<span class="n">distribution</span><span class="o">[</span><span class="n">bucket</span><span class="o">]++;</span> <span class="o">}</span>
- 
-<span class="c1">// Calcolo il coefficiente di variazione: deve essere &lt; 10% per una buona</span>
-<span class="c1">// distribuzione double mean = Arrays.stream(distribution).average().orElse(0);</span>
-<span class="c1">// double variance = Arrays.stream(distribution) .mapToDouble(v -&gt; Math.pow(v -</span>
-<span class="c1">// mean, 2)).average().orElse(0); double cv = Math.sqrt(variance) / mean;</span>
-<span class="c1">// assertTrue(cv &lt; 0.1, "Distribuzione hash scarsa: CV=" + cv + " (atteso &lt;</span>
-<span class="c1">// 0.1)"); }</span>
- 
-<span class="o">*</span> <span class="nc">Configuro</span> <span class="n">la</span> <span class="nc">HashMap</span> <span class="n">con</span> <span class="n">il</span> <span class="n">load</span> <span class="n">factor</span> <span class="n">e</span> <span class="n">la</span> <span class="n">capacità</span> <span class="n">iniziale</span> <span class="n">corretti</span> <span class="n">per</span>
-<span class="o">*</span> <span class="n">evitare</span> <span class="nl">rehashing:</span> <span class="o">*/</span>
- <span class="nd">@Component</span> <span class="kd">public</span> <span class="kd">class</span> <span class="nc">ResourceCache</span> 
-<span class="o">{</span> 
-<span class="c1">// Capacità iniziale = dimensione attesa / load factor, arrotondata alla potenza</span>
-<span class="c1">// di 2 più vicina</span>
-<span class="c1">// Per 1 milione di entry con load factor 0.75: 1_000_000 / 0.75 = 1_333_333 -&gt;</span>
-<span class="c1">// 2^21 = 2_097_152 private final Map&lt;CacheKey, Resource&gt; cache = new</span>
-<span class="c1">// HashMap&lt;&gt;(2_097_152, 0.75f);</span>
-<span class="o">*</span> <span class="nc">Se</span> <span class="n">il</span> <span class="n">numero</span> <span class="n">di</span> <span class="n">entry</span> <span class="n">è</span> <span class="n">noto</span> <span class="n">a</span> <span class="n">priori</span><span class="o">,</span> <span class="n">uso</span> <span class="n">questo</span> <span class="n">calcolo</span> <span class="n">per</span> <span class="n">evitare</span> <span class="n">il</span>
-<span class="o">*</span> <span class="n">rehashing</span> <span class="nl">costoso:</span> <span class="o">*/</span>
- <span class="kd">public</span> <span class="kd">static</span> <span class="kt">int</span> <span class="nf">optimalInitialCapacity</span><span class="o">(</span><span class="kt">int</span> <span class="n">expectedSize</span><span class="o">)</span> 
-<span class="o">{</span> <span class="k">return</span> <span class="o">(</span><span class="kt">int</span><span class="o">)</span> <span class="nc">Math</span><span class="o">.</span><span class="na">ceil</span><span class="o">(</span><span class="n">expectedSize</span> <span class="o">/</span> <span class="mf">0.75</span><span class="o">)</span> <span class="o">+</span> <span class="mi">1</span><span class="o">;</span> <span class="o">}</span>
- <span class="o">}</span>
- 
-<span class="o">*</span> <span class="nc">Per</span> <span class="n">mappe</span> <span class="n">con</span> <span class="n">altissima</span> <span class="n">concorrenza</span> <span class="n">in</span> <span class="n">lettura</span><span class="o">,</span> <span class="n">uso</span> <span class="nc">ConcurrentHashMap</span> <span class="n">con</span>
-<span class="o">*</span> <span class="n">parallelismThreshold</span> <span class="nl">appropriato:</span> <span class="o">*/</span>
- <span class="kd">private</span> <span class="kd">final</span> <span class="nc">ConcurrentHashMap</span><span class="o">&lt;</span><span class="nc">CacheKey</span><span class="o">,</span> <span class="nc">Resource</span><span class="o">&gt;</span> <span class="n">concurrentCache</span> <span class="o">=</span> <span class="k">new</span>
-<span class="nc">ConcurrentHashMap</span><span class="o">&lt;&gt;(</span><span class="n">optimalInitialCapacity</span><span class="o">(</span><span class="mi">1_000_000</span><span class="o">),</span> <span class="mf">0.75f</span><span class="o">,</span> <span class="mi">32</span><span class="o">);</span>
-<span class="c1">// 32 segmenti di concorrenza </span>
-<span class="o">*</span> <span class="nc">Individuo</span> <span class="n">le</span> <span class="nc">HashMap</span> <span class="n">con</span> <span class="n">collisioni</span> <span class="n">eccessive</span> <span class="n">in</span> <span class="n">produzione</span> <span class="n">tramite</span> <span class="nl">JFR:</span>
-<span class="o">*</span> <span class="n">nell</span><span class="err">'</span><span class="n">evento</span> <span class="s">"Object Allocation in New TLAB"</span> <span class="n">filtro</span> <span class="n">per</span>
-<span class="o">*</span> <span class="n">java</span><span class="o">.</span><span class="na">util</span><span class="o">.</span><span class="na">HashMap</span><span class="n">$TreeNode</span><span class="o">:</span> <span class="n">se</span> <span class="n">appaiono</span><span class="o">,</span> <span class="n">significa</span> <span class="n">che</span> <span class="n">alcuni</span> <span class="n">bucket</span> <span class="n">hanno</span>
-<span class="o">*</span> <span class="n">degenerato</span> <span class="n">in</span> <span class="n">alberi</span> <span class="n">rosso</span><span class="o">-</span><span class="n">neri</span> <span class="n">per</span> <span class="n">troppe</span> <span class="n">collisioni</span><span class="o">.</span> <span class="o">*/</span>
+<span class="nd">@Test</span> <span class="kd">public</span> <span class="kt">void</span> <span class="nf">verifyHashDistribution</span><span class="o">()</span> <span class="o">{</span>
+    <span class="kt">int</span> <span class="n">buckets</span> <span class="o">=</span> <span class="mi">1024</span><span class="o">;</span>
+    <span class="kt">int</span><span class="o">[]</span> <span class="n">distribution</span> <span class="o">=</span> <span class="k">new</span> <span class="kt">int</span><span class="o">[</span><span class="n">buckets</span><span class="o">];</span>
+    <span class="nc">List</span><span class="o">&lt;</span><span class="nc">CacheKey</span><span class="o">&gt;</span> <span class="n">keys</span> <span class="o">=</span> <span class="n">generateSampleKeys</span><span class="o">(</span><span class="mi">100_000</span><span class="o">);</span>
+    <span class="k">for</span> <span class="o">(</span><span class="nc">CacheKey</span> <span class="n">key</span> <span class="o">:</span> <span class="n">keys</span><span class="o">)</span> <span class="o">{</span>
+        <span class="kt">int</span> <span class="n">bucket</span> <span class="o">=</span> <span class="o">(</span><span class="n">key</span><span class="o">.</span><span class="na">hashCode</span><span class="o">()</span> <span class="o">^</span> <span class="o">(</span><span class="n">key</span><span class="o">.</span><span class="na">hashCode</span><span class="o">()</span> <span class="o">&gt;&gt;&gt;</span> <span class="mi">16</span><span class="o">))</span> <span class="o">&amp;</span> <span class="o">(</span><span class="n">buckets</span> <span class="o">-</span> <span class="mi">1</span><span class="o">);</span>
+        <span class="n">distribution</span><span class="o">[</span><span class="n">bucket</span><span class="o">]++;</span>
+    <span class="o">}</span>
+    <span class="c1">// Calcolo il coefficiente di variazione: deve essere &lt; 10% per una buona</span>
+        <span class="n">distribuzione</span> <span class="kt">double</span> <span class="n">mean</span> <span class="o">=</span>
+        <span class="nc">Arrays</span><span class="o">.</span><span class="na">stream</span><span class="o">(</span><span class="n">distribution</span><span class="o">).</span><span class="na">average</span><span class="o">().</span><span class="na">orElse</span><span class="o">(</span><span class="mi">0</span><span class="o">)</span>
+    <span class="o">;</span>
+    <span class="kt">double</span> <span class="n">variance</span> <span class="o">=</span> <span class="nc">Arrays</span><span class="o">.</span><span class="na">stream</span><span class="o">(</span><span class="n">distribution</span><span class="o">)</span> <span class="o">.</span><span class="na">mapToDouble</span><span class="o">(</span><span class="n">v</span> <span class="o">-&gt;</span> <span class="nc">Math</span><span class="o">.</span><span class="na">pow</span><span class="o">(</span><span class="n">v</span> <span class="o">-</span>
+        <span class="n">mean</span><span class="o">,</span> <span class="mi">2</span><span class="o">)).</span><span class="na">average</span><span class="o">().</span><span class="na">orElse</span><span class="o">(</span><span class="mi">0</span><span class="o">);</span>
+    <span class="kt">double</span> <span class="n">cv</span> <span class="o">=</span> <span class="nc">Math</span><span class="o">.</span><span class="na">sqrt</span><span class="o">(</span><span class="n">variance</span><span class="o">)</span> <span class="o">/</span> <span class="n">mean</span><span class="o">;</span>
+    <span class="n">assertTrue</span><span class="o">(</span><span class="n">cv</span> <span class="o">&lt;</span> <span class="mf">0.1</span><span class="o">,</span> <span class="s">"Distribuzione hash scarsa: CV="</span> <span class="o">+</span> <span class="n">cv</span> <span class="o">+</span> <span class="s">" (atteso &lt;
+        0.1)"</span><span class="o">);</span>
+<span class="o">}</span>
+<span class="cm">/* Configuro la HashMap con il load factor e la capacità iniziale corretti per
+    evitare rehashing: */</span>
+<span class="nd">@Component</span> <span class="kd">public</span> <span class="kd">class</span> <span class="nc">ResourceCache</span> <span class="o">{</span>
+    <span class="c1">// Capacità iniziale = dimensione attesa / load factor, arrotondata alla</span>
+        <span class="n">potenza</span> <span class="n">di</span> <span class="mi">2</span> <span class="n">più</span> <span class="n">vicina</span> <span class="c1">// Per 1 milione di entry con load factor 0.75:</span>
+        <span class="mi">1_000_000</span> <span class="o">/</span> <span class="mf">0.75</span> <span class="o">=</span> <span class="mi">1_333_333</span> <span class="o">-&gt;</span> <span class="mi">2</span><span class="o">^</span><span class="mi">21</span> <span class="o">=</span> <span class="mi">2_097_152</span> <span class="kd">private</span> <span class="kd">final</span>
+        <span class="nc">Map</span><span class="o">&lt;</span><span class="nc">CacheKey</span><span class="o">,</span> <span class="nc">Resource</span><span class="o">&gt;</span> <span class="n">cache</span> <span class="o">=</span> <span class="k">new</span> <span class="nc">HashMap</span><span class="o">&lt;&gt;(</span><span class="mi">2_097_152</span><span class="o">,</span> <span class="mf">0.75f</span><span class="o">)</span>
+    <span class="o">;</span>
+    <span class="cm">/* Se il numero di entry è noto a priori, uso questo calcolo per evitare il
+        rehashing costoso: */</span>
+    <span class="kd">public</span> <span class="kd">static</span> <span class="kt">int</span> <span class="nf">optimalInitialCapacity</span><span class="o">(</span><span class="kt">int</span> <span class="n">expectedSize</span><span class="o">)</span> <span class="o">{</span>
+        <span class="k">return</span> <span class="o">(</span><span class="kt">int</span><span class="o">)</span> <span class="nc">Math</span><span class="o">.</span><span class="na">ceil</span><span class="o">(</span><span class="n">expectedSize</span> <span class="o">/</span> <span class="mf">0.75</span><span class="o">)</span> <span class="o">+</span> <span class="mi">1</span><span class="o">;</span>
+    <span class="o">}</span>
+<span class="o">}</span>
+<span class="cm">/* Per mappe con altissima concorrenza in lettura, uso ConcurrentHashMap con
+    parallelismThreshold appropriato: */</span>
+<span class="kd">private</span> <span class="kd">final</span> <span class="nc">ConcurrentHashMap</span><span class="o">&lt;</span><span class="nc">CacheKey</span><span class="o">,</span> <span class="nc">Resource</span><span class="o">&gt;</span> <span class="n">concurrentCache</span> <span class="o">=</span> <span class="k">new</span>
+    <span class="nc">ConcurrentHashMap</span><span class="o">&lt;&gt;(</span><span class="n">optimalInitialCapacity</span><span class="o">(</span><span class="mi">1_000_000</span><span class="o">),</span> <span class="mf">0.75f</span><span class="o">,</span> <span class="mi">32</span><span class="o">);</span>
+<span class="c1">// 32 segmenti di concorrenza /* Individuo le HashMap con collisioni eccessive</span>
+    <span class="n">in</span> <span class="n">produzione</span> <span class="n">tramite</span> <span class="nl">JFR:</span> <span class="n">nell</span><span class="err">'</span><span class="n">evento</span> <span class="s">"Object Allocation in New TLAB"</span>
+    <span class="n">filtro</span> <span class="n">per</span> <span class="n">java</span><span class="o">.</span><span class="na">util</span><span class="o">.</span><span class="na">HashMap</span><span class="n">$TreeNode</span><span class="o">:</span> <span class="n">se</span> <span class="n">appaiono</span><span class="o">,</span> <span class="n">significa</span> <span class="n">che</span> <span class="n">alcuni</span>
+    <span class="n">bucket</span> <span class="n">hanno</span> <span class="n">degenerato</span> <span class="n">in</span> <span class="n">alberi</span> <span class="n">rosso</span><span class="o">-</span><span class="n">neri</span> <span class="n">per</span> <span class="n">troppe</span> <span class="n">collisioni</span><span class="o">.</span> <span class="o">*/</span>
 </pre></td></tr></tbody></table></code></pre></div></div>
 
         </article>

@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Hot Standby Feedback — DevLog</title>
-    <meta name="description" content="In una configurazione Master-Replica, può succedere che una query lunga sulla replica venga interrotta perché il Master ha rimosso dei dati (tramite Vacuum) che la replica deve ancora processare. Questo è il 'replication conflict'. Il meccanismo hot_
+    <meta name="description" content="In una configurazione Master-Replica, può succedere che una query lunga sulla replica venga interrotta perché il Master ha rimosso dei dati (tramite Vacuum) che la replica deve ancora processare. Questo è il "replication conflict". Il meccanismo hot_
 ">
     <link rel="stylesheet" href="/appuntidiprogrammazione/assets/css/style.css">
 
@@ -113,35 +113,31 @@
 22
 23
 24
-25
-26
-</pre></td><td class="rouge-code"><pre><span class="o">*</span> <span class="n">Configurazione</span> <span class="n">da</span> <span class="n">applicare</span> <span class="n">nel</span> <span class="n">file</span> <span class="n">postgresql</span><span class="p">.</span><span class="n">conf</span> <span class="n">della</span> <span class="n">REPLICA</span><span class="p">.</span> <span class="n">Comunica</span>
-<span class="o">*</span> <span class="n">al</span> <span class="n">master</span> <span class="n">di</span> <span class="n">mantenere</span> <span class="n">le</span> <span class="n">tuple</span> <span class="n">necessarie</span> <span class="n">finch</span><span class="err">é</span> <span class="n">la</span> <span class="n">replica</span> <span class="n">non</span> <span class="n">ha</span> <span class="n">concluso</span>
-<span class="o">*</span> <span class="n">le</span> <span class="n">sue</span> <span class="n">transazioni</span> <span class="n">aperte</span><span class="p">.</span> <span class="o">*/</span>
- <span class="c1">-- hot_standby_feedback = on -- max_standby_streaming_delay = '30s' </span>
-<span class="o">*</span> <span class="n">Sul</span> <span class="n">MASTER</span><span class="p">,</span> <span class="n">monitoro</span> <span class="n">il</span> <span class="n">bloat</span> <span class="n">causato</span> <span class="n">da</span> <span class="n">hot_standby_feedback</span> <span class="n">controllando</span> <span class="n">lo</span>
-<span class="o">*</span> <span class="n">slot</span> <span class="n">di</span> <span class="n">replica</span> <span class="n">e</span> <span class="n">il</span> <span class="n">ritardo</span> <span class="n">accumulato</span><span class="p">.</span> <span class="n">Se</span> <span class="n">il</span> <span class="n">ritardo</span> <span class="n">cresce</span> <span class="n">troppo</span><span class="p">,</span> <span class="n">il</span>
-<span class="o">*</span> <span class="n">Master</span> <span class="n">trattiene</span> <span class="n">versioni</span> <span class="n">vecchie</span> <span class="n">per</span> <span class="n">un</span> <span class="n">tempo</span> <span class="n">eccessivo</span><span class="p">.</span> <span class="o">*/</span>
- <span class="k">SELECT</span> <span class="n">slot_name</span><span class="p">,</span> <span class="n">active</span><span class="p">,</span> <span class="n">pg_size_pretty</span><span class="p">(</span><span class="n">pg_wal_lsn_diff</span><span class="p">(</span><span class="n">pg_current_wal_lsn</span><span class="p">(),</span>
-<span class="n">restart_lsn</span><span class="p">))</span> <span class="k">AS</span> <span class="n">retained_wal</span><span class="p">,</span> <span class="n">catalog_xmin</span><span class="p">,</span> <span class="n">age</span><span class="p">(</span><span class="n">catalog_xmin</span><span class="p">)</span> <span class="k">AS</span>
-<span class="n">catalog_xmin_age</span> <span class="k">FROM</span> <span class="n">pg_replication_slots</span><span class="p">;</span>
-<span class="o">*</span> <span class="n">Sul</span> <span class="n">MASTER</span><span class="p">,</span> <span class="n">verifico</span> <span class="n">che</span> <span class="n">l</span><span class="s1">'autovacuum non venga bloccato dalla replica per
-* troppo tempo. Se '</span><span class="n">catalog_xmin_age</span><span class="s1">' supera soglie critiche, valuto di
-* disabilitare temporaneamente il feedback. */
- SELECT now() - pg_last_xact_replay_timestamp() AS replication_lag FROM
-pg_stat_replication;
-* Strategia di bilanciamento: invece di hot_standby_feedback globale, posso
-* usare max_standby_streaming_delay per definire quanto a lungo la replica
-* tolera il ritardo prima di cancellare la query piuttosto che aspettare il
-* master: -- Sul master in postgresql.conf: wal_keep_size = '</span><span class="mi">2</span><span class="n">GB</span><span class="s1">' -- Mantiene
-* abbastanza WAL per query lunghe -- Sulla replica: max_standby_streaming_delay
-* = '</span><span class="mi">10</span><span class="k">min</span><span class="s1">' hot_standby_feedback = on */
- 
-* A livello applicativo, instrumento i report lunghi con un timeout esplicito
-* sulla connessione replica per evitare che una query infinita blocchi il
-* feedback indefinitamente: SET statement_timeout = '</span><span class="mi">25</span><span class="k">min</span><span class="s1">'; SET
-* idle_in_transaction_session_timeout = '</span><span class="mi">5</span><span class="k">min</span><span class="s1">'; */
-</span></pre></td></tr></tbody></table></code></pre></div></div>
+</pre></td><td class="rouge-code"><pre>    <span class="cm">/* Configurazione da applicare nel file postgresql.conf della REPLICA.
+        Comunica al master di mantenere le tuple necessarie finché la replica
+        non ha concluso le sue transazioni aperte. */</span> <span class="c1">-- hot_standby_feedback =</span>
+        <span class="k">on</span> <span class="c1">-- max_standby_streaming_delay = '30s' /* Sul MASTER, monitoro il</span>
+        <span class="n">bloat</span> <span class="n">causato</span> <span class="n">da</span> <span class="n">hot_standby_feedback</span> <span class="n">controllando</span> <span class="n">lo</span> <span class="n">slot</span> <span class="n">di</span> <span class="n">replica</span> <span class="n">e</span>
+        <span class="n">il</span> <span class="n">ritardo</span> <span class="n">accumulato</span><span class="p">.</span> <span class="n">Se</span> <span class="n">il</span> <span class="n">ritardo</span> <span class="n">cresce</span> <span class="n">troppo</span><span class="p">,</span> <span class="n">il</span> <span class="n">Master</span> <span class="n">trattiene</span>
+        <span class="n">versioni</span> <span class="n">vecchie</span> <span class="n">per</span> <span class="n">un</span> <span class="n">tempo</span> <span class="n">eccessivo</span><span class="p">.</span> <span class="o">*/</span> <span class="k">SELECT</span> <span class="n">slot_name</span><span class="p">,</span> <span class="n">active</span><span class="p">,</span>
+        <span class="n">pg_size_pretty</span><span class="p">(</span><span class="n">pg_wal_lsn_diff</span><span class="p">(</span><span class="n">pg_current_wal_lsn</span><span class="p">(),</span> <span class="n">restart_lsn</span><span class="p">))</span> <span class="k">AS</span>
+        <span class="n">retained_wal</span><span class="p">,</span> <span class="n">catalog_xmin</span><span class="p">,</span> <span class="n">age</span><span class="p">(</span><span class="n">catalog_xmin</span><span class="p">)</span> <span class="k">AS</span> <span class="n">catalog_xmin_age</span> <span class="k">FROM</span>
+        <span class="n">pg_replication_slots</span><span class="p">;</span> <span class="cm">/* Sul MASTER, verifico che l'autovacuum non venga
+        bloccato dalla replica per troppo tempo. Se 'catalog_xmin_age' supera
+        soglie critiche, valuto di disabilitare temporaneamente il feedback. */</span>
+        <span class="k">SELECT</span> <span class="n">now</span><span class="p">()</span> <span class="o">-</span> <span class="n">pg_last_xact_replay_timestamp</span><span class="p">()</span> <span class="k">AS</span> <span class="n">replication_lag</span> <span class="k">FROM</span>
+        <span class="n">pg_stat_replication</span><span class="p">;</span> <span class="cm">/* Strategia di bilanciamento: invece di
+        hot_standby_feedback globale, posso usare max_standby_streaming_delay
+        per definire quanto a lungo la replica tolera il ritardo prima di
+        cancellare la query piuttosto che aspettare il master: -- Sul master in
+        postgresql.conf: wal_keep_size = '2GB' -- Mantiene abbastanza WAL per
+        query lunghe -- Sulla replica: max_standby_streaming_delay = '10min'
+        hot_standby_feedback = on */</span> <span class="cm">/* A livello applicativo, instrumento i
+        report lunghi con un timeout esplicito sulla connessione replica per
+        evitare che una query infinita blocchi il feedback indefinitamente: SET
+        statement_timeout = '25min'; SET idle_in_transaction_session_timeout =
+        '5min'; */</span>
+</pre></td></tr></tbody></table></code></pre></div></div>
 
         </article>
 

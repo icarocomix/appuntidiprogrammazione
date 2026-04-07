@@ -119,52 +119,36 @@
 28
 29
 30
-31
-32
-33
-34
-35
-36
-37
-38
-</pre></td><td class="rouge-code"><pre><span class="o">*</span> <span class="n">Sul</span> <span class="n">Publisher</span><span class="p">:</span> <span class="n">creo</span> <span class="n">una</span> <span class="n">pubblicazione</span> <span class="n">per</span> <span class="n">tabelle</span> <span class="n">specifiche</span><span class="p">,</span> <span class="n">evitando</span> <span class="n">di</span>
-<span class="o">*</span> <span class="n">replicare</span> <span class="n">l</span><span class="s1">'intero database verso il data warehouse. */
- CREATE PUBLICATION subset_pub FOR TABLE orders, customers, products; 
-* Sul Subscriber (data warehouse): creo la subscription che si connette al
-* publisher e inizia a ricevere le modifiche. */
- CREATE SUBSCRIPTION dw_sub CONNECTION '</span><span class="k">host</span><span class="o">=</span><span class="n">prod_db</span> <span class="n">port</span><span class="o">=</span><span class="mi">5432</span> <span class="n">dbname</span><span class="o">=</span><span class="n">myapp</span>
-<span class="k">user</span><span class="o">=</span><span class="n">rep_user</span> <span class="n">password</span><span class="o">=</span><span class="n">secret</span><span class="s1">' PUBLICATION subset_pub;
-* Monitoro continuamente lo stato degli slot sul Publisher. Se '</span><span class="n">active</span><span class="s1">' è false
-* da più di 30 minuti e '</span><span class="n">confirmed_flush_lsn</span><span class="s1">' non avanza, il subscriber è
-* probabilmente morto e il disco si sta riempiendo. */
- SELECT slot_name, slot_type, active,
-pg_size_pretty(pg_wal_lsn_diff(pg_current_wal_lsn(), confirmed_flush_lsn)) AS
-retained_wal, confirmed_flush_lsn FROM pg_replication_slots WHERE slot_type =
-'</span><span class="n">logical</span><span class="s1">';
-* Se uno slot inattivo sta trattenendo troppo WAL, lo elimino per proteggere il
-* disco del publisher: */
- SELECT pg_drop_replication_slot('</span><span class="n">dw_sub</span><span class="s1">'); 
-* Imposto un limite massimo di slot e una soglia di WAL trattenuto nel
-* postgresql.conf: max_replication_slots = 10 wal_keep_size = '</span><span class="mi">1</span><span class="n">GB</span><span class="s1">' -- Limite di
-* WAL locale prima di allertare */
- 
-* In Spring Boot, schedulo un job che monitora i slot e invia un alert se il WAL
-* trattenuto supera una soglia critica: @Scheduled(cron = "0 */
-5 * * * *") 
-// Ogni 5 minuti public void monitorReplicationSlots() 
-{ List&lt;Map&lt;String, Object&gt;&gt; slots = jdbcTemplate.queryForList(""" SELECT
-slot_name, active, pg_wal_lsn_diff(pg_current_wal_lsn(), confirmed_flush_lsn) AS
-retained_bytes FROM pg_replication_slots WHERE slot_type = '</span><span class="n">logical</span><span class="s1">' """); for
-(Map&lt;String, Object&gt; slot : slots)
-{ long retainedBytes = ((Number) slot.get("retained_bytes")).longValue();
-boolean active = (boolean) slot.get("active"); if (!active &amp;&amp; retainedBytes &gt;
-5_000_000_000L)
-{ 
-// 5GB alertService.sendCritical("Slot " + slot.get("slot_name") + " inattivo
-// trattiene " + retainedBytes / 1e9 + " GB di WAL"); }
- }
- }
- */
+</pre></td><td class="rouge-code"><pre>    <span class="cm">/* Sul Publisher: creo una pubblicazione per tabelle specifiche, evitando di
+        replicare l'intero database verso il data warehouse. */</span> <span class="k">CREATE</span>
+        <span class="n">PUBLICATION</span> <span class="n">subset_pub</span> <span class="k">FOR</span> <span class="k">TABLE</span> <span class="n">orders</span><span class="p">,</span> <span class="n">customers</span><span class="p">,</span> <span class="n">products</span><span class="p">;</span> <span class="cm">/* Sul
+        Subscriber (data warehouse): creo la subscription che si connette al
+        publisher e inizia a ricevere le modifiche. */</span> <span class="k">CREATE</span> <span class="n">SUBSCRIPTION</span>
+        <span class="n">dw_sub</span> <span class="k">CONNECTION</span> <span class="s1">'host=prod_db port=5432 dbname=myapp user=rep_user
+        password=secret'</span> <span class="n">PUBLICATION</span> <span class="n">subset_pub</span><span class="p">;</span> <span class="cm">/* Monitoro continuamente lo
+        stato degli slot sul Publisher. Se 'active' è false da più di 30 minuti
+        e 'confirmed_flush_lsn' non avanza, il subscriber è probabilmente morto
+        e il disco si sta riempiendo. */</span> <span class="k">SELECT</span> <span class="n">slot_name</span><span class="p">,</span> <span class="n">slot_type</span><span class="p">,</span> <span class="n">active</span><span class="p">,</span>
+        <span class="n">pg_size_pretty</span><span class="p">(</span><span class="n">pg_wal_lsn_diff</span><span class="p">(</span><span class="n">pg_current_wal_lsn</span><span class="p">(),</span>
+        <span class="n">confirmed_flush_lsn</span><span class="p">))</span> <span class="k">AS</span> <span class="n">retained_wal</span><span class="p">,</span> <span class="n">confirmed_flush_lsn</span> <span class="k">FROM</span>
+        <span class="n">pg_replication_slots</span> <span class="k">WHERE</span> <span class="n">slot_type</span> <span class="o">=</span> <span class="s1">'logical'</span><span class="p">;</span> <span class="cm">/* Se uno slot
+        inattivo sta trattenendo troppo WAL, lo elimino per proteggere il disco
+        del publisher: */</span> <span class="k">SELECT</span> <span class="n">pg_drop_replication_slot</span><span class="p">(</span><span class="s1">'dw_sub'</span><span class="p">);</span> <span class="cm">/* Imposto
+        un limite massimo di slot e una soglia di WAL trattenuto nel
+        postgresql.conf: max_replication_slots = 10 wal_keep_size = '1GB' --
+        Limite di WAL locale prima di allertare */</span> <span class="cm">/* In Spring Boot, schedulo
+        un job che monitora i slot e invia un alert se il WAL trattenuto supera
+        una soglia critica: @Scheduled(cron = "0 */</span><span class="mi">5</span> <span class="o">*</span> <span class="o">*</span> <span class="o">*</span> <span class="o">*</span><span class="nv">") // Ogni 5 minuti
+        public void monitorReplicationSlots() { List&lt;Map&lt;String, Object&gt;&gt; slots
+        = jdbcTemplate.queryForList(</span><span class="se">""</span><span class="nv">"</span> <span class="k">SELECT</span> <span class="n">slot_name</span><span class="p">,</span> <span class="n">active</span><span class="p">,</span>
+        <span class="n">pg_wal_lsn_diff</span><span class="p">(</span><span class="n">pg_current_wal_lsn</span><span class="p">(),</span> <span class="n">confirmed_flush_lsn</span><span class="p">)</span> <span class="k">AS</span>
+        <span class="n">retained_bytes</span> <span class="k">FROM</span> <span class="n">pg_replication_slots</span> <span class="k">WHERE</span> <span class="n">slot_type</span> <span class="o">=</span> <span class="s1">'logical'</span>
+        <span class="nv">"</span><span class="se">""</span><span class="nv">); for (Map&lt;String, Object&gt; slot : slots) { long retainedBytes =
+        ((Number) slot.get("</span><span class="n">retained_bytes</span><span class="nv">")).longValue(); boolean active =
+        (boolean) slot.get("</span><span class="n">active</span><span class="nv">"); if (!active &amp;&amp; retainedBytes &gt;
+        5_000_000_000L) { // 5GB alertService.sendCritical("</span><span class="n">Slot</span> <span class="nv">" +
+        slot.get("</span><span class="n">slot_name</span><span class="nv">") + "</span> <span class="n">inattivo</span> <span class="n">trattiene</span> <span class="nv">" + retainedBytes / 1e9 + "</span>
+        <span class="n">GB</span> <span class="n">di</span> <span class="n">WAL</span><span class="nv">"); } } } */
 </span></pre></td></tr></tbody></table></code></pre></div></div>
 
         </article>

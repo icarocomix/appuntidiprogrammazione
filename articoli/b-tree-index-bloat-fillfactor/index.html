@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>B-Tree Index Bloat & Fillfactor — DevLog</title>
-    <meta name="description" content="Gli indici B-Tree tendono a frammentarsi (bloat) a causa di frequenti update e delete, poiché PostgreSQL non può riutilizzare immediatamente lo spazio delle pagine degli indici fino al passaggio del Vacuum. Un B-Tree 'gonfio' aumenta il numero di liv
+    <meta name="description" content="Gli indici B-Tree tendono a frammentarsi (bloat) a causa di frequenti update e delete, poiché PostgreSQL non può riutilizzare immediatamente lo spazio delle pagine degli indici fino al passaggio del Vacuum. Un B-Tree "gonfio" aumenta il numero di liv
 ">
     <link rel="stylesheet" href="/appuntidiprogrammazione/assets/css/style.css">
 
@@ -120,56 +120,38 @@
 29
 30
 31
-32
-33
-34
-35
-36
-37
-38
-39
-40
-</pre></td><td class="rouge-code"><pre><span class="o">*</span> <span class="n">Creo</span> <span class="n">un</span> <span class="n">indice</span> <span class="n">con</span> <span class="n">spazio</span> <span class="n">di</span> <span class="n">riserva</span> <span class="n">per</span> <span class="n">gli</span> <span class="k">update</span><span class="p">.</span> <span class="n">Il</span> <span class="n">fillfactor</span><span class="o">=</span><span class="mi">85</span> <span class="n">lascia</span>
-<span class="o">*</span> <span class="n">il</span> <span class="mi">15</span><span class="o">%</span> <span class="n">di</span> <span class="n">ogni</span> <span class="n">pagina</span> <span class="n">libero</span> <span class="n">per</span> <span class="n">aggiornamenti</span> <span class="n">futuri</span><span class="p">,</span> <span class="n">prevenendo</span> <span class="n">la</span>
-<span class="o">*</span> <span class="n">frammentazione</span> <span class="n">precoce</span> <span class="n">sotto</span> <span class="n">carichi</span> <span class="n">di</span> <span class="n">scrittura</span> <span class="n">intensi</span><span class="p">.</span> <span class="o">*/</span>
- <span class="k">CREATE</span> <span class="k">INDEX</span> <span class="n">idx_sessions_updated_at</span> <span class="k">ON</span> <span class="n">sessions</span> <span class="p">(</span><span class="n">updated_at</span><span class="p">)</span> <span class="k">WITH</span> <span class="p">(</span><span class="n">fillfactor</span>
-<span class="o">=</span> <span class="mi">85</span><span class="p">);</span>
-<span class="o">*</span> <span class="n">Per</span> <span class="n">una</span> <span class="n">tabella</span> <span class="n">esistente</span><span class="p">,</span> <span class="n">modifico</span> <span class="n">il</span> <span class="n">fillfactor</span> <span class="n">e</span> <span class="n">ricostruisco</span> <span class="n">l</span><span class="s1">'indice in
-* modo non bloccante: */
- ALTER INDEX idx_sessions_updated_at SET (fillfactor = 85); REINDEX INDEX
-CONCURRENTLY idx_sessions_updated_at;
-* Monitoro il livello di bloat corrente con pgstatindex per decidere se e quando
-* intervenire: */
- SELECT * FROM pgstatindex('</span><span class="n">idx_sessions_updated_at</span><span class="s1">'); 
-* Leggo i campi chiave: avg_leaf_density: idealmente &gt; 70%. Se scende sotto il
-* 50%, il bloat è significativo. leaf_fragmentation: percentuale di pagine
-* foglia fuori ordine. leaf_pages: numero totale di pagine foglia dell'</span><span class="n">indice</span><span class="p">.</span>
-<span class="o">*</span> <span class="o">*/</span>
- 
-<span class="cm">/* Verifico il bloat aggregato su tutti gli indici della tabella sessions: */</span>
- <span class="k">SELECT</span> <span class="n">indexrelname</span><span class="p">,</span> <span class="n">pg_size_pretty</span><span class="p">(</span><span class="n">pg_relation_size</span><span class="p">(</span><span class="n">indexrelid</span><span class="p">))</span> <span class="k">AS</span>
-<span class="n">index_size</span><span class="p">,</span> <span class="n">idx_scan</span><span class="p">,</span> <span class="n">idx_tup_read</span><span class="p">,</span> <span class="n">idx_tup_fetch</span> <span class="k">FROM</span> <span class="n">pg_stat_user_indexes</span>
-<span class="k">WHERE</span> <span class="n">relname</span> <span class="o">=</span> <span class="s1">'sessions'</span> <span class="k">ORDER</span> <span class="k">BY</span> <span class="n">pg_relation_size</span><span class="p">(</span><span class="n">indexrelid</span><span class="p">)</span> <span class="k">DESC</span><span class="p">;</span>
-<span class="o">*</span> <span class="n">Se</span> <span class="n">il</span> <span class="n">bloat</span> <span class="err">è</span> <span class="n">gi</span><span class="err">à</span> <span class="n">elevato</span><span class="p">,</span> <span class="n">eseguo</span> <span class="n">un</span> <span class="k">REINDEX</span> <span class="n">CONCURRENTLY</span> <span class="n">per</span> <span class="n">ricostruire</span>
-<span class="o">*</span> <span class="n">l</span><span class="s1">'indice senza bloccare le query in produzione: */
- REINDEX INDEX CONCURRENTLY idx_sessions_updated_at; 
-* Per la tabella sessions con carico misto (insert + delete intensi), imposto
-* anche il fillfactor sulla tabella stessa per facilitare gli HOT update (Heap
-* Only Tuple): */
- ALTER TABLE sessions SET (fillfactor = 85); 
-* In Spring Boot, schedulo un job settimanale che controlla il bloat e lancia il
-* REINDEX se necessario: @Scheduled(cron = "0 0 3 * * SUN") public void
-* checkIndexBloat()
-{ Double density = jdbcTemplate.queryForObject( "SELECT avg_leaf_density FROM
-pgstatindex('</span><span class="n">idx_sessions_updated_at</span><span class="s1">')", Double.class); if (density != null &amp;&amp;
-density &lt; 50.0)
-{ jdbcTemplate.execute("REINDEX INDEX CONCURRENTLY idx_sessions_updated_at");
-log.warn("REINDEX eseguito: avg_leaf_density era
-{}
-", density); }
- }
- */
-</span></pre></td></tr></tbody></table></code></pre></div></div>
+</pre></td><td class="rouge-code"><pre>    <span class="cm">/* Creo un indice con spazio di riserva per gli update. Il fillfactor=85
+        lascia il 15% di ogni pagina libero per aggiornamenti futuri, prevenendo
+        la frammentazione precoce sotto carichi di scrittura intensi. */</span> <span class="k">CREATE</span>
+        <span class="k">INDEX</span> <span class="n">idx_sessions_updated_at</span> <span class="k">ON</span> <span class="n">sessions</span> <span class="p">(</span><span class="n">updated_at</span><span class="p">)</span> <span class="k">WITH</span> <span class="p">(</span><span class="n">fillfactor</span>
+        <span class="o">=</span> <span class="mi">85</span><span class="p">);</span> <span class="cm">/* Per una tabella esistente, modifico il fillfactor e
+        ricostruisco l'indice in modo non bloccante: */</span> <span class="k">ALTER</span> <span class="k">INDEX</span>
+        <span class="n">idx_sessions_updated_at</span> <span class="k">SET</span> <span class="p">(</span><span class="n">fillfactor</span> <span class="o">=</span> <span class="mi">85</span><span class="p">);</span> <span class="k">REINDEX</span> <span class="k">INDEX</span>
+        <span class="n">CONCURRENTLY</span> <span class="n">idx_sessions_updated_at</span><span class="p">;</span> <span class="cm">/* Monitoro il livello di bloat
+        corrente con pgstatindex per decidere se e quando intervenire: */</span> <span class="k">SELECT</span>
+        <span class="o">*</span> <span class="k">FROM</span> <span class="n">pgstatindex</span><span class="p">(</span><span class="s1">'idx_sessions_updated_at'</span><span class="p">);</span> <span class="cm">/* Leggo i campi chiave:
+        avg_leaf_density: idealmente &gt; 70%. Se scende sotto il 50%, il bloat è
+        significativo. leaf_fragmentation: percentuale di pagine foglia fuori
+        ordine. leaf_pages: numero totale di pagine foglia dell'indice. */</span> <span class="cm">/*
+        Verifico il bloat aggregato su tutti gli indici della tabella sessions:
+        */</span> <span class="k">SELECT</span> <span class="n">indexrelname</span><span class="p">,</span> <span class="n">pg_size_pretty</span><span class="p">(</span><span class="n">pg_relation_size</span><span class="p">(</span><span class="n">indexrelid</span><span class="p">))</span> <span class="k">AS</span>
+        <span class="n">index_size</span><span class="p">,</span> <span class="n">idx_scan</span><span class="p">,</span> <span class="n">idx_tup_read</span><span class="p">,</span> <span class="n">idx_tup_fetch</span> <span class="k">FROM</span>
+        <span class="n">pg_stat_user_indexes</span> <span class="k">WHERE</span> <span class="n">relname</span> <span class="o">=</span> <span class="s1">'sessions'</span> <span class="k">ORDER</span> <span class="k">BY</span>
+        <span class="n">pg_relation_size</span><span class="p">(</span><span class="n">indexrelid</span><span class="p">)</span> <span class="k">DESC</span><span class="p">;</span> <span class="cm">/* Se il bloat è già elevato, eseguo
+        un REINDEX CONCURRENTLY per ricostruire l'indice senza bloccare le query
+        in produzione: */</span> <span class="k">REINDEX</span> <span class="k">INDEX</span> <span class="n">CONCURRENTLY</span> <span class="n">idx_sessions_updated_at</span><span class="p">;</span> <span class="cm">/*
+        Per la tabella sessions con carico misto (insert + delete intensi),
+        imposto anche il fillfactor sulla tabella stessa per facilitare gli HOT
+        update (Heap Only Tuple): */</span> <span class="k">ALTER</span> <span class="k">TABLE</span> <span class="n">sessions</span> <span class="k">SET</span> <span class="p">(</span><span class="n">fillfactor</span> <span class="o">=</span> <span class="mi">85</span><span class="p">);</span>
+        <span class="cm">/* In Spring Boot, schedulo un job settimanale che controlla il bloat e
+        lancia il REINDEX se necessario: @Scheduled(cron = "0 0 3 * * SUN")
+        public void checkIndexBloat() { Double density =
+        jdbcTemplate.queryForObject( "SELECT avg_leaf_density FROM
+        pgstatindex('idx_sessions_updated_at')", Double.class); if (density !=
+        null &amp;&amp; density &lt; 50.0) { jdbcTemplate.execute("REINDEX INDEX
+        CONCURRENTLY idx_sessions_updated_at"); log.warn("REINDEX eseguito:
+        avg_leaf_density era {}", density); } } */</span>
+</pre></td></tr></tbody></table></code></pre></div></div>
 
         </article>
 

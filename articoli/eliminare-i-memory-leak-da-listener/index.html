@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Eliminare i Memory Leak da Listener — DevLog</title>
-    <meta name="description" content="I listener e i callback registrati in oggetti Singleton o statici sono una causa comune di memory leak. Se un oggetto 'Short-Lived' si registra presso un oggetto 'Long-Lived' e non si deregistra, non verrà mai rimosso dal GC. L'uso di WeakReference p
+    <meta name="description" content="I listener e i callback registrati in oggetti Singleton o statici sono una causa comune di memory leak. Se un oggetto "Short-Lived" si registra presso un oggetto "Long-Lived" e non si deregistra, non verrà mai rimosso dal GC. L'uso di WeakReference p
 ">
     <link rel="stylesheet" href="/appuntidiprogrammazione/assets/css/style.css">
 
@@ -189,106 +189,140 @@
 98
 99
 100
-</pre></td><td class="rouge-code"><pre><span class="o">*</span> <span class="nc">Il</span> <span class="nl">problema:</span> <span class="n">un</span> <span class="nc">EventBus</span> <span class="n">singleton</span> <span class="n">mantiene</span> <span class="n">riferimenti</span> <span class="n">forti</span> <span class="n">ai</span> <span class="n">listener</span><span class="o">.</span> <span class="nc">Se</span>
-<span class="o">*</span> <span class="n">un</span> <span class="n">oggetto</span> <span class="nc">Session</span> <span class="n">si</span> <span class="n">registra</span> <span class="n">ma</span> <span class="n">non</span> <span class="n">si</span> <span class="nf">deregistra</span> <span class="o">(</span><span class="n">es</span><span class="o">.</span> <span class="n">per</span> <span class="n">un</span><span class="err">'</span><span class="n">eccezione</span> <span class="n">o</span> <span class="n">un</span>
-<span class="o">*</span> <span class="n">bug</span><span class="o">),</span> <span class="n">rimane</span> <span class="n">in</span> <span class="n">memoria</span> <span class="n">per</span> <span class="n">sempre</span><span class="o">.</span> <span class="o">*/</span>
- <span class="nd">@Component</span> <span class="kd">public</span> <span class="kd">class</span> <span class="nc">EventBus</span> 
-<span class="o">{</span> 
-<span class="c1">// SBAGLIATO: riferimento forte impedisce al GC di raccogliere i listener</span>
-<span class="c1">// private final List&lt;EventListener&gt; strongListeners = new</span>
-<span class="c1">// CopyOnWriteArrayList&lt;&gt;(); public void register(EventListener listener)</span>
-<span class="o">{</span> <span class="n">strongListeners</span><span class="o">.</span><span class="na">add</span><span class="o">(</span><span class="n">listener</span><span class="o">);</span> 
-<span class="c1">// Leak! Se il chiamante non chiama unregister(), l'oggetto non viene mai</span>
-<span class="c1">// raccolto }</span>
- <span class="o">}</span>
- 
-<span class="o">*</span> <span class="no">SOLUZIONE</span> <span class="mi">1</span><span class="o">:</span> <span class="nc">WeakReference</span> <span class="err">—</span> <span class="n">il</span> <span class="n">listener</span> <span class="n">viene</span> <span class="n">raccolto</span> <span class="n">dal</span> <span class="no">GC</span> <span class="n">quando</span> <span class="n">non</span> <span class="n">è</span>
-<span class="o">*</span> <span class="n">più</span> <span class="n">referenziato</span> <span class="n">altrove</span><span class="o">.</span> <span class="o">*/</span>
- <span class="nd">@Component</span> <span class="kd">public</span> <span class="kd">class</span> <span class="nc">WeakEventBus</span> 
-<span class="o">{</span> <span class="kd">private</span> <span class="kd">final</span> <span class="nc">List</span><span class="o">&lt;</span><span class="nc">WeakReference</span><span class="o">&lt;</span><span class="nc">EventListener</span><span class="o">&gt;&gt;</span> <span class="n">weakListeners</span> <span class="o">=</span> <span class="k">new</span>
-<span class="nc">CopyOnWriteArrayList</span><span class="o">&lt;&gt;();</span> <span class="kd">public</span> <span class="kt">void</span> <span class="nf">register</span><span class="o">(</span><span class="nc">EventListener</span> <span class="n">listener</span><span class="o">)</span>
-<span class="o">{</span> <span class="n">weakListeners</span><span class="o">.</span><span class="na">add</span><span class="o">(</span><span class="k">new</span> <span class="nc">WeakReference</span><span class="o">&lt;&gt;(</span><span class="n">listener</span><span class="o">));</span> <span class="o">}</span>
- <span class="kd">public</span> <span class="kt">void</span> <span class="nf">publish</span><span class="o">(</span><span class="nc">Event</span> <span class="n">event</span><span class="o">)</span> 
-<span class="o">{</span> 
-<span class="c1">// Itero rimuovendo automaticamente i riferimenti scaduti (listener già raccolti</span>
-<span class="c1">// dal GC) weakListeners.removeIf(ref -&gt;</span>
-<span class="o">{</span> <span class="nc">EventListener</span> <span class="n">listener</span> <span class="o">=</span> <span class="n">ref</span><span class="o">.</span><span class="na">get</span><span class="o">();</span> <span class="k">if</span> <span class="o">(</span><span class="n">listener</span> <span class="o">==</span> <span class="kc">null</span><span class="o">)</span> 
-<span class="o">{</span> <span class="k">return</span> <span class="kc">true</span><span class="o">;</span> 
-<span class="c1">// Rimuovo il riferimento morto }</span>
- <span class="n">listener</span><span class="o">.</span><span class="na">onEvent</span><span class="o">(</span><span class="n">event</span><span class="o">);</span> <span class="k">return</span> <span class="kc">false</span><span class="o">;</span> <span class="o">}</span>
-<span class="o">);</span> <span class="o">}</span>
- <span class="o">}</span>
- 
-<span class="o">*</span> <span class="no">SOLUZIONE</span> <span class="mi">2</span><span class="o">:</span> <span class="nc">WeakHashMap</span> <span class="err">—</span> <span class="n">le</span> <span class="n">entry</span> <span class="n">vengono</span> <span class="n">rimosse</span> <span class="n">automaticamente</span> <span class="n">quando</span> <span class="n">la</span>
-<span class="o">*</span> <span class="n">chiave</span> <span class="n">non</span> <span class="n">è</span> <span class="n">più</span> <span class="n">referenziata</span><span class="o">.</span> <span class="nc">Ideale</span> <span class="n">per</span> <span class="n">mappare</span> <span class="n">oggetti</span> <span class="n">a</span> <span class="n">listener</span> <span class="n">senza</span>
-<span class="o">*</span> <span class="n">doversi</span> <span class="n">preoccupare</span> <span class="n">della</span> <span class="n">deregistrazione</span><span class="o">.</span> <span class="o">*/</span>
- <span class="nd">@Component</span> <span class="kd">public</span> <span class="kd">class</span> <span class="nc">SessionEventDispatcher</span> 
-<span class="o">{</span> 
-<span class="c1">// La chiave (UserSession) è tenuta con WeakReference: quando la sessione scade,</span>
-<span class="c1">// l'entry viene rimossa automaticamente al prossimo GC cycle private final</span>
-<span class="c1">// Map&lt;UserSession, SessionListener&gt; listeners = Collections.synchronizedMap(new</span>
-<span class="c1">// WeakHashMap&lt;&gt;()); public void registerSession(UserSession session,</span>
-<span class="c1">// SessionListener listener)</span>
-<span class="o">{</span> <span class="n">listeners</span><span class="o">.</span><span class="na">put</span><span class="o">(</span><span class="n">session</span><span class="o">,</span> <span class="n">listener</span><span class="o">);</span> 
-<span class="c1">// Nessuna deregistrazione manuale necessaria }</span>
- <span class="kd">public</span> <span class="kt">void</span> <span class="nf">notifyAll</span><span class="o">(</span><span class="nc">SessionEvent</span> <span class="n">event</span><span class="o">)</span> 
-<span class="o">{</span> 
-<span class="c1">// Le sessioni scadute sono già state rimosse automaticamente dal GC</span>
-<span class="c1">// listeners.forEach((session, listener) -&gt;</span>
-<span class="o">{</span> <span class="k">try</span> 
-<span class="o">{</span> <span class="n">listener</span><span class="o">.</span><span class="na">onSessionEvent</span><span class="o">(</span><span class="n">event</span><span class="o">);</span> <span class="o">}</span>
- <span class="k">catch</span> <span class="o">(</span><span class="nc">Exception</span> <span class="n">e</span><span class="o">)</span> 
-<span class="o">{</span> <span class="n">log</span><span class="o">.</span><span class="na">error</span><span class="o">(</span><span class="s">"Errore nel listener per sessione 
-{}
-"</span><span class="o">,</span> <span class="n">session</span><span class="o">.</span><span class="na">getId</span><span class="o">(),</span> <span class="n">e</span><span class="o">);</span> <span class="o">}</span>
- <span class="o">}</span>
-<span class="o">);</span> <span class="o">}</span>
- <span class="o">}</span>
- 
-<span class="o">*</span> <span class="no">SOLUZIONE</span> <span class="mi">3</span><span class="o">:</span> <span class="n">pattern</span> <span class="nc">Closeable</span> <span class="n">con</span> <span class="n">deregistrazione</span> <span class="n">automatica</span> <span class="err">—</span> <span class="n">la</span> <span class="n">soluzione</span>
-<span class="o">*</span> <span class="n">più</span> <span class="n">esplicita</span> <span class="n">e</span> <span class="n">sicura</span><span class="o">.</span> <span class="o">*/</span>
- <span class="nd">@Component</span> <span class="kd">public</span> <span class="kd">class</span> <span class="nc">StrongEventBus</span> 
-<span class="o">{</span> <span class="kd">private</span> <span class="kd">final</span> <span class="nc">List</span><span class="o">&lt;</span><span class="nc">EventListener</span><span class="o">&gt;</span> <span class="n">listeners</span> <span class="o">=</span> <span class="k">new</span> <span class="nc">CopyOnWriteArrayList</span><span class="o">&lt;&gt;();</span> 
-<span class="o">*</span> <span class="nc">Restituisco</span> <span class="n">un</span><span class="err">'</span><span class="n">istanza</span> <span class="nc">Closeable</span> <span class="n">che</span> <span class="n">deregistra</span> <span class="n">automaticamente</span> <span class="n">il</span> <span class="n">listener</span>
-<span class="o">*</span> <span class="n">quando</span> <span class="n">viene</span> <span class="n">chiusa</span><span class="o">.</span> <span class="nc">Usabile</span> <span class="n">in</span> <span class="n">un</span> <span class="k">try</span><span class="o">-</span><span class="n">with</span><span class="o">-</span><span class="n">resources</span> <span class="n">per</span> <span class="n">garantire</span> <span class="n">la</span>
-<span class="o">*</span> <span class="n">deregistrazione</span> <span class="n">anche</span> <span class="n">in</span> <span class="n">caso</span> <span class="n">di</span> <span class="n">eccezione</span><span class="o">.</span> <span class="o">*/</span>
- <span class="kd">public</span> <span class="nc">Closeable</span> <span class="nf">register</span><span class="o">(</span><span class="nc">EventListener</span> <span class="n">listener</span><span class="o">)</span> 
-<span class="o">{</span> <span class="n">listeners</span><span class="o">.</span><span class="na">add</span><span class="o">(</span><span class="n">listener</span><span class="o">);</span> <span class="k">return</span> <span class="o">()</span> <span class="o">-&gt;</span> <span class="n">listeners</span><span class="o">.</span><span class="na">remove</span><span class="o">(</span><span class="n">listener</span><span class="o">);</span> 
-<span class="c1">// Lambda che rimuove il listener }</span>
- <span class="o">}</span>
- 
+101
+102
+103
+104
+105
+106
+107
+108
+109
+110
+111
+112
+113
+114
+115
+116
+117
+</pre></td><td class="rouge-code"><pre><span class="cm">/* Il problema: un EventBus singleton mantiene riferimenti forti ai listener. Se
+    un oggetto Session si registra ma non si deregistra (es. per un'eccezione o
+    un bug), rimane in memoria per sempre. */</span>
+<span class="nd">@Component</span> <span class="kd">public</span> <span class="kd">class</span> <span class="nc">EventBus</span> <span class="o">{</span>
+    <span class="c1">// SBAGLIATO: riferimento forte impedisce al GC di raccogliere i listener</span>
+        <span class="kd">private</span> <span class="kd">final</span> <span class="nc">List</span><span class="o">&lt;</span><span class="nc">EventListener</span><span class="o">&gt;</span> <span class="n">strongListeners</span> <span class="o">=</span> <span class="k">new</span>
+        <span class="nc">CopyOnWriteArrayList</span><span class="o">&lt;&gt;()</span>
+    <span class="o">;</span>
+    <span class="kd">public</span> <span class="kt">void</span> <span class="nf">register</span><span class="o">(</span><span class="nc">EventListener</span> <span class="n">listener</span><span class="o">)</span> <span class="o">{</span>
+        <span class="n">strongListeners</span><span class="o">.</span><span class="na">add</span><span class="o">(</span><span class="n">listener</span><span class="o">);</span>
+        <span class="c1">// Leak! Se il chiamante non chiama unregister(), l'oggetto non viene</span>
+            <span class="n">mai</span> <span class="n">raccolto</span>
+    <span class="o">}</span>
+<span class="o">}</span>
+<span class="cm">/* SOLUZIONE 1: WeakReference — il listener viene raccolto dal GC quando non è
+    più referenziato altrove. */</span>
+<span class="nd">@Component</span> <span class="kd">public</span> <span class="kd">class</span> <span class="nc">WeakEventBus</span> <span class="o">{</span>
+    <span class="kd">private</span> <span class="kd">final</span> <span class="nc">List</span><span class="o">&lt;</span><span class="nc">WeakReference</span><span class="o">&lt;</span><span class="nc">EventListener</span><span class="o">&gt;&gt;</span> <span class="n">weakListeners</span> <span class="o">=</span> <span class="k">new</span>
+        <span class="nc">CopyOnWriteArrayList</span><span class="o">&lt;&gt;();</span>
+    <span class="kd">public</span> <span class="kt">void</span> <span class="nf">register</span><span class="o">(</span><span class="nc">EventListener</span> <span class="n">listener</span><span class="o">)</span> <span class="o">{</span>
+        <span class="n">weakListeners</span><span class="o">.</span><span class="na">add</span><span class="o">(</span><span class="k">new</span> <span class="nc">WeakReference</span><span class="o">&lt;&gt;(</span><span class="n">listener</span><span class="o">));</span>
+    <span class="o">}</span>
+    <span class="kd">public</span> <span class="kt">void</span> <span class="nf">publish</span><span class="o">(</span><span class="nc">Event</span> <span class="n">event</span><span class="o">)</span> <span class="o">{</span>
+        <span class="c1">// Itero rimuovendo automaticamente i riferimenti scaduti (listener già</span>
+            <span class="n">raccolti</span> <span class="n">dal</span> <span class="no">GC</span><span class="o">)</span> <span class="n">weakListeners</span><span class="o">.</span><span class="na">removeIf</span><span class="o">(</span><span class="n">ref</span> <span class="o">-&gt;</span>
+        <span class="o">{</span>
+            <span class="nc">EventListener</span> <span class="n">listener</span> <span class="o">=</span> <span class="n">ref</span><span class="o">.</span><span class="na">get</span><span class="o">();</span>
+            <span class="k">if</span> <span class="o">(</span><span class="n">listener</span> <span class="o">==</span> <span class="kc">null</span><span class="o">)</span> <span class="o">{</span>
+                <span class="k">return</span> <span class="kc">true</span><span class="o">;</span>
+                <span class="c1">// Rimuovo il riferimento morto</span>
+            <span class="o">}</span>
+            <span class="n">listener</span><span class="o">.</span><span class="na">onEvent</span><span class="o">(</span><span class="n">event</span><span class="o">);</span>
+            <span class="k">return</span> <span class="kc">false</span><span class="o">;</span>
+        <span class="o">}</span>
+        <span class="o">);</span>
+    <span class="o">}</span>
+<span class="o">}</span>
+<span class="cm">/* SOLUZIONE 2: WeakHashMap — le entry vengono rimosse automaticamente quando la
+    chiave non è più referenziata. Ideale per mappare oggetti a listener senza
+    doversi preoccupare della deregistrazione. */</span>
+<span class="nd">@Component</span> <span class="kd">public</span> <span class="kd">class</span> <span class="nc">SessionEventDispatcher</span> <span class="o">{</span>
+    <span class="c1">// La chiave (UserSession) è tenuta con WeakReference: quando la sessione</span>
+        <span class="n">scade</span><span class="o">,</span> <span class="c1">// l'entry viene rimossa automaticamente al prossimo GC cycle</span>
+        <span class="kd">private</span> <span class="kd">final</span> <span class="nc">Map</span><span class="o">&lt;</span><span class="nc">UserSession</span><span class="o">,</span> <span class="nc">SessionListener</span><span class="o">&gt;</span> <span class="n">listeners</span> <span class="o">=</span>
+        <span class="nc">Collections</span><span class="o">.</span><span class="na">synchronizedMap</span><span class="o">(</span><span class="k">new</span> <span class="nc">WeakHashMap</span><span class="o">&lt;&gt;())</span>
+    <span class="o">;</span>
+    <span class="kd">public</span> <span class="kt">void</span> <span class="nf">registerSession</span><span class="o">(</span><span class="nc">UserSession</span> <span class="n">session</span><span class="o">,</span> <span class="nc">SessionListener</span> <span class="n">listener</span><span class="o">)</span> <span class="o">{</span>
+        <span class="n">listeners</span><span class="o">.</span><span class="na">put</span><span class="o">(</span><span class="n">session</span><span class="o">,</span> <span class="n">listener</span><span class="o">);</span>
+        <span class="c1">// Nessuna deregistrazione manuale necessaria</span>
+    <span class="o">}</span>
+    <span class="kd">public</span> <span class="kt">void</span> <span class="nf">notifyAll</span><span class="o">(</span><span class="nc">SessionEvent</span> <span class="n">event</span><span class="o">)</span> <span class="o">{</span>
+        <span class="c1">// Le sessioni scadute sono già state rimosse automaticamente dal GC</span>
+            <span class="n">listeners</span><span class="o">.</span><span class="na">forEach</span><span class="o">((</span><span class="n">session</span><span class="o">,</span> <span class="n">listener</span><span class="o">)</span> <span class="o">-&gt;</span>
+        <span class="o">{</span>
+            <span class="k">try</span> <span class="o">{</span>
+                <span class="n">listener</span><span class="o">.</span><span class="na">onSessionEvent</span><span class="o">(</span><span class="n">event</span><span class="o">);</span>
+            <span class="o">}</span>
+            <span class="k">catch</span> <span class="o">(</span><span class="nc">Exception</span> <span class="n">e</span><span class="o">)</span> <span class="o">{</span>
+                <span class="n">log</span><span class="o">.</span><span class="na">error</span><span class="o">(</span><span class="s">"Errore nel listener per sessione {
+                }
+                "</span><span class="o">,</span> <span class="n">session</span><span class="o">.</span><span class="na">getId</span><span class="o">(),</span> <span class="n">e</span><span class="o">);</span>
+            <span class="o">}</span>
+        <span class="o">}</span>
+        <span class="o">);</span>
+    <span class="o">}</span>
+<span class="o">}</span>
+<span class="cm">/* SOLUZIONE 3: pattern Closeable con deregistrazione automatica — la soluzione
+    più esplicita e sicura. */</span>
+<span class="nd">@Component</span> <span class="kd">public</span> <span class="kd">class</span> <span class="nc">StrongEventBus</span> <span class="o">{</span>
+    <span class="kd">private</span> <span class="kd">final</span> <span class="nc">List</span><span class="o">&lt;</span><span class="nc">EventListener</span><span class="o">&gt;</span> <span class="n">listeners</span> <span class="o">=</span> <span class="k">new</span> <span class="nc">CopyOnWriteArrayList</span><span class="o">&lt;&gt;();</span>
+    <span class="cm">/* Restituisco un'istanza Closeable che deregistra automaticamente il
+        listener quando viene chiusa. Usabile in un try-with-resources per
+        garantire la deregistrazione anche in caso di eccezione. */</span>
+    <span class="kd">public</span> <span class="nc">Closeable</span> <span class="nf">register</span><span class="o">(</span><span class="nc">EventListener</span> <span class="n">listener</span><span class="o">)</span> <span class="o">{</span>
+        <span class="n">listeners</span><span class="o">.</span><span class="na">add</span><span class="o">(</span><span class="n">listener</span><span class="o">);</span>
+        <span class="k">return</span> <span class="o">()</span> <span class="o">-&gt;</span> <span class="n">listeners</span><span class="o">.</span><span class="na">remove</span><span class="o">(</span><span class="n">listener</span><span class="o">);</span>
+        <span class="c1">// Lambda che rimuove il listener</span>
+    <span class="o">}</span>
+<span class="o">}</span>
 <span class="cm">/* Nel chiamante, uso try-with-resources per garantire la deregistrazione: */</span>
- <span class="nd">@Service</span> <span class="kd">public</span> <span class="kd">class</span> <span class="nc">OrderProcessingService</span> 
-<span class="o">{</span> <span class="nd">@Autowired</span> <span class="kd">private</span> <span class="nc">StrongEventBus</span> <span class="n">eventBus</span><span class="o">;</span> <span class="kd">public</span> <span class="kt">void</span> <span class="nf">processOrder</span><span class="o">(</span><span class="nc">Order</span>
-<span class="n">order</span><span class="o">)</span>
-<span class="o">{</span> <span class="k">try</span> <span class="o">(</span><span class="nc">Closeable</span> <span class="n">registration</span> <span class="o">=</span> <span class="n">eventBus</span><span class="o">.</span><span class="na">register</span><span class="o">(</span><span class="n">event</span> <span class="o">-&gt;</span>
-<span class="n">handleOrderEvent</span><span class="o">(</span><span class="n">order</span><span class="o">,</span> <span class="n">event</span><span class="o">)))</span>
-<span class="o">{</span> 
-<span class="c1">// Il listener è attivo solo per la durata di questo blocco</span>
-<span class="c1">// doProcessOrder(order); }</span>
- 
-<span class="c1">// Al termine del try, il listener viene automaticamente deregistrato }</span>
- <span class="o">}</span>
- 
+<span class="nd">@Service</span> <span class="kd">public</span> <span class="kd">class</span> <span class="nc">OrderProcessingService</span> <span class="o">{</span>
+    <span class="nd">@Autowired</span> <span class="kd">private</span> <span class="nc">StrongEventBus</span> <span class="n">eventBus</span><span class="o">;</span>
+    <span class="kd">public</span> <span class="kt">void</span> <span class="nf">processOrder</span><span class="o">(</span><span class="nc">Order</span> <span class="n">order</span><span class="o">)</span> <span class="o">{</span>
+        <span class="k">try</span> <span class="o">(</span><span class="nc">Closeable</span> <span class="n">registration</span> <span class="o">=</span> <span class="n">eventBus</span><span class="o">.</span><span class="na">register</span><span class="o">(</span><span class="n">event</span> <span class="o">-&gt;</span>
+            <span class="n">handleOrderEvent</span><span class="o">(</span><span class="n">order</span><span class="o">,</span> <span class="n">event</span><span class="o">)))</span> <span class="o">{</span>
+            <span class="c1">// Il listener è attivo solo per la durata di questo blocco</span>
+                <span class="n">doProcessOrder</span><span class="o">(</span><span class="n">order</span><span class="o">)</span>
+            <span class="o">;</span>
+        <span class="o">}</span>
+        <span class="c1">// Al termine del try, il listener viene automaticamente deregistrato</span>
+    <span class="o">}</span>
+<span class="o">}</span>
 <span class="cm">/* Rilevo i leak di listener in produzione tramite heap dump e Eclipse MAT: */</span>
- 
-<span class="c1">// jcmd &lt;PID&gt; GC.heap_dump filename=heap.hprof </span>
-<span class="c1">// In MAT: Leak Suspects &gt; cerco classi con molte istanze che non dovrebbero</span>
-<span class="c1">// esistere</span>
-<span class="c1">// Oppure: OQL query: SELECT * FROM java.util.EventListener WHERE ... </span>
-<span class="o">*</span> <span class="nc">In</span> <span class="nc">Spring</span> <span class="nc">Boot</span><span class="o">,</span> <span class="n">verifico</span> <span class="n">i</span> <span class="n">leak</span> <span class="n">di</span> <span class="n">listener</span> <span class="n">con</span> <span class="n">un</span> <span class="n">test</span> <span class="n">che</span> <span class="n">forza</span> <span class="n">il</span> <span class="no">GC</span> <span class="n">e</span>
-<span class="o">*</span> <span class="n">controlla</span> <span class="n">che</span> <span class="n">le</span> <span class="n">istanze</span> <span class="n">siano</span> <span class="n">state</span> <span class="nl">raccolte:</span> <span class="o">*/</span>
- <span class="nd">@Test</span> <span class="kd">public</span> <span class="kt">void</span> <span class="nf">verifyNoListenerLeak</span><span class="o">()</span> <span class="kd">throws</span> <span class="nc">Exception</span> 
-<span class="o">{</span> <span class="nc">WeakEventBus</span> <span class="n">bus</span> <span class="o">=</span> <span class="k">new</span> <span class="nc">WeakEventBus</span><span class="o">();</span> 
-<span class="c1">// Creo il listener in uno scope separato per permettere al GC di raccoglierlo </span>
-<span class="o">{</span> <span class="nc">EventListener</span> <span class="n">shortLivedListener</span> <span class="o">=</span> <span class="n">event</span> <span class="o">-&gt;</span> 
-<span class="o">{}</span>
-<span class="o">;</span> <span class="n">bus</span><span class="o">.</span><span class="na">register</span><span class="o">(</span><span class="n">shortLivedListener</span><span class="o">);</span> <span class="n">assertEquals</span><span class="o">(</span><span class="mi">1</span><span class="o">,</span> <span class="n">bus</span><span class="o">.</span><span class="na">getListenerCount</span><span class="o">());</span> <span class="o">}</span>
- 
-<span class="c1">// Forzo il GC e verifico che il listener sia stato rimosso System.gc();</span>
-<span class="c1">// Thread.sleep(100);</span>
-<span class="c1">// Do tempo al GC di completare assertEquals(0, bus.getListenerCount(), "Leak</span>
-<span class="c1">// rilevato: il listener non è stato rimosso dopo il GC"); }</span>
+<span class="c1">// jcmd &lt;PID&gt; GC.heap_dump filename=heap.hprof // In MAT: Leak Suspects &gt; cerco</span>
+    <span class="n">classi</span> <span class="n">con</span> <span class="n">molte</span> <span class="n">istanze</span> <span class="n">che</span> <span class="n">non</span> <span class="n">dovrebbero</span> <span class="n">esistere</span> <span class="c1">// Oppure: OQL query:</span>
+    <span class="no">SELECT</span> <span class="o">*</span> <span class="no">FROM</span> <span class="n">java</span><span class="o">.</span><span class="na">util</span><span class="o">.</span><span class="na">EventListener</span> <span class="no">WHERE</span> <span class="o">...</span> <span class="cm">/* In Spring Boot, verifico
+    i leak di listener con un test che forza il GC e controlla che le istanze
+    siano state raccolte: */</span> <span class="nd">@Test</span> <span class="kd">public</span> <span class="kt">void</span> <span class="nf">verifyNoListenerLeak</span><span class="o">()</span> <span class="kd">throws</span>
+    <span class="nc">Exception</span>
+<span class="o">{</span>
+    <span class="nc">WeakEventBus</span> <span class="n">bus</span> <span class="o">=</span> <span class="k">new</span> <span class="nc">WeakEventBus</span><span class="o">();</span>
+    <span class="c1">// Creo il listener in uno scope separato per permettere al GC di</span>
+        <span class="n">raccoglierlo</span>
+    <span class="o">{</span>
+        <span class="nc">EventListener</span> <span class="n">shortLivedListener</span> <span class="o">=</span> <span class="n">event</span> <span class="o">-&gt;</span> <span class="o">{</span>
+        <span class="o">}</span>
+        <span class="o">;</span>
+        <span class="n">bus</span><span class="o">.</span><span class="na">register</span><span class="o">(</span><span class="n">shortLivedListener</span><span class="o">);</span>
+        <span class="n">assertEquals</span><span class="o">(</span><span class="mi">1</span><span class="o">,</span> <span class="n">bus</span><span class="o">.</span><span class="na">getListenerCount</span><span class="o">());</span>
+    <span class="o">}</span>
+    <span class="c1">// Forzo il GC e verifico che il listener sia stato rimosso System.gc()</span>
+    <span class="o">;</span>
+    <span class="nc">Thread</span><span class="o">.</span><span class="na">sleep</span><span class="o">(</span><span class="mi">100</span><span class="o">);</span>
+    <span class="c1">// Do tempo al GC di completare assertEquals(0, bus.getListenerCount(),</span>
+        <span class="s">"Leak rilevato: il listener non è stato rimosso dopo il GC"</span><span class="o">)</span>
+    <span class="o">;</span>
+<span class="o">}</span>
 </pre></td></tr></tbody></table></code></pre></div></div>
 
         </article>

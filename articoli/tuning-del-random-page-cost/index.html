@@ -108,30 +108,26 @@
 17
 18
 19
-20
-21
-</pre></td><td class="rouge-code"><pre><span class="o">*</span> <span class="n">Testo</span> <span class="n">l</span><span class="s1">'impatto del parametro solo per la sessione corrente, senza toccare la
-* configurazione globale del server. In questo modo posso confrontare i piani
-* prima e dopo in modo sicuro. */
- SET random_page_cost = 1.1; 
-* Eseguo la stessa query con e senza il parametro modificato e confronto i
-* piani. Con il valore di default 4.0 probabilmente vedrò un Seq Scan. Con 1.1
-* mi aspetto un Index Scan o un Bitmap Index Scan. */
- EXPLAIN (ANALYZE, BUFFERS) SELECT * FROM big_data WHERE category_id = 500; 
-* Per rendere la modifica permanente e globale, agisco su postgresql.conf
-* (richiede reload, non restart): random_page_cost = 1.1 -- Per SSD/NVMe
-* effective_cache_size = '</span><span class="mi">12</span><span class="n">GB</span><span class="s1">' -- Aiuto il Planner a capire quanta RAM è
-* disponibile per il caching Se uso storage NVMe estremamente veloce, posso
-* scendere anche a 1.0: random_page_cost = 1.0 seq_page_cost = 1.0 */
- 
-* Verifico il tipo di storage effettivo prima di decidere il valore: un disco
-* rotante con RAID non beneficia di questo abbassamento. */
- SELECT name, setting, unit FROM pg_settings WHERE name IN ('</span><span class="n">random_page_cost</span><span class="s1">',
-'</span><span class="n">seq_page_cost</span><span class="s1">', '</span><span class="n">effective_cache_size</span><span class="s1">');
-* A livello di singola tabella critica, posso sovrascrivere il parametro globale
-* con un valore specifico per quella relazione (Postgres 13+): */
- ALTER TABLE big_data SET (seq_page_cost = 1, random_page_cost = 1);
-</span></pre></td></tr></tbody></table></code></pre></div></div>
+</pre></td><td class="rouge-code"><pre>    <span class="cm">/* Testo l'impatto del parametro solo per la sessione corrente, senza
+        toccare la configurazione globale del server. In questo modo posso
+        confrontare i piani prima e dopo in modo sicuro. */</span> <span class="k">SET</span> <span class="n">random_page_cost</span>
+        <span class="o">=</span> <span class="mi">1</span><span class="p">.</span><span class="mi">1</span><span class="p">;</span> <span class="cm">/* Eseguo la stessa query con e senza il parametro modificato e
+        confronto i piani. Con il valore di default 4.0 probabilmente vedrò un
+        Seq Scan. Con 1.1 mi aspetto un Index Scan o un Bitmap Index Scan. */</span>
+        <span class="k">EXPLAIN</span> <span class="p">(</span><span class="k">ANALYZE</span><span class="p">,</span> <span class="n">BUFFERS</span><span class="p">)</span> <span class="k">SELECT</span> <span class="o">*</span> <span class="k">FROM</span> <span class="n">big_data</span> <span class="k">WHERE</span> <span class="n">category_id</span> <span class="o">=</span>
+        <span class="mi">500</span><span class="p">;</span> <span class="cm">/* Per rendere la modifica permanente e globale, agisco su
+        postgresql.conf (richiede reload, non restart): random_page_cost = 1.1
+        -- Per SSD/NVMe effective_cache_size = '12GB' -- Aiuto il Planner a
+        capire quanta RAM è disponibile per il caching Se uso storage NVMe
+        estremamente veloce, posso scendere anche a 1.0: random_page_cost = 1.0
+        seq_page_cost = 1.0 */</span> <span class="cm">/* Verifico il tipo di storage effettivo prima di
+        decidere il valore: un disco rotante con RAID non beneficia di questo
+        abbassamento. */</span> <span class="k">SELECT</span> <span class="n">name</span><span class="p">,</span> <span class="n">setting</span><span class="p">,</span> <span class="n">unit</span> <span class="k">FROM</span> <span class="n">pg_settings</span> <span class="k">WHERE</span> <span class="n">name</span>
+        <span class="k">IN</span> <span class="p">(</span><span class="s1">'random_page_cost'</span><span class="p">,</span> <span class="s1">'seq_page_cost'</span><span class="p">,</span> <span class="s1">'effective_cache_size'</span><span class="p">);</span> <span class="cm">/* A
+        livello di singola tabella critica, posso sovrascrivere il parametro
+        globale con un valore specifico per quella relazione (Postgres 13+): */</span>
+        <span class="k">ALTER</span> <span class="k">TABLE</span> <span class="n">big_data</span> <span class="k">SET</span> <span class="p">(</span><span class="n">seq_page_cost</span> <span class="o">=</span> <span class="mi">1</span><span class="p">,</span> <span class="n">random_page_cost</span> <span class="o">=</span> <span class="mi">1</span><span class="p">);</span>
+</pre></td></tr></tbody></table></code></pre></div></div>
 
         </article>
 

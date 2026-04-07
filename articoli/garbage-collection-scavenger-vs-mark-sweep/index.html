@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Garbage Collection: Scavenger vs Mark-Sweep — DevLog</title>
-    <meta name="description" content="V8 divide l'heap in 'New Space' (piccolo e veloce) e 'Old Space'. La maggior parte degli oggetti muore giovane nello Scavenger GC (copia veloce). Se un oggetto sopravvive troppo, finisce nell'Old Space dove il Mark-Sweep è molto più costoso. Per ridu
+    <meta name="description" content="V8 divide l'heap in "New Space" (piccolo e veloce) e "Old Space". La maggior parte degli oggetti muore giovane nello Scavenger GC (copia veloce). Se un oggetto sopravvive troppo, finisce nell'Old Space dove il Mark-Sweep è molto più costoso. Per ridu
 ">
     <link rel="stylesheet" href="/appuntidiprogrammazione/assets/css/style.css">
 
@@ -184,100 +184,168 @@
 93
 94
 95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+106
+107
+108
+109
+110
+111
+112
+113
+114
+115
+116
+117
+118
+119
+120
+121
+122
+123
+124
+125
+126
+127
+128
+129
 </pre></td><td class="rouge-code"><pre><span class="cm">/* Avvio Node con flag di diagnostica per osservare i cicli GC in produzione: */</span>
- 
-<span class="c1">// node --trace-gc --trace-gc-verbose app.js </span>
-<span class="c1">// Output tipico: </span>
-<span class="c1">// [44315:0x...] Scavenge 2.5 / 8.0 ms -&gt; Minor GC: veloce, &lt; 5ms </span>
-<span class="c1">// [44315:0x...] Mark-sweep 120.3 / 256.0 ms -&gt; Major GC: lento, &gt; 100ms </span>
-<span class="o">*</span> <span class="nx">PATTERN</span> <span class="nx">CHE</span> <span class="nx">CAUSA</span> <span class="nx">MAJOR</span> <span class="nx">GC</span><span class="p">:</span> <span class="nx">closure</span> <span class="nx">che</span> <span class="nx">intrappolano</span> <span class="nx">riferimenti</span> <span class="nx">a</span> <span class="nx">grandi</span>
-<span class="o">*</span> <span class="nx">oggetti</span><span class="p">.</span> <span class="o">*</span><span class="sr">/</span><span class="err">
-</span> <span class="kd">const</span> <span class="nx">globalCache</span> <span class="o">=</span> <span class="k">new</span> <span class="nb">Map</span><span class="p">();</span> 
-<span class="c1">// Vive per sempre nell'Old Space function processRequest(req) </span>
-<span class="p">{</span> <span class="kd">const</span> <span class="nx">heavyData</span> <span class="o">=</span> <span class="nx">loadData</span><span class="p">(</span><span class="nx">req</span><span class="p">.</span><span class="nx">id</span><span class="p">);</span> 
-<span class="c1">// Oggetto grande globalCache.set(req.id, heavyData); </span>
-<span class="c1">// SBAGLIATO: heavyData promosso all'Old Space return heavyData.result; </span>
-<span class="c1">// Il dato è già stato letto: non serve tenerlo in cache }</span>
- 
+<span class="c1">// node --trace-gc --trace-gc-verbose app.js // Output tipico: // [44315:0x...]</span>
+    <span class="nx">Scavenge</span> <span class="mf">2.5</span> <span class="o">/</span> <span class="mf">8.0</span> <span class="nx">ms</span> <span class="o">-&gt;</span> <span class="nx">Minor</span> <span class="nx">GC</span><span class="p">:</span> <span class="nx">veloce</span><span class="p">,</span> <span class="o">&lt;</span> <span class="mi">5</span><span class="nx">ms</span> <span class="c1">// [44315:0x...] Mark-sweep</span>
+    <span class="mf">120.3</span> <span class="o">/</span> <span class="mf">256.0</span> <span class="nx">ms</span> <span class="o">-&gt;</span> <span class="nx">Major</span> <span class="nx">GC</span><span class="p">:</span> <span class="nx">lento</span><span class="p">,</span> <span class="o">&gt;</span> <span class="mi">100</span><span class="nx">ms</span> <span class="cm">/* PATTERN CHE CAUSA MAJOR GC:
+    closure che intrappolano riferimenti a grandi oggetti. */</span> <span class="kd">const</span> <span class="nx">globalCache</span>
+    <span class="o">=</span> <span class="k">new</span> <span class="nb">Map</span><span class="p">()</span>
+<span class="p">;</span>
+<span class="c1">// Vive per sempre nell'Old Space function processRequest(req)</span>
+<span class="p">{</span>
+    <span class="kd">const</span> <span class="nx">heavyData</span> <span class="o">=</span> <span class="nx">loadData</span><span class="p">(</span><span class="nx">req</span><span class="p">.</span><span class="nx">id</span><span class="p">);</span>
+    <span class="c1">// Oggetto grande globalCache.set(req.id, heavyData)</span>
+    <span class="p">;</span>
+    <span class="c1">// SBAGLIATO: heavyData promosso all'Old Space</span>
+    <span class="k">return</span> <span class="nx">heavyData</span><span class="p">.</span><span class="nx">result</span><span class="p">;</span>
+    <span class="c1">// Il dato è già stato letto: non serve tenerlo in cache</span>
+<span class="p">}</span>
 <span class="cm">/* PATTERN CORRETTO: oggetti a vita brevissima rimangono nel New Space. */</span>
- <span class="kd">function</span> <span class="nx">processRequestOptimized</span><span class="p">(</span><span class="nx">req</span><span class="p">)</span> 
-<span class="p">{</span> 
-<span class="c1">// heavyData nasce e muore nello scope della funzione: Scavenger lo raccoglie</span>
-<span class="c1">// const heavyData = loadData(req.id); const result = heavyData.result;</span>
-<span class="c1">// Estraggo solo il necessario </span>
-<span class="c1">// heavyData viene dereferenziato qui: Scavenger lo pulisce al prossimo ciclo</span>
-<span class="c1">// return result;</span>
-<span class="c1">// Ritorno solo il primitivo/oggetto piccolo }</span>
- 
-<span class="o">*</span> <span class="nx">Per</span> <span class="nx">i</span> <span class="nx">casi</span> <span class="nx">dove</span> <span class="nx">la</span> <span class="nx">cache</span> <span class="nx">è</span> <span class="nx">necessaria</span><span class="p">,</span> <span class="nx">uso</span> <span class="nx">WeakRef</span> <span class="nx">per</span> <span class="nx">permettere</span> <span class="nx">al</span> <span class="nx">GC</span> <span class="nx">di</span>
-<span class="o">*</span> <span class="nx">raccogliere</span> <span class="nx">i</span> <span class="nx">valori</span> <span class="nx">quando</span> <span class="nx">la</span> <span class="nx">memoria</span> <span class="nx">è</span> <span class="nx">sotto</span> <span class="na">pressione</span><span class="p">:</span> <span class="o">*</span><span class="sr">/</span><span class="err">
-</span> <span class="kd">class</span> <span class="nx">PressureAwareLruCache</span> 
-<span class="p">{</span> <span class="kd">constructor</span><span class="p">(</span><span class="nx">maxSize</span><span class="p">)</span> 
-<span class="p">{</span> <span class="k">this</span><span class="p">.</span><span class="nx">maxSize</span> <span class="o">=</span> <span class="nx">maxSize</span><span class="p">;</span> <span class="k">this</span><span class="p">.</span><span class="nx">cache</span> <span class="o">=</span> <span class="k">new</span> <span class="nb">Map</span><span class="p">();</span> 
-<span class="c1">// key -&gt; WeakRef(value) this.registry = new FinalizationRegistry((key) =&gt; </span>
-<span class="p">{</span> 
-<span class="c1">// Callback quando il GC raccoglie l'oggetto: rimuovo la entry obsoleta if</span>
-<span class="c1">// (this.cache.has(key) &amp;&amp; !this.cache.get(key).deref())</span>
-<span class="p">{</span> <span class="k">this</span><span class="p">.</span><span class="nx">cache</span><span class="p">.</span><span class="k">delete</span><span class="p">(</span><span class="nx">key</span><span class="p">);</span> <span class="p">}</span>
- <span class="p">}</span>
-<span class="p">);</span> <span class="p">}</span>
- <span class="kd">set</span><span class="p">(</span><span class="nx">key</span><span class="p">,</span> <span class="nx">value</span><span class="p">)</span> 
-<span class="p">{</span> <span class="k">if</span> <span class="p">(</span><span class="k">this</span><span class="p">.</span><span class="nx">cache</span><span class="p">.</span><span class="nx">size</span> <span class="o">&gt;=</span> <span class="k">this</span><span class="p">.</span><span class="nx">maxSize</span><span class="p">)</span> 
-<span class="p">{</span> 
-<span class="c1">// Rimuovo la entry più vecchia (prima inserita) const firstKey =</span>
-<span class="c1">// this.cache.keys().next().value; this.cache.delete(firstKey); }</span>
- <span class="kd">const</span> <span class="nx">ref</span> <span class="o">=</span> <span class="k">new</span> <span class="nx">WeakRef</span><span class="p">(</span><span class="nx">value</span><span class="p">);</span> <span class="k">this</span><span class="p">.</span><span class="nx">cache</span><span class="p">.</span><span class="kd">set</span><span class="p">(</span><span class="nx">key</span><span class="p">,</span> <span class="nx">ref</span><span class="p">);</span>
-<span class="k">this</span><span class="p">.</span><span class="nx">registry</span><span class="p">.</span><span class="nx">register</span><span class="p">(</span><span class="nx">value</span><span class="p">,</span> <span class="nx">key</span><span class="p">);</span>
-<span class="c1">// Registro per la pulizia automatica }</span>
- <span class="kd">get</span><span class="p">(</span><span class="nx">key</span><span class="p">)</span> 
-<span class="p">{</span> <span class="kd">const</span> <span class="nx">ref</span> <span class="o">=</span> <span class="k">this</span><span class="p">.</span><span class="nx">cache</span><span class="p">.</span><span class="kd">get</span><span class="p">(</span><span class="nx">key</span><span class="p">);</span> <span class="k">if</span> <span class="p">(</span><span class="o">!</span><span class="nx">ref</span><span class="p">)</span> <span class="k">return</span> <span class="kc">undefined</span><span class="p">;</span> <span class="kd">const</span> <span class="nx">value</span> <span class="o">=</span>
-<span class="nx">ref</span><span class="p">.</span><span class="nx">deref</span><span class="p">();</span> <span class="k">if</span> <span class="p">(</span><span class="o">!</span><span class="nx">value</span><span class="p">)</span>
-<span class="p">{</span> <span class="k">this</span><span class="p">.</span><span class="nx">cache</span><span class="p">.</span><span class="k">delete</span><span class="p">(</span><span class="nx">key</span><span class="p">);</span> 
-<span class="c1">// Il GC ha raccolto il valore: rimuovo la entry return undefined; }</span>
- <span class="k">return</span> <span class="nx">value</span><span class="p">;</span> <span class="p">}</span>
- <span class="p">}</span>
- 
-<span class="o">*</span> <span class="nx">Identifico</span> <span class="nx">quali</span> <span class="nx">oggetti</span> <span class="nx">vengono</span> <span class="nx">promossi</span> <span class="nx">all</span><span class="dl">'</span><span class="s1">Old Space tramite Chrome
-* DevTools o il profiler integrato di Node: */
- const v8 = require(</span><span class="dl">'</span><span class="nx">v8</span><span class="dl">'</span><span class="s1">); 
-// Scatto un heap snapshot prima function takeSnapshot(label) 
-{ const snapshot = v8.writeHeapSnapshot(`/tmp/heap-$
-{label}
--$
-{Date.now()}
-.heapsnapshot`); console.log(`Heap snapshot salvato in $
-{snapshot}
-`); }
- 
-// In produzione, monitoraggio continuo del GC tramite performanceObserver:
-// const
-{ PerformanceObserver }
- = require(</span><span class="dl">'</span><span class="nx">perf_hooks</span><span class="dl">'</span><span class="s1">); const gcObserver = new PerformanceObserver((list) =&gt; 
-{ for (const entry of list.getEntries()) 
-{ const gcType = entry.detail?.kind === 1 ? </span><span class="dl">'</span><span class="nx">Minor</span> <span class="p">(</span><span class="nx">Scavenger</span><span class="p">)</span><span class="dl">'</span><span class="s1"> : </span><span class="dl">'</span><span class="nx">Major</span> <span class="p">(</span><span class="nx">Mark</span><span class="o">-</span>
-<span class="nx">Sweep</span><span class="p">)</span><span class="dl">'</span><span class="s1">; const duration = entry.duration.toFixed(2); if (entry.duration &gt; 50)
-{ 
-// Loggo solo i GC &gt; 50ms: quelli che impattano P99 console.warn(`GC $
-{gcType}
-: $
-{duration}
-ms - possibile promozione eccessiva all</span><span class="dl">'</span><span class="nx">Old</span> <span class="nx">Space</span><span class="s2">`); }
- }
- }
-); gcObserver.observe(
-{ entryTypes: ['gc'] }
-); 
-* In un server Express, espongo le metriche GC tramite un endpoint di health per
-* monitoraggio Prometheus: */
- app.get('/metrics/gc', (req, res) =&gt; 
-{ const memUsage = process.memoryUsage(); res.json(
-{ heapUsed: Math.round(memUsage.heapUsed / 1_048_576) + 'MB', heapTotal:
-Math.round(memUsage.heapTotal / 1_048_576) + 'MB', external:
-Math.round(memUsage.external / 1_048_576) + 'MB',
-// Memoria nativa (Buffer, Typed Arrays) rss: Math.round(memUsage.rss /
-// 1_048_576) + 'MB'
-// RSS totale del processo }
-); }
+<span class="kd">function</span> <span class="nx">processRequestOptimized</span><span class="p">(</span><span class="nx">req</span><span class="p">)</span> <span class="p">{</span>
+    <span class="c1">// heavyData nasce e muore nello scope della funzione: Scavenger lo</span>
+        <span class="nx">raccoglie</span> <span class="kd">const</span> <span class="nx">heavyData</span> <span class="o">=</span> <span class="nx">loadData</span><span class="p">(</span><span class="nx">req</span><span class="p">.</span><span class="nx">id</span><span class="p">)</span>
+    <span class="p">;</span>
+    <span class="kd">const</span> <span class="nx">result</span> <span class="o">=</span> <span class="nx">heavyData</span><span class="p">.</span><span class="nx">result</span><span class="p">;</span>
+    <span class="c1">// Estraggo solo il necessario // heavyData viene dereferenziato qui:</span>
+        <span class="nx">Scavenger</span> <span class="nx">lo</span> <span class="nx">pulisce</span> <span class="nx">al</span> <span class="nx">prossimo</span> <span class="nx">ciclo</span>
+    <span class="k">return</span> <span class="nx">result</span><span class="p">;</span>
+    <span class="c1">// Ritorno solo il primitivo/oggetto piccolo</span>
+<span class="p">}</span>
+<span class="cm">/* Per i casi dove la cache è necessaria, uso WeakRef per permettere al GC di
+    raccogliere i valori quando la memoria è sotto pressione: */</span>
+<span class="kd">class</span> <span class="nx">PressureAwareLruCache</span> <span class="p">{</span>
+    <span class="kd">constructor</span><span class="p">(</span><span class="nx">maxSize</span><span class="p">)</span> <span class="p">{</span>
+        <span class="k">this</span><span class="p">.</span><span class="nx">maxSize</span> <span class="o">=</span> <span class="nx">maxSize</span><span class="p">;</span>
+        <span class="k">this</span><span class="p">.</span><span class="nx">cache</span> <span class="o">=</span> <span class="k">new</span> <span class="nb">Map</span><span class="p">();</span>
+        <span class="c1">// key -&gt; WeakRef(value) this.registry = new FinalizationRegistry((key)</span>
+            <span class="o">=&gt;</span>
+        <span class="p">{</span>
+            <span class="c1">// Callback quando il GC raccoglie l'oggetto: rimuovo la entry</span>
+                <span class="nx">obsoleta</span> <span class="k">if</span> <span class="p">(</span><span class="k">this</span><span class="p">.</span><span class="nx">cache</span><span class="p">.</span><span class="nx">has</span><span class="p">(</span><span class="nx">key</span><span class="p">)</span> <span class="o">&amp;&amp;</span>
+                <span class="o">!</span><span class="k">this</span><span class="p">.</span><span class="nx">cache</span><span class="p">.</span><span class="kd">get</span><span class="p">(</span><span class="nx">key</span><span class="p">).</span><span class="nx">deref</span><span class="p">())</span>
+            <span class="p">{</span>
+                <span class="k">this</span><span class="p">.</span><span class="nx">cache</span><span class="p">.</span><span class="k">delete</span><span class="p">(</span><span class="nx">key</span><span class="p">);</span>
+            <span class="p">}</span>
+        <span class="p">}</span>
+        <span class="p">);</span>
+    <span class="p">}</span>
+    <span class="kd">set</span><span class="p">(</span><span class="nx">key</span><span class="p">,</span> <span class="nx">value</span><span class="p">)</span> <span class="p">{</span>
+        <span class="k">if</span> <span class="p">(</span><span class="k">this</span><span class="p">.</span><span class="nx">cache</span><span class="p">.</span><span class="nx">size</span> <span class="o">&gt;=</span> <span class="k">this</span><span class="p">.</span><span class="nx">maxSize</span><span class="p">)</span> <span class="p">{</span>
+            <span class="c1">// Rimuovo la entry più vecchia (prima inserita) const firstKey =</span>
+                <span class="k">this</span><span class="p">.</span><span class="nx">cache</span><span class="p">.</span><span class="nx">keys</span><span class="p">().</span><span class="nx">next</span><span class="p">().</span><span class="nx">value</span>
+            <span class="p">;</span>
+            <span class="k">this</span><span class="p">.</span><span class="nx">cache</span><span class="p">.</span><span class="k">delete</span><span class="p">(</span><span class="nx">firstKey</span><span class="p">);</span>
+        <span class="p">}</span>
+        <span class="kd">const</span> <span class="nx">ref</span> <span class="o">=</span> <span class="k">new</span> <span class="nx">WeakRef</span><span class="p">(</span><span class="nx">value</span><span class="p">);</span>
+        <span class="k">this</span><span class="p">.</span><span class="nx">cache</span><span class="p">.</span><span class="kd">set</span><span class="p">(</span><span class="nx">key</span><span class="p">,</span> <span class="nx">ref</span><span class="p">);</span>
+        <span class="k">this</span><span class="p">.</span><span class="nx">registry</span><span class="p">.</span><span class="nx">register</span><span class="p">(</span><span class="nx">value</span><span class="p">,</span> <span class="nx">key</span><span class="p">);</span>
+        <span class="c1">// Registro per la pulizia automatica</span>
+    <span class="p">}</span>
+    <span class="kd">get</span><span class="p">(</span><span class="nx">key</span><span class="p">)</span> <span class="p">{</span>
+        <span class="kd">const</span> <span class="nx">ref</span> <span class="o">=</span> <span class="k">this</span><span class="p">.</span><span class="nx">cache</span><span class="p">.</span><span class="kd">get</span><span class="p">(</span><span class="nx">key</span><span class="p">);</span>
+        <span class="k">if</span> <span class="p">(</span><span class="o">!</span><span class="nx">ref</span><span class="p">)</span> <span class="k">return</span> <span class="kc">undefined</span><span class="p">;</span>
+        <span class="kd">const</span> <span class="nx">value</span> <span class="o">=</span> <span class="nx">ref</span><span class="p">.</span><span class="nx">deref</span><span class="p">();</span>
+        <span class="k">if</span> <span class="p">(</span><span class="o">!</span><span class="nx">value</span><span class="p">)</span> <span class="p">{</span>
+            <span class="k">this</span><span class="p">.</span><span class="nx">cache</span><span class="p">.</span><span class="k">delete</span><span class="p">(</span><span class="nx">key</span><span class="p">);</span>
+            <span class="c1">// Il GC ha raccolto il valore: rimuovo la entry</span>
+            <span class="k">return</span> <span class="kc">undefined</span><span class="p">;</span>
+        <span class="p">}</span>
+        <span class="k">return</span> <span class="nx">value</span><span class="p">;</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+<span class="cm">/* Identifico quali oggetti vengono promossi all'Old Space tramite Chrome
+    DevTools o il profiler integrato di Node: */</span>
+<span class="kd">const</span> <span class="nx">v8</span> <span class="o">=</span> <span class="nx">require</span><span class="p">(</span><span class="dl">'</span><span class="s1">v8</span><span class="dl">'</span><span class="p">);</span>
+<span class="c1">// Scatto un heap snapshot prima function takeSnapshot(label)</span>
+<span class="p">{</span>
+    <span class="kd">const</span> <span class="nx">snapshot</span> <span class="o">=</span> <span class="nx">v8</span><span class="p">.</span><span class="nx">writeHeapSnapshot</span><span class="p">(</span><span class="s2">`/tmp/heap-</span><span class="p">${</span>
+        <span class="nx">label</span>
+    <span class="p">}</span><span class="s2">
+    -</span><span class="p">${</span>
+        <span class="nb">Date</span><span class="p">.</span><span class="nx">now</span><span class="p">()</span>
+    <span class="p">}</span><span class="s2">
+    .heapsnapshot`</span><span class="p">);</span>
+    <span class="nx">console</span><span class="p">.</span><span class="nx">log</span><span class="p">(</span><span class="s2">`Heap snapshot salvato in </span><span class="p">${</span>
+        <span class="nx">snapshot</span>
+    <span class="p">}</span><span class="s2">
+    `</span><span class="p">);</span>
+<span class="p">}</span>
+<span class="c1">// In produzione, monitoraggio continuo del GC tramite performanceObserver:</span>
+    <span class="kd">const</span>
+<span class="p">{</span>
+    <span class="nx">PerformanceObserver</span>
+<span class="p">}</span>
+<span class="o">=</span> <span class="nx">require</span><span class="p">(</span><span class="dl">'</span><span class="s1">perf_hooks</span><span class="dl">'</span><span class="p">);</span>
+<span class="kd">const</span> <span class="nx">gcObserver</span> <span class="o">=</span> <span class="k">new</span> <span class="nx">PerformanceObserver</span><span class="p">((</span><span class="nx">list</span><span class="p">)</span> <span class="o">=&gt;</span> <span class="p">{</span>
+    <span class="k">for</span> <span class="p">(</span><span class="kd">const</span> <span class="nx">entry</span> <span class="k">of</span> <span class="nx">list</span><span class="p">.</span><span class="nx">getEntries</span><span class="p">())</span> <span class="p">{</span>
+        <span class="kd">const</span> <span class="nx">gcType</span> <span class="o">=</span> <span class="nx">entry</span><span class="p">.</span><span class="nx">detail</span><span class="p">?.</span><span class="nx">kind</span> <span class="o">===</span> <span class="mi">1</span> <span class="p">?</span> <span class="dl">'</span><span class="s1">Minor (Scavenger)</span><span class="dl">'</span> <span class="p">:</span> <span class="dl">'</span><span class="s1">Major
+            (Mark-Sweep)</span><span class="dl">'</span><span class="p">;</span>
+        <span class="kd">const</span> <span class="nx">duration</span> <span class="o">=</span> <span class="nx">entry</span><span class="p">.</span><span class="nx">duration</span><span class="p">.</span><span class="nx">toFixed</span><span class="p">(</span><span class="mi">2</span><span class="p">);</span>
+        <span class="k">if</span> <span class="p">(</span><span class="nx">entry</span><span class="p">.</span><span class="nx">duration</span> <span class="o">&gt;</span> <span class="mi">50</span><span class="p">)</span> <span class="p">{</span>
+            <span class="c1">// Loggo solo i GC &gt; 50ms: quelli che impattano P99 console.warn(`GC</span>
+                <span class="nx">$</span>
+            <span class="p">{</span>
+                <span class="nx">gcType</span>
+            <span class="p">}</span>
+            <span class="p">:</span> <span class="nx">$</span><span class="p">{</span>
+                <span class="nx">duration</span>
+            <span class="p">}</span>
+            <span class="nx">ms</span> <span class="o">-</span> <span class="nx">possibile</span> <span class="nx">promozione</span> <span class="nx">eccessiva</span> <span class="nx">all</span><span class="dl">'</span><span class="s1">Old Space`);
+        }
+    }
+}
+);
+gcObserver.observe({
+    entryTypes: [</span><span class="dl">'</span><span class="nx">gc</span><span class="dl">'</span><span class="s1">]
+}
+);
+/* In un server Express, espongo le metriche GC tramite un endpoint di health
+    per monitoraggio Prometheus: */
+app.get(</span><span class="dl">'</span><span class="o">/</span><span class="nx">metrics</span><span class="o">/</span><span class="nx">gc</span><span class="dl">'</span><span class="s1">, (req, res) =&gt; {
+    const memUsage = process.memoryUsage();
+    res.json({
+        heapUsed: Math.round(memUsage.heapUsed / 1_048_576) + </span><span class="dl">'</span><span class="nx">MB</span><span class="dl">'</span><span class="s1">, heapTotal:
+            Math.round(memUsage.heapTotal / 1_048_576) + </span><span class="dl">'</span><span class="nx">MB</span><span class="dl">'</span><span class="s1">, external:
+            Math.round(memUsage.external / 1_048_576) + </span><span class="dl">'</span><span class="nx">MB</span><span class="dl">'</span><span class="s1">,
+        // Memoria nativa (Buffer, Typed Arrays) rss: Math.round(memUsage.rss /
+            1_048_576) + </span><span class="dl">'</span><span class="nx">MB</span><span class="dl">'</span><span class="s1"> // RSS totale del processo
+    }
+    );
+}
 );
 </span></pre></td></tr></tbody></table></code></pre></div></div>
 

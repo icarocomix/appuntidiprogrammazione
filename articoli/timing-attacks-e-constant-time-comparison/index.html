@@ -155,73 +155,103 @@
 64
 65
 66
-</pre></td><td class="rouge-code"><pre><span class="o">*</span> <span class="nx">Dimostro</span> <span class="nx">il</span> <span class="nx">problema</span> <span class="nx">del</span> <span class="nx">timing</span> <span class="nx">attack</span> <span class="nx">con</span> <span class="nx">un</span> <span class="nx">confronto</span> <span class="nx">naive</span><span class="p">.</span> <span class="nx">Un</span> <span class="nx">attaccante</span>
-<span class="o">*</span> <span class="nx">può</span> <span class="nx">misurare</span> <span class="nx">il</span> <span class="nx">tempo</span> <span class="nx">di</span> <span class="nx">risposta</span> <span class="nx">con</span> <span class="nx">migliaia</span> <span class="nx">di</span> <span class="nx">richieste</span><span class="p">:</span> <span class="nx">una</span> <span class="nx">chiave</span> <span class="nx">che</span>
-<span class="o">*</span> <span class="nx">inizia</span> <span class="nx">con</span> <span class="nx">i</span> <span class="nx">caratteri</span> <span class="nx">corretti</span> <span class="nx">risponderà</span> <span class="nx">leggermente</span> <span class="nx">più</span> <span class="nx">lentamente</span><span class="p">.</span> <span class="o">*</span><span class="sr">/</span><span class="err">
-</span> <span class="kd">function</span> <span class="nx">vulnerableCompare</span><span class="p">(</span><span class="nx">userInput</span><span class="p">,</span> <span class="nx">secretKey</span><span class="p">)</span> 
-<span class="p">{</span> 
-<span class="c1">// SBAGLIATO: esce al primo carattere diverso -&gt; tempo dipende dal prefisso</span>
-<span class="c1">// corretto return userInput === secretKey; }</span>
- 
-<span class="o">*</span> <span class="nx">Con</span> <span class="nx">enough</span> <span class="nx">richieste</span> <span class="nx">statistiche</span><span class="p">,</span> <span class="nx">un</span> <span class="nx">attaccante</span> <span class="nx">può</span> <span class="nx">ricostruire</span> <span class="nx">la</span> <span class="nx">chiave</span>
-<span class="o">*</span> <span class="nx">carattere</span> <span class="nx">per</span> <span class="nx">carattere</span> <span class="nx">misurando</span> <span class="nx">il</span> <span class="nx">tempo</span> <span class="nx">di</span> <span class="nx">risposta</span> <span class="nx">medio</span><span class="p">.</span> <span class="o">*</span><span class="sr">/</span><span class="err">
-</span> 
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+</pre></td><td class="rouge-code"><pre><span class="cm">/* Dimostro il problema del timing attack con un confronto naive. Un attaccante
+    può misurare il tempo di risposta con migliaia di richieste: una chiave che
+    inizia con i caratteri corretti risponderà leggermente più lentamente. */</span>
+<span class="kd">function</span> <span class="nx">vulnerableCompare</span><span class="p">(</span><span class="nx">userInput</span><span class="p">,</span> <span class="nx">secretKey</span><span class="p">)</span> <span class="p">{</span>
+    <span class="c1">// SBAGLIATO: esce al primo carattere diverso -&gt; tempo dipende dal prefisso</span>
+        <span class="nx">corretto</span>
+    <span class="k">return</span> <span class="nx">userInput</span> <span class="o">===</span> <span class="nx">secretKey</span><span class="p">;</span>
+<span class="p">}</span>
+<span class="cm">/* Con enough richieste statistiche, un attaccante può ricostruire la chiave
+    carattere per carattere misurando il tempo di risposta medio. */</span>
 <span class="cm">/* SOLUZIONE: confronto in tempo costante con crypto.timingSafeEqual. */</span>
- <span class="kd">const</span> <span class="nx">crypto</span> <span class="o">=</span> <span class="nx">require</span><span class="p">(</span><span class="dl">'</span><span class="s1">crypto</span><span class="dl">'</span><span class="p">);</span> <span class="kd">function</span> <span class="nx">safeCompare</span><span class="p">(</span><span class="nx">userInput</span><span class="p">,</span> <span class="nx">expected</span><span class="p">)</span> 
-<span class="p">{</span> 
-<span class="c1">// Devo garantire che i buffer abbiano la stessa lunghezza: timingSafeEqual</span>
-<span class="c1">// richiede uguale dimensione const inputBuffer = Buffer.from(userInput,</span>
-<span class="c1">// 'utf8'); const expectedBuffer = Buffer.from(expected, 'utf8');</span>
-<span class="c1">// Se le lunghezze sono diverse, il token è sicuramente errato. </span>
-<span class="c1">// Tuttavia devo evitare il timing attack anche sul confronto delle lunghezze: </span>
-<span class="c1">// confronto la lunghezza DOPO aver fatto il timingSafeEqual su buffer dello</span>
-<span class="c1">// stesso size. const inputHash = crypto.createHmac('sha256', 'comparison-</span>
-<span class="c1">// key').update(inputBuffer).digest(); const expectedHash =</span>
-<span class="c1">// crypto.createHmac('sha256', 'comparison-</span>
-<span class="c1">// key').update(expectedBuffer).digest();</span>
-<span class="c1">// Confronto gli hash (sempre 32 byte): nessun leak sulla lunghezza originale</span>
-<span class="c1">// return crypto.timingSafeEqual(inputHash, expectedHash); }</span>
- 
-<span class="o">*</span> <span class="nx">Implemento</span> <span class="nx">un</span> <span class="nx">middleware</span> <span class="nx">per</span> <span class="nx">la</span> <span class="nx">verifica</span> <span class="nx">delle</span> <span class="nx">API</span> <span class="nx">Key</span> <span class="nx">con</span> <span class="nx">protezione</span>
-<span class="o">*</span> <span class="nx">completa</span><span class="p">:</span> <span class="o">*</span><span class="sr">/</span><span class="err">
-</span> <span class="kd">function</span> <span class="nx">createApiKeyMiddleware</span><span class="p">(</span><span class="nx">validApiKeys</span><span class="p">)</span> 
-<span class="p">{</span> <span class="k">return</span> <span class="kd">function</span> <span class="nx">apiKeyAuth</span><span class="p">(</span><span class="nx">req</span><span class="p">,</span> <span class="nx">res</span><span class="p">,</span> <span class="nx">next</span><span class="p">)</span> 
-<span class="p">{</span> <span class="kd">const</span> <span class="nx">providedKey</span> <span class="o">=</span> <span class="nx">req</span><span class="p">.</span><span class="nx">headers</span><span class="p">[</span><span class="dl">'</span><span class="s1">x-api-key</span><span class="dl">'</span><span class="p">];</span> <span class="k">if</span> <span class="p">(</span><span class="o">!</span><span class="nx">providedKey</span><span class="p">)</span> 
-<span class="p">{</span> 
-<span class="c1">// Aggiungo un delay fisso anche in caso di chiave mancante per non distinguere </span>
-<span class="c1">// "chiave mancante" da "chiave errata" tramite timing return setTimeout(() =&gt;</span>
-<span class="c1">// res.status(401).json(</span>
-<span class="p">{</span> <span class="na">error</span><span class="p">:</span> <span class="dl">'</span><span class="s1">Unauthorized</span><span class="dl">'</span> <span class="p">}</span>
-<span class="p">),</span> <span class="mi">50</span><span class="p">);</span> <span class="p">}</span>
- 
-<span class="c1">// Verifico contro tutte le chiavi valide: non esco al primo match per evitare</span>
-<span class="c1">// timing leak let isValid = false; for (const validKey of validApiKeys)</span>
-<span class="p">{</span> 
-<span class="c1">// Confronto ogni chiave valida: non uso 'break' per mantenere tempo costante if</span>
-<span class="c1">// (safeCompare(providedKey, validKey))</span>
-<span class="p">{</span> <span class="nx">isValid</span> <span class="o">=</span> <span class="kc">true</span><span class="p">;</span> 
-<span class="c1">// Non esco dal loop: continuo per tempo costante }</span>
- <span class="p">}</span>
- <span class="k">if</span> <span class="p">(</span><span class="o">!</span><span class="nx">isValid</span><span class="p">)</span> 
-<span class="p">{</span> <span class="k">return</span> <span class="nx">res</span><span class="p">.</span><span class="nx">status</span><span class="p">(</span><span class="mi">403</span><span class="p">).</span><span class="nx">json</span><span class="p">(</span>
-<span class="p">{</span> <span class="na">error</span><span class="p">:</span> <span class="dl">'</span><span class="s1">Forbidden</span><span class="dl">'</span> <span class="p">}</span>
-<span class="p">);</span> <span class="p">}</span>
- <span class="nx">next</span><span class="p">();</span> <span class="p">}</span>
-<span class="p">;</span> <span class="p">}</span>
- 
-<span class="o">*</span> <span class="nx">Aggiungo</span> <span class="nx">jitter</span> <span class="nx">casuale</span> <span class="nx">per</span> <span class="nx">rendere</span> <span class="nx">impossibile</span> <span class="nx">la</span> <span class="nx">misurazione</span> <span class="nx">statistica</span>
-<span class="o">*</span> <span class="nx">anche</span> <span class="nx">con</span> <span class="nx">timingSafeEqual</span><span class="p">:</span> <span class="o">*</span><span class="sr">/</span><span class="err">
-</span> <span class="k">async</span> <span class="kd">function</span> <span class="nx">authenticateWithJitter</span><span class="p">(</span><span class="nx">providedKey</span><span class="p">,</span> <span class="nx">expectedKey</span><span class="p">)</span> 
-<span class="p">{</span> <span class="kd">const</span> <span class="nx">startTime</span> <span class="o">=</span> <span class="nx">process</span><span class="p">.</span><span class="nx">hrtime</span><span class="p">.</span><span class="nx">bigint</span><span class="p">();</span> <span class="kd">const</span> <span class="nx">isValid</span> <span class="o">=</span>
-<span class="nx">safeCompare</span><span class="p">(</span><span class="nx">providedKey</span><span class="p">,</span> <span class="nx">expectedKey</span><span class="p">);</span>
-<span class="c1">// Aggiungo un delay casuale tra 10ms e 50ms: il jitter oscura qualsiasi</span>
-<span class="c1">// variazione residua const jitterMs = 10 + Math.random() * 40; await new</span>
-<span class="c1">// Promise(resolve =&gt; setTimeout(resolve, jitterMs)); const elapsed =</span>
-<span class="c1">// Number(process.hrtime.bigint() - startTime) / 1e6; console.debug(`Auth</span>
-<span class="c1">// completata in $</span>
-<span class="p">{</span><span class="nx">elapsed</span><span class="p">.</span><span class="nx">toFixed</span><span class="p">(</span><span class="mi">2</span><span class="p">)}</span>
-<span class="nx">ms</span> <span class="p">(</span><span class="nx">include</span> <span class="nx">jitter</span><span class="p">)</span><span class="s2">`); return isValid; }
-</span></pre></td></tr></tbody></table></code></pre></div></div>
+<span class="kd">const</span> <span class="nx">crypto</span> <span class="o">=</span> <span class="nx">require</span><span class="p">(</span><span class="dl">'</span><span class="s1">crypto</span><span class="dl">'</span><span class="p">);</span>
+<span class="kd">function</span> <span class="nx">safeCompare</span><span class="p">(</span><span class="nx">userInput</span><span class="p">,</span> <span class="nx">expected</span><span class="p">)</span> <span class="p">{</span>
+    <span class="c1">// Devo garantire che i buffer abbiano la stessa lunghezza: timingSafeEqual</span>
+        <span class="nx">richiede</span> <span class="nx">uguale</span> <span class="nx">dimensione</span> <span class="kd">const</span> <span class="nx">inputBuffer</span> <span class="o">=</span> <span class="nx">Buffer</span><span class="p">.</span><span class="k">from</span><span class="p">(</span><span class="nx">userInput</span><span class="p">,</span>
+        <span class="dl">'</span><span class="s1">utf8</span><span class="dl">'</span><span class="p">)</span>
+    <span class="p">;</span>
+    <span class="kd">const</span> <span class="nx">expectedBuffer</span> <span class="o">=</span> <span class="nx">Buffer</span><span class="p">.</span><span class="k">from</span><span class="p">(</span><span class="nx">expected</span><span class="p">,</span> <span class="dl">'</span><span class="s1">utf8</span><span class="dl">'</span><span class="p">);</span>
+    <span class="c1">// Se le lunghezze sono diverse, il token è sicuramente errato. // Tuttavia</span>
+        <span class="nx">devo</span> <span class="nx">evitare</span> <span class="nx">il</span> <span class="nx">timing</span> <span class="nx">attack</span> <span class="nx">anche</span> <span class="nx">sul</span> <span class="nx">confronto</span> <span class="nx">delle</span> <span class="nx">lunghezze</span><span class="p">:</span> <span class="c1">//</span>
+        <span class="nx">confronto</span> <span class="nx">la</span> <span class="nx">lunghezza</span> <span class="nx">DOPO</span> <span class="nx">aver</span> <span class="nx">fatto</span> <span class="nx">il</span> <span class="nx">timingSafeEqual</span> <span class="nx">su</span> <span class="nx">buffer</span>
+        <span class="nx">dello</span> <span class="nx">stesso</span> <span class="nx">size</span><span class="p">.</span> <span class="kd">const</span> <span class="nx">inputHash</span> <span class="o">=</span> <span class="nx">crypto</span><span class="p">.</span><span class="nx">createHmac</span><span class="p">(</span><span class="dl">'</span><span class="s1">sha256</span><span class="dl">'</span><span class="p">,</span>
+        <span class="dl">'</span><span class="s1">comparison-key</span><span class="dl">'</span><span class="p">).</span><span class="nx">update</span><span class="p">(</span><span class="nx">inputBuffer</span><span class="p">).</span><span class="nx">digest</span><span class="p">()</span>
+    <span class="p">;</span>
+    <span class="kd">const</span> <span class="nx">expectedHash</span> <span class="o">=</span> <span class="nx">crypto</span><span class="p">.</span><span class="nx">createHmac</span><span class="p">(</span><span class="dl">'</span><span class="s1">sha256</span><span class="dl">'</span><span class="p">,</span>
+        <span class="dl">'</span><span class="s1">comparison-key</span><span class="dl">'</span><span class="p">).</span><span class="nx">update</span><span class="p">(</span><span class="nx">expectedBuffer</span><span class="p">).</span><span class="nx">digest</span><span class="p">();</span>
+    <span class="c1">// Confronto gli hash (sempre 32 byte): nessun leak sulla lunghezza</span>
+        <span class="nx">originale</span>
+    <span class="k">return</span> <span class="nx">crypto</span><span class="p">.</span><span class="nx">timingSafeEqual</span><span class="p">(</span><span class="nx">inputHash</span><span class="p">,</span> <span class="nx">expectedHash</span><span class="p">);</span>
+<span class="p">}</span>
+<span class="cm">/* Implemento un middleware per la verifica delle API Key con protezione
+    completa: */</span>
+<span class="kd">function</span> <span class="nx">createApiKeyMiddleware</span><span class="p">(</span><span class="nx">validApiKeys</span><span class="p">)</span> <span class="p">{</span>
+    <span class="k">return</span> <span class="kd">function</span> <span class="nx">apiKeyAuth</span><span class="p">(</span><span class="nx">req</span><span class="p">,</span> <span class="nx">res</span><span class="p">,</span> <span class="nx">next</span><span class="p">)</span> <span class="p">{</span>
+        <span class="kd">const</span> <span class="nx">providedKey</span> <span class="o">=</span> <span class="nx">req</span><span class="p">.</span><span class="nx">headers</span><span class="p">[</span><span class="dl">'</span><span class="s1">x-api-key</span><span class="dl">'</span><span class="p">];</span>
+        <span class="k">if</span> <span class="p">(</span><span class="o">!</span><span class="nx">providedKey</span><span class="p">)</span> <span class="p">{</span>
+            <span class="c1">// Aggiungo un delay fisso anche in caso di chiave mancante per non</span>
+                <span class="nx">distinguere</span> <span class="c1">// "chiave mancante" da "chiave errata" tramite</span>
+                <span class="nx">timing</span>
+            <span class="k">return</span> <span class="nx">setTimeout</span><span class="p">(()</span> <span class="o">=&gt;</span> <span class="nx">res</span><span class="p">.</span><span class="nx">status</span><span class="p">(</span><span class="mi">401</span><span class="p">).</span><span class="nx">json</span><span class="p">({</span>
+                <span class="na">error</span><span class="p">:</span> <span class="dl">'</span><span class="s1">Unauthorized</span><span class="dl">'</span>
+            <span class="p">}</span>
+            <span class="p">),</span> <span class="mi">50</span><span class="p">);</span>
+        <span class="p">}</span>
+        <span class="c1">// Verifico contro tutte le chiavi valide: non esco al primo match per</span>
+            <span class="nx">evitare</span> <span class="nx">timing</span> <span class="nx">leak</span> <span class="kd">let</span> <span class="nx">isValid</span> <span class="o">=</span> <span class="kc">false</span>
+        <span class="p">;</span>
+        <span class="k">for</span> <span class="p">(</span><span class="kd">const</span> <span class="nx">validKey</span> <span class="k">of</span> <span class="nx">validApiKeys</span><span class="p">)</span> <span class="p">{</span>
+            <span class="c1">// Confronto ogni chiave valida: non uso 'break' per mantenere tempo</span>
+                <span class="nx">costante</span> <span class="k">if</span> <span class="p">(</span><span class="nx">safeCompare</span><span class="p">(</span><span class="nx">providedKey</span><span class="p">,</span> <span class="nx">validKey</span><span class="p">))</span>
+            <span class="p">{</span>
+                <span class="nx">isValid</span> <span class="o">=</span> <span class="kc">true</span><span class="p">;</span>
+                <span class="c1">// Non esco dal loop: continuo per tempo costante</span>
+            <span class="p">}</span>
+        <span class="p">}</span>
+        <span class="k">if</span> <span class="p">(</span><span class="o">!</span><span class="nx">isValid</span><span class="p">)</span> <span class="p">{</span>
+            <span class="k">return</span> <span class="nx">res</span><span class="p">.</span><span class="nx">status</span><span class="p">(</span><span class="mi">403</span><span class="p">).</span><span class="nx">json</span><span class="p">({</span>
+                <span class="na">error</span><span class="p">:</span> <span class="dl">'</span><span class="s1">Forbidden</span><span class="dl">'</span>
+            <span class="p">}</span>
+            <span class="p">);</span>
+        <span class="p">}</span>
+        <span class="nx">next</span><span class="p">();</span>
+    <span class="p">}</span>
+    <span class="p">;</span>
+<span class="p">}</span>
+<span class="cm">/* Aggiungo jitter casuale per rendere impossibile la misurazione statistica
+    anche con timingSafeEqual: */</span>
+<span class="k">async</span> <span class="kd">function</span> <span class="nx">authenticateWithJitter</span><span class="p">(</span><span class="nx">providedKey</span><span class="p">,</span> <span class="nx">expectedKey</span><span class="p">)</span> <span class="p">{</span>
+    <span class="kd">const</span> <span class="nx">startTime</span> <span class="o">=</span> <span class="nx">process</span><span class="p">.</span><span class="nx">hrtime</span><span class="p">.</span><span class="nx">bigint</span><span class="p">();</span>
+    <span class="kd">const</span> <span class="nx">isValid</span> <span class="o">=</span> <span class="nx">safeCompare</span><span class="p">(</span><span class="nx">providedKey</span><span class="p">,</span> <span class="nx">expectedKey</span><span class="p">);</span>
+    <span class="c1">// Aggiungo un delay casuale tra 10ms e 50ms: il jitter oscura qualsiasi</span>
+        <span class="nx">variazione</span> <span class="nx">residua</span> <span class="kd">const</span> <span class="nx">jitterMs</span> <span class="o">=</span> <span class="mi">10</span> <span class="o">+</span> <span class="nb">Math</span><span class="p">.</span><span class="nx">random</span><span class="p">()</span> <span class="o">*</span> <span class="mi">40</span>
+    <span class="p">;</span>
+    <span class="k">await</span> <span class="k">new</span> <span class="nb">Promise</span><span class="p">(</span><span class="nx">resolve</span> <span class="o">=&gt;</span> <span class="nx">setTimeout</span><span class="p">(</span><span class="nx">resolve</span><span class="p">,</span> <span class="nx">jitterMs</span><span class="p">));</span>
+    <span class="kd">const</span> <span class="nx">elapsed</span> <span class="o">=</span> <span class="nb">Number</span><span class="p">(</span><span class="nx">process</span><span class="p">.</span><span class="nx">hrtime</span><span class="p">.</span><span class="nx">bigint</span><span class="p">()</span> <span class="o">-</span> <span class="nx">startTime</span><span class="p">)</span> <span class="o">/</span> <span class="mi">1</span><span class="nx">e6</span><span class="p">;</span>
+    <span class="nx">console</span><span class="p">.</span><span class="nx">debug</span><span class="p">(</span><span class="s2">`Auth completata in </span><span class="p">${</span>
+        <span class="nx">elapsed</span><span class="p">.</span><span class="nx">toFixed</span><span class="p">(</span><span class="mi">2</span><span class="p">)</span>
+    <span class="p">}</span><span class="s2">
+    ms (include jitter)`</span><span class="p">);</span>
+    <span class="k">return</span> <span class="nx">isValid</span><span class="p">;</span>
+<span class="p">}</span>
+</pre></td></tr></tbody></table></code></pre></div></div>
 
         </article>
 

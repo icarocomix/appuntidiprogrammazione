@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Microtask vs Macrotask Queue — DevLog</title>
-    <meta name="description" content="Non tutte le callback hanno la stessa priorità. process.nextTick e Promise.then (microtasks) vengono eseguiti immediatamente dopo ogni operazione, prima del ciclo successivo dell'Event Loop. Un abuso di nextTick può causare la 'starvation' dell'I/O, 
+    <meta name="description" content="Non tutte le callback hanno la stessa priorità. process.nextTick e Promise.then (microtasks) vengono eseguiti immediatamente dopo ogni operazione, prima del ciclo successivo dell'Event Loop. Un abuso di nextTick può causare la "starvation" dell'I/O, 
 ">
     <link rel="stylesheet" href="/appuntidiprogrammazione/assets/css/style.css">
 
@@ -166,82 +166,118 @@
 75
 76
 77
-</pre></td><td class="rouge-code"><pre><span class="o">*</span> <span class="nx">Visualizzo</span> <span class="nx">l</span><span class="dl">'</span><span class="s1">ordine esatto di esecuzione delle diverse code per renderlo
-* concreto. */
- console.log(</span><span class="dl">'</span><span class="mi">1</span><span class="p">.</span> <span class="nx">Synchronous</span> <span class="nx">code</span><span class="dl">'</span><span class="s1">); process.nextTick(() =&gt; console.log(</span><span class="dl">'</span><span class="mi">2</span><span class="p">.</span>
-<span class="nx">nextTick</span> <span class="p">(</span><span class="nx">microtask</span> <span class="nx">queue</span> <span class="err">#</span><span class="mi">1</span><span class="p">)</span><span class="dl">'</span><span class="s1">)); Promise.resolve().then(() =&gt; console.log(</span><span class="dl">'</span><span class="mi">3</span><span class="p">.</span>
-<span class="nb">Promise</span><span class="p">.</span><span class="nx">then</span> <span class="p">(</span><span class="nx">microtask</span> <span class="nx">queue</span> <span class="err">#</span><span class="mi">2</span><span class="p">)</span><span class="dl">'</span><span class="s1">)); setImmediate(() =&gt; console.log(</span><span class="dl">'</span><span class="mi">4</span><span class="p">.</span>
-<span class="nx">setImmediate</span> <span class="p">(</span><span class="nx">Check</span> <span class="nx">phase</span><span class="p">)</span><span class="dl">'</span><span class="s1">)); setTimeout(() =&gt; console.log(</span><span class="dl">'</span><span class="mi">5</span><span class="p">.</span> <span class="nx">setTimeout</span>
-<span class="p">(</span><span class="nx">Timers</span> <span class="nx">phase</span><span class="p">)</span><span class="dl">'</span><span class="s1">), 0); console.log(</span><span class="dl">'</span><span class="mi">6</span><span class="p">.</span> <span class="nx">More</span> <span class="nx">synchronous</span> <span class="nx">code</span><span class="dl">'</span><span class="s1">);
-// Output garantito: 1, 6, 2, 3, 4 o 5 (4 e 5 dipendono dal sistema), ma SEMPRE
-// 2 prima di 3
-* Il problema: starvation da nextTick ricorsivo. Questo codice blocca l</span><span class="dl">'</span><span class="nx">I</span><span class="o">/</span><span class="nx">O</span>
-<span class="o">*</span> <span class="nx">indefinitamente</span><span class="p">.</span> <span class="o">*</span><span class="sr">/</span><span class="err">
-</span> <span class="kd">function</span> <span class="nx">starveIo</span><span class="p">()</span> 
-<span class="p">{</span> <span class="nx">process</span><span class="p">.</span><span class="nx">nextTick</span><span class="p">(()</span> <span class="o">=&gt;</span> 
-<span class="p">{</span> 
-<span class="c1">// SBAGLIATO: ricorsione infinita nei microtask </span>
-<span class="c1">// L'Event Loop non passa mai alla fase Poll: nessuna connessione HTTP viene</span>
-<span class="c1">// accettata starveIo(); }</span>
-<span class="p">);</span> <span class="p">}</span>
- 
-<span class="c1">// starveIo(); </span>
-<span class="c1">// Non eseguire: blocca il server </span>
-<span class="o">*</span> <span class="nx">La</span> <span class="nx">soluzione</span><span class="p">:</span> <span class="nx">uso</span> <span class="nx">setImmediate</span> <span class="nx">per</span> <span class="nx">operazioni</span> <span class="nx">ricorsive</span> <span class="nx">che</span> <span class="nx">devono</span> <span class="nx">cedere</span> <span class="nx">il</span>
-<span class="o">*</span> <span class="nx">controllo</span> <span class="nx">all</span><span class="dl">'</span><span class="s1">Event Loop. */
- function processLargeArray(array, index = 0) 
-{ if (index &gt;= array.length) return; 
-// Elaboro un elemento per volta processElement(array[index]); if (index % 100
-// === 0)
-{ 
-// Ogni 100 elementi, cedo il controllo all</span><span class="dl">'</span><span class="nx">Event</span> <span class="nx">Loop</span> <span class="nx">setImmediate</span><span class="p">(()</span> <span class="o">=&gt;</span>
-<span class="c1">// processLargeArray(array, index + 1));</span>
-<span class="c1">// CORRETTO: l'I/O può girare }</span>
- <span class="k">else</span> 
-<span class="p">{</span> <span class="nx">process</span><span class="p">.</span><span class="nx">nextTick</span><span class="p">(()</span> <span class="o">=&gt;</span> <span class="nx">processLargeArray</span><span class="p">(</span><span class="nx">array</span><span class="p">,</span> <span class="nx">index</span> <span class="o">+</span> <span class="mi">1</span><span class="p">));</span> 
-<span class="c1">// Per blocchi piccoli va bene }</span>
- <span class="p">}</span>
- 
-<span class="o">*</span> <span class="nx">Implemento</span> <span class="nx">un</span> <span class="nx">task</span> <span class="nx">runner</span> <span class="nx">che</span> <span class="nx">distingue</span> <span class="nx">tra</span> <span class="nx">microtask</span> <span class="nx">urgenti</span> <span class="nx">e</span> <span class="nx">macrotask</span>
-<span class="o">*</span> <span class="nx">deferibili</span><span class="p">:</span> <span class="o">*</span><span class="sr">/</span><span class="err">
-</span> <span class="kd">class</span> <span class="nx">EventLoopAwareQueue</span> 
-<span class="p">{</span> <span class="kd">constructor</span><span class="p">()</span> 
-<span class="p">{</span> <span class="k">this</span><span class="p">.</span><span class="nx">urgentQueue</span> <span class="o">=</span> <span class="p">[];</span> 
-<span class="c1">// Elaborati con nextTick: bloccano l'I/O this.deferredQueue = []; </span>
-<span class="c1">// Elaborati con setImmediate: cedono all'I/O }</span>
- <span class="nx">scheduleUrgent</span><span class="p">(</span><span class="nx">fn</span><span class="p">)</span> 
-<span class="p">{</span> 
-<span class="c1">// Uso nextTick SOLO per task che devono essere elaborati prima del prossimo I/O</span>
-<span class="c1">// Es: completamento di operazioni sincrone, cleanup di stato critico</span>
-<span class="c1">// process.nextTick(fn); }</span>
- <span class="nx">scheduleDeferred</span><span class="p">(</span><span class="nx">fn</span><span class="p">)</span> 
-<span class="p">{</span> 
-<span class="c1">// Uso setImmediate per tutto il resto: permette all'Event Loop di respirare </span>
-<span class="c1">// Es: aggiornamento di cache, invio di notifiche, operazioni batch</span>
-<span class="c1">// setImmediate(fn); }</span>
- <span class="p">}</span>
- 
-<span class="o">*</span> <span class="nx">In</span> <span class="nx">Express</span><span class="p">,</span> <span class="nx">scelgo</span> <span class="nx">correttamente</span> <span class="nx">dove</span> <span class="nx">schedulare</span> <span class="nx">le</span> <span class="nx">operazioni</span> <span class="nx">post</span><span class="o">-</span><span class="nx">request</span><span class="p">:</span>
-<span class="o">*</span> <span class="o">*</span><span class="sr">/</span><span class="err">
-</span> <span class="nx">app</span><span class="p">.</span><span class="nx">post</span><span class="p">(</span><span class="dl">'</span><span class="s1">/data</span><span class="dl">'</span><span class="p">,</span> <span class="k">async</span> <span class="p">(</span><span class="nx">req</span><span class="p">,</span> <span class="nx">res</span><span class="p">)</span> <span class="o">=&gt;</span> 
-<span class="p">{</span> <span class="kd">const</span> <span class="nx">result</span> <span class="o">=</span> <span class="k">await</span> <span class="nx">db</span><span class="p">.</span><span class="nx">save</span><span class="p">(</span><span class="nx">req</span><span class="p">.</span><span class="nx">body</span><span class="p">);</span> <span class="nx">res</span><span class="p">.</span><span class="nx">json</span><span class="p">(</span><span class="nx">result</span><span class="p">);</span> 
-<span class="c1">// Rispondo subito al client </span>
-<span class="c1">// Operazioni post-risposta: uso setImmediate per non ritardare la prossima</span>
-<span class="c1">// richiesta setImmediate(async () =&gt;</span>
-<span class="p">{</span> <span class="k">await</span> <span class="nx">cache</span><span class="p">.</span><span class="nx">invalidate</span><span class="p">(</span><span class="nx">req</span><span class="p">.</span><span class="nx">body</span><span class="p">.</span><span class="nx">id</span><span class="p">);</span> 
-<span class="c1">// Non urgente: può aspettare il prossimo ciclo await</span>
-<span class="c1">// analytics.track('data_saved', req.body.id);</span>
-<span class="c1">// Idem }</span>
-<span class="p">);</span> <span class="p">}</span>
-<span class="p">);</span> 
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+</pre></td><td class="rouge-code"><pre><span class="cm">/* Visualizzo l'ordine esatto di esecuzione delle diverse code per renderlo
+    concreto. */</span>
+<span class="nx">console</span><span class="p">.</span><span class="nx">log</span><span class="p">(</span><span class="dl">'</span><span class="s1">1. Synchronous code</span><span class="dl">'</span><span class="p">);</span>
+<span class="nx">process</span><span class="p">.</span><span class="nx">nextTick</span><span class="p">(()</span> <span class="o">=&gt;</span> <span class="nx">console</span><span class="p">.</span><span class="nx">log</span><span class="p">(</span><span class="dl">'</span><span class="s1">2. nextTick (microtask queue #1)</span><span class="dl">'</span><span class="p">));</span>
+<span class="nb">Promise</span><span class="p">.</span><span class="nx">resolve</span><span class="p">().</span><span class="nx">then</span><span class="p">(()</span> <span class="o">=&gt;</span> <span class="nx">console</span><span class="p">.</span><span class="nx">log</span><span class="p">(</span><span class="dl">'</span><span class="s1">3. Promise.then (microtask queue
+    #2)</span><span class="dl">'</span><span class="p">));</span>
+<span class="nx">setImmediate</span><span class="p">(()</span> <span class="o">=&gt;</span> <span class="nx">console</span><span class="p">.</span><span class="nx">log</span><span class="p">(</span><span class="dl">'</span><span class="s1">4. setImmediate (Check phase)</span><span class="dl">'</span><span class="p">));</span>
+<span class="nx">setTimeout</span><span class="p">(()</span> <span class="o">=&gt;</span> <span class="nx">console</span><span class="p">.</span><span class="nx">log</span><span class="p">(</span><span class="dl">'</span><span class="s1">5. setTimeout (Timers phase)</span><span class="dl">'</span><span class="p">),</span> <span class="mi">0</span><span class="p">);</span>
+<span class="nx">console</span><span class="p">.</span><span class="nx">log</span><span class="p">(</span><span class="dl">'</span><span class="s1">6. More synchronous code</span><span class="dl">'</span><span class="p">);</span>
+<span class="c1">// Output garantito: 1, 6, 2, 3, 4 o 5 (4 e 5 dipendono dal sistema), ma SEMPRE</span>
+    <span class="mi">2</span> <span class="nx">prima</span> <span class="nx">di</span> <span class="mi">3</span> <span class="cm">/* Il problema: starvation da nextTick ricorsivo. Questo codice
+    blocca l'I/O indefinitamente. */</span> <span class="kd">function</span> <span class="nx">starveIo</span><span class="p">()</span>
+<span class="p">{</span>
+    <span class="nx">process</span><span class="p">.</span><span class="nx">nextTick</span><span class="p">(()</span> <span class="o">=&gt;</span> <span class="p">{</span>
+        <span class="c1">// SBAGLIATO: ricorsione infinita nei microtask // L'Event Loop non</span>
+            <span class="nx">passa</span> <span class="nx">mai</span> <span class="nx">alla</span> <span class="nx">fase</span> <span class="na">Poll</span><span class="p">:</span> <span class="nx">nessuna</span> <span class="nx">connessione</span> <span class="nx">HTTP</span> <span class="nx">viene</span> <span class="nx">accettata</span>
+            <span class="nx">starveIo</span><span class="p">()</span>
+        <span class="p">;</span>
+    <span class="p">}</span>
+    <span class="p">);</span>
+<span class="p">}</span>
+<span class="c1">// starveIo()</span>
+<span class="p">;</span>
+<span class="c1">// Non eseguire: blocca il server /* La soluzione: uso setImmediate per</span>
+    <span class="nx">operazioni</span> <span class="nx">ricorsive</span> <span class="nx">che</span> <span class="nx">devono</span> <span class="nx">cedere</span> <span class="nx">il</span> <span class="nx">controllo</span> <span class="nx">all</span><span class="dl">'</span><span class="s1">Event Loop. */
+    function processLargeArray(array, index = 0)
+{
+    if (index &gt;= array.length) return;
+    // Elaboro un elemento per volta processElement(array[index])
+    ;
+    if (index % 100 === 0) {
+        // Ogni 100 elementi, cedo il controllo all</span><span class="dl">'</span><span class="nx">Event</span> <span class="nx">Loop</span> <span class="nx">setImmediate</span><span class="p">(()</span>
+            <span class="o">=&gt;</span> <span class="nx">processLargeArray</span><span class="p">(</span><span class="nx">array</span><span class="p">,</span> <span class="nx">index</span> <span class="o">+</span> <span class="mi">1</span><span class="p">))</span>
+        <span class="p">;</span>
+        <span class="c1">// CORRETTO: l'I/O può girare</span>
+    <span class="p">}</span>
+    <span class="k">else</span> <span class="p">{</span>
+        <span class="nx">process</span><span class="p">.</span><span class="nx">nextTick</span><span class="p">(()</span> <span class="o">=&gt;</span> <span class="nx">processLargeArray</span><span class="p">(</span><span class="nx">array</span><span class="p">,</span> <span class="nx">index</span> <span class="o">+</span> <span class="mi">1</span><span class="p">));</span>
+        <span class="c1">// Per blocchi piccoli va bene</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+<span class="cm">/* Implemento un task runner che distingue tra microtask urgenti e macrotask
+    deferibili: */</span>
+<span class="kd">class</span> <span class="nx">EventLoopAwareQueue</span> <span class="p">{</span>
+    <span class="kd">constructor</span><span class="p">()</span> <span class="p">{</span>
+        <span class="k">this</span><span class="p">.</span><span class="nx">urgentQueue</span> <span class="o">=</span> <span class="p">[];</span>
+        <span class="c1">// Elaborati con nextTick: bloccano l'I/O this.deferredQueue = []</span>
+        <span class="p">;</span>
+        <span class="c1">// Elaborati con setImmediate: cedono all'I/O</span>
+    <span class="p">}</span>
+    <span class="nx">scheduleUrgent</span><span class="p">(</span><span class="nx">fn</span><span class="p">)</span> <span class="p">{</span>
+        <span class="c1">// Uso nextTick SOLO per task che devono essere elaborati prima del</span>
+            <span class="nx">prossimo</span> <span class="nx">I</span><span class="o">/</span><span class="nx">O</span> <span class="c1">// Es: completamento di operazioni sincrone, cleanup di</span>
+            <span class="nx">stato</span> <span class="nx">critico</span> <span class="nx">process</span><span class="p">.</span><span class="nx">nextTick</span><span class="p">(</span><span class="nx">fn</span><span class="p">)</span>
+        <span class="p">;</span>
+    <span class="p">}</span>
+    <span class="nx">scheduleDeferred</span><span class="p">(</span><span class="nx">fn</span><span class="p">)</span> <span class="p">{</span>
+        <span class="c1">// Uso setImmediate per tutto il resto: permette all'Event Loop di</span>
+            <span class="nx">respirare</span> <span class="c1">// Es: aggiornamento di cache, invio di notifiche,</span>
+            <span class="nx">operazioni</span> <span class="nx">batch</span> <span class="nx">setImmediate</span><span class="p">(</span><span class="nx">fn</span><span class="p">)</span>
+        <span class="p">;</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+<span class="cm">/* In Express, scelgo correttamente dove schedulare le operazioni post-request:
+    */</span>
+<span class="nx">app</span><span class="p">.</span><span class="nx">post</span><span class="p">(</span><span class="dl">'</span><span class="s1">/data</span><span class="dl">'</span><span class="p">,</span> <span class="k">async</span> <span class="p">(</span><span class="nx">req</span><span class="p">,</span> <span class="nx">res</span><span class="p">)</span> <span class="o">=&gt;</span> <span class="p">{</span>
+    <span class="kd">const</span> <span class="nx">result</span> <span class="o">=</span> <span class="k">await</span> <span class="nx">db</span><span class="p">.</span><span class="nx">save</span><span class="p">(</span><span class="nx">req</span><span class="p">.</span><span class="nx">body</span><span class="p">);</span>
+    <span class="nx">res</span><span class="p">.</span><span class="nx">json</span><span class="p">(</span><span class="nx">result</span><span class="p">);</span>
+    <span class="c1">// Rispondo subito al client // Operazioni post-risposta: uso setImmediate</span>
+        <span class="nx">per</span> <span class="nx">non</span> <span class="nx">ritardare</span> <span class="nx">la</span> <span class="nx">prossima</span> <span class="nx">richiesta</span> <span class="nx">setImmediate</span><span class="p">(</span><span class="k">async</span> <span class="p">()</span> <span class="o">=&gt;</span>
+    <span class="p">{</span>
+        <span class="k">await</span> <span class="nx">cache</span><span class="p">.</span><span class="nx">invalidate</span><span class="p">(</span><span class="nx">req</span><span class="p">.</span><span class="nx">body</span><span class="p">.</span><span class="nx">id</span><span class="p">);</span>
+        <span class="c1">// Non urgente: può aspettare il prossimo ciclo await</span>
+            <span class="nx">analytics</span><span class="p">.</span><span class="nx">track</span><span class="p">(</span><span class="dl">'</span><span class="s1">data_saved</span><span class="dl">'</span><span class="p">,</span> <span class="nx">req</span><span class="p">.</span><span class="nx">body</span><span class="p">.</span><span class="nx">id</span><span class="p">)</span>
+        <span class="p">;</span>
+        <span class="c1">// Idem</span>
+    <span class="p">}</span>
+    <span class="p">);</span>
+<span class="p">}</span>
+<span class="p">);</span>
 <span class="cm">/* Monitoro il delay dell'Event Loop per rilevare starvation in produzione: */</span>
- <span class="kd">let</span> <span class="nx">lastCheck</span> <span class="o">=</span> <span class="nb">Date</span><span class="p">.</span><span class="nx">now</span><span class="p">();</span> <span class="nx">setInterval</span><span class="p">(()</span> <span class="o">=&gt;</span> 
-<span class="p">{</span> <span class="kd">const</span> <span class="nx">now</span> <span class="o">=</span> <span class="nb">Date</span><span class="p">.</span><span class="nx">now</span><span class="p">();</span> <span class="kd">const</span> <span class="nx">delay</span> <span class="o">=</span> <span class="nx">now</span> <span class="o">-</span> <span class="nx">lastCheck</span> <span class="o">-</span> <span class="mi">100</span><span class="p">;</span> 
-<span class="c1">// Il timer dovrebbe scattare ogni 100ms if (delay &gt; 50) </span>
-<span class="p">{</span> <span class="nx">console</span><span class="p">.</span><span class="nx">warn</span><span class="p">(</span><span class="s2">`Event Loop delay: +$
-{delay}
-ms - possibile starvation da microtask`</span><span class="p">);</span> <span class="p">}</span>
- <span class="nx">lastCheck</span> <span class="o">=</span> <span class="nx">now</span><span class="p">;</span> <span class="p">}</span>
+<span class="kd">let</span> <span class="nx">lastCheck</span> <span class="o">=</span> <span class="nb">Date</span><span class="p">.</span><span class="nx">now</span><span class="p">();</span>
+<span class="nx">setInterval</span><span class="p">(()</span> <span class="o">=&gt;</span> <span class="p">{</span>
+    <span class="kd">const</span> <span class="nx">now</span> <span class="o">=</span> <span class="nb">Date</span><span class="p">.</span><span class="nx">now</span><span class="p">();</span>
+    <span class="kd">const</span> <span class="nx">delay</span> <span class="o">=</span> <span class="nx">now</span> <span class="o">-</span> <span class="nx">lastCheck</span> <span class="o">-</span> <span class="mi">100</span><span class="p">;</span>
+    <span class="c1">// Il timer dovrebbe scattare ogni 100ms if (delay &gt; 50)</span>
+    <span class="p">{</span>
+        <span class="nx">console</span><span class="p">.</span><span class="nx">warn</span><span class="p">(</span><span class="s2">`Event Loop delay: +</span><span class="p">${</span>
+            <span class="nx">delay</span>
+        <span class="p">}</span><span class="s2">
+        ms - possibile starvation da microtask`</span><span class="p">);</span>
+    <span class="p">}</span>
+    <span class="nx">lastCheck</span> <span class="o">=</span> <span class="nx">now</span><span class="p">;</span>
+<span class="p">}</span>
 <span class="p">,</span> <span class="mi">100</span><span class="p">);</span>
 </pre></td></tr></tbody></table></code></pre></div></div>
 

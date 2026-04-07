@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>MethodHandle vs Reflection — DevLog</title>
-    <meta name="description" content="L'API java.lang.reflect.Method è lenta perché esegue controlli di accesso a ogni chiamata e non viene facilmente 'inlineata' dal compilatore JIT. MethodHandle (introdotto in Java 7) agisce come un puntatore a funzione tipizzato e costante. Se memoriz
+    <meta name="description" content="L'API java.lang.reflect.Method è lenta perché esegue controlli di accesso a ogni chiamata e non viene facilmente "inlineata" dal compilatore JIT. MethodHandle (introdotto in Java 7) agisce come un puntatore a funzione tipizzato e costante. Se memoriz
 ">
     <link rel="stylesheet" href="/appuntidiprogrammazione/assets/css/style.css">
 
@@ -145,62 +145,74 @@
 54
 55
 56
-</pre></td><td class="rouge-code"><pre><span class="o">*</span> <span class="nc">Risolvo</span> <span class="n">i</span> <span class="nc">MethodHandle</span> <span class="n">una</span> <span class="n">sola</span> <span class="n">volta</span> <span class="n">in</span> <span class="n">un</span> <span class="n">blocco</span> <span class="kd">static</span><span class="o">:</span> <span class="n">il</span> <span class="n">costo</span> <span class="n">del</span> <span class="n">lookup</span>
-<span class="o">*</span> <span class="n">avviene</span> <span class="n">allo</span> <span class="n">startup</span><span class="o">,</span> <span class="n">non</span> <span class="n">a</span> <span class="n">ogni</span> <span class="n">chiamata</span><span class="o">.</span> <span class="nc">Nei</span> <span class="n">campi</span> <span class="kd">static</span> <span class="kd">final</span> <span class="n">il</span> <span class="no">JIT</span> <span class="n">può</span>
-<span class="o">*</span> <span class="n">inlineare</span> <span class="n">la</span> <span class="n">chiamata</span> <span class="n">come</span> <span class="n">se</span> <span class="n">fosse</span> <span class="n">diretta</span><span class="o">.</span> <span class="o">*/</span>
- <span class="kd">private</span> <span class="kd">static</span> <span class="kd">final</span> <span class="nc">MethodHandle</span> <span class="no">PROCESS_HANDLE</span><span class="o">;</span> <span class="kd">private</span> <span class="kd">static</span> <span class="kd">final</span>
-<span class="nc">MethodHandle</span> <span class="no">VALIDATE_HANDLE</span><span class="o">;</span> <span class="kd">static</span>
-<span class="o">{</span> <span class="k">try</span> 
-<span class="o">{</span> <span class="nc">MethodHandles</span><span class="o">.</span><span class="na">Lookup</span> <span class="n">lookup</span> <span class="o">=</span> <span class="nc">MethodHandles</span><span class="o">.</span><span class="na">lookup</span><span class="o">();</span> <span class="no">PROCESS_HANDLE</span> <span class="o">=</span>
-<span class="n">lookup</span><span class="o">.</span><span class="na">findVirtual</span><span class="o">(</span> <span class="nc">MessageService</span><span class="o">.</span><span class="na">class</span><span class="o">,</span> <span class="s">"process"</span><span class="o">,</span>
-<span class="nc">MethodType</span><span class="o">.</span><span class="na">methodType</span><span class="o">(</span><span class="kt">void</span><span class="o">.</span><span class="na">class</span><span class="o">,</span> <span class="nc">String</span><span class="o">.</span><span class="na">class</span><span class="o">));</span> <span class="no">VALIDATE_HANDLE</span> <span class="o">=</span>
-<span class="n">lookup</span><span class="o">.</span><span class="na">findVirtual</span><span class="o">(</span> <span class="nc">MessageService</span><span class="o">.</span><span class="na">class</span><span class="o">,</span> <span class="s">"validate"</span><span class="o">,</span>
-<span class="nc">MethodType</span><span class="o">.</span><span class="na">methodType</span><span class="o">(</span><span class="kt">boolean</span><span class="o">.</span><span class="na">class</span><span class="o">,</span> <span class="nc">String</span><span class="o">.</span><span class="na">class</span><span class="o">));</span> <span class="o">}</span>
- <span class="k">catch</span> <span class="o">(</span><span class="nc">NoSuchMethodException</span> <span class="o">|</span> <span class="nc">IllegalAccessException</span> <span class="n">e</span><span class="o">)</span> 
-<span class="o">{</span> <span class="k">throw</span> <span class="k">new</span> <span class="nc">ExceptionInInitializerError</span><span class="o">(</span><span class="n">e</span><span class="o">);</span> <span class="o">}</span>
- <span class="o">}</span>
- 
+57
+58
+59
+60
+61
+62
+</pre></td><td class="rouge-code"><pre><span class="cm">/* Risolvo i MethodHandle una sola volta in un blocco static: il costo del
+    lookup avviene allo startup, non a ogni chiamata. Nei campi static final il
+    JIT può inlineare la chiamata come se fosse diretta. */</span>
+<span class="kd">private</span> <span class="kd">static</span> <span class="kd">final</span> <span class="nc">MethodHandle</span> <span class="no">PROCESS_HANDLE</span><span class="o">;</span>
+<span class="kd">private</span> <span class="kd">static</span> <span class="kd">final</span> <span class="nc">MethodHandle</span> <span class="no">VALIDATE_HANDLE</span><span class="o">;</span>
+<span class="kd">static</span> <span class="o">{</span>
+    <span class="k">try</span> <span class="o">{</span>
+        <span class="nc">MethodHandles</span><span class="o">.</span><span class="na">Lookup</span> <span class="n">lookup</span> <span class="o">=</span> <span class="nc">MethodHandles</span><span class="o">.</span><span class="na">lookup</span><span class="o">();</span>
+        <span class="no">PROCESS_HANDLE</span> <span class="o">=</span> <span class="n">lookup</span><span class="o">.</span><span class="na">findVirtual</span><span class="o">(</span> <span class="nc">MessageService</span><span class="o">.</span><span class="na">class</span><span class="o">,</span> <span class="s">"process"</span><span class="o">,</span>
+            <span class="nc">MethodType</span><span class="o">.</span><span class="na">methodType</span><span class="o">(</span><span class="kt">void</span><span class="o">.</span><span class="na">class</span><span class="o">,</span> <span class="nc">String</span><span class="o">.</span><span class="na">class</span><span class="o">));</span>
+        <span class="no">VALIDATE_HANDLE</span> <span class="o">=</span> <span class="n">lookup</span><span class="o">.</span><span class="na">findVirtual</span><span class="o">(</span> <span class="nc">MessageService</span><span class="o">.</span><span class="na">class</span><span class="o">,</span> <span class="s">"validate"</span><span class="o">,</span>
+            <span class="nc">MethodType</span><span class="o">.</span><span class="na">methodType</span><span class="o">(</span><span class="kt">boolean</span><span class="o">.</span><span class="na">class</span><span class="o">,</span> <span class="nc">String</span><span class="o">.</span><span class="na">class</span><span class="o">));</span>
+    <span class="o">}</span>
+    <span class="k">catch</span> <span class="o">(</span><span class="nc">NoSuchMethodException</span> <span class="o">|</span> <span class="nc">IllegalAccessException</span> <span class="n">e</span><span class="o">)</span> <span class="o">{</span>
+        <span class="k">throw</span> <span class="k">new</span> <span class="nf">ExceptionInInitializerError</span><span class="o">(</span><span class="n">e</span><span class="o">);</span>
+    <span class="o">}</span>
+<span class="o">}</span>
 <span class="cm">/* Confronto le performance con JMH per quantificare il guadagno: */</span>
- <span class="nd">@Benchmark</span> <span class="kd">public</span> <span class="kt">void</span> <span class="nf">withReflection</span><span class="o">(</span><span class="nc">BenchState</span> <span class="n">state</span><span class="o">)</span> <span class="kd">throws</span> <span class="nc">Exception</span> 
-<span class="o">{</span> <span class="n">state</span><span class="o">.</span><span class="na">method</span><span class="o">.</span><span class="na">invoke</span><span class="o">(</span><span class="n">state</span><span class="o">.</span><span class="na">service</span><span class="o">,</span> <span class="s">"payload"</span><span class="o">);</span> 
-<span class="c1">// Controllo accesso ad ogni chiamata }</span>
- <span class="nd">@Benchmark</span> <span class="kd">public</span> <span class="kt">void</span> <span class="nf">withMethodHandle</span><span class="o">(</span><span class="nc">BenchState</span> <span class="n">state</span><span class="o">)</span> <span class="kd">throws</span> <span class="nc">Throwable</span> 
-<span class="o">{</span> <span class="no">PROCESS_HANDLE</span><span class="o">.</span><span class="na">invokeExact</span><span class="o">(</span><span class="n">state</span><span class="o">.</span><span class="na">service</span><span class="o">,</span> <span class="s">"payload"</span><span class="o">);</span> 
-<span class="c1">// JIT può inlineare questo }</span>
- 
+<span class="nd">@Benchmark</span> <span class="kd">public</span> <span class="kt">void</span> <span class="nf">withReflection</span><span class="o">(</span><span class="nc">BenchState</span> <span class="n">state</span><span class="o">)</span> <span class="kd">throws</span> <span class="nc">Exception</span> <span class="o">{</span>
+    <span class="n">state</span><span class="o">.</span><span class="na">method</span><span class="o">.</span><span class="na">invoke</span><span class="o">(</span><span class="n">state</span><span class="o">.</span><span class="na">service</span><span class="o">,</span> <span class="s">"payload"</span><span class="o">);</span>
+    <span class="c1">// Controllo accesso ad ogni chiamata</span>
+<span class="o">}</span>
+<span class="nd">@Benchmark</span> <span class="kd">public</span> <span class="kt">void</span> <span class="nf">withMethodHandle</span><span class="o">(</span><span class="nc">BenchState</span> <span class="n">state</span><span class="o">)</span> <span class="kd">throws</span> <span class="nc">Throwable</span> <span class="o">{</span>
+    <span class="no">PROCESS_HANDLE</span><span class="o">.</span><span class="na">invokeExact</span><span class="o">(</span><span class="n">state</span><span class="o">.</span><span class="na">service</span><span class="o">,</span> <span class="s">"payload"</span><span class="o">);</span>
+    <span class="c1">// JIT può inlineare questo</span>
+<span class="o">}</span>
 <span class="c1">// Risultato tipico: MethodHandle è 3-10x più veloce di reflection su call site</span>
-<span class="c1">// caldi</span>
-<span class="o">*</span> <span class="nc">Implemento</span> <span class="n">un</span> <span class="n">dispatcher</span> <span class="n">di</span> <span class="n">eventi</span> <span class="n">basato</span> <span class="n">su</span> <span class="nc">MethodHandle</span> <span class="n">per</span> <span class="n">un</span> <span class="n">sistema</span> <span class="n">di</span>
-<span class="o">*</span> <span class="nl">plugin:</span> <span class="o">*/</span>
- <span class="nd">@Component</span> <span class="kd">public</span> <span class="kd">class</span> <span class="nc">EventDispatcher</span> 
-<span class="o">{</span> 
-<span class="c1">// Mappa tipo evento -&gt; MethodHandle del metodo handler: risolta allo startup</span>
-<span class="c1">// private final Map&lt;Class&lt;?&gt;, MethodHandle&gt; handlerMap = new</span>
-<span class="c1">// ConcurrentHashMap&lt;&gt;(); public void registerHandler(Object handler) throws</span>
-<span class="c1">// Exception</span>
-<span class="o">{</span> <span class="nc">MethodHandles</span><span class="o">.</span><span class="na">Lookup</span> <span class="n">lookup</span> <span class="o">=</span> <span class="nc">MethodHandles</span><span class="o">.</span><span class="na">lookup</span><span class="o">();</span> <span class="k">for</span> <span class="o">(</span><span class="nc">Method</span> <span class="n">method</span> <span class="o">:</span>
-<span class="n">handler</span><span class="o">.</span><span class="na">getClass</span><span class="o">().</span><span class="na">getDeclaredMethods</span><span class="o">())</span>
-<span class="o">{</span> <span class="k">if</span> <span class="o">(</span><span class="n">method</span><span class="o">.</span><span class="na">isAnnotationPresent</span><span class="o">(</span><span class="nc">EventHandler</span><span class="o">.</span><span class="na">class</span><span class="o">))</span> 
-<span class="o">{</span> <span class="nc">Class</span><span class="o">&lt;?&gt;</span> <span class="n">eventType</span> <span class="o">=</span> <span class="n">method</span><span class="o">.</span><span class="na">getParameterTypes</span><span class="o">()[</span><span class="mi">0</span><span class="o">];</span> <span class="nc">MethodHandle</span> <span class="n">mh</span> <span class="o">=</span>
-<span class="n">lookup</span><span class="o">.</span><span class="na">unreflect</span><span class="o">(</span><span class="n">method</span><span class="o">).</span><span class="na">bindTo</span><span class="o">(</span><span class="n">handler</span><span class="o">);</span>
-<span class="c1">// bindTo: lego l'istanza al handle per evitare di passarla ad ogni chiamata</span>
-<span class="c1">// handlerMap.put(eventType, mh); }</span>
- <span class="o">}</span>
- <span class="o">}</span>
- <span class="kd">public</span> <span class="kt">void</span> <span class="nf">dispatch</span><span class="o">(</span><span class="nc">Object</span> <span class="n">event</span><span class="o">)</span> <span class="kd">throws</span> <span class="nc">Throwable</span> 
-<span class="o">{</span> <span class="nc">MethodHandle</span> <span class="n">handler</span> <span class="o">=</span> <span class="n">handlerMap</span><span class="o">.</span><span class="na">get</span><span class="o">(</span><span class="n">event</span><span class="o">.</span><span class="na">getClass</span><span class="o">());</span> <span class="k">if</span> <span class="o">(</span><span class="n">handler</span> <span class="o">!=</span> <span class="kc">null</span><span class="o">)</span> 
-<span class="o">{</span> <span class="n">handler</span><span class="o">.</span><span class="na">invoke</span><span class="o">(</span><span class="n">event</span><span class="o">);</span> 
-<span class="c1">// Chiamata quasi nativa: JIT ottimizza il call site }</span>
- <span class="o">}</span>
- <span class="o">}</span>
- 
-<span class="o">*</span> <span class="nc">In</span> <span class="nc">Spring</span> <span class="nc">Boot</span><span class="o">,</span> <span class="n">registro</span> <span class="n">i</span> <span class="n">plugin</span> <span class="n">al</span> <span class="n">momento</span> <span class="n">dell</span><span class="err">'</span><span class="n">avvio</span> <span class="n">e</span> <span class="n">uso</span> <span class="n">il</span> <span class="n">dispatcher</span>
-<span class="o">*</span> <span class="n">nelle</span> <span class="nl">richieste:</span> <span class="o">*/</span>
- <span class="nd">@EventListener</span><span class="o">(</span><span class="nc">ApplicationReadyEvent</span><span class="o">.</span><span class="na">class</span><span class="o">)</span> <span class="kd">public</span> <span class="kt">void</span> <span class="nf">registerPlugins</span><span class="o">()</span>
-<span class="kd">throws</span> <span class="nc">Exception</span>
-<span class="o">{</span> <span class="k">for</span> <span class="o">(</span><span class="nc">Object</span> <span class="n">plugin</span> <span class="o">:</span> <span class="n">pluginRegistry</span><span class="o">.</span><span class="na">getAll</span><span class="o">())</span> 
-<span class="o">{</span> <span class="n">dispatcher</span><span class="o">.</span><span class="na">registerHandler</span><span class="o">(</span><span class="n">plugin</span><span class="o">);</span> <span class="o">}</span>
- <span class="o">}</span>
+    <span class="n">caldi</span> <span class="cm">/* Implemento un dispatcher di eventi basato su MethodHandle per un
+    sistema di plugin: */</span> <span class="nd">@Component</span> <span class="kd">public</span> <span class="kd">class</span> <span class="nc">EventDispatcher</span>
+<span class="o">{</span>
+    <span class="c1">// Mappa tipo evento -&gt; MethodHandle del metodo handler: risolta allo</span>
+        <span class="n">startup</span> <span class="kd">private</span> <span class="kd">final</span> <span class="nc">Map</span><span class="o">&lt;</span><span class="nc">Class</span><span class="o">&lt;?&gt;,</span> <span class="nc">MethodHandle</span><span class="o">&gt;</span> <span class="n">handlerMap</span> <span class="o">=</span> <span class="k">new</span>
+        <span class="nc">ConcurrentHashMap</span><span class="o">&lt;&gt;()</span>
+    <span class="o">;</span>
+    <span class="kd">public</span> <span class="kt">void</span> <span class="nf">registerHandler</span><span class="o">(</span><span class="nc">Object</span> <span class="n">handler</span><span class="o">)</span> <span class="kd">throws</span> <span class="nc">Exception</span> <span class="o">{</span>
+        <span class="nc">MethodHandles</span><span class="o">.</span><span class="na">Lookup</span> <span class="n">lookup</span> <span class="o">=</span> <span class="nc">MethodHandles</span><span class="o">.</span><span class="na">lookup</span><span class="o">();</span>
+        <span class="k">for</span> <span class="o">(</span><span class="nc">Method</span> <span class="n">method</span> <span class="o">:</span> <span class="n">handler</span><span class="o">.</span><span class="na">getClass</span><span class="o">().</span><span class="na">getDeclaredMethods</span><span class="o">())</span> <span class="o">{</span>
+            <span class="k">if</span> <span class="o">(</span><span class="n">method</span><span class="o">.</span><span class="na">isAnnotationPresent</span><span class="o">(</span><span class="nc">EventHandler</span><span class="o">.</span><span class="na">class</span><span class="o">))</span> <span class="o">{</span>
+                <span class="nc">Class</span><span class="o">&lt;?&gt;</span> <span class="n">eventType</span> <span class="o">=</span> <span class="n">method</span><span class="o">.</span><span class="na">getParameterTypes</span><span class="o">()[</span><span class="mi">0</span><span class="o">];</span>
+                <span class="nc">MethodHandle</span> <span class="n">mh</span> <span class="o">=</span> <span class="n">lookup</span><span class="o">.</span><span class="na">unreflect</span><span class="o">(</span><span class="n">method</span><span class="o">).</span><span class="na">bindTo</span><span class="o">(</span><span class="n">handler</span><span class="o">);</span>
+                <span class="c1">// bindTo: lego l'istanza al handle per evitare di passarla ad</span>
+                    <span class="n">ogni</span> <span class="n">chiamata</span> <span class="n">handlerMap</span><span class="o">.</span><span class="na">put</span><span class="o">(</span><span class="n">eventType</span><span class="o">,</span> <span class="n">mh</span><span class="o">)</span>
+                <span class="o">;</span>
+            <span class="o">}</span>
+        <span class="o">}</span>
+    <span class="o">}</span>
+    <span class="kd">public</span> <span class="kt">void</span> <span class="nf">dispatch</span><span class="o">(</span><span class="nc">Object</span> <span class="n">event</span><span class="o">)</span> <span class="kd">throws</span> <span class="nc">Throwable</span> <span class="o">{</span>
+        <span class="nc">MethodHandle</span> <span class="n">handler</span> <span class="o">=</span> <span class="n">handlerMap</span><span class="o">.</span><span class="na">get</span><span class="o">(</span><span class="n">event</span><span class="o">.</span><span class="na">getClass</span><span class="o">());</span>
+        <span class="k">if</span> <span class="o">(</span><span class="n">handler</span> <span class="o">!=</span> <span class="kc">null</span><span class="o">)</span> <span class="o">{</span>
+            <span class="n">handler</span><span class="o">.</span><span class="na">invoke</span><span class="o">(</span><span class="n">event</span><span class="o">);</span>
+            <span class="c1">// Chiamata quasi nativa: JIT ottimizza il call site</span>
+        <span class="o">}</span>
+    <span class="o">}</span>
+<span class="o">}</span>
+<span class="cm">/* In Spring Boot, registro i plugin al momento dell'avvio e uso il dispatcher
+    nelle richieste: */</span>
+<span class="nd">@EventListener</span><span class="o">(</span><span class="nc">ApplicationReadyEvent</span><span class="o">.</span><span class="na">class</span><span class="o">)</span> <span class="kd">public</span> <span class="kt">void</span> <span class="nf">registerPlugins</span><span class="o">()</span> <span class="kd">throws</span>
+    <span class="nc">Exception</span> <span class="o">{</span>
+    <span class="k">for</span> <span class="o">(</span><span class="nc">Object</span> <span class="n">plugin</span> <span class="o">:</span> <span class="n">pluginRegistry</span><span class="o">.</span><span class="na">getAll</span><span class="o">())</span> <span class="o">{</span>
+        <span class="n">dispatcher</span><span class="o">.</span><span class="na">registerHandler</span><span class="o">(</span><span class="n">plugin</span><span class="o">);</span>
+    <span class="o">}</span>
+<span class="o">}</span>
 </pre></td></tr></tbody></table></code></pre></div></div>
 
         </article>

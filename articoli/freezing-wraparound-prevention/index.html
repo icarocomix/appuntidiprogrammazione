@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Freezing & Wraparound Prevention — DevLog</title>
-    <meta name="description" content="Ogni riga ha un Transaction ID (XID). Poiché il contatore è a 32 bit, dopo 2 miliardi di transazioni il database va in 'wraparound' (i vecchi dati diventano invisibili). Il 'Freezing' è il processo con cui il Vacuum marca le righe vecchie come 'conge
+    <meta name="description" content="Ogni riga ha un Transaction ID (XID). Poiché il contatore è a 32 bit, dopo 2 miliardi di transazioni il database va in "wraparound" (i vecchi dati diventano invisibili). Il "Freezing" è il processo con cui il Vacuum marca le righe vecchie come "conge
 ">
     <link rel="stylesheet" href="/appuntidiprogrammazione/assets/css/style.css">
 
@@ -102,23 +102,19 @@
 11
 12
 13
-14
-15
-</pre></td><td class="rouge-code"><pre><span class="o">*</span> <span class="n">Verifico</span> <span class="n">l</span><span class="s1">'età delle transazioni per ogni database: se supera 1.5 miliardi è
-* urgente */
- SELECT datname, age(datfrozenxid) AS xid_age, round(age(datfrozenxid) /
-2000000000.0 * 100, 2) AS pct_of_limit FROM pg_database ORDER BY xid_age DESC;
-/* Abbasso la soglia di freeze per anticipare il vacuum automatico */
- ALTER TABLE high_write_table SET (autovacuum_freeze_max_age = 100000000); 
-* Se l'</span><span class="n">et</span><span class="err">à</span> <span class="err">è</span> <span class="n">gi</span><span class="err">à</span> <span class="n">critica</span> <span class="p">(</span><span class="o">&gt;</span> <span class="mi">150</span><span class="n">M</span><span class="p">),</span> <span class="n">eseguo</span> <span class="n">un</span> <span class="k">freeze</span> <span class="n">manuale</span> <span class="k">in</span> <span class="n">orario</span> <span class="n">notturno</span>
-<span class="o">*</span> <span class="o">*/</span>
- <span class="k">VACUUM</span> <span class="k">FREEZE</span> <span class="k">VERBOSE</span> <span class="n">my_table</span><span class="p">;</span> 
-<span class="cm">/* Monitoro le tabelle più "anziane" per pianificare i freeze prioritari */</span>
- <span class="k">SELECT</span> <span class="n">relname</span><span class="p">,</span> <span class="n">age</span><span class="p">(</span><span class="n">relfrozenxid</span><span class="p">)</span> <span class="k">AS</span> <span class="n">table_xid_age</span> <span class="k">FROM</span> <span class="n">pg_class</span> <span class="k">WHERE</span> <span class="n">relkind</span>
-<span class="o">=</span> <span class="s1">'r'</span> <span class="k">ORDER</span> <span class="k">BY</span> <span class="n">table_xid_age</span> <span class="k">DESC</span> <span class="k">LIMIT</span> <span class="mi">10</span><span class="p">;</span>
-<span class="o">*</span> <span class="n">Imposto</span> <span class="n">un</span> <span class="n">alert</span> <span class="n">operativo</span><span class="p">:</span> <span class="n">se</span> <span class="n">age</span><span class="p">(</span><span class="n">datfrozenxid</span><span class="p">)</span> <span class="n">supera</span> <span class="mi">500</span><span class="n">M</span><span class="p">,</span> <span class="n">invio</span> <span class="n">una</span>
-<span class="o">*</span> <span class="n">notifica</span> <span class="o">*/</span>
- <span class="k">SELECT</span> <span class="n">datname</span> <span class="k">FROM</span> <span class="n">pg_database</span> <span class="k">WHERE</span> <span class="n">age</span><span class="p">(</span><span class="n">datfrozenxid</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">500000000</span><span class="p">;</span>
+</pre></td><td class="rouge-code"><pre>    <span class="cm">/* Verifico l'età delle transazioni per ogni database: se supera 1.5
+        miliardi è urgente */</span> <span class="k">SELECT</span> <span class="n">datname</span><span class="p">,</span> <span class="n">age</span><span class="p">(</span><span class="n">datfrozenxid</span><span class="p">)</span> <span class="k">AS</span> <span class="n">xid_age</span><span class="p">,</span>
+        <span class="n">round</span><span class="p">(</span><span class="n">age</span><span class="p">(</span><span class="n">datfrozenxid</span><span class="p">)</span> <span class="o">/</span> <span class="mi">2000000000</span><span class="p">.</span><span class="mi">0</span> <span class="o">*</span> <span class="mi">100</span><span class="p">,</span> <span class="mi">2</span><span class="p">)</span> <span class="k">AS</span> <span class="n">pct_of_limit</span> <span class="k">FROM</span>
+        <span class="n">pg_database</span> <span class="k">ORDER</span> <span class="k">BY</span> <span class="n">xid_age</span> <span class="k">DESC</span><span class="p">;</span> <span class="cm">/* Abbasso la soglia di freeze per
+        anticipare il vacuum automatico */</span> <span class="k">ALTER</span> <span class="k">TABLE</span> <span class="n">high_write_table</span> <span class="k">SET</span>
+        <span class="p">(</span><span class="n">autovacuum_freeze_max_age</span> <span class="o">=</span> <span class="mi">100000000</span><span class="p">);</span> <span class="cm">/* Se l'età è già critica (&gt;
+        150M), eseguo un freeze manuale in orario notturno */</span> <span class="k">VACUUM</span> <span class="k">FREEZE</span>
+        <span class="k">VERBOSE</span> <span class="n">my_table</span><span class="p">;</span> <span class="cm">/* Monitoro le tabelle più "anziane" per pianificare i
+        freeze prioritari */</span> <span class="k">SELECT</span> <span class="n">relname</span><span class="p">,</span> <span class="n">age</span><span class="p">(</span><span class="n">relfrozenxid</span><span class="p">)</span> <span class="k">AS</span> <span class="n">table_xid_age</span>
+        <span class="k">FROM</span> <span class="n">pg_class</span> <span class="k">WHERE</span> <span class="n">relkind</span> <span class="o">=</span> <span class="s1">'r'</span> <span class="k">ORDER</span> <span class="k">BY</span> <span class="n">table_xid_age</span> <span class="k">DESC</span> <span class="k">LIMIT</span> <span class="mi">10</span><span class="p">;</span>
+        <span class="cm">/* Imposto un alert operativo: se age(datfrozenxid) supera 500M, invio
+        una notifica */</span> <span class="k">SELECT</span> <span class="n">datname</span> <span class="k">FROM</span> <span class="n">pg_database</span> <span class="k">WHERE</span> <span class="n">age</span><span class="p">(</span><span class="n">datfrozenxid</span><span class="p">)</span>
+        <span class="o">&gt;</span> <span class="mi">500000000</span><span class="p">;</span>
 </pre></td></tr></tbody></table></code></pre></div></div>
 
         </article>

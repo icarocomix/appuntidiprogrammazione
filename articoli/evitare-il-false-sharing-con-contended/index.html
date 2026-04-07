@@ -150,67 +150,91 @@
 59
 60
 61
-</pre></td><td class="rouge-code"><pre><span class="o">*</span> <span class="nc">Il</span> <span class="nl">problema:</span> <span class="n">due</span> <span class="n">contatori</span> <span class="n">nello</span> <span class="n">stesso</span> <span class="n">oggetto</span> <span class="n">probabilmente</span> <span class="n">finiscono</span> <span class="n">nella</span>
-<span class="o">*</span> <span class="n">stessa</span> <span class="n">cache</span> <span class="n">line</span> <span class="n">da</span> <span class="mi">64</span> <span class="kt">byte</span><span class="o">.</span> <span class="nc">Quando</span> <span class="n">il</span> <span class="n">thread</span> <span class="no">A</span> <span class="n">incrementa</span> <span class="n">successCount</span> <span class="n">e</span> <span class="n">il</span>
-<span class="o">*</span> <span class="n">thread</span> <span class="no">B</span> <span class="n">incrementa</span> <span class="n">errorCount</span><span class="o">,</span> <span class="n">si</span> <span class="n">invalidano</span> <span class="n">le</span> <span class="n">cache</span> <span class="n">line</span> <span class="n">a</span> <span class="n">vicenda</span> <span class="n">anche</span> <span class="n">se</span>
-<span class="o">*</span> <span class="n">lavorano</span> <span class="n">su</span> <span class="n">dati</span> <span class="n">diversi</span><span class="o">.</span> <span class="o">*/</span>
- <span class="kd">public</span> <span class="kd">class</span> <span class="nc">MetricsBad</span> 
-<span class="o">{</span> <span class="kd">public</span> <span class="kd">volatile</span> <span class="kt">long</span> <span class="n">successCount</span><span class="o">;</span> 
-<span class="c1">// Probabilmente nella stessa cache line di errorCount public volatile long</span>
-<span class="c1">// errorCount;</span>
-<span class="c1">// False sharing garantito }</span>
- 
-<span class="o">*</span> <span class="nc">La</span> <span class="nl">soluzione:</span> <span class="nd">@Contended</span> <span class="n">aggiunge</span> <span class="n">padding</span> <span class="n">prima</span> <span class="n">e</span> <span class="n">dopo</span> <span class="n">la</span> <span class="n">variabile</span><span class="o">,</span>
-<span class="o">*</span> <span class="n">garantendo</span> <span class="n">che</span> <span class="n">occupi</span> <span class="n">una</span> <span class="n">cache</span> <span class="n">line</span> <span class="n">da</span> <span class="n">sola</span><span class="o">.</span> <span class="o">*/</span>
- <span class="kd">public</span> <span class="kd">class</span> <span class="nc">MetricsGood</span> 
-<span class="o">{</span> <span class="nd">@jdk</span><span class="o">.</span><span class="na">internal</span><span class="o">.</span><span class="na">vm</span><span class="o">.</span><span class="na">annotation</span><span class="o">.</span><span class="na">Contended</span> <span class="kd">public</span> <span class="kd">volatile</span> <span class="kt">long</span> <span class="n">successCount</span><span class="o">;</span> 
-<span class="c1">// Cache line dedicata: 64 byte di padding prima e dopo</span>
-<span class="c1">// @jdk.internal.vm.annotation.Contended public volatile long errorCount;</span>
-<span class="c1">// Idem: nessun thread interferisce con l'altro }</span>
- 
-<span class="o">*</span> <span class="nc">Richiede</span> <span class="n">il</span> <span class="n">flag</span> <span class="nl">JVM:</span> <span class="o">-</span><span class="nl">XX:</span><span class="o">-</span><span class="nc">RestrictContended</span> <span class="n">per</span> <span class="n">funzionare</span> <span class="n">fuori</span> <span class="n">dai</span> <span class="n">moduli</span>
-<span class="o">*</span> <span class="no">JDK</span> <span class="n">interni</span><span class="o">.</span> <span class="nc">In</span> <span class="n">produzione</span> <span class="n">aggiungo</span> <span class="n">il</span> <span class="n">flag</span> <span class="n">nelle</span> <span class="n">opzioni</span> <span class="n">della</span> <span class="nl">JVM:</span> <span class="n">java</span>
-<span class="o">*</span> <span class="o">-</span><span class="nl">XX:</span><span class="o">-</span><span class="nc">RestrictContended</span> <span class="o">-</span><span class="n">jar</span> <span class="n">myapp</span><span class="o">.</span><span class="na">jar</span> <span class="o">*/</span>
- 
-<span class="o">*</span> <span class="nc">Per</span> <span class="n">evitare</span> <span class="n">la</span> <span class="n">dipendenza</span> <span class="n">da</span> <span class="no">API</span> <span class="n">interne</span><span class="o">,</span> <span class="n">posso</span> <span class="n">implementare</span> <span class="n">il</span> <span class="n">padding</span>
-<span class="o">*</span> <span class="n">manualmente</span> <span class="n">con</span> <span class="n">campi</span> <span class="n">dummy</span><span class="o">.</span> <span class="nc">Questa</span> <span class="n">tecnica</span> <span class="n">è</span> <span class="n">usata</span> <span class="n">da</span> <span class="nc">LongAdder</span> <span class="n">e</span>
-<span class="o">*</span> <span class="nc">ConcurrentHashMap</span> <span class="nl">internamente:</span> <span class="o">*/</span>
- <span class="kd">public</span> <span class="kd">class</span> <span class="nc">PaddedCounter</span> 
-<span class="o">{</span> 
-<span class="c1">// 7 long di padding prima del valore (7 * 8 = 56 byte) volatile long p1, p2,</span>
-<span class="c1">// p3, p4, p5, p6, p7; volatile long value;</span>
-<span class="c1">// Il valore reale occupa la sua cache line volatile long q1, q2, q3, q4, q5,</span>
-<span class="c1">// q6, q7;</span>
-<span class="c1">// 7 long di padding dopo }</span>
- 
-<span class="o">*</span> <span class="nc">In</span> <span class="n">scenari</span> <span class="n">reali</span> <span class="n">preferisco</span> <span class="nc">LongAdder</span> <span class="n">di</span> <span class="nc">Java</span> <span class="n">che</span> <span class="n">risolve</span> <span class="n">il</span> <span class="n">problema</span>
-<span class="o">*</span> <span class="n">internamente</span> <span class="n">usando</span> <span class="n">un</span> <span class="n">array</span> <span class="n">di</span> <span class="n">celle</span> <span class="n">con</span> <span class="n">padding</span><span class="o">,</span> <span class="n">ed</span> <span class="n">è</span> <span class="n">anche</span> <span class="n">più</span> <span class="n">performante</span>
-<span class="o">*</span> <span class="n">di</span> <span class="nc">AtomicLong</span> <span class="n">sotto</span> <span class="n">alta</span> <span class="nl">contesa:</span> <span class="o">*/</span>
- <span class="kd">public</span> <span class="kd">class</span> <span class="nc">TradingMetrics</span> 
-<span class="o">{</span> 
-<span class="c1">// LongAdder usa striping interno con padding: zero false sharing private final</span>
-<span class="c1">// LongAdder successCount = new LongAdder(); private final LongAdder errorCount</span>
-<span class="c1">// = new LongAdder(); public void recordSuccess()</span>
-<span class="o">{</span> <span class="n">successCount</span><span class="o">.</span><span class="na">increment</span><span class="o">();</span> <span class="o">}</span>
- <span class="kd">public</span> <span class="kt">void</span> <span class="nf">recordError</span><span class="o">()</span> 
-<span class="o">{</span> <span class="n">errorCount</span><span class="o">.</span><span class="na">increment</span><span class="o">();</span> <span class="o">}</span>
- 
-<span class="c1">// sum() è eventualmente consistente: perfetto per dashboard di monitoraggio</span>
-<span class="c1">// public long getSuccessCount()</span>
-<span class="o">{</span> <span class="k">return</span> <span class="n">successCount</span><span class="o">.</span><span class="na">sum</span><span class="o">();</span> <span class="o">}</span>
- <span class="kd">public</span> <span class="kt">long</span> <span class="nf">getErrorCount</span><span class="o">()</span> 
-<span class="o">{</span> <span class="k">return</span> <span class="n">errorCount</span><span class="o">.</span><span class="na">sum</span><span class="o">();</span> <span class="o">}</span>
- <span class="o">}</span>
- 
-<span class="o">*</span> <span class="nc">Misuro</span> <span class="n">l</span><span class="err">'</span><span class="n">impatto</span> <span class="n">del</span> <span class="kc">false</span> <span class="n">sharing</span> <span class="n">con</span> <span class="no">JMH</span> <span class="n">per</span> <span class="n">quantificare</span> <span class="n">il</span> <span class="n">guadagno</span> <span class="n">prima</span>
-<span class="o">*</span> <span class="n">di</span> <span class="n">introdurre</span> <span class="nl">complessità:</span> <span class="o">*/</span>
- <span class="nd">@State</span><span class="o">(</span><span class="nc">Scope</span><span class="o">.</span><span class="na">Benchmark</span><span class="o">)</span> <span class="kd">public</span> <span class="kd">class</span> <span class="nc">FalseSharingBenchmark</span> 
-<span class="o">{</span> <span class="nc">MetricsBad</span> <span class="n">bad</span> <span class="o">=</span> <span class="k">new</span> <span class="nc">MetricsBad</span><span class="o">();</span> <span class="nc">MetricsGood</span> <span class="n">good</span> <span class="o">=</span> <span class="k">new</span> <span class="nc">MetricsGood</span><span class="o">();</span>
-<span class="nd">@Benchmark</span> <span class="nd">@Threads</span><span class="o">(</span><span class="mi">8</span><span class="o">)</span> <span class="kd">public</span> <span class="kt">void</span> <span class="nf">withFalseSharing</span><span class="o">()</span>
-<span class="o">{</span> <span class="n">bad</span><span class="o">.</span><span class="na">successCount</span><span class="o">++;</span> <span class="o">}</span>
- <span class="nd">@Benchmark</span> <span class="nd">@Threads</span><span class="o">(</span><span class="mi">8</span><span class="o">)</span> <span class="kd">public</span> <span class="kt">void</span> <span class="nf">withoutFalseSharing</span><span class="o">()</span> 
-<span class="o">{</span> <span class="n">good</span><span class="o">.</span><span class="na">successCount</span><span class="o">++;</span> <span class="o">}</span>
- <span class="o">}</span>
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+</pre></td><td class="rouge-code"><pre><span class="cm">/* Il problema: due contatori nello stesso oggetto probabilmente finiscono nella
+    stessa cache line da 64 byte. Quando il thread A incrementa successCount e
+    il thread B incrementa errorCount, si invalidano le cache line a vicenda
+    anche se lavorano su dati diversi. */</span>
+<span class="kd">public</span> <span class="kd">class</span> <span class="nc">MetricsBad</span> <span class="o">{</span>
+    <span class="kd">public</span> <span class="kd">volatile</span> <span class="kt">long</span> <span class="n">successCount</span><span class="o">;</span>
+    <span class="c1">// Probabilmente nella stessa cache line di errorCount public volatile long</span>
+        <span class="n">errorCount</span>
+    <span class="o">;</span>
+    <span class="c1">// False sharing garantito</span>
+<span class="o">}</span>
+<span class="cm">/* La soluzione: @Contended aggiunge padding prima e dopo la variabile,
+    garantendo che occupi una cache line da sola. */</span>
+<span class="kd">public</span> <span class="kd">class</span> <span class="nc">MetricsGood</span> <span class="o">{</span>
+    <span class="nd">@jdk</span><span class="o">.</span><span class="na">internal</span><span class="o">.</span><span class="na">vm</span><span class="o">.</span><span class="na">annotation</span><span class="o">.</span><span class="na">Contended</span> <span class="kd">public</span> <span class="kd">volatile</span> <span class="kt">long</span> <span class="n">successCount</span><span class="o">;</span>
+    <span class="c1">// Cache line dedicata: 64 byte di padding prima e dopo</span>
+        <span class="nd">@jdk</span><span class="o">.</span><span class="na">internal</span><span class="o">.</span><span class="na">vm</span><span class="o">.</span><span class="na">annotation</span><span class="o">.</span><span class="na">Contended</span> <span class="kd">public</span> <span class="kd">volatile</span> <span class="kt">long</span> <span class="n">errorCount</span>
+    <span class="o">;</span>
+    <span class="c1">// Idem: nessun thread interferisce con l'altro</span>
+<span class="o">}</span>
+<span class="cm">/* Richiede il flag JVM: -XX:-RestrictContended per funzionare fuori dai moduli
+    JDK interni. In produzione aggiungo il flag nelle opzioni della JVM: java
+    -XX:-RestrictContended -jar myapp.jar */</span>
+<span class="cm">/* Per evitare la dipendenza da API interne, posso implementare il padding
+    manualmente con campi dummy. Questa tecnica è usata da LongAdder e
+    ConcurrentHashMap internamente: */</span>
+<span class="kd">public</span> <span class="kd">class</span> <span class="nc">PaddedCounter</span> <span class="o">{</span>
+    <span class="c1">// 7 long di padding prima del valore (7 * 8 = 56 byte) volatile long p1,</span>
+        <span class="n">p2</span><span class="o">,</span> <span class="n">p3</span><span class="o">,</span> <span class="n">p4</span><span class="o">,</span> <span class="n">p5</span><span class="o">,</span> <span class="n">p6</span><span class="o">,</span> <span class="n">p7</span>
+    <span class="o">;</span>
+    <span class="kd">volatile</span> <span class="kt">long</span> <span class="n">value</span><span class="o">;</span>
+    <span class="c1">// Il valore reale occupa la sua cache line volatile long q1, q2, q3, q4,</span>
+        <span class="n">q5</span><span class="o">,</span> <span class="n">q6</span><span class="o">,</span> <span class="n">q7</span>
+    <span class="o">;</span>
+    <span class="c1">// 7 long di padding dopo</span>
+<span class="o">}</span>
+<span class="cm">/* In scenari reali preferisco LongAdder di Java che risolve il problema
+    internamente usando un array di celle con padding, ed è anche più
+    performante di AtomicLong sotto alta contesa: */</span>
+<span class="kd">public</span> <span class="kd">class</span> <span class="nc">TradingMetrics</span> <span class="o">{</span>
+    <span class="c1">// LongAdder usa striping interno con padding: zero false sharing private</span>
+        <span class="kd">final</span> <span class="nc">LongAdder</span> <span class="n">successCount</span> <span class="o">=</span> <span class="k">new</span> <span class="nc">LongAdder</span><span class="o">()</span>
+    <span class="o">;</span>
+    <span class="kd">private</span> <span class="kd">final</span> <span class="nc">LongAdder</span> <span class="n">errorCount</span> <span class="o">=</span> <span class="k">new</span> <span class="nc">LongAdder</span><span class="o">();</span>
+    <span class="kd">public</span> <span class="kt">void</span> <span class="nf">recordSuccess</span><span class="o">()</span> <span class="o">{</span>
+        <span class="n">successCount</span><span class="o">.</span><span class="na">increment</span><span class="o">();</span>
+    <span class="o">}</span>
+    <span class="kd">public</span> <span class="kt">void</span> <span class="nf">recordError</span><span class="o">()</span> <span class="o">{</span>
+        <span class="n">errorCount</span><span class="o">.</span><span class="na">increment</span><span class="o">();</span>
+    <span class="o">}</span>
+    <span class="c1">// sum() è eventualmente consistente: perfetto per dashboard di monitoraggio</span>
+        <span class="kd">public</span> <span class="kt">long</span> <span class="nf">getSuccessCount</span><span class="o">()</span>
+    <span class="o">{</span>
+        <span class="k">return</span> <span class="n">successCount</span><span class="o">.</span><span class="na">sum</span><span class="o">();</span>
+    <span class="o">}</span>
+    <span class="kd">public</span> <span class="kt">long</span> <span class="nf">getErrorCount</span><span class="o">()</span> <span class="o">{</span>
+        <span class="k">return</span> <span class="n">errorCount</span><span class="o">.</span><span class="na">sum</span><span class="o">();</span>
+    <span class="o">}</span>
+<span class="o">}</span>
+<span class="cm">/* Misuro l'impatto del false sharing con JMH per quantificare il guadagno prima
+    di introdurre complessità: */</span>
+<span class="nd">@State</span><span class="o">(</span><span class="nc">Scope</span><span class="o">.</span><span class="na">Benchmark</span><span class="o">)</span> <span class="kd">public</span> <span class="kd">class</span> <span class="nc">FalseSharingBenchmark</span> <span class="o">{</span>
+    <span class="nc">MetricsBad</span> <span class="n">bad</span> <span class="o">=</span> <span class="k">new</span> <span class="nc">MetricsBad</span><span class="o">();</span>
+    <span class="nc">MetricsGood</span> <span class="n">good</span> <span class="o">=</span> <span class="k">new</span> <span class="nc">MetricsGood</span><span class="o">();</span>
+    <span class="nd">@Benchmark</span>
+    <span class="nd">@Threads</span><span class="o">(</span><span class="mi">8</span><span class="o">)</span> <span class="kd">public</span> <span class="kt">void</span> <span class="nf">withFalseSharing</span><span class="o">()</span> <span class="o">{</span>
+        <span class="n">bad</span><span class="o">.</span><span class="na">successCount</span><span class="o">++;</span>
+    <span class="o">}</span>
+    <span class="nd">@Benchmark</span>
+    <span class="nd">@Threads</span><span class="o">(</span><span class="mi">8</span><span class="o">)</span> <span class="kd">public</span> <span class="kt">void</span> <span class="nf">withoutFalseSharing</span><span class="o">()</span> <span class="o">{</span>
+        <span class="n">good</span><span class="o">.</span><span class="na">successCount</span><span class="o">++;</span>
+    <span class="o">}</span>
+<span class="o">}</span>
 </pre></td></tr></tbody></table></code></pre></div></div>
 
         </article>
