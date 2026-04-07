@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="it" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Predicate Locking in SSI — DevLog</title>
+    <meta name="description" content="Il Predicate Locking è la tecnologia che permette al livello SERIALIZABLE di funzionare. A differenza dei lock normali, non blocca i dati esistenti, ma "segna" le condizioni di ricerca (i predicati). Se una transazione A legge tutti gli utenti "attiv
+">
+    <link rel="stylesheet" href="/appuntidiprogrammazione/assets/css/style.css">
+
+    <script>
+        /*
+         * Applico il tema PRIMA del rendering per evitare il flash di contenuto
+         * (FOUC). Lo script è inline e bloccante di proposito: deve girare
+         * prima che il browser disegni qualsiasi elemento.
+         */
+        (function() {
+            var saved = localStorage.getItem('theme') || 'dark';
+            document.documentElement.setAttribute('data-theme', saved);
+        })();
+    </script>
+</head>
+<body>
+
+    <header class="main-header">
+        <div class="logo" onclick="window.location.href='/appuntidiprogrammazione/'">
+            APPUNTI DI <span>PROGRAMMAZIONE</span>
+        </div>
+
+        <!-- 
+            Il pulsante aggiorna l'attributo data-theme sull'<html> e
+            persiste la scelta nel localStorage per le sessioni future.
+        -->
+        <button onclick="toggleTheme()" class="theme-toggle" aria-label="Cambia tema">🌓</button>
+    </header>
+
+    <!--
+    Layout post: struttura a due colonne.
+    - Sinistra (post-content): breadcrumb → tags → link PDF → articolo MD
+    - Destra (post-sidebar): tags argomento + libro consigliato
+    
+    Ordine DOM: post-content prima, post-sidebar dopo.
+    Grid-template-areas in CSS li posiziona visivamente:
+    "content sidebar" su desktop, stacked su mobile.
+-->
+<div class="post-container">
+
+    <!-- COLONNA SINISTRA: contenuto principale -->
+    <main class="post-content">
+
+        <!-- Breadcrumb: navigazione verso la home -->
+        <nav class="post-breadcrumb" aria-label="Breadcrumb">
+            <a href="/appuntidiprogrammazione/">Appunti di Programmazione</a>
+            <span class="separator" aria-hidden="true">/</span>
+            <span>Predicate Locking in SSI</span>
+        </nav>
+
+        <!-- Tags legati all'articolo -->
+        
+        <div class="post-tags-header" aria-label="Argomenti">
+            
+                <span class="post-tag-chip">db</span>
+            
+                <span class="post-tag-chip">concorrenza e locking approfond</span>
+            
+        </div>
+        
+
+        <!-- Link al/ai PDF allegati all'articolo -->
+        
+        <div class="pdf-link-wrapper">
+            <a class="pdf-link"
+               href="/appuntidiprogrammazione/assets/pdf/predicate-locking-in-ssi.pdf"
+               target="_blank"
+               rel="noopener noreferrer"
+               aria-label="Scarica il PDF: Predicate Locking in SSI">
+                Scarica PDF
+            </a>
+        </div>
+        
+
+        <!-- Corpo dell'articolo renderizzato da Kramdown -->
+        <article class="post-article-body">
+            <h2 id="esigenza-reale">Esigenza Reale</h2>
+<p>Garantire la coerenza di un sistema di allocazione budget dove la somma delle spese non deve mai superare il tetto massimo, anche se le spese vengono inserite contemporaneamente.</p>
+
+<h2 id="analisi-tecnica">Analisi Tecnica</h2>
+<p>Problema: Come bloccare una “condizione” (la somma) invece di singole righe che potrebbero non esistere ancora. Perché: Sfrutto l’infrastruttura SSI di Postgres. Ho scelto questo metodo perché è l’unico che garantisce l’assenza di anomalie senza dover bloccare l’intera tabella dei pagamenti.</p>
+
+<h2 id="esempio-implementativo">Esempio Implementativo</h2>
+
+<div class="language-sql highlighter-rouge"><div class="highlight"><pre class="highlight"><code><table class="rouge-table"><tbody><tr><td class="rouge-gutter gl"><pre class="lineno">1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+</pre></td><td class="rouge-code"><pre>    <span class="cm">/* Il database "ricorda" che ho letto questa somma tramite un predicate lock
+        implicito sulla condizione WHERE project_id = 5. Se qualcuno inserisce
+        una spesa sullo stesso progetto prima del mio COMMIT, Postgres rileva la
+        sovrapposizione logica e annulla una delle due transazioni. */</span> <span class="k">BEGIN</span>
+        <span class="k">ISOLATION</span> <span class="k">LEVEL</span> <span class="k">SERIALIZABLE</span><span class="p">;</span> <span class="cm">/* Leggo il budget disponibile e la spesa
+        corrente. Questi due SELECT creano predicate lock su entrambe le tabelle
+        per le condizioni usate. */</span> <span class="k">SELECT</span> <span class="n">budget_limit</span> <span class="k">INTO</span> <span class="n">v_limit</span> <span class="k">FROM</span>
+        <span class="n">projects</span> <span class="k">WHERE</span> <span class="n">id</span> <span class="o">=</span> <span class="mi">5</span> <span class="k">FOR</span> <span class="k">SHARE</span><span class="p">;</span> <span class="k">SELECT</span> <span class="n">coalesce</span><span class="p">(</span><span class="k">sum</span><span class="p">(</span><span class="n">amount</span><span class="p">),</span> <span class="mi">0</span><span class="p">)</span> <span class="k">INTO</span>
+        <span class="n">v_spent</span> <span class="k">FROM</span> <span class="n">expenses</span> <span class="k">WHERE</span> <span class="n">project_id</span> <span class="o">=</span> <span class="mi">5</span><span class="p">;</span> <span class="cm">/* Verifico il vincolo a
+        livello applicativo prima di inserire. */</span> <span class="n">IF</span> <span class="n">v_spent</span> <span class="o">+</span> <span class="mi">100</span> <span class="o">&gt;</span> <span class="n">v_limit</span>
+        <span class="k">THEN</span> <span class="n">RAISE</span> <span class="n">EXCEPTION</span> <span class="s1">'Budget superato: disponibile %, richiesto %'</span><span class="p">,</span>
+        <span class="n">v_limit</span> <span class="o">-</span> <span class="n">v_spent</span><span class="p">,</span> <span class="mi">100</span><span class="p">;</span> <span class="k">END</span> <span class="n">IF</span><span class="p">;</span> <span class="k">INSERT</span> <span class="k">INTO</span> <span class="n">expenses</span> <span class="p">(</span><span class="n">project_id</span><span class="p">,</span>
+        <span class="n">amount</span><span class="p">,</span> <span class="n">description</span><span class="p">)</span> <span class="k">VALUES</span> <span class="p">(</span><span class="mi">5</span><span class="p">,</span> <span class="mi">100</span><span class="p">,</span> <span class="s1">'Acquisto hardware'</span><span class="p">);</span> <span class="k">COMMIT</span><span class="p">;</span> <span class="cm">/*
+        Monitoro i predicate lock attivi per capire cosa sta proteggendo il
+        sistema in un dato momento: */</span> <span class="k">SELECT</span> <span class="k">database</span><span class="p">,</span> <span class="n">relation</span><span class="p">::</span><span class="n">regclass</span><span class="p">,</span>
+        <span class="k">mode</span><span class="p">,</span> <span class="n">pid</span> <span class="k">FROM</span> <span class="n">pg_locks</span> <span class="k">WHERE</span> <span class="n">locktype</span> <span class="k">IN</span> <span class="p">(</span><span class="s1">'relation'</span><span class="p">,</span> <span class="s1">'page'</span><span class="p">,</span> <span class="s1">'tuple'</span><span class="p">,</span>
+        <span class="s1">'object'</span><span class="p">,</span> <span class="s1">'advisory'</span><span class="p">)</span> <span class="k">AND</span> <span class="k">mode</span> <span class="k">LIKE</span> <span class="s1">'%Siread%'</span><span class="p">;</span> <span class="cm">/* SIREAD è il tipo di
+        lock usato da SSI: è invisibile agli altri processi (non li blocca) ma
+        viene confrontato con i nuovi lock per rilevare cicli di dipendenze. */</span>
+</pre></td></tr></tbody></table></code></pre></div></div>
+
+        </article>
+
+    </main>
+
+    <!-- COLONNA DESTRA: sidebar post -->
+    <aside class="post-sidebar">
+
+        <!-- Box 1: tags argomento (stessa lista dei chip sopra, ma nella sidebar) -->
+        
+        <div class="sidebar-box tags-box">
+            <span class="box-label">Argomenti</span>
+            <div class="tag-cloud-sidebar">
+                
+                    <span class="sidebar-tag">db</span>
+                
+                    <span class="sidebar-tag">concorrenza e locking approfond</span>
+                
+            </div>
+        </div>
+        
+
+        <!-- Box 2: libro consigliato -->
+        <div class="sidebar-box books-box">
+            <span class="box-label">Letture Consigliate</span>
+            <div class="book-card">
+                <a href="https://www.amazon.it/Appunti-Programmazione-Pensieri-soluzioni-Applicazioni-ebook/dp/B0FMFRHKTF/"
+                   target="_blank"
+                   rel="noopener noreferrer"
+                   aria-label="Acquista Appunti di Programmazione su Amazon">
+                    <img src="https://m.media-amazon.com/images/I/61Ck5eMzGYL._SY466_.jpg"
+                         alt="Copertina: Appunti di Programmazione"
+                         width="80">
+                    <p>Appunti di Programmazione: Pensieri e soluzioni per Applicazioni WEB</p>
+                </a>
+            </div>
+        </div>
+
+    </aside>
+
+</div>
+
+    <footer class="main-footer">
+        DevLog — Appunti di Programmazione &nbsp;·&nbsp; cosimociraci@gmail.com
+    </footer>
+
+    <script>
+        /*
+         * toggleTheme: legge il tema corrente dall'attributo HTML,
+         * calcola l'opposto e lo salva. Il CSS reagisce via [data-theme].
+         * Non uso classi sul body per mantenere tutto centralizzato
+         * sull'elemento radice.
+         */
+        function toggleTheme() {
+            var html = document.documentElement;
+            var current = html.getAttribute('data-theme');
+            var next = current === 'dark' ? 'light' : 'dark';
+            html.setAttribute('data-theme', next);
+            localStorage.setItem('theme', next);
+        }
+    </script>
+
+</body>
+</html>
