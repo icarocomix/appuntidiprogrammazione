@@ -264,6 +264,20 @@ img { max-width: 100%; display: block; }
 }
 .post-article-body .rouge-code { padding-left: 15px; }
 
+/* Forza l'arancio sulle parole chiave anche se il parser fallisce 
+   ma l'attributo class è presente */
+[class*="language-"] {
+    color: var(--text-primary);
+}
+
+/* Se Rouge non ha generato gli span, purtroppo non possiamo colorare 
+   le singole parole. Ma se le genera con classi diverse, questo risolve: */
+pre[class*="language-"] .k, 
+pre[class*="language-"] .kd, 
+.language-thymeleaf .k {
+    color: var(--code-keyword) !important;
+}
+
 /* ------------------------------------------------
    9. FOOTER & RESPONSIVE
    ------------------------------------------------ */
