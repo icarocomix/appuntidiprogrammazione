@@ -708,6 +708,42 @@ img {
   letter-spacing: 0.08em;
 }
 
+/* --- Syntax Highlighting Personalizzato --- */
+
+/* Sfondo e stile generale del blocco di codice */
+.highlight {
+    background: #1e1e1e; /* Sfondo scuro per far risaltare l'arancio */
+    color: #d4d4d4;
+    padding: 1rem;
+    border-radius: 8px;
+    overflow-x: auto;
+}
+
+/* PAROLE CHIAVE IN ARANCIO */
+/* .k = keyword, .kd = keyword declaration, .kn = keyword namespace, .kp = keyword pseudo */
+.highlight .k, 
+.highlight .kd, 
+.highlight .kn, 
+.highlight .kp, 
+.highlight .o { 
+    color: #ff9800 !important; /* Arancio vivace */
+    font-weight: bold;
+}
+
+/* Altre personalizzazioni per completare il look */
+.highlight .s, .highlight .s2 { color: #ce9178; } /* Stringhe: colore sabbia/mattone */
+.highlight .c, .highlight .c1 { color: #6a9955; font-style: italic; } /* Commenti: verde */
+.highlight .nf { color: #dcdcaa; } /* Nomi funzioni: giallo paglierino */
+.highlight .nc { color: #4ec9b0; } /* Nomi classi: acquamarina */
+.highlight .nt { color: #ff9800; } /* Tag HTML/Thymeleaf: Arancio */
+
+/* Numeri di riga (se attivi nel _config.yml) */
+.highlight .lineno {
+    color: #858585;
+    padding-right: 15px;
+    user-select: none;
+}
+
 /* ------------------------------------------------
    13. RESPONSIVE
    ------------------------------------------------ */
