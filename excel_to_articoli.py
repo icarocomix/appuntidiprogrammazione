@@ -11,6 +11,15 @@ OUTPUT_DIR = "_articoli"
 CALENDARIO_CSV = "generazione_slide/calendario_instagram.csv"
 MAX_CHARS_WIDTH = 80
 
+# Mappatura dei linguaggi per il rendering di Jekyll/Rouge
+# Forza Thymeleaf e altri formati verso Java o HTML per attivare l'highlighting
+LANG_MAP = {
+    "thymeleaf": "java",  # Thymeleaf lato Java/Spring
+    "db": "sql",
+    "js": "javascript",
+    "vanillajs": "javascript",
+    "html": "html"
+}
 
 def normalize_for_match(text):
     if not isinstance(text, str):
@@ -79,7 +88,8 @@ def format_code_pro(code_text, tech: str) -> str:
     if not code:
         return ""
 
-    actual_tech = "sql" if tech.lower() == "db" else tech.lower()
+    # Uso la LANG_MAP per decidere quale formatter usare internamente
+    actual_tech = LANG_MAP.get(tech.lower(), tech.lower())
 
     try:
         lines         = cf.normalize_to_lines(code, actual_tech)
@@ -181,7 +191,8 @@ def process_excels():
                     raw_code = "\n".join(str(row[col]) for col in code_cols)
 
                     formatted_code = format_code_pro(raw_code, tech_name)
-                    code_lang      = "sql" if tech_name == "db" else tech_name
+                    # Determino il tag del blocco di codice per il file Markdown
+                    code_lang = LANG_MAP.get(tech_name, tech_name)
 
                     with open(out_path / filename, "w", encoding="utf-8") as f:
                         f.write("---\n")
