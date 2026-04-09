@@ -13,7 +13,7 @@ pdf_file: "typed-arrays-e-unboxed-numerics.pdf"
 Implementare un motore di calcolo per segnali audio o manipolazione di pixel in tempo reale nel browser o Node.js.
 
 ## Analisi Tecnica
-**Problema:** Latenza computazionale e picchi di GC causati dall'allocazione continua di numeri ad alta precisione in array dinamici. Perché: Uso i Typed Arrays. Ho scelto questa struttura per forzare il runtime a usare memoria fissa e contigua, permettendo ottimizzazioni SIMD e un accesso ai dati estremamente più veloce.
+****Problema:**** Latenza computazionale e picchi di GC causati dall'allocazione continua di numeri ad alta precisione in array dinamici. **Perché:** Uso i Typed Arrays. Ho scelto questa struttura per forzare il runtime a usare memoria fissa e contigua, permettendo ottimizzazioni SIMD e un accesso ai dati estremamente più veloce.
 
 ## Esempio Implementativo
 
@@ -49,7 +49,7 @@ i++) {
     sum2 += typedArray[i];
     // Loop ottimizzato con istruzioni vettoriali dalla CPU
 }
-/* Scelgo il tipo corretto in base al dominio del problema: */
+/* Scelgo il tipo corretto in base al dominio del **Problema:** */
 // Float64Array: calcolo scientifico, audio (range completo double IEEE 754) //
     Float32Array: grafica 3D, WebGL (meno preciso ma 2x più compatto) //
     Int32Array: contatori, indici, coordinate pixel // Uint8Array: buffer raw,

@@ -13,7 +13,7 @@ pdf_file: "microtask-vs-macrotask-queue.pdf"
 Risolvere bug di precedenza in sistemi ad alta frequenza dove i timer sembrano "scattare" in ritardo rispetto alle promesse.
 
 ## Analisi Tecnica
-**Problema:** L'applicazione non risponde all'I/O esterno perché saturata da una catena infinita di microtask ricorsivi. Perché: Uso setImmediate per task non urgenti. Ho scelto di differire la logica alla fase di "Check" dell'Event Loop per permettere al ciclo di completare il polling dell'I/O di rete.
+****Problema:**** L'applicazione non risponde all'I/O esterno perché saturata da una catena infinita di microtask ricorsivi. **Perché:** Uso setImmediate per task non urgenti. Ho scelto di differire la logica alla fase di "Check" dell'Event Loop per permettere al ciclo di completare il polling dell'I/O di rete.
 
 ## Esempio Implementativo
 
@@ -28,7 +28,7 @@ setImmediate(() => console.log('4. setImmediate (Check phase)'));
 setTimeout(() => console.log('5. setTimeout (Timers phase)'), 0);
 console.log('6. More synchronous code');
 // Output garantito: 1, 6, 2, 3, 4 o 5 (4 e 5 dipendono dal sistema), ma SEMPRE
-    2 prima di 3 /* Il problema: starvation da nextTick ricorsivo. Questo codice
+    2 prima di 3 /* Il **Problema:** starvation da nextTick ricorsivo. Questo codice
     blocca l'I/O indefinitamente. */ function starveIo()
 {
     process.nextTick(() => {
