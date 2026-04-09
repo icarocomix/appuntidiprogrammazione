@@ -14,6 +14,7 @@ Accelerare i tempi di risposta di un'API REST che restituisce grandi liste di og
 
 ## Analisi Tecnica
 **Problema:** Il tempo speso nella serializzazione JSON domina il tempo totale della richiesta a causa della lentezza della reflection.
+
 **Perché:** Abilito la generazione di bytecode dinamico. Ho scelto di ottimizzare il layer di trasporto delegando a Jackson la creazione di invocatori ottimizzati per i miei DTO specifici.
 
 ## Esempio Implementativo

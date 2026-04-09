@@ -14,6 +14,7 @@ Implementare un sistema multi-tenant dove ogni azienda vede solo i propri ordini
 
 ## Analisi Tecnica
 **Problema:** Le policy RLS troppo complesse rallentano l'acquisizione dei lock e possono causare timeout inaspettati.
+
 **Perché:** Uso variabili di sessione personalizzate. Ho scelto di filtrare tramite current_setting('app.tenant_id') perché è un'operazione in memoria che non richiede join aggiuntivi durante il controllo del lock.
 
 ## Esempio Implementativo

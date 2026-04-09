@@ -14,6 +14,7 @@ Gestire aggiornamenti real-time della dashboard dove più widget devono reagire 
 
 ## Analisi Tecnica
 **Problema:** Memory leak e comportamenti inconsistenti dovuti a sottoscrizioni multiple non coordinate a flussi di dati asincroni.
+
 **Perché:** Uso il Multicasting controllato. Ho scelto di centralizzare lo stream per inviare dati a tutti i listener attivi con un'unica esecuzione della logica sorgente.
 
 ## Esempio Implementativo

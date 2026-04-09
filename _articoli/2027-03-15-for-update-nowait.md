@@ -14,6 +14,7 @@ Implementare un sistema di editing collaborativo "ottimista" dove il primo che a
 
 ## Analisi Tecnica
 **Problema:** L'utente rimane in attesa indefinita se un altro processo ha lasciato una transazione appesa su quel record.
+
 **Perché:** Uso FOR UPDATE NOWAIT. Ho scelto questa opzione perché voglio un feedback immediato: se non posso avere il lock, l'applicazione deve gestire l'errore 54P01 istantaneamente.
 
 ## Esempio Implementativo

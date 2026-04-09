@@ -14,6 +14,7 @@ Implementare un sistema di dashboard dove ogni utente può aggiungere "Widget" d
 
 ## Analisi Tecnica
 **Problema:** Necessità di gestire decine di th:if per decidere quale frammento mostrare, creando template illeggibili.
+
 **Perché:** Uso il caricamento dinamico per nome. Ho scelto di mappare i nomi dei frammenti nel database per rendere l'interfaccia estensibile senza modificare il codice Java dei controller.
 
 ## Esempio Implementativo

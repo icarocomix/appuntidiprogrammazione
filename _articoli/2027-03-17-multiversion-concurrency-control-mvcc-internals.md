@@ -14,6 +14,7 @@ Ottimizzare un database che subisce migliaia di update al secondo, evitando che 
 
 ## Analisi Tecnica
 **Problema:** Le vecchie versioni delle righe (dead tuples) occupano spazio e rallentano le scansioni degli indici.
+
 **Perché:** Analizzo xmin e xmax. Ho deciso di monitorare queste colonne di sistema per capire quali transazioni "long-running" stanno impedendo la pulizia MVCC.
 
 ## Esempio Implementativo

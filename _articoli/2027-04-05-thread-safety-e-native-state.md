@@ -14,6 +14,7 @@ Garantire l'integrità dei dati in un database a chiave-valore in memoria scritt
 
 ## Analisi Tecnica
 **Problema:** Corruzione silenziosa dei dati quando più thread Java manipolano la stessa area di memoria nativa.
+
 **Perché:** Uso Arena.ofShared() combinata con barriere di memoria. Ho scelto di gestire esplicitamente la sincronizzazione per assicurarmi che le scritture di un thread siano visibili agli altri prima di procedere.
 
 ## Esempio Implementativo

@@ -14,6 +14,7 @@ Implementare un sistema di monitoraggio dove una libreria C notifica a Java il s
 
 ## Analisi Tecnica
 **Problema:** Necessità di gestire eventi asincroni generati dal mondo nativo senza bloccare l'esecuzione.
+
 **Perché:** Creo un upcallStub. Ho scelto di mappare un metodo Java come puntatore a funzione C, permettendo alla libreria esterna di "chiamare casa" in modo sicuro e controllato.
 
 ## Esempio Implementativo

@@ -14,6 +14,7 @@ Creare un dispatcher di eventi ultra-veloce che invoca metodi di plugin caricati
 
 ## Analisi Tecnica
 **Problema:** L'invocazione tramite Reflection classica introduce un overhead misurabile che scala male all'aumentare delle chiamate.
+
 **Perché:** Uso MethodHandle. Ho scelto questa via perché, una volta risolto il puntatore (lookup), l'esecuzione è estremamente vicina alla velocità nativa grazie alla capacità della JVM di ottimizzare il call site.
 
 ## Esempio Implementativo

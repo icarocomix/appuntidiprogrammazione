@@ -14,6 +14,7 @@ Gestire un sistema di prenotazione medica dove un medico non può avere più di 
 
 ## Analisi Tecnica
 **Problema:** Il controllo del conteggio (COUNT) in una transazione non vede gli inserimenti "in volo" di altre transazioni concorrenti.
+
 **Perché:** Uso il livello SERIALIZABLE. Ho scelto questa strada perché il database rileva automaticamente il conflitto logico tra la lettura del conteggio e l'inserimento, senza che io debba usare lock pesanti su intere tabelle.
 
 ## Esempio Implementativo

@@ -14,6 +14,7 @@ Creare un componente "Button" o "Card" universale che accetta varianti di colore
 
 ## Analisi Tecnica
 **Problema:** Frammenti troppo rigidi che forzano a passare parametri vuoti o nulli, rendendo il codice verboso.
+
 **Perché:** Uso i parametri con default. Ho scelto il token _ per permettere al designer di vedere un'anteprima statica pur lasciando al programmatore il controllo dinamico totale.
 
 ## Esempio Implementativo

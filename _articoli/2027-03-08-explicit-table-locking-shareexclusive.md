@@ -14,6 +14,7 @@ Sincronizzare un ricalcolo massivo di una classifica utenti dove non voglio che 
 
 ## Analisi Tecnica
 **Problema:** La necessità di garantire un'istantanea statica di un'intera tabella per una procedura complessa che non può usare SSI.
+
 **Perché:** Uso LOCK TABLE ... IN SHARE MODE. Ho scelto SHARE perché mi permette di leggere i dati con la certezza che non cambino, pur consentendo ad altri di leggere (ma non scrivere).
 
 ## Esempio Implementativo

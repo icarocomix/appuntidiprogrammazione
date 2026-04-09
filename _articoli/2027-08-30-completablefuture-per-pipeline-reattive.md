@@ -14,6 +14,7 @@ Comporre un profilo utente aggregando dati provenienti da tre diversi microservi
 
 ## Analisi Tecnica
 **Problema:** Codice asincrono difficile da mantenere, debuggare e testare a causa di logiche di sincronizzazione manuali.
+
 **Perché:** Uso l'API fluent di CompletableFuture. Ho scelto questo approccio per rendere esplicita la sequenza delle operazioni e gestire le eccezioni in modo centralizzato lungo tutta la catena.
 
 ## Esempio Implementativo

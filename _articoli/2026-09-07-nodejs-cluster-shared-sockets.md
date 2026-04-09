@@ -14,6 +14,7 @@ Implementare uno scale-out verticale su una macchina con 32 core per gestire 100
 
 ## Analisi Tecnica
 **Problema:** Sotto-utilizzo delle risorse hardware: un solo core al 100% e gli altri 31 inattivi durante i picchi di traffico.
+
 **Perché:** Uso il clustering nativo. Ho scelto di isolare i processi worker per garantire che il crash di uno non tiri giù l'intera infrastruttura e per parallelizzare il carico.
 
 ## Esempio Implementativo

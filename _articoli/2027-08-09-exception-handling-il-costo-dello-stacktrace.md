@@ -14,6 +14,7 @@ Gestire validazioni di input ad alta frequenza dove il fallimento è un evento p
 
 ## Analisi Tecnica
 **Problema:** Overhead della CPU enorme quando le eccezioni vengono usate per gestire la logica di business ordinaria.
+
 **Perché:** Disabilito lo stacktrace. Ho deciso di ottimizzare le eccezioni ricorrenti perché in questi casi il "dove" è successo l'errore è già noto e non giustifica il costo del dump dello stack.
 
 ## Esempio Implementativo

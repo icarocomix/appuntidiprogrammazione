@@ -14,6 +14,7 @@ Massimizzare le performance di contatori atomici globali usati intensivamente in
 
 ## Analisi Tecnica
 **Problema:** Degradazione invisibile delle prestazioni dovuta alla contesa della cache line tra core diversi.
+
 **Perché:** Uso @jdk.internal.vm.annotation.Contended. Ho deciso di forzare l'allineamento della memoria per evitare il ping-pong della cache line tra i core, aumentando il throughput delle operazioni atomiche.
 
 ## Esempio Implementativo

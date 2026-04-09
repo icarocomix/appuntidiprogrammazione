@@ -14,5 +14,6 @@ Sfruttare tutti i core di un server moderno per accelerare il calcolo di aggrega
 
 ## Analisi Tecnica
 **Problema:** Query pesanti che utilizzano un solo core mentre gli altri 31 rimangono inattivi.
+
 **Perché:** Ho regolato i parametri di parallelismo. Ho scelto di forzare il parallelismo su questa tabella specifica perché la scansione sequenziale è inevitabile ma può essere divisa tra più worker.
 

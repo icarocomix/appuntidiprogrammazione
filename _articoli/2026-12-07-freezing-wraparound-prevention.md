@@ -14,6 +14,7 @@ Prevenire l'arresto improvviso del database di produzione dovuto al raggiungimen
 
 ## Analisi Tecnica
 **Problema:** Accumulo di ID transazione non congelati che minaccia l'integrità del database a lungo termine.
+
 **Perché:** Regolo autovacuum_freeze_max_age. Ho scelto di abbassare la soglia per far partire il vacuum di "freeze" prima della crisi, distribuendo il carico di manutenzione invece di concentrarlo in un unico evento catastrofico.
 
 ## Esempio Implementativo

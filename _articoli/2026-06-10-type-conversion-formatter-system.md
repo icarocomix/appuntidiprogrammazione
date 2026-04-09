@@ -14,6 +14,7 @@ Gestire input di date e valute in form internazionali senza scrivere logica di p
 
 ## Analisi Tecnica
 **Problema:** Errori di binding (400 Bad Request) dovuti a formati stringa non corrispondenti ai tipi Java del modello.
+
 **Perché:** Uso il sistema di conversione di Spring. Ho scelto di centralizzare le regole di formattazione nei Bean tramite annotazioni, permettendo a Thymeleaf di riflettere queste regole sia in lettura che in scrittura (binding).
 
 ## Esempio Implementativo

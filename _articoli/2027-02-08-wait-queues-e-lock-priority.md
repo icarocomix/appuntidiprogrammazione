@@ -14,6 +14,7 @@ Evitare che un tentativo di aggiungere una colonna a una tabella "clienti" blocc
 
 ## Analisi Tecnica
 **Problema:** Una richiesta di manutenzione pesante si mette in testa alla coda e blocca tutte le letture successive, svuotando il pool di connessioni.
+
 **Perché:** Imposto lock_timeout. Ho scelto di far fallire il mio script di migrazione se non ottiene il lock entro 2 secondi, per non disturbare gli utenti.
 
 ## Esempio Implementativo

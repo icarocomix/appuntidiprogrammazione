@@ -14,6 +14,7 @@ Rendere fluide le transazioni di inserimento massivo evitando che i processi ute
 
 ## Analisi Tecnica
 **Problema:** Picchi di latenza improvvisi durante le scritture pesanti, dovuti a un inefficiente scaricamento della cache sul disco.
+
 **Perché:** Analizzo le statistiche del bgwriter. Ho scelto di calibrare i parametri di scrittura in background per "spalmare" l'I/O nel tempo, garantendo che ci sia sempre spazio libero nei buffer per le nuove transazioni.
 
 ## Esempio Implementativo

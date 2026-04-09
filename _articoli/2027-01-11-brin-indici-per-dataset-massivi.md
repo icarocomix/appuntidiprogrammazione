@@ -14,6 +14,7 @@ Gestire l'indicizzazione di tabelle di telemetria IoT che crescono di 500 milion
 
 ## Analisi Tecnica
 **Problema:** L'indice B-Tree standard consuma troppo spazio disco e satura la cache, rallentando l'intero sistema.
+
 **Perché:** Ho optato per BRIN. Ho scelto questa soluzione perché i log arrivano in ordine cronologico, permettendo a BRIN di escludere il 99% dei blocchi disco con una frazione dello spazio di un B-Tree.
 
 ## Esempio Implementativo

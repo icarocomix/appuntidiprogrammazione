@@ -14,6 +14,7 @@ Identificare immediatamente quale script di reportistica notturno sta impedendo 
 
 ## Analisi Tecnica
 **Problema:** Difficoltà nel distinguere tra un normale tempo di esecuzione e un'attesa forzata da un lock acquisito da un altro utente.
+
 **Perché:** Interrogo pg_blocking_pids. Ho scelto di mappare i PID bloccanti per visualizzare l'albero delle dipendenze e capire l'origine esatta del blocco.
 
 ## Esempio Implementativo

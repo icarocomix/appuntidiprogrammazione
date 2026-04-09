@@ -14,6 +14,7 @@ Accelerare le query di geo-fencing che devono identificare in quali aree urbane 
 
 ## Analisi Tecnica
 **Problema:** Scansione di troppi nodi dell'albero GiST a causa di un'organizzazione spaziale dei dati frammentata.
+
 **Perché:** Ho scelto di ordinare i dati spazialmente prima di indicizzarli. Questo processo, chiamato "Clustering", massimizza la selettività di ogni ramo dell'indice GiST.
 
 ## Esempio Implementativo

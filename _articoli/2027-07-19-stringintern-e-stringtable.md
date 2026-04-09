@@ -14,6 +14,7 @@ Ottimizzare la memoria di un sistema di reportistica che carica milioni di recor
 
 ## Analisi Tecnica
 **Problema:** Milioni di istanze diverse di stringhe identiche che consumano l'80% dell'heap disponibile.
+
 **Perché:** Uso l'interning controllato. Ho scelto di centralizzare i valori ripetitivi per ridurre drasticamente l'impronta di memoria, configurando però la JVM per gestire un pool di stringhe di dimensioni adeguate.
 
 ## Esempio Implementativo

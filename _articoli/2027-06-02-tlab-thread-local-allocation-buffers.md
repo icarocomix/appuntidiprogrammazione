@@ -14,6 +14,7 @@ Ridurre i colli di bottiglia durante i picchi di traffico in un'applicazione che
 
 ## Analisi Tecnica
 **Problema:** Rallentamento delle allocazioni di memoria dovuto alla sincronizzazione tra i thread nel Memory Manager della JVM.
+
 **Perché:** Verifico e ottimizzo i TLAB. Ho scelto di assicurarmi che l'allocazione sia "lock-free" per la stragrande maggioranza degli oggetti, riducendo drasticamente il tempo speso nei safepoint.
 
 ## Esempio Implementativo

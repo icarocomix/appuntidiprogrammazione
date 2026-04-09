@@ -14,5 +14,6 @@ Correggere piani di esecuzione errati su colonne che contengono dati con una dis
 
 ## Analisi Tecnica
 **Problema:** Il Planner sbaglia completamente la stima delle righe perché l'istogramma delle statistiche è troppo approssimativo.
+
 **Perché:** Ho alzato il target delle statistiche solo per la colonna problematica. Ho scelto questa via per non appesantire il processo globale di ANALYZE, ma risolvere il problema alla radice per le query critiche.
 

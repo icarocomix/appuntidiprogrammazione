@@ -14,6 +14,7 @@ Velocizzare le query di conteggio o di ricerca su colonne indicizzate in tabelle
 
 ## Analisi Tecnica
 **Problema:** L'indice contiene i dati ma non le informazioni di visibilità transazionale, forzando accessi al disco extra.
+
 **Perché:** Mantengo la Visibility Map pulita tramite autovacuum aggressivo. Ho scelto questa strategia per permettere al planner di usare l'Index-Only Scan il 100% delle volte.
 
 ## Esempio Implementativo

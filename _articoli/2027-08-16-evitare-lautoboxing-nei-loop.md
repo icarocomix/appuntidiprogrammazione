@@ -14,6 +14,7 @@ Elaborare statistiche in tempo reale su milioni di rilevazioni numeriche proveni
 
 ## Analisi Tecnica
 **Problema:** Degradazione delle performance e pressione sul GC causata dalla creazione silenziosa di oggetti wrapper durante i calcoli.
+
 **Perché:** Uso IntStream e array nativi. Ho scelto di mantenere i dati nel loro formato primitivo per sfruttare la velocità della CPU ed evitare il passaggio continuo tra stack e heap.
 
 ## Esempio Implementativo

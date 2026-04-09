@@ -14,6 +14,7 @@ Diagnosticare perché una query è veloce a volte e lenta altre (spesso dovuto a
 
 ## Analisi Tecnica
 **Problema:** La latenza variabile delle query rende difficile capire se l'ottimizzazione sta funzionando davvero.
+
 **Perché:** Uso BUFFERS. Ho scelto di basarmi sul numero di pagine toccate perché è un valore costante che non dipende dal "calore" della cache al momento del test.
 
 ## Esempio Implementativo

@@ -14,6 +14,7 @@ Scalare un gateway API che effettua chiamate sincrone a servizi esterni senza es
 
 ## Analisi Tecnica
 **Problema:** Ogni thread dell'OS occupa circa 1MB di memoria; con migliaia di connessioni concorrenti, il server va in OutOfMemoryError.
+
 **Perché:** Uso Executors.newVirtualThreadPerTaskExecutor(). Ho deciso di delegare alla JVM lo scheduling, permettendo di gestire milioni di thread con un footprint minimo di memoria.
 
 ## Esempio Implementativo

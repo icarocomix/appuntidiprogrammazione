@@ -14,6 +14,7 @@ Gestire correttamente tag che hanno sia un'iterazione custom che una validazione
 
 ## Analisi Tecnica
 **Problema:** Errori di rendering o variabili non trovate perché il processore di visualizzazione scatta prima di quello di popolamento dati.
+
 **Perché:** Regolo il valore di Precedence. Ho scelto di assegnare valori distanziati (es. 100, 200, 1000) per garantire un ciclo di vita del tag deterministico e prevedibile.
 
 ## Esempio Implementativo

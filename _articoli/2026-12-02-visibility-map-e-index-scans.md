@@ -14,6 +14,7 @@ Ottimizzare il conteggio di righe o la ricerca di colonne indicizzate su tabelle
 
 ## Analisi Tecnica
 **Problema:** Query che dovrebbero usare solo l'indice risultano lente perché devono accedere continuamente ai dati della tabella per confermare la visibilità MVCC.
+
 **Perché:** Monitoro lo stato della Visibility Map. Ho scelto di forzare il vacuum sulle tabelle critiche per "congelare" le pagine e abilitare l'ottimizzazione Index-Only Scan in modo costante.
 
 ## Esempio Implementativo

@@ -14,6 +14,7 @@ Passare configurazioni o dataset di medie dimensioni dal backend al frontend sen
 
 ## Analisi Tecnica
 **Problema:** Il rendering dei dati in blocchi th:inline="javascript" diventa un collo di bottiglia se gli oggetti sono complessi.
+
 **Perché:** Uso l'iniezione JSON raw. Ho scelto di bypassare l'inliner di Thymeleaf per i dati strutturati, trattandoli come stringhe statiche già pronte per il client.
 
 ## Esempio Implementativo

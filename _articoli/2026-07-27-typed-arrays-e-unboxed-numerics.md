@@ -14,6 +14,7 @@ Implementare un motore di calcolo per segnali audio o manipolazione di pixel in 
 
 ## Analisi Tecnica
 **Problema:** Latenza computazionale e picchi di GC causati dall'allocazione continua di numeri ad alta precisione in array dinamici.
+
 **Perché:** Uso i Typed Arrays. Ho scelto questa struttura per forzare il runtime a usare memoria fissa e contigua, permettendo ottimizzazioni SIMD e un accesso ai dati estremamente più veloce.
 
 ## Esempio Implementativo

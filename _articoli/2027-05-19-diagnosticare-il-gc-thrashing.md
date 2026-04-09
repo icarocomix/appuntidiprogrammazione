@@ -14,6 +14,7 @@ Implementare un sistema di "fail-fast" per istanze di microservizi che sono entr
 
 ## Analisi Tecnica
 **Problema:** L'applicazione non risponde più ma il processo risulta attivo, consumando il 100% della CPU in cicli di GC inutili.
+
 **Perché:** Uso le soglie di overhead del GC. Ho scelto di forzare un crash controllato per permettere all'orchestratore (K8s) di riavviare l'istanza su un altro nodo, ripristinando il servizio.
 
 ## Esempio Implementativo

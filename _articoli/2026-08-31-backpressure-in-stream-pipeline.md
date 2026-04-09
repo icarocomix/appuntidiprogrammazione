@@ -14,6 +14,7 @@ Trasferire file di diversi gigabyte tra un client e un server senza esaurire la 
 
 ## Analisi Tecnica
 **Problema:** OutOfMemoryError causato dall'accumulo di chunk di dati nel buffer di scrittura (writable.write() restituisce false).
+
 **Perché:** Implemento il controllo del flusso. Ho scelto pipeline perché mette in pausa il "Readable" finché il "Writable" non ha terminato di svuotare il buffer verso il kernel (drain).
 
 ## Esempio Implementativo

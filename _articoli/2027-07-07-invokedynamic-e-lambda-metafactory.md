@@ -14,6 +14,7 @@ Trasformare stringhe di configurazione o espressioni dinamiche in chiamate a fun
 
 ## Analisi Tecnica
 **Problema:** L'uso eccessivo di classi anonime per le callback appesantisce il caricamento delle classi e il consumo di memoria.
+
 **Perché:** Sfrutto LambdaMetafactory. Ho scelto questa tecnica per generare invocatori dinamici che la JVM tratta come normali lambda, garantendo il massimo livello di inlining possibile.
 
 ## Esempio Implementativo

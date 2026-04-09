@@ -14,6 +14,7 @@ Scalare un'applicazione social dove la frequenza di lettura (feed) è 1000x supe
 
 ## Analisi Tecnica
 **Problema:** Modelli di dati troppo complessi che tentano di soddisfare sia i vincoli di validazione che le esigenze di reportistica veloce.
+
 **Perché:** Separo le responsabilità. Ho scelto CQRS per poter scalare i database di lettura indipendentemente dai servizi di scrittura, ottimizzando i tempi di risposta delle API.
 
 ## Esempio Implementativo

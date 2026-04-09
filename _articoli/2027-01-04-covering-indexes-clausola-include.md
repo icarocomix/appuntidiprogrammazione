@@ -14,6 +14,7 @@ Velocizzare una query frequente che cerca l'email di un utente partendo dal suo 
 
 ## Analisi Tecnica
 **Problema:** Anche se l'ID è indicizzato, il database deve comunque leggere la tabella per recuperare la colonna 'email'.
+
 **Perché:** Uso INCLUDE. Ho scelto di "portare" l'email dentro l'indice dell'ID per permettere un Index-Only Scan, dimezzando di fatto il numero di blocchi letti dal disco.
 
 ## Esempio Implementativo

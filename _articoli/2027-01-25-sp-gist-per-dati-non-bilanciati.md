@@ -14,6 +14,7 @@ Ottimizzare un database di indirizzi stradali con milioni di coordinate GPS punt
 
 ## Analisi Tecnica
 **Problema:** L'indice GiST standard soffre di troppi overlap in zone con altissima densità di punti (es. centri città), rallentando i lookup.
+
 **Perché:** Uso SP-GiST. Ho scelto questo metodo perché la partizione dello spazio senza sovrapposizioni elimina l'ambiguità durante la discesa dell'albero, migliorando le performance di ricerca puntuale.
 
 ## Esempio Implementativo

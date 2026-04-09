@@ -14,6 +14,7 @@ Ottimizzare le performance di un database migrato da un vecchio server fisico a 
 
 ## Analisi Tecnica
 **Problema:** Il Planner evita l'uso degli indici perché sovrastima il costo di lettura delle pagine sparse sul disco.
+
 **Perché:** Ho deciso di allineare random_page_cost a seq_page_cost. In questo modo elimino il bias contro gli indici, riflettendo la realtà fisica dell'hardware SSD dove la latenza di seek è trascurabile.
 
 ## Esempio Implementativo

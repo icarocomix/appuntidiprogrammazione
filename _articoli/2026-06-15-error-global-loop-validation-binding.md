@@ -14,6 +14,7 @@ Gestire la validazione di form complessi con regole cross-field (es. la data di 
 
 ## Analisi Tecnica
 **Problema:** Codice di template sporco e ripetitivo per gestire la visualizzazione degli errori di validazione del backend.
+
 **Perché:** Uso l'astrazione #fields. Ho scelto di centralizzare la logica di visualizzazione degli errori per garantire che ogni feedback del server sia mappato correttamente agli elementi UI corrispondenti nel DOM.
 
 ## Esempio Implementativo

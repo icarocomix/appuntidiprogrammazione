@@ -14,6 +14,7 @@ Ottimizzare un algoritmo di elaborazione segnali dove l'accesso ai dati deve ess
 
 ## Analisi Tecnica
 **Problema:** La CPU passa troppo tempo in attesa che i dati vengano caricati dalla memoria principale a causa della frammentazione dell'heap.
+
 **Perché:** Struttura i dati in array contigui. Ho scelto di appiattire le strutture dati complesse in array lineari per "aiutare" l'hardware a prevedere il prossimo dato da elaborare.
 
 ## Esempio Implementativo

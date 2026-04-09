@@ -14,6 +14,7 @@ Visualizzare i primi risultati di una ricerca massiva mentre il server sta ancor
 
 ## Analisi Tecnica
 **Problema:** Latenza percepita alta (schermata bianca) durante l'elaborazione di grandi volumi di dati lato server.
+
 **Perché:** Uso il rendering reattivo. Ho scelto di inviare i dati in streaming per permettere al browser di iniziare il parsing del DOM prima che la risposta HTTP sia completata.
 
 ## Esempio Implementativo

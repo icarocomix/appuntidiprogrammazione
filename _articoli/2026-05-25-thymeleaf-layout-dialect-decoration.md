@@ -14,6 +14,7 @@ Gestire un sito con diverse sezioni (Pubblica, Admin, Dashboard) che condividono
 
 ## Analisi Tecnica
 **Problema:** Gestione difficoltosa dei meta-tag SEO e degli script specifici per pagina quando si usa l'inclusione classica "bottom-up".
+
 **Perché:** Uso il pattern Decorator. Ho scelto questo dialetto per invertire la responsabilità: è la pagina specifica che decide quale layout riempire, non il layout che "tira dentro" i pezzi.
 
 ## Esempio Implementativo

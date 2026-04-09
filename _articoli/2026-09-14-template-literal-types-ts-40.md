@@ -14,6 +14,7 @@ Creare un Event Emitter dove i nomi degli eventi sono generati automaticamente c
 
 ## Analisi Tecnica
 **Problema:** Perdita di type-safety quando si usano stringhe dinamiche come chiavi o identificatori.
+
 **Perché:** Uso i Template Literal Types. Ho scelto di automatizzare la creazione di tipi stringa per evitare errori di battitura in sistemi basati su convenzioni di naming.
 
 ## Esempio Implementativo

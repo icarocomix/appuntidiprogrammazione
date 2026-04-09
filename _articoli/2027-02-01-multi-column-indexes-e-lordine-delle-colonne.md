@@ -14,6 +14,7 @@ Progettare un indice efficiente per una tabella di log che viene interrogata spe
 
 ## Analisi Tecnica
 **Problema:** Le query che filtrano solo per la seconda colonna dell'indice non ottengono i benefici prestazionali sperati.
+
 **Perché:** Ho riordinato le colonne basandomi sulla frequenza d'uso. Ho messo 'app_id' per primo perché è presente nel 90% delle query, massimizzando il riutilizzo dello stesso indice.
 
 ## Esempio Implementativo

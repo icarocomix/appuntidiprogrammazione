@@ -14,6 +14,7 @@ Garantire tempi di risposta costanti per un motore di ricerca interno che gestis
 
 ## Analisi Tecnica
 **Problema:** Picchi di latenza imprevedibili causati dalle pause di garbage collection su heap di grandi dimensioni.
+
 **Perché:** Scelgo ZGC. Ho deciso di dare priorità alla latenza minima rispetto al throughput massimo, configurando la JVM per sfruttare il parallelismo estremo nella marcatura degli oggetti.
 
 ## Esempio Implementativo

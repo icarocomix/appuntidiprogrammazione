@@ -14,6 +14,7 @@ Proteggere un'applicazione single-page (SPA) complessa che visualizza contenuti 
 
 ## Analisi Tecnica
 **Problema:** Esecuzione di script non autorizzati iniettati tramite commenti, profili utente o parametri URL malformati.
+
 **Perché:** Implemento una politica "Nonce-based". Ho scelto questo approccio dinamico per permettere l'esecuzione di script interni legittimi bloccando al contempo qualsiasi codice iniettato esternamente.
 
 ## Esempio Implementativo

@@ -14,6 +14,7 @@ Regolare il tempo di reazione del DB ai blocchi circolari in un sistema con tran
 
 ## Analisi Tecnica
 **Problema:** Un deadlock non rilevato rapidamente tiene occupate risorse preziose, ma un controllo troppo frequente rallenta il sistema.
+
 **Perché:** Mantengo il valore di default ma attivo il logging esteso dei lock. Ho scelto questa configurazione per avere visibilità totale senza penalizzare le performance.
 
 ## Esempio Implementativo

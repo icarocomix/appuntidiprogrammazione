@@ -14,6 +14,7 @@ Evitare che il database chiami una funzione di conversione valuta 1 milione di v
 
 ## Analisi Tecnica
 **Problema:** Degrado prestazionale dovuto all'impossibilità del Planner di ottimizzare o "cacheare" i risultati delle funzioni.
+
 **Perché:** Ho marcato la funzione come IMMUTABLE. Ho scelto questo approccio perché i dati di input determinano univocamente l'output, permettendo al Planner di ottimizzare aggressivamente.
 
 ## Esempio Implementativo

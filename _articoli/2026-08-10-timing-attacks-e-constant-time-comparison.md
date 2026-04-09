@@ -14,6 +14,7 @@ Proteggere gli endpoint di autenticazione o la verifica di API Key da attacchi d
 
 ## Analisi Tecnica
 **Problema:** Leak di informazioni sensibili tramite la variazione del tempo di esecuzione dei confronti tra stringhe.
+
 **Perché:** Uso il confronto in tempo costante. Ho scelto questa funzione nativa per assicurarmi che il tempo di computazione non dipenda dal numero di caratteri corretti inseriti dall'utente.
 
 ## Esempio Implementativo

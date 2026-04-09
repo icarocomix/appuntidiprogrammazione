@@ -14,6 +14,7 @@ Ottimizzare l'accesso a una configurazione globale caricata in memoria che viene
 
 ## Analisi Tecnica
 **Problema:** La contesa tra lettori e scrittori causa micro-latenze inutili in uno scenario read-heavy.
+
 **Perché:** Uso StampedLock. Ho scelto il lock ottimistico perché presuppongo che il dato non cambi durante la lettura; se succede, rifaccio il lavoro, evitando però di acquisire un lock reale il 99% delle volte.
 
 ## Esempio Implementativo

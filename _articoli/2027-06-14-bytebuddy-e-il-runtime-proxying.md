@@ -14,6 +14,7 @@ Creare un sistema di logging automatico che intercetta i metodi di classi servic
 
 ## Analisi Tecnica
 **Problema:** Impossibilità di applicare proxy a classi legacy o final senza modificare il codice sorgente.
+
 **Perché:** Uso ByteBuddy per la generazione di bytecode. Ho scelto questo approccio perché mi permette di manipolare il comportamento delle classi "al volo" con un impatto minimo sulle prestazioni di esecuzione.
 
 ## Esempio Implementativo

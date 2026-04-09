@@ -14,6 +14,7 @@ Evitare che le sessioni utente rimangano in memoria per sempre a causa di notifi
 
 ## Analisi Tecnica
 **Problema:** Accumulo progressivo di oggetti "morti" nell'heap che non possono essere rimossi perché ancora referenziati da un dispatcher globale.
+
 **Perché:** Uso riferimenti deboli (WeakReference). Ho scelto di permettere al GC di fare il suo lavoro anche se ho dimenticato una deregistrazione manuale, garantendo la pulizia automatica dei listener obsoleti.
 
 ## Esempio Implementativo

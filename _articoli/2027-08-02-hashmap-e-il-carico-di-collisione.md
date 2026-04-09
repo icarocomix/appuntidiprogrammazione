@@ -14,6 +14,7 @@ Prevenire rallentamenti critici in una cache in memoria che gestisce milioni di 
 
 ## Analisi Tecnica
 **Problema:** Degradazione delle performance di ricerca nelle mappe dovuta a una cattiva distribuzione degli hash delle chiavi.
+
 **Perché:** Ottimizzo il metodo hashCode. Ho scelto di implementare una distribuzione uniforme per assicurarmi che i dati siano sparsi correttamente tra i bucket della mappa, minimizzando le collisioni.
 
 ## Esempio Implementativo

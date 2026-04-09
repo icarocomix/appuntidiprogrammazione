@@ -14,6 +14,7 @@ Blindare i controller che gestiscono percorsi dinamici o temi grafici selezionab
 
 ## Analisi Tecnica
 **Problema:** Esecuzione di codice remoto (RCE) tramite la manipolazione dei parametri che determinano quale file di template deve essere renderizzato.
+
 **Perché:** Sanitizzazione rigorosa dei path. Ho scelto di mappare gli input utente su una Enum predefinita prima di restituire il nome della stringa al DispatcherServlet.
 
 ## Esempio Implementativo

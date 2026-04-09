@@ -14,6 +14,7 @@ Ripristinare le performance di ricerca su una tabella di messaggistica dove gli 
 
 ## Analisi Tecnica
 **Problema:** Indici massivi che non entrano più in RAM a causa della frammentazione interna, causando swap su disco.
+
 **Perché:** Eseguo il reindex online. Ho scelto la modalità CONCURRENTLY perché non posso permettermi di fermare l'applicazione, ma ho bisogno di un indice compatto per velocizzare i join.
 
 ## Esempio Implementativo

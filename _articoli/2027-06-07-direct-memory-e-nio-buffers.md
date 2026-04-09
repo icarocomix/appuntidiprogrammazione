@@ -14,6 +14,7 @@ Gestire le performance di un server socket ad alto throughput che usa buffer dir
 
 ## Analisi Tecnica
 **Problema:** Memoria di sistema che sparisce nonostante l'heap Java risulti perfettamente stabile e sotto controllo.
+
 **Perché:** Imposto un limite alla memoria diretta. Ho scelto di allineare la Direct Memory alla dimensione dei buffer previsti, garantendo che lo storage off-heap non diventi una mina vagante per la stabilità del server.
 
 ## Esempio Implementativo

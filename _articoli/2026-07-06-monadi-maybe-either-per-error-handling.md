@@ -14,6 +14,7 @@ Validare e processare input utente complessi attraverso una serie di trasformazi
 
 ## Analisi Tecnica
 **Problema:** Codice "spaghetto" dovuto a controlli di errore annidati e gestione incoerente delle eccezioni asincrone.
+
 **Perché:** Uso programmazione funzionale tipizzata. Ho scelto le monadi per rendere il flusso dei dati esplicito e deterministico, eliminando i branch condizionali multipli.
 
 ## Esempio Implementativo

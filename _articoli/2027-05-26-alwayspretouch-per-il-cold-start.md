@@ -14,6 +14,7 @@ Eliminare le micro-latenze iniziali nei nodi di un cluster che vengono accesi du
 
 ## Analisi Tecnica
 **Problema:** Latenze elevate nelle prime transazioni post-avvio a causa del page-faulting dell'OS durante l'espansione dell'heap.
+
 **Perché:** Uso il PreTouch. Ho scelto di pagare un prezzo in fase di boot per garantire che tutta la memoria dichiarata sia fisicamente pronta e "calda" prima che l'applicazione inizi ad accettare traffico.
 
 ## Esempio Implementativo

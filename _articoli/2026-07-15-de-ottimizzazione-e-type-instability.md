@@ -14,6 +14,7 @@ Garantire performance costanti in una libreria di utility usata trasversalmente 
 
 ## Analisi Tecnica
 **Problema:** Jitter nelle performance causato dal compilatore JIT che scarta continuamente il codice ottimizzato per instabilità dei tipi.
+
 **Perché:** Isolo i path di esecuzione per tipo. Ho scelto di creare funzioni specifiche per tipi diversi invece di una funzione "overloaded" generica per mantenere il call site monomorfico.
 
 ## Esempio Implementativo

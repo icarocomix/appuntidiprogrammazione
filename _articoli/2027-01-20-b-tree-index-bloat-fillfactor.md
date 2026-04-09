@@ -14,6 +14,7 @@ Mantenere alte le performance di ricerca su una tabella di "sessioni attive" che
 
 ## Analisi Tecnica
 **Problema:** Il degrado delle performance dovuto alla frammentazione fisica dell'indice che costringe a scansioni di pagine quasi vuote.
+
 **Perché:** Ho scelto di abbassare il fillfactor. In questo modo permetto a Postgres di inserire nuove versioni delle chiavi nella stessa pagina, riducendo l'overhead di riorganizzazione dell'albero.
 
 ## Esempio Implementativo

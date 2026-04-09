@@ -14,6 +14,7 @@ Gestire milioni di nodi in una struttura dati in memoria (come un grafo o una ca
 
 ## Analisi Tecnica
 **Problema:** Eccessivo consumo di memoria dovuto all'allocazione di oggetti wrapper per ogni singola variabile atomica.
+
 **Perché:** Uso gli static field updaters. Ho scelto questa tecnica per mantenere l'atomicità tramite reflection interna (CAS) senza pagare il prezzo dell'allocazione di milioni di piccoli oggetti wrapper.
 
 ## Esempio Implementativo

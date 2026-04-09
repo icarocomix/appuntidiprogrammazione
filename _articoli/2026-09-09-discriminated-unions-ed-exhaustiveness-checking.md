@@ -14,6 +14,7 @@ Modellare lo stato di una richiesta HTTP (Idle, Loading, Success, Error) evitand
 
 ## Analisi Tecnica
 **Problema:** Accesso a proprietà inesistenti in determinati stati (es. leggere data quando loading è true) e bug logici dovuti a casi non gestiti.
+
 **Perché:** Uso il controllo di esaustività. Ho scelto questa tecnica per rendere illegali gli stati impossibili già a livello di compilatore.
 
 ## Esempio Implementativo
