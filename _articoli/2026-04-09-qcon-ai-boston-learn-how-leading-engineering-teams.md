@@ -1,3 +1,12 @@
+---
+layout: post
+title: "QCon AI Boston 2026: Un Approfondimento Sui Sistemi AI Produttivi"
+date: 2026-04-09 12:00:00
+tech: "ia"
+tags: ["ia"]
+link: "https://boston.qcon.ai/"
+---
+
  # QCon AI Boston 2026: Un Approfondimento Sui Sistemi AI Produttivi
 
 Il mondo dell'intelligenza artificiale (AI) sta espandendosi rapidamente e la necessità di rendere i sistemi AI resistenti alla produzione è diventata una priorità fondamentale per i professionisti del settore IT. Per aiutare a risolvere questo problema, il QCon AI Boston 2026 si propone di fornire un'occasione per imparare dai leader dell'industria sulle migliori pratiche per costruire sistemi AI che resistano alla produzione.
