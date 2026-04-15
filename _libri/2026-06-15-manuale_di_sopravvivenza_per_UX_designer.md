@@ -7,8 +7,8 @@ sintesi: >
 date: 2026-04-14 16:51:55
 tech: "Informatica"
 tags: [UX Design, User Experience, Matteo Di Pascale, Web Design, Business Aware Design, User-Centered Design, Product Management, Design Thinking]
-link: "https://www.amazon.it/Manuale-sopravvivenza-UX-designer-pratica/dp/8836013289"
-link_img: "https://m.media-amazon.com/images/I/718yFwD94kL._AC_UF1000,1000_QL80_.jpg"
+link: "https://amzn.eu/d/05Id7U9k"
+link_img: "https://m.media-amazon.com/images/I/61yzI+B4sYL._SY466_.jpg"
 
 ---
 

@@ -7,8 +7,8 @@ sintesi: >
 date: 2026-04-14 17:25:10
 tech: "Saggistica"
 tags: [Edward de Bono, Creatività, Pensiero Laterale, Problem Solving, Psicologia Cognitiva, Innovazione, Formazione, Design]
-link: "https://www.amazon.it/Creatività-pensiero-laterale-Edward-Bono/dp/8817126866"
-link_img: "https://m.media-amazon.com/images/I/61M63eZ+XGL._AC_UF1000,1000_QL80_.jpg"
+link: "https://amzn.eu/d/0aPCJfTK"
+link_img: "https://m.media-amazon.com/images/I/81QmFSb6bHL._SY466_.jpg"
 ---
 
 ## Creatività e pensiero laterale

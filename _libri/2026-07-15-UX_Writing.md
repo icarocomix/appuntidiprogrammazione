@@ -7,8 +7,8 @@ sintesi: >
 date: 2026-04-14 17:10:00
 tech: "Informatica"
 tags: [UX Writing, Microcopy, Serena Giust, Design Thinking, User Experience, Content Strategy, Digital Communication]
-link: "https://www.hoeplieditore.it/libro/ux-writing/9788820391140.html"
-link_img: "https://m.media-amazon.com/images/I/719h-nFfC4L._AC_UF1000,1000_QL80_.jpg"
+link: "https://amzn.eu/d/09vREaGF"
+link_img: "https://m.media-amazon.com/images/I/61-0koybhNL._SY466_.jpg"
 
 ---
 
