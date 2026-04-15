@@ -1,6 +1,7 @@
 ---
 layout: libro
 title: "Sei cappelli per pensare. Manuale pratico per ragionare con creatività ed efficaci"
+autore: "Edward de Bono"
 sintesi: >
   Un metodo rivoluzionario per trasformare il pensiero confuso in un processo strutturato ed efficace attraverso l'uso di ruoli simbolici. 
   Abbandonando la dialettica dello scontro, Edward de Bono insegna come esplorare ogni problema da sei prospettive diverse per prendere decisioni migliori in meno tempo.

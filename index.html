@@ -73,6 +73,9 @@ title: Home
 
                     <h2 class="post-title">
                         <a href="{{ item.url | relative_url }}">{{ item.title }}</a>
+                        {% if item.layout == 'libro' %}
+                        <span class="autore">&nbsp; (di {{ item.autore }})</span>
+                        {% endif %}
                     </h2>
 
                     <p class="post-sintesi">

@@ -1,6 +1,7 @@
 ---
 layout: libro
 title: "UX Writing. Micro testi, macro impatto"
+autore: "Serena Giust"
 sintesi: >
   Un manuale essenziale per scoprire come le parole, anche le più piccole, possano trasformare radicalmente l'esperienza digitale. 
   Serena Giust insegna a progettare micro-testi empatici e funzionali che guidano l'utente verso i propri obiettivi migliorando i risultati di business.
@@ -9,7 +10,6 @@ tech: "Informatica"
 tags: [UX Writing, Microcopy, Serena Giust, Design Thinking, User Experience, Content Strategy, Digital Communication]
 link: "https://amzn.eu/d/09vREaGF"
 link_img: "https://m.media-amazon.com/images/I/61-0koybhNL._SY466_.jpg"
-
 ---
 
 ## UX Writing. Micro testi, macro impatto

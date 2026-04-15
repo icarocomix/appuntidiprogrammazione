@@ -1,6 +1,7 @@
 ---
 layout: libro
 title: "Manuale di sopravvivenza per UX designer"
+autore: "Matteo Di Pascale"
 sintesi: >
   Un approccio pragmatico e diretto per barcamenarsi nel mondo del design dell'esperienza utente, unendo il buon senso alla strategia di business.
   Matteo Di Pascale demistifica la disciplina con illustrazioni ironiche e consigli pronti all'uso per non soccombere alla complessità della teoria.
