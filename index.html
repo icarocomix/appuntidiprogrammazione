@@ -40,16 +40,21 @@ title: Home
         {% assign oggi_str = site.time | date: '%Y-%m-%d' %}
 
         {% comment %}
-            Recupero le collection. Se non esistono, 'where' restituirà un array vuoto
-            invece di un valore 'nil', rendendo il concat sicuro.
+            Inizializziamo le liste partendo direttamente dalle collection.
+            Il filtro 'sort' garantisce che l'oggetto sia trattato come array.
         {% endcomment %}
-        {% assign articoli = site.articoli | where: "output", true %}
-        {% assign libri = site.libri | where: "output", true %}
+        {% assign articoli = site.articoli | sort: 'date' %}
+        {% assign libri = site.libri | sort: 'date' %}
 
         {% comment %}
-            Ora il concat è sicuro perché operiamo su due array certi.
+            Se la collection 'libri' non esiste, site.libri è nil. 
+            Dobbiamo assicurarci di concatenare solo se libri non è vuoto.
         {% endcomment %}
-        {% assign tutti_i_contenuti = articoli | concat: libri | sort: 'date' | reverse %}
+        {% if site.libri %}
+            {% assign tutti_i_contenuti = articoli | concat: libri | sort: 'date' | reverse %}
+        {% else %}
+            {% assign tutti_i_contenuti = articoli | sort: 'date' | reverse %}
+        {% endif %}
 
         <div class="post-grid" id="post-grid">
             {% for item in tutti_i_contenuti %}
