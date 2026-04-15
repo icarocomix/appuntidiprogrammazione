@@ -39,7 +39,17 @@ title: Home
 
         {% assign oggi_str = site.time | date: '%Y-%m-%d' %}
 
-        {% assign tutti_i_contenuti = site.articoli | concat: site.libri | sort: 'date' | reverse %}
+        {% comment %}
+            Inizializzo array vuoti per evitare errori se le collection non esistono
+        {% endcomment %}
+        {% assign articoli = site.articoli | default: Array.new %}
+        {% assign libri = site.libri | default: Array.new %}
+
+        {% comment %}
+            Unisco le liste. Usando 'default: Array.new' (o semplicemente assicurandoci 
+            che siano array) il concat non fallirà più.
+        {% endcomment %}
+        {% assign tutti_i_contenuti = articoli | concat: libri | sort: 'date' | reverse %}
 
         <div class="post-grid" id="post-grid">
             {% for item in tutti_i_contenuti %}
@@ -54,7 +64,7 @@ title: Home
                 >
                     <div class="post-meta">
                         {% if item.layout == 'libro' %}
-                            LIBRO &nbsp;·&nbsp; {{ item.date | date: "%d/%m/%Y" }}
+                            📚 LIBRO &nbsp;·&nbsp; {{ item.date | date: "%d/%m/%Y" }}
                         {% else %}
                             {{ item.tech | upcase }} &nbsp;·&nbsp; {{ item.date | date: "%d/%m/%Y" }}
                         {% endif %}
@@ -64,7 +74,13 @@ title: Home
                         <a href="{{ item.url | relative_url }}">{{ item.title }}</a>
                     </h2>
 
-                    <p class="post-sintesi">{{ item.sintesi | truncate: 160 }}</p>
+                    <p class="post-sintesi">
+                        {% if item.sintesi %}
+                            {{ item.sintesi | strip_html | truncate: 160 }}
+                        {% else %}
+                            {{ item.content | strip_html | truncate: 160 }}
+                        {% endif %}
+                    </p>
                 </article>
                 {% endif %}
             {% endfor %}
