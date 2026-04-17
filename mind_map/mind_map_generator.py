@@ -48,14 +48,14 @@ OV_CENTER_R  = 1.4
 # =============================================================================
 # METRICHE FOCUS (vista singola categoria, canvas 1080x1080)
 # =============================================================================
-FO_LINE_H    = 0.80
-FO_ROW_PAD   = 0.60
-FO_KEY_WRAP  = 14
-FO_DESC_WRAP = 32
-FO_CAT_BOX_W = 8.0    # era 5.0 — box categoria più grande e leggibile
-FO_CAT_BOX_H = 2.8    # era 1.6
-FO_PILL_W    = 7.0    # era 4.2 — pill chiave più larga
-FO_DESC_W    = 13.0   # era 7.5 — box descrizione più largo
+FO_LINE_H    = 1.10   
+FO_ROW_PAD   = 1.50   
+FO_KEY_WRAP  = 13
+FO_DESC_WRAP = 24     # Leggermente ridotto per sicurezza margini
+FO_CAT_BOX_W = 12.0   # Incrementato da 10 a 12
+FO_CAT_BOX_H = 4.5    # Incrementato da 3.2 a 4.5 per ospitare 2-3 righe
+FO_PILL_W    = 8.5    
+FO_DESC_W    = 14.0   # Bilanciato per evitare clipping a destra
 FO_LIMIT     = 40.0
 FO_CENTER    = FO_LIMIT / 2
 
@@ -261,8 +261,7 @@ def _fo_item_h(key: str, desc: str) -> float:
 
 def render_focus(cat: dict, output_path: str, dpi: int = 100):
     """
-    Genera il PNG focalizzato su una singola categoria.
-    Canvas logico 40x40, esportato a 1080x1080 px (IMG_SIZE_INCH=10.8, dpi=100).
+    Genera il PNG con box categoria più grande e spazioso.
     """
     IMG = 10.8
     fig, ax = plt.subplots(figsize=(IMG, IMG))
@@ -276,43 +275,37 @@ def render_focus(cat: dict, output_path: str, dpi: int = 100):
     items = cat.get("items", [])
     name  = cat.get("name", "")
 
-    # --- Calcolo scala ---
-    # Ho scalato in base all'altezza totale degli item + gap tra essi.
-    # Il margine verticale è 6 unità (3 sopra + 3 sotto).
     total_items_h = sum(_fo_item_h(k, d) for k, d in items)
-    available_h   = FO_LIMIT - 6.0
+    available_h   = FO_LIMIT - 4.0
     scale = min(1.0, available_h / total_items_h) if total_items_h > 0 else 1.0
 
-    # --- Box categoria al centro del canvas ---
-    # Ho posizionato il box categoria a sinistra per lasciare spazio agli item.
-    # Con FO_CAT_BOX_W=8, FO_PILL_W=7, FO_DESC_W=13 la larghezza totale è circa
-    # 8 + 1.5 + 7 + 1.0 + 13 = 30.5 su 40 unità → margini di 4.75 per lato.
-    cx_cat = 8.5
+    # Posizionamento (cx_cat a 7.5 per bilanciare il box più largo)
+    cx_cat = 7.5 
     cy_cat = FO_CENTER
 
+    # Box Categoria (Wrap impostato a 12 per forzare le due righe se necessario)
     ax.add_patch(FancyBboxPatch(
         (cx_cat - FO_CAT_BOX_W/2, cy_cat - FO_CAT_BOX_H/2),
         FO_CAT_BOX_W, FO_CAT_BOX_H,
         boxstyle="round,pad=0.20",
         facecolor=color, edgecolor=_darken(color), linewidth=2.5, zorder=3
     ))
+    
+    # Ho mantenuto il font a 18, ma ora ha molto più spazio intorno
     ax.text(cx_cat, cy_cat, "\n".join(_wrap(name, 12)),
-            ha="center", va="center", fontsize=14, color="white",
-            fontweight="bold", fontfamily=FONT, zorder=4, linespacing=1.4)
+            ha="center", va="center", fontsize=18, color="white",
+            fontweight="bold", fontfamily=FONT, zorder=4, linespacing=1.3)
 
     if not items:
-        plt.savefig(output_path, dpi=dpi, bbox_inches="tight",
-                    facecolor=BG_COLOR, pad_inches=0.3)
+        plt.savefig(output_path, dpi=dpi, facecolor=BG_COLOR)
         plt.close()
         return
 
-    # --- Posizioni X degli item (a destra del box categoria) ---
-    x_pill = cx_cat + FO_CAT_BOX_W/2 + 1.5 + FO_PILL_W/2    # era gap 1.2
-    x_desc = x_pill + FO_PILL_W/2 + 1.0 + FO_DESC_W/2        # era gap 0.6
+    # Ricalcolo distanze orizzontali per i nuovi ingombri
+    x_pill = cx_cat + FO_CAT_BOX_W/2 + 1.8 + FO_PILL_W/2
+    x_desc = x_pill + FO_PILL_W/2 + 1.0 + FO_DESC_W/2
 
-    # --- Calcolo blocco verticale degli item centrato su cy_cat ---
-    total_scaled = total_items_h * scale
-    y_cursor     = cy_cat + total_scaled / 2
+    y_cursor = cy_cat + (total_items_h * scale) / 2
 
     for key, desc in items:
         key_lines  = _wrap(key,  FO_KEY_WRAP)
@@ -322,41 +315,34 @@ def render_focus(cat: dict, output_path: str, dpi: int = 100):
         yc         = y_cursor - row_h / 2
 
         # Pill chiave
-        pill_h = len(key_lines) * FO_LINE_H * scale + 0.25
+        pill_h = len(key_lines) * FO_LINE_H * scale + 0.35
         ax.add_patch(FancyBboxPatch(
             (x_pill - FO_PILL_W/2, yc - pill_h/2), FO_PILL_W, pill_h,
-            boxstyle="round,pad=0.1",
-            facecolor=ITEM_BG_COLOR, edgecolor=color, linewidth=1.5, zorder=3
+            boxstyle="round,pad=0.12",
+            facecolor=ITEM_BG_COLOR, edgecolor=color, linewidth=1.8, zorder=3
         ))
         ax.text(x_pill, yc, "\n".join(key_lines),
-                ha="center", va="center", fontsize=10,
+                ha="center", va="center", fontsize=13,
                 color=CMD_TEXT_COLOR, fontfamily=FONT, zorder=4, linespacing=1.2)
 
         # Box descrizione
-        desc_h = len(desc_lines) * FO_LINE_H * scale + 0.25
+        desc_h = len(desc_lines) * FO_LINE_H * scale + 0.35
         ax.add_patch(FancyBboxPatch(
             (x_desc - FO_DESC_W/2, yc - desc_h/2), FO_DESC_W, desc_h,
-            boxstyle="round,pad=0.1",
+            boxstyle="round,pad=0.12",
             facecolor=ITEM_BG_COLOR, edgecolor=_darken(color, 0.85),
             linewidth=1.0, zorder=3
         ))
         ax.text(x_desc, yc, "\n".join(desc_lines),
-                ha="center", va="center", fontsize=9.5,
+                ha="center", va="center", fontsize=12,
                 color=ITEM_LABEL_COLOR, fontfamily=FONT, zorder=4, linespacing=1.2)
 
-        # Linee: categoria -> pill -> desc
-        _conn(ax, cx_cat + FO_CAT_BOX_W/2, yc, x_pill - FO_PILL_W/2, yc, lw=1.2)
+        _conn(ax, cx_cat + FO_CAT_BOX_W/2, yc, x_pill - FO_PILL_W/2, yc, lw=1.3)
         _conn(ax, x_pill + FO_PILL_W/2,    yc, x_desc - FO_DESC_W/2, yc, lw=1.0)
 
         y_cursor -= row_h
 
-    # Titolo in alto a sinistra
-    ax.text(1.0, FO_LIMIT - 0.8, name,
-            fontsize=10, color="white", fontweight="bold",
-            va="top", fontfamily=FONT, alpha=0.7)
-
-    plt.savefig(output_path, dpi=dpi, bbox_inches="tight",
-                facecolor=BG_COLOR, pad_inches=0.3)
+    plt.savefig(output_path, dpi=dpi, facecolor=BG_COLOR)
     plt.close()
 
 
