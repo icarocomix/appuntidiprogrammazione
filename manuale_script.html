@@ -33,113 +33,126 @@
         <button onclick="toggleTheme()" class="theme-toggle" aria-label="Cambia tema">🌓</button>
     </header>
 
-    <p>Manuale d’Uso: Pipeline Generazione Notizie e Formattazione Codice
-Questo documento descrive gli script Python e Bash utilizzati per la raccolta automatizzata di notizie tecnologiche, la generazione di articoli e la formattazione professionale del codice sorgente.</p>
+    <p>Hai ragione, ho interrotto bruscamente la formattazione. Ecco il documento completo, strutturato in modo più leggibile e professionale, pronto per essere salvato come <code class="language-plaintext highlighter-rouge">README.md</code> o <code class="language-plaintext highlighter-rouge">MANUALE.md</code>.</p>
 
-<p>Indice degli Script
-avvia_generazione_notizie.sh (Entry point)</p>
+<hr />
 
-<p>genera_notizie.py (Core Engine)</p>
+<h1 id="-manuale-operativo-script-python--bash">📘 Manuale Operativo Script Python &amp; Bash</h1>
 
-<p>code_formatter.py (Motore di formattazione)</p>
+<p>Questo manuale descrive le funzionalità e le modalità di utilizzo della suite di script per la gestione del blog tecnico e la generazione automatizzata di contenuti.</p>
 
-<p>excel_to_articoli.py (Importatore Excel)</p>
+<h2 id="-script-di-automazione-e-core">🛠 Script di Automazione e Core</h2>
 
-<p>formatta_articoli.py (Refactoring testo)</p>
+<h3 id="1-avvia_generazione_notiziesh">1. <code class="language-plaintext highlighter-rouge">avvia_generazione_notizie.sh</code></h3>
+<p>È l’entry-point principale del sistema. Automatizza l’intero ambiente di lavoro prima di avviare la generazione.</p>
+<ul>
+  <li><strong>Cosa fa:</strong> Verifica lo stato di <strong>Ollama</strong>, controlla la presenza dei modelli (<code class="language-plaintext highlighter-rouge">mistral</code>, <code class="language-plaintext highlighter-rouge">qwen2.5-coder</code>), imposta le variabili d’ambiente per Python e avvia la pipeline salvando i log in tempo reale.</li>
+  <li><strong>Come si usa:</strong>
+    <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><table class="rouge-table"><tbody><tr><td class="rouge-gutter gl"><pre class="lineno">1
+</pre></td><td class="rouge-code"><pre>  ./avvia_generazione_notizie.sh
+</pre></td></tr></tbody></table></code></pre></div>    </div>
+  </li>
+  <li><strong>Parametri:</strong> Nessuno (configurazione interna tramite variabili <code class="language-plaintext highlighter-rouge">PROJECT_DIR</code> e <code class="language-plaintext highlighter-rouge">LOG_FILE</code>).</li>
+</ul>
 
-<p>formatta_codice_articoli.py (Refactoring blocchi codice)</p>
+<h3 id="2-genera_notiziepy">2. <code class="language-plaintext highlighter-rouge">genera_notizie.py</code></h3>
+<p>Il motore centrale di intelligenza artificiale per il recupero di news.</p>
+<ul>
+  <li><strong>Cosa fa:</strong> Esegue scraping, trascrizione video (Whisper) e analisi contenuti per generare articoli e slide.</li>
+  <li><strong>Come si usa:</strong>
+    <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><table class="rouge-table"><tbody><tr><td class="rouge-gutter gl"><pre class="lineno">1
+</pre></td><td class="rouge-code"><pre>  pipenv run python genera_notizie.py <span class="o">[</span>opzioni]
+</pre></td></tr></tbody></table></code></pre></div>    </div>
+  </li>
+  <li><strong>Parametri:</strong>
+    <ul>
+      <li><code class="language-plaintext highlighter-rouge">--date YYYY-MM-DD</code>: Forza una data specifica (default: oggi).</li>
+      <li><code class="language-plaintext highlighter-rouge">--regenerate</code>: Rigenera le immagini/slide senza scaricare nuovi dati.</li>
+      <li><code class="language-plaintext highlighter-rouge">--fix-frontmatter</code>: Corregge solo le intestazioni YAML dei file MD.</li>
+      <li><code class="language-plaintext highlighter-rouge">--libri</code>: Genera slide dedicate ai consigli di lettura dalla cartella <code class="language-plaintext highlighter-rouge">_libri</code>.</li>
+    </ul>
+  </li>
+</ul>
 
-<p>debug_formatter.py (Utility di test)</p>
+<hr />
 
-<p>avvia_generazione_notizie.sh
-Descrizione: Script Bash di automazione principale. Gestisce l’ambiente di esecuzione: verifica che Ollama sia attivo, controlla la presenza dei modelli LLM necessari (mistral, qwen2.5-coder), configura il buffering di Python e avvia la pipeline principale salvando i log.</p>
+<h2 id="-script-di-formattazione-codice">🖋 Script di Formattazione Codice</h2>
 
-<p>Come si usa:</p>
+<h3 id="3-code_formatterpy">3. <code class="language-plaintext highlighter-rouge">code_formatter.py</code></h3>
+<p>Il motore logico di formattazione multi-linguaggio.</p>
+<ul>
+  <li><strong>Cosa fa:</strong> Normalizza l’indentazione, gestisce i commenti a blocco e rifinisce il codice tramite <strong>Prettier</strong> e <strong>Ollama</strong>. Supporta Java, JS, SQL e linguaggi di markup.</li>
+  <li><strong>Come si usa:</strong>
+    <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><table class="rouge-table"><tbody><tr><td class="rouge-gutter gl"><pre class="lineno">1
+</pre></td><td class="rouge-code"><pre>  python code_formatter.py &lt;file_input&gt;
+</pre></td></tr></tbody></table></code></pre></div>    </div>
+  </li>
+  <li><strong>Parametri:</strong>
+    <ul>
+      <li><code class="language-plaintext highlighter-rouge">&lt;file_input&gt;</code> (<strong>Obbligatorio</strong>): Percorso del file sorgente da processare.</li>
+    </ul>
+  </li>
+</ul>
 
-<p>Bash
-./avvia_generazione_notizie.sh
-Parametri: Nessuno. Le configurazioni (percorsi, nomi modelli) sono cablate all’interno delle variabili PROJECT_DIR e LOG_FILE.</p>
+<h3 id="4-formatta_codice_articolipy">4. <code class="language-plaintext highlighter-rouge">formatta_codice_articoli.py</code></h3>
+<p>Versione “bulk” (massiva) del formattatore per il blog.</p>
+<ul>
+  <li><strong>Cosa fa:</strong> Scansiona i file Markdown, individua i blocchi di codice dentro la sezione “Esempio Implementativo” e li sovrascrive con la versione formattata correttamente.</li>
+  <li><strong>Come si usa:</strong>
+    <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><table class="rouge-table"><tbody><tr><td class="rouge-gutter gl"><pre class="lineno">1
+</pre></td><td class="rouge-code"><pre>  python formatta_codice_articoli.py
+</pre></td></tr></tbody></table></code></pre></div>    </div>
+  </li>
+  <li><strong>Parametri:</strong> Nessuno. Opera sulla cartella <code class="language-plaintext highlighter-rouge">_articoli/</code> e produce l’output in <code class="language-plaintext highlighter-rouge">_nuovi_articoli/</code>.</li>
+</ul>
 
-<p>genera_notizie.py
-Descrizione:
-Il cuore del sistema. Esegue lo scraping di siti tecnologici, trascrive video (tramite Whisper), analizza i contenuti tramite LLM e genera articoli in formato Markdown pronti per Jekyll. Include logiche per la creazione di palette colori tech e gestione della cache degli URL.</p>
+<hr />
 
-<p>Come si usa:</p>
+<h2 id="-script-di-importazione-e-refactoring-testi">📊 Script di Importazione e Refactoring Testi</h2>
 
-<p>Bash
-pipenv run python genera_notizie.py [opzioni]
-Parametri Facoltativi:</p>
+<h3 id="5-excel_to_articolipy">5. <code class="language-plaintext highlighter-rouge">excel_to_articoli.py</code></h3>
+<p>Importatore dai fogli di calcolo.</p>
+<ul>
+  <li><strong>Cosa fa:</strong> Converte righe Excel in file Markdown per Jekyll. Gestisce la sanificazione dei caratteri speciali di Excel (<code class="language-plaintext highlighter-rouge">\xa0</code>, <code class="language-plaintext highlighter-rouge">\r\n</code>) e formatta il codice integrato.</li>
+  <li><strong>Come si usa:</strong>
+    <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><table class="rouge-table"><tbody><tr><td class="rouge-gutter gl"><pre class="lineno">1
+</pre></td><td class="rouge-code"><pre>  python excel_to_articoli.py
+</pre></td></tr></tbody></table></code></pre></div>    </div>
+  </li>
+  <li><strong>Parametri:</strong> Nessuno. Richiede una cartella <code class="language-plaintext highlighter-rouge">excel_input/</code> con i file <code class="language-plaintext highlighter-rouge">.xlsx</code>.</li>
+</ul>
 
-<p>–date YYYY-MM-DD: Specifica una data di sessione (default: oggi).</p>
+<h3 id="6-formatta_articolipy">6. <code class="language-plaintext highlighter-rouge">formatta_articoli.py</code></h3>
+<p>Refactoring stilistico dei testi.</p>
+<ul>
+  <li><strong>Cosa fa:</strong> Pulisce i tag “Problema:” e “Perché:”, assicurando che siano in grassetto e con la corretta spaziatura tra i paragrafi per una leggibilità ottimale.</li>
+  <li><strong>Come si usa:</strong>
+    <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><table class="rouge-table"><tbody><tr><td class="rouge-gutter gl"><pre class="lineno">1
+</pre></td><td class="rouge-code"><pre>  python formatta_articoli.py
+</pre></td></tr></tbody></table></code></pre></div>    </div>
+  </li>
+  <li><strong>Parametri:</strong> Nessuno. Processa i file nella cartella <code class="language-plaintext highlighter-rouge">_articoli/</code>.</li>
+</ul>
 
-<p>–regenerate: Rigenera le immagini per i file MD esistenti senza scaricare nuove notizie.</p>
+<hr />
 
-<p>–fix-frontmatter: Aggiorna solo i metadati YAML dei file.</p>
+<h2 id="-utility-di-diagnostica">🔍 Utility di Diagnostica</h2>
 
-<p>–libri: Modalità speciale per generare slide “consigli di lettura” da file in _libri/.</p>
-
-<p>code_formatter.py
-Descrizione:
-Formattatore multi-linguaggio (Java, JS, SQL, HTML). Utilizza una logica mista: regole regex custom per l’indentazione, integrazione con Prettier per la rifinitura estetica e supporto a Ollama (LLM) per risolvere ambiguità strutturali (es. codice attaccato ai commenti).</p>
-
-<p>Come si usa:</p>
-
-<p>Bash
-python code_formatter.py <file_input>
-Parametri Obbligatori:</file_input></p>
-
-<file_input>: Percorso del file di testo/codice da formattare.
-
-Output: Stampa a video il codice formattato secondo gli standard definiti.
-
-excel_to_articoli.py
-Descrizione:
-Converte dataset esportati in Excel (.xlsx) in articoli Markdown per il blog. Gestisce la pulizia dei caratteri speciali di Excel, mappa i linguaggi di programmazione e utilizza code_formatter.py per formattare gli esempi di codice trovati nelle celle.
-
-Come si usa:
-
-Bash
-python excel_to_articoli.py
-Prerequisiti: I file devono essere presenti nella cartella excel_input/.
-
-Output: Genera file .md nella cartella _articoli/.
-
-formatta_articoli.py
-Descrizione:
-Script di rifinitura per i testi degli articoli. Cerca le parole chiave "Problema:" e "Perché:", le normalizza (rimuovendo formattazioni errate o grassetti multipli) e le riformatta correttamente con grassetti standard e spaziature (newline) adeguate.
-
-Come si usa:
-
-Bash
-python formatta_articoli.py
-Parametri: Agisce automaticamente sulla cartella _articoli/.
-
-formatta_codice_articoli.py
-Descrizione:
-Esegue un refactoring massivo di tutti i blocchi di codice contenuti nei file Markdown. Estrae il codice tra i tag ```, lo passa al motore di code_formatter.py e sovrascrive il file con la versione indentata e pulita.
-
-Come si usa:
-
-Bash
-python formatta_codice_articoli.py
-Configurazione: Legge da _articoli/ e scrive i risultati in _nuovi_articoli/.
-
-debug_formatter.py
-Descrizione:
-Strumento di diagnostica per lo sviluppo del formattatore. Mostra il processo di trasformazione del codice in tre step: input grezzo, scomposizione in token/linee (debug lista) e output finale.
-
-Come si usa:
-
-Bash
-python debug_formatter.py <file_input> [linguaggio]
-Parametri Obbligatori:
-
-<file_input>: Il file di test.
-
-Parametri Facoltativi:
-
-[linguaggio]: Specifica la tecnologia (es. java, sql, html). Default: java.
-</file_input></file_input></file_input>
+<h3 id="7-debug_formatterpy">7. <code class="language-plaintext highlighter-rouge">debug_formatter.py</code></h3>
+<ul>
+  <li><strong>Cosa fa:</strong> Analizza passo-passo come il codice viene interpretato dal sistema (Step 1: Raw, Step 2: List Debug, Step 3: Final Output).</li>
+  <li><strong>Come si usa:</strong>
+    <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><table class="rouge-table"><tbody><tr><td class="rouge-gutter gl"><pre class="lineno">1
+</pre></td><td class="rouge-code"><pre>  python debug_formatter.py &lt;file_input&gt; <span class="o">[</span>tecnologia]
+</pre></td></tr></tbody></table></code></pre></div>    </div>
+  </li>
+  <li><strong>Parametri:</strong>
+    <ul>
+      <li><code class="language-plaintext highlighter-rouge">&lt;file_input&gt;</code> (<strong>Obbligatorio</strong>): File di testo/codice da testare.</li>
+      <li><code class="language-plaintext highlighter-rouge">[tecnologia]</code> (Facoltativo): es. <code class="language-plaintext highlighter-rouge">java</code>, <code class="language-plaintext highlighter-rouge">sql</code>, <code class="language-plaintext highlighter-rouge">html</code>. Default: <code class="language-plaintext highlighter-rouge">java</code>.</li>
+    </ul>
+  </li>
+</ul>
 
 
     <footer class="main-footer">
