@@ -1,39 +1,244 @@
 <!DOCTYPE html>
-<html lang="it" data-theme="dark">
+<!--
+    Ho impostato data-theme="dark" come default sull'<html> invece di class="dark".
+    Il mio CSS custom usa il selettore [data-theme="dark/light"], mentre Tailwind
+    usa la classe 'dark'. Lo script anti-FOUC qui sotto sincronizza entrambi
+    leggendo localStorage, così nessuno dei due sistemi resta cieco all'altro.
+-->
+<html lang="it" data-theme="dark" class="dark">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Design System Document: The Lucid Console — DevLog</title>
     <meta name="description" content="Hub tecnico per appunti di programmazione, analisi di problemi reali  e soluzioni implementative in ambito Spring Boot, Java e Web Dev.">
+
+    <!-- Font: Space Grotesk (headlines), Inter (body), JetBrains Mono (code) -->
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300..700&family=Inter:wght@300..700&family=JetBrains+Mono:wght@400..700&display=swap" rel="stylesheet">
+    <!-- Material Symbols per le icone nella sidebar e nella navbar -->
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet">
+
+    <!--
+        Ho incluso il foglio di stile custom DOPO i font e PRIMA dello script anti-FOUC.
+        Il CSS definisce le variabili --bg-primary, --text-main, ecc. usate dai layout
+        di post e libro, e tutto il syntax highlighting Rouge. Senza questo link,
+        le pagine articolo erano prive di qualsiasi stile personalizzato.
+    -->
     <link rel="stylesheet" href="/appuntidiprogrammazione/assets/css/style.css">
 
+    <!--
+        Anti-FOUC (Flash Of Unstyled Content): applico il tema PRIMA che il browser
+        disegni qualsiasi elemento. Lo script è inline e bloccante di proposito.
+        Leggo la preferenza da localStorage; se assente, uso 'dark' come default.
+        Sincronizzo sia data-theme (selettore CSS custom) sia la classe 'dark'
+        (selettore darkMode Tailwind) per mantenere entrambi i sistemi allineati.
+    -->
     <script>
-        /*
-         * Applico il tema PRIMA del rendering per evitare il flash di contenuto
-         * (FOUC). Lo script è inline e bloccante di proposito: deve girare
-         * prima che il browser disegni qualsiasi elemento.
-         */
         (function() {
             var saved = localStorage.getItem('theme') || 'dark';
             document.documentElement.setAttribute('data-theme', saved);
+            if (saved === 'dark') {
+                document.documentElement.classList.add('dark');
+            } else {
+                document.documentElement.classList.remove('dark');
+            }
         })();
     </script>
 </head>
-<body>
+<body class="antialiased flex flex-col min-h-screen" style="background-color: var(--bg-primary); color: var(--text-main); font-family: 'Inter', sans-serif;">
 
-    <header class="main-header">
-        <div class="logo" onclick="window.location.href='/appuntidiprogrammazione/'">
-            APPUNTI DI <span>PROGRAMMAZIONE</span>
+    <!-- ===== TOP NAVBAR ===== -->
+    <nav class="main-header flex justify-between items-center px-8 h-16 w-full backdrop-blur-xl sticky top-0 z-50"
+         style="background-color: rgba(10,10,10,0.92); border-bottom: 1px solid var(--border-color);">
+
+        <!-- Logo: torna alla home via relative_url per compatibilità con baseurl -->
+        <a class="logo font-mono font-bold"
+           href="/appuntidiprogrammazione/"
+           style="color: var(--accent-primary); font-family: 'JetBrains Mono', monospace; letter-spacing: 0.05em;">
+            APPUNTI DI <span style="color: var(--text-main);">PROGRAMMAZIONE</span>
+        </a>
+
+        <div class="flex items-center space-x-4">
+            <!--
+                Ho aggiunto onclick="toggleTheme()" al pulsante: nel vecchio default
+                era presente, nel nuovo era stato rimosso e il pulsante era muto.
+                La funzione è definita in fondo al body, prima della chiusura </html>.
+            -->
+            <button onclick="toggleTheme()"
+                    class="theme-toggle"
+                    aria-label="Cambia tema"
+                    style="background: var(--bg-tertiary); border: 1px solid var(--border-color); border-radius: 4px; padding: 6px 12px; cursor: pointer; color: var(--text-main); transition: var(--transition);">
+                🌓
+            </button>
         </div>
+    </nav>
 
-        <!-- 
-            Il pulsante aggiorna l'attributo data-theme sull'<html> e
-            persiste la scelta nel localStorage per le sessioni future.
-        -->
-        <button onclick="toggleTheme()" class="theme-toggle" aria-label="Cambia tema">🌓</button>
-    </header>
+    <!-- ===== LAYOUT PRINCIPALE: sidebar sinistra + canvas contenuto ===== -->
+    <div class="flex flex-grow w-full max-w-screen-xl mx-auto mt-8 mb-16 px-4 sm:px-8" style="gap: 3rem; align-items: flex-start;">
 
-    <h1 id="design-system-document-the-lucid-console">Design System Document: The Lucid Console</h1>
+        <!-- Sidebar sinistra: visibile solo su schermi >= lg (1024px) -->
+        <aside class="hidden lg:flex flex-col flex-shrink-0"
+               style="width: 220px; position: sticky; top: 5.5rem; border-right: 1px solid var(--border-color); padding-right: 1.5rem;">
+
+            <div style="margin-bottom: 1.5rem; padding-bottom: 1rem; border-bottom: 1px solid var(--border-color);">
+                <p class="font-mono" style="font-size: 0.65rem; text-transform: uppercase; color: var(--text-dim); margin-bottom: 0.25rem;">System Operator</p>
+                <h2 class="font-mono" style="font-size: 1rem; font-weight: 900; color: var(--accent-primary); letter-spacing: -0.02em;">CONSOLE_ROOT</h2>
+                <p class="font-mono" style="font-size: 0.65rem; color: var(--text-dim);">v4.2.0-stable</p>
+            </div>
+
+            <nav style="flex: 1;">
+                <ul style="list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 2px; font-family: 'JetBrains Mono', monospace; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.05em;">
+                    <li>
+                        <a href="/appuntidiprogrammazione/"
+                           style="display: flex; align-items: center; gap: 0.5rem; padding: 0.6rem 0.75rem; color: var(--accent-primary); border-radius: 4px; transition: var(--transition);"
+                           onmouseover="this.style.background='var(--bg-tertiary)'"
+                           onmouseout="this.style.background='transparent'">
+                            <span class="material-symbols-outlined" style="font-size: 1rem;">terminal</span>
+                            Latest Logs
+                        </a>
+                    </li>
+                    <li>
+                        <a href="#"
+                           style="display: flex; align-items: center; gap: 0.5rem; padding: 0.6rem 0.75rem; color: var(--text-dim); border-radius: 4px; transition: var(--transition);"
+                           onmouseover="this.style.color='var(--accent-primary)'; this.style.background='var(--bg-tertiary)'"
+                           onmouseout="this.style.color='var(--text-dim)'; this.style.background='transparent'">
+                            <span class="material-symbols-outlined" style="font-size: 1rem;">menu_book</span>
+                            Book Reviews
+                        </a>
+                    </li>
+                    <li>
+                        <a href="#"
+                           style="display: flex; align-items: center; gap: 0.5rem; padding: 0.6rem 0.75rem; color: var(--text-dim); border-radius: 4px; transition: var(--transition);"
+                           onmouseover="this.style.color='var(--accent-primary)'; this.style.background='var(--bg-tertiary)'"
+                           onmouseout="this.style.color='var(--text-dim)'; this.style.background='transparent'">
+                            <span class="material-symbols-outlined" style="font-size: 1rem;">star</span>
+                            Core Readings
+                        </a>
+                    </li>
+                </ul>
+            </nav>
+        </aside>
+
+        <!-- Canvas: qui Jekyll inietta il contenuto della pagina corrente.
+             Non c'è nessun contenuto hardcoded dopo <h1 id="design-system-document-the-lucid-console">Design System Document: The Lucid Console</h1>
+
+<h2 id="1-overview--creative-north-star">1. Overview &amp; Creative North Star</h2>
+<p>The Creative North Star for this design system is <strong>“The Lucid Console.”</strong></p>
+
+<p>This system rejects the cluttered, chaotic aesthetic of traditional command-line interfaces in favor of a high-end, editorial developer experience. It bridges the gap between technical precision and sophisticated digital craft. We are moving away from “generic terminal” tropes—like neon-on-black or harsh grids—to embrace a layered, atmospheric environment.</p>
+
+<p>The design breaks the standard Jekyll template look through <strong>intentional asymmetry</strong>, <strong>glassmorphism</strong>, and <strong>tonal depth</strong>. By utilizing extreme typographic scales and “ghost” boundaries, we create an interface that feels like a professional-grade IDE curated by a premium design house.</p>
+
+<hr />
+
+<h2 id="2-colors--surface-philosophy">2. Colors &amp; Surface Philosophy</h2>
+
+<p>The palette is rooted in deep technical neutrals punctuated by a vibrant Emerald/Forest accent.</p>
+
+<h3 id="surface-hierarchy--nesting">Surface Hierarchy &amp; Nesting</h3>
+<p>To move beyond the “flat” look, we utilize a hierarchy of nested surfaces rather than structural lines.</p>
+<ul>
+  <li><strong>Surface (Base):</strong> <code class="language-plaintext highlighter-rouge">#131313</code> (Dark) / <code class="language-plaintext highlighter-rouge">#FFFFFF</code> (Light). This is your canvas.</li>
+  <li><strong>Surface-Container-Low:</strong> Use for large structural blocks (e.g., sidebars).</li>
+  <li><strong>Surface-Container-High:</strong> Use for interactive elements and cards.</li>
+  <li><strong>Surface-Container-Highest:</strong> Reserved for floating elements or “active” states.</li>
+</ul>
+
+<h3 id="the-no-line-rule">The “No-Line” Rule</h3>
+<p><strong>Explicit Instruction:</strong> Do not use <code class="language-plaintext highlighter-rouge">1px solid</code> borders to define sections. Layout boundaries must be established through background color shifts. For example, a code block (<code class="language-plaintext highlighter-rouge">surface-container-lowest</code>) should sit directly on the <code class="language-plaintext highlighter-rouge">surface</code> background, defined only by its tonal shift.</p>
+
+<h3 id="the-glass--gradient-rule">The “Glass &amp; Gradient” Rule</h3>
+<p>To elevate the “Modern Terminal” aesthetic, CTAs and hero elements should utilize a subtle gradient transitioning from <code class="language-plaintext highlighter-rouge">primary</code> (#4edea3) to <code class="language-plaintext highlighter-rouge">primary_container</code> (#10b981). Floating cards must use <strong>Glassmorphism</strong>: a semi-transparent <code class="language-plaintext highlighter-rouge">surface_container</code> with a <code class="language-plaintext highlighter-rouge">backdrop-blur</code> of 12px–20px.</p>
+
+<hr />
+
+<h2 id="3-typography">3. Typography</h2>
+<p>We utilize a high-contrast pairing to balance technical utility with editorial elegance.</p>
+
+<ul>
+  <li><strong>Display &amp; Headlines (Space Grotesk):</strong> This font provides a “Tech-Grotesque” feel. Use <code class="language-plaintext highlighter-rouge">display-lg</code> (3.5rem) for main landing titles to create an authoritative, editorial impact.</li>
+  <li><strong>Body &amp; Titles (Inter):</strong> For the primary reading experience, Inter provides maximum legibility.
+    <ul>
+      <li><em>Note:</em> While the user requested JetBrains Mono for titles, we have optimized the hierarchy: Use <strong>JetBrains Mono</strong> specifically for <code class="language-plaintext highlighter-rouge">label-md</code> and <code class="language-plaintext highlighter-rouge">label-sm</code> (the “Command” tags) and inline code to maintain the developer soul without sacrificing the readability of large headlines.</li>
+    </ul>
+  </li>
+  <li><strong>The Hierarchy Goal:</strong> Headlines should feel architectural; body text should feel transparent; labels should feel like code.</li>
+</ul>
+
+<hr />
+
+<h2 id="4-elevation--depth">4. Elevation &amp; Depth</h2>
+
+<h3 id="the-layering-principle">The Layering Principle</h3>
+<p>Depth is achieved by “stacking” surface tiers. To create a lift effect, place a <code class="language-plaintext highlighter-rouge">surface-container-lowest</code> card on a <code class="language-plaintext highlighter-rouge">surface-container-low</code> section. This creates a soft, natural transition that mimics physical depth without the clutter of shadows.</p>
+
+<h3 id="ambient-glow-the-signature-micro-interaction">Ambient Glow (The Signature Micro-interaction)</h3>
+<p>Instead of traditional drop shadows, interactive elements (cards, buttons) utilize an <strong>Ambient Glow</strong> on hover:</p>
+<ul>
+  <li><strong>Effect:</strong> A 15px-30px blurred outer glow using the <code class="language-plaintext highlighter-rouge">primary</code> color at 15% opacity.</li>
+  <li><strong>Logic:</strong> This mimics the light emission of a high-end CRT or OLED terminal screen.</li>
+</ul>
+
+<h3 id="the-ghost-border-fallback">The “Ghost Border” Fallback</h3>
+<p>If a boundary is required for accessibility, use a <strong>Ghost Border</strong>.</p>
+<ul>
+  <li><strong>Token:</strong> <code class="language-plaintext highlighter-rouge">outline_variant</code> at 15% opacity.</li>
+  <li><strong>Constraint:</strong> Never use 100% opaque, high-contrast borders for containment.</li>
+</ul>
+
+<hr />
+
+<h2 id="5-components">5. Components</h2>
+
+<h3 id="buttons--tags-command-inputs">Buttons &amp; Tags (Command Inputs)</h3>
+<ul>
+  <li><strong>Primary Button:</strong> Background <code class="language-plaintext highlighter-rouge">primary</code>, text <code class="language-plaintext highlighter-rouge">on_primary</code>. Corner radius: <code class="language-plaintext highlighter-rouge">md</code> (0.375rem). No border.</li>
+  <li><strong>Command Tags:</strong> These should look like terminal flags (e.g., <code class="language-plaintext highlighter-rouge">--version</code>). Use <code class="language-plaintext highlighter-rouge">surface-container-highest</code>, <code class="language-plaintext highlighter-rouge">label-md</code> typography (Monospaced), and a <code class="language-plaintext highlighter-rouge">sm</code> (0.125rem) radius.</li>
+  <li><strong>Interaction:</strong> On hover, the text should slightly shift +2px to the right to simulate a terminal cursor movement.</li>
+</ul>
+
+<h3 id="cards-the-glass-module">Cards (The Glass Module)</h3>
+<ul>
+  <li><strong>Styling:</strong> Background: <code class="language-plaintext highlighter-rouge">surface_variant</code> at 60% opacity.</li>
+  <li><strong>Effect:</strong> <code class="language-plaintext highlighter-rouge">backdrop-filter: blur(10px)</code>.</li>
+  <li><strong>Border:</strong> A “Ghost Border” on the top and left edges only to simulate a light source.</li>
+  <li><strong>Spacing:</strong> Use <code class="language-plaintext highlighter-rouge">xl</code> (0.75rem) internal padding to provide “editorial” breathing room.</li>
+</ul>
+
+<h3 id="sidebar--navigation">Sidebar &amp; Navigation</h3>
+<ul>
+  <li><strong>Structure:</strong> No vertical divider line. Use a <code class="language-plaintext highlighter-rouge">surface-container-low</code> background color for the entire sidebar column.</li>
+  <li><strong>List Items:</strong> Clean, monospaced text. Leading elements should be simple functional icons (e.g., <code class="language-plaintext highlighter-rouge">&gt; </code>, <code class="language-plaintext highlighter-rouge">~ </code>).</li>
+  <li><strong>Active State:</strong> A subtle <code class="language-plaintext highlighter-rouge">primary</code> glow behind the text, rather than a bold background color change.</li>
+</ul>
+
+<h3 id="input-fields">Input Fields</h3>
+<ul>
+  <li><strong>Styling:</strong> <code class="language-plaintext highlighter-rouge">surface-container-lowest</code> background.</li>
+  <li><strong>Focus State:</strong> The border transitions from “Ghost” to a solid <code class="language-plaintext highlighter-rouge">primary</code> glow. The cursor should be a solid block (blinking) to maintain the terminal aesthetic.</li>
+</ul>
+
+<hr />
+
+<h2 id="6-dos-and-donts">6. Do’s and Don’ts</h2>
+
+<h3 id="do">Do:</h3>
+<ul>
+  <li><strong>Use Asymmetry:</strong> Place content off-center or use wide margins to create a custom, high-end feel.</li>
+  <li><strong>Leverage Monospace for Metadata:</strong> Use monospaced fonts for dates, tags, and “technical” data points.</li>
+  <li><strong>Embrace Negative Space:</strong> Let the <code class="language-plaintext highlighter-rouge">surface</code> color breathe. High-end design is defined by what you leave out.</li>
+</ul>
+
+<h3 id="dont">Don’t:</h3>
+<ul>
+  <li><strong>Don’t use Divider Lines:</strong> If you feel the need for a line, use a 16px white-space gap instead.</li>
+  <li><strong>Don’t use Standard Shadows:</strong> Avoid “drop shadows” that look like they belong in a 2014 office suite. Use tonal shifts or ambient glows.</li>
+  <li><strong>Don’t Over-round:</strong> Keep the <code class="language-plaintext highlighter-rouge">roundedness</code> to <code class="language-plaintext highlighter-rouge">DEFAULT</code> (0.25rem) or <code class="language-plaintext highlighter-rouge">md</code> (0.375rem). Anything more feels too “bubbly” and loses the technical edge.</li>
+  <li><strong>Don’t use pure black/white for text:</strong> Use <code class="language-plaintext highlighter-rouge">on_surface_variant</code> for secondary text to maintain a soft, professional contrast.</li>
+</ul>
+:
+             era questo il bug principale che rendeva ogni pagina identica. -->
+        <div class="flex-1" style="min-width: 0;">
+            <h1 id="design-system-document-the-lucid-console">Design System Document: The Lucid Console</h1>
 
 <h2 id="1-overview--creative-north-star">1. Overview &amp; Creative North Star</h2>
 <p>The Creative North Star for this design system is <strong>“The Lucid Console.”</strong></p>
@@ -150,23 +355,33 @@
   <li><strong>Don’t use pure black/white for text:</strong> Use <code class="language-plaintext highlighter-rouge">on_surface_variant</code> for secondary text to maintain a soft, professional contrast.</li>
 </ul>
 
+        </div>
 
-    <footer class="main-footer">
-        Appunti di Programmazione &nbsp;·&nbsp; cosimociraci@gmail.com
+    </div>
+
+    <!-- ===== FOOTER ===== -->
+    <footer class="main-footer"
+            style="border-top: 1px solid var(--border-color); padding: 1.5rem 2rem; font-family: 'JetBrains Mono', monospace; font-size: 0.65rem; text-transform: uppercase; color: var(--text-dim); text-align: center; letter-spacing: 0.05em;">
+        [ROOT@DEVLOG ~]# Appunti di Programmazione &nbsp;·&nbsp;
+        
+            <a href="mailto:cosimociraci@gmail.com" style="color: var(--text-dim);">cosimociraci@gmail.com</a>
+        
     </footer>
 
     <script>
         /*
-         * toggleTheme: legge il tema corrente dall'attributo HTML,
-         * calcola l'opposto e lo salva. Il CSS reagisce via [data-theme].
-         * Non uso classi sul body per mantenere tutto centralizzato
-         * sull'elemento radice.
+         * toggleTheme: aggiorno il tema sia via data-theme (CSS custom con variabili)
+         * sia via classe 'dark' sull'<html> (Tailwind darkMode: "class").
+         * Persisto la scelta in localStorage per le sessioni future.
+         * classList.toggle(class, forza) aggiunge/rimuove in un'unica chiamata
+         * senza rischio di duplicati.
          */
         function toggleTheme() {
-            var html = document.documentElement;
+            var html    = document.documentElement;
             var current = html.getAttribute('data-theme');
-            var next = current === 'dark' ? 'light' : 'dark';
+            var next    = current === 'dark' ? 'light' : 'dark';
             html.setAttribute('data-theme', next);
+            html.classList.toggle('dark', next === 'dark');
             localStorage.setItem('theme', next);
         }
     </script>

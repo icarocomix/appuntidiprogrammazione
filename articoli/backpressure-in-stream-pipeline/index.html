@@ -1,58 +1,146 @@
 <!DOCTYPE html>
-<html lang="it" data-theme="dark">
+<!--
+    Ho impostato data-theme="dark" come default sull'<html> invece di class="dark".
+    Il mio CSS custom usa il selettore [data-theme="dark/light"], mentre Tailwind
+    usa la classe 'dark'. Lo script anti-FOUC qui sotto sincronizza entrambi
+    leggendo localStorage, così nessuno dei due sistemi resta cieco all'altro.
+-->
+<html lang="it" data-theme="dark" class="dark">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Backpressure in Stream Pipeline — DevLog</title>
     <meta name="description" content="Leggere dati più velocemente di quanto si riesca a scriverli causa il riempimento del buffer (RAM). Il segnale di "backpressure" indica al readable di fermarsi finché il writable non ha svuotato il suo buffer. L'uso di stream.pipeline() invece di .pi
 ">
+
+    <!-- Font: Space Grotesk (headlines), Inter (body), JetBrains Mono (code) -->
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300..700&family=Inter:wght@300..700&family=JetBrains+Mono:wght@400..700&display=swap" rel="stylesheet">
+    <!-- Material Symbols per le icone nella sidebar e nella navbar -->
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet">
+
+    <!--
+        Ho incluso il foglio di stile custom DOPO i font e PRIMA dello script anti-FOUC.
+        Il CSS definisce le variabili --bg-primary, --text-main, ecc. usate dai layout
+        di post e libro, e tutto il syntax highlighting Rouge. Senza questo link,
+        le pagine articolo erano prive di qualsiasi stile personalizzato.
+    -->
     <link rel="stylesheet" href="/appuntidiprogrammazione/assets/css/style.css">
 
+    <!--
+        Anti-FOUC (Flash Of Unstyled Content): applico il tema PRIMA che il browser
+        disegni qualsiasi elemento. Lo script è inline e bloccante di proposito.
+        Leggo la preferenza da localStorage; se assente, uso 'dark' come default.
+        Sincronizzo sia data-theme (selettore CSS custom) sia la classe 'dark'
+        (selettore darkMode Tailwind) per mantenere entrambi i sistemi allineati.
+    -->
     <script>
-        /*
-         * Applico il tema PRIMA del rendering per evitare il flash di contenuto
-         * (FOUC). Lo script è inline e bloccante di proposito: deve girare
-         * prima che il browser disegni qualsiasi elemento.
-         */
         (function() {
             var saved = localStorage.getItem('theme') || 'dark';
             document.documentElement.setAttribute('data-theme', saved);
+            if (saved === 'dark') {
+                document.documentElement.classList.add('dark');
+            } else {
+                document.documentElement.classList.remove('dark');
+            }
         })();
     </script>
 </head>
-<body>
+<body class="antialiased flex flex-col min-h-screen" style="background-color: var(--bg-primary); color: var(--text-main); font-family: 'Inter', sans-serif;">
 
-    <header class="main-header">
-        <div class="logo" onclick="window.location.href='/appuntidiprogrammazione/'">
-            APPUNTI DI <span>PROGRAMMAZIONE</span>
+    <!-- ===== TOP NAVBAR ===== -->
+    <nav class="main-header flex justify-between items-center px-8 h-16 w-full backdrop-blur-xl sticky top-0 z-50"
+         style="background-color: rgba(10,10,10,0.92); border-bottom: 1px solid var(--border-color);">
+
+        <!-- Logo: torna alla home via relative_url per compatibilità con baseurl -->
+        <a class="logo font-mono font-bold"
+           href="/appuntidiprogrammazione/"
+           style="color: var(--accent-primary); font-family: 'JetBrains Mono', monospace; letter-spacing: 0.05em;">
+            APPUNTI DI <span style="color: var(--text-main);">PROGRAMMAZIONE</span>
+        </a>
+
+        <div class="flex items-center space-x-4">
+            <!--
+                Ho aggiunto onclick="toggleTheme()" al pulsante: nel vecchio default
+                era presente, nel nuovo era stato rimosso e il pulsante era muto.
+                La funzione è definita in fondo al body, prima della chiusura </html>.
+            -->
+            <button onclick="toggleTheme()"
+                    class="theme-toggle"
+                    aria-label="Cambia tema"
+                    style="background: var(--bg-tertiary); border: 1px solid var(--border-color); border-radius: 4px; padding: 6px 12px; cursor: pointer; color: var(--text-main); transition: var(--transition);">
+                🌓
+            </button>
         </div>
+    </nav>
 
-        <!-- 
-            Il pulsante aggiorna l'attributo data-theme sull'<html> e
-            persiste la scelta nel localStorage per le sessioni future.
-        -->
-        <button onclick="toggleTheme()" class="theme-toggle" aria-label="Cambia tema">🌓</button>
-    </header>
+    <!-- ===== LAYOUT PRINCIPALE: sidebar sinistra + canvas contenuto ===== -->
+    <div class="flex flex-grow w-full max-w-screen-xl mx-auto mt-8 mb-16 px-4 sm:px-8" style="gap: 3rem; align-items: flex-start;">
 
-    <!--
+        <!-- Sidebar sinistra: visibile solo su schermi >= lg (1024px) -->
+        <aside class="hidden lg:flex flex-col flex-shrink-0"
+               style="width: 220px; position: sticky; top: 5.5rem; border-right: 1px solid var(--border-color); padding-right: 1.5rem;">
+
+            <div style="margin-bottom: 1.5rem; padding-bottom: 1rem; border-bottom: 1px solid var(--border-color);">
+                <p class="font-mono" style="font-size: 0.65rem; text-transform: uppercase; color: var(--text-dim); margin-bottom: 0.25rem;">System Operator</p>
+                <h2 class="font-mono" style="font-size: 1rem; font-weight: 900; color: var(--accent-primary); letter-spacing: -0.02em;">CONSOLE_ROOT</h2>
+                <p class="font-mono" style="font-size: 0.65rem; color: var(--text-dim);">v4.2.0-stable</p>
+            </div>
+
+            <nav style="flex: 1;">
+                <ul style="list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 2px; font-family: 'JetBrains Mono', monospace; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.05em;">
+                    <li>
+                        <a href="/appuntidiprogrammazione/"
+                           style="display: flex; align-items: center; gap: 0.5rem; padding: 0.6rem 0.75rem; color: var(--accent-primary); border-radius: 4px; transition: var(--transition);"
+                           onmouseover="this.style.background='var(--bg-tertiary)'"
+                           onmouseout="this.style.background='transparent'">
+                            <span class="material-symbols-outlined" style="font-size: 1rem;">terminal</span>
+                            Latest Logs
+                        </a>
+                    </li>
+                    <li>
+                        <a href="#"
+                           style="display: flex; align-items: center; gap: 0.5rem; padding: 0.6rem 0.75rem; color: var(--text-dim); border-radius: 4px; transition: var(--transition);"
+                           onmouseover="this.style.color='var(--accent-primary)'; this.style.background='var(--bg-tertiary)'"
+                           onmouseout="this.style.color='var(--text-dim)'; this.style.background='transparent'">
+                            <span class="material-symbols-outlined" style="font-size: 1rem;">menu_book</span>
+                            Book Reviews
+                        </a>
+                    </li>
+                    <li>
+                        <a href="#"
+                           style="display: flex; align-items: center; gap: 0.5rem; padding: 0.6rem 0.75rem; color: var(--text-dim); border-radius: 4px; transition: var(--transition);"
+                           onmouseover="this.style.color='var(--accent-primary)'; this.style.background='var(--bg-tertiary)'"
+                           onmouseout="this.style.color='var(--text-dim)'; this.style.background='transparent'">
+                            <span class="material-symbols-outlined" style="font-size: 1rem;">star</span>
+                            Core Readings
+                        </a>
+                    </li>
+                </ul>
+            </nav>
+        </aside>
+
+        <!-- Canvas: qui Jekyll inietta il contenuto della pagina corrente.
+             Non c'è nessun contenuto hardcoded dopo <!--
     Layout post: struttura a due colonne.
-    - Sinistra (post-content): breadcrumb → tags → link PDF → link fonte → articolo MD
-    - Destra (post-sidebar): tags argomento + libro consigliato
+    - Sinistra (post-content): breadcrumb → tags → PDF → fonte → corpo MD
+    - Destra  (post-sidebar):  tags + fonte + libro consigliato
     
-    Ordine DOM: post-content prima, post-sidebar dopo.
-    Grid-template-areas in CSS li posiziona visivamente:
-    "content sidebar" su desktop, stacked su mobile.
+    grid-template-areas: "content sidebar" definita in style.css su .post-container.
+    Sotto 992px le colonne si collassano in una sola.
 -->
 <div class="post-container">
+
     <!-- COLONNA SINISTRA: contenuto principale -->
     <main class="post-content">
-        <!-- Breadcrumb: navigazione verso la home -->
+
+        <!-- Breadcrumb: uso relative_url per compatibilità con baseurl -->
         <nav class="post-breadcrumb" aria-label="Breadcrumb">
             <a href="/appuntidiprogrammazione/">Appunti di Programmazione</a>
             <span class="separator" aria-hidden="true">/</span>
             <span>Backpressure in Stream Pipeline</span>
         </nav>
-        <!-- Tags legati all'articolo -->
+
+        <!-- Tag chip in testa all'articolo -->
         
         <div class="post-tags-header" aria-label="Argomenti">
             
@@ -62,7 +150,8 @@
             
         </div>
         
-        <!-- Link al/ai PDF allegati all'articolo -->
+
+        <!-- Link al PDF allegato: visibile solo se pdf_file è nel frontmatter -->
         
         <div class="pdf-link-wrapper">
             <a class="pdf-link"
@@ -70,11 +159,12 @@
                target="_blank"
                rel="noopener noreferrer"
                aria-label="Scarica il PDF: Backpressure in Stream Pipeline">
-                Scarica PDF
+                ↓ Scarica PDF
             </a>
         </div>
         
-        <!-- Corpo dell'articolo renderizzato da Kramdown -->
+
+        <!-- Corpo dell'articolo: Kramdown inietta l'HTML del markdown qui -->
         <article class="post-article-body">
             <h2 id="esigenza-reale">Esigenza Reale</h2>
 <p>Trasferire file di diversi gigabyte tra un client e un server senza esaurire la memoria RAM del processo Node.js.</p>
@@ -405,14 +495,20 @@
 </pre></td></tr></tbody></table></code></pre></div></div>
 
         </article>
-        <!-- Link alla fonte originale: lo posiziono dopo il corpo perché è un
-             approfondimento opzionale, non un'azione primaria. L'icona SVG inline
-             evita dipendenze da font icon esterni. -->
+
+        <!--
+            Fonte originale in fondo al corpo: la posiziono qui (dopo il testo)
+            perché è un approfondimento opzionale, non un'azione primaria.
+            L'icona SVG è inline per evitare dipendenze da font icon esterni.
+        -->
         
+
     </main>
-    <!-- COLONNA DESTRA: sidebar post -->
+
+    <!-- COLONNA DESTRA: sidebar -->
     <aside class="post-sidebar">
-        <!-- Box 1: tags argomento (stessa lista dei chip sopra, ma nella sidebar) -->
+
+        <!-- Box 1: tag argomento -->
         
         <div class="sidebar-box tags-box">
             <span class="box-label">Argomenti</span>
@@ -425,9 +521,10 @@
             </div>
         </div>
         
-        <!-- Box 2: fonte originale nella sidebar, visibile a colpo d'occhio
-             senza dover scorrere fino in fondo all'articolo. -->
+
+        <!-- Box 2: fonte originale nella sidebar (a colpo d'occhio senza scorrere) -->
         
+
         <!-- Box 3: libro consigliato -->
         <div class="sidebar-box books-box">
             <span class="box-label">Letture Consigliate</span>
@@ -443,25 +540,461 @@
                 </a>
             </div>
         </div>
+
+    </aside>
+</div>:
+             era questo il bug principale che rendeva ogni pagina identica. -->
+        <div class="flex-1" style="min-width: 0;">
+            <!--
+    Layout post: struttura a due colonne.
+    - Sinistra (post-content): breadcrumb → tags → PDF → fonte → corpo MD
+    - Destra  (post-sidebar):  tags + fonte + libro consigliato
+    
+    grid-template-areas: "content sidebar" definita in style.css su .post-container.
+    Sotto 992px le colonne si collassano in una sola.
+-->
+<div class="post-container">
+
+    <!-- COLONNA SINISTRA: contenuto principale -->
+    <main class="post-content">
+
+        <!-- Breadcrumb: uso relative_url per compatibilità con baseurl -->
+        <nav class="post-breadcrumb" aria-label="Breadcrumb">
+            <a href="/appuntidiprogrammazione/">Appunti di Programmazione</a>
+            <span class="separator" aria-hidden="true">/</span>
+            <span>Backpressure in Stream Pipeline</span>
+        </nav>
+
+        <!-- Tag chip in testa all'articolo -->
+        
+        <div class="post-tags-header" aria-label="Argomenti">
+            
+                <span class="post-tag-chip">js</span>
+            
+                <span class="post-tag-chip">node.js internals & libuv</span>
+            
+        </div>
+        
+
+        <!-- Link al PDF allegato: visibile solo se pdf_file è nel frontmatter -->
+        
+        <div class="pdf-link-wrapper">
+            <a class="pdf-link"
+               href="/appuntidiprogrammazione/assets/pdf/backpressure-in-stream-pipeline.pdf"
+               target="_blank"
+               rel="noopener noreferrer"
+               aria-label="Scarica il PDF: Backpressure in Stream Pipeline">
+                ↓ Scarica PDF
+            </a>
+        </div>
+        
+
+        <!-- Corpo dell'articolo: Kramdown inietta l'HTML del markdown qui -->
+        <article class="post-article-body">
+            <h2 id="esigenza-reale">Esigenza Reale</h2>
+<p>Trasferire file di diversi gigabyte tra un client e un server senza esaurire la memoria RAM del processo Node.js.</p>
+
+<h2 id="analisi-tecnica">Analisi Tecnica</h2>
+<p><strong>Problema:</strong> OutOfMemoryError causato dall’accumulo di chunk di dati nel buffer di scrittura (writable.write() restituisce false).</p>
+
+<p><strong>Perché:</strong> Implemento il controllo del flusso. Ho scelto pipeline perché mette in pausa il “Readable” finché il “Writable” non ha terminato di svuotare il buffer verso il kernel (drain).</p>
+
+<h2 id="esempio-implementativo">Esempio Implementativo</h2>
+
+<div class="language-javascript highlighter-rouge"><div class="highlight"><pre class="highlight"><code><table class="rouge-table"><tbody><tr><td class="rouge-gutter gl"><pre class="lineno">1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+106
+107
+108
+109
+110
+111
+112
+113
+114
+115
+116
+117
+118
+119
+120
+121
+122
+123
+124
+125
+126
+127
+128
+129
+130
+131
+132
+133
+134
+135
+136
+137
+138
+139
+140
+141
+142
+143
+144
+145
+146
+147
+148
+149
+150
+151
+152
+153
+154
+155
+156
+157
+158
+</pre></td><td class="rouge-code"><pre><span class="cm">/* Dimostro il problema della backpressure non gestita con .pipe() manuale. */</span>
+<span class="c1">// SBAGLIATO: nessuna gestione della backpressure const readable =</span>
+    <span class="nx">fs</span><span class="p">.</span><span class="nx">createReadStream</span><span class="p">(</span><span class="dl">'</span><span class="s1">huge-file.zip</span><span class="dl">'</span><span class="p">)</span>
+<span class="p">;</span>
+<span class="kd">const</span> <span class="nx">writable</span> <span class="o">=</span> <span class="nx">fs</span><span class="p">.</span><span class="nx">createWriteStream</span><span class="p">(</span><span class="dl">'</span><span class="s1">output.zip</span><span class="dl">'</span><span class="p">);</span>
+<span class="nx">readable</span><span class="p">.</span><span class="nx">on</span><span class="p">(</span><span class="dl">'</span><span class="s1">data</span><span class="dl">'</span><span class="p">,</span> <span class="nx">chunk</span> <span class="o">=&gt;</span> <span class="p">{</span>
+    <span class="kd">const</span> <span class="nx">canContinue</span> <span class="o">=</span> <span class="nx">writable</span><span class="p">.</span><span class="nx">write</span><span class="p">(</span><span class="nx">chunk</span><span class="p">);</span>
+    <span class="c1">// Se false, il buffer di writable è pieno if (!canContinue)</span>
+    <span class="p">{</span>
+        <span class="nx">readable</span><span class="p">.</span><span class="nx">pause</span><span class="p">();</span>
+        <span class="c1">// Devo mettere in pausa manualmente writable.once('drain', () =&gt;</span>
+            <span class="nx">readable</span><span class="p">.</span><span class="nx">resume</span><span class="p">())</span>
+        <span class="p">;</span>
+        <span class="c1">// Riprendo quando il buffer si svuota</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+<span class="p">);</span>
+<span class="c1">// Questo è esattamente quello che pipeline() fa automaticamente /* CORRETTO:</span>
+    <span class="nx">uso</span> <span class="nx">pipeline</span><span class="p">()</span> <span class="nx">con</span> <span class="k">async</span><span class="sr">/await per gestione automatica della backpressure e</span><span class="err">d
+</span>    <span class="nx">errori</span><span class="p">.</span> <span class="o">*</span><span class="sr">/ cons</span><span class="err">t
+</span><span class="p">{</span>
+    <span class="nx">pipeline</span>
+<span class="p">}</span>
+<span class="o">=</span> <span class="nx">require</span><span class="p">(</span><span class="dl">'</span><span class="s1">stream/promises</span><span class="dl">'</span><span class="p">);</span>
+<span class="kd">const</span> <span class="nx">fs</span> <span class="o">=</span> <span class="nx">require</span><span class="p">(</span><span class="dl">'</span><span class="s1">fs</span><span class="dl">'</span><span class="p">);</span>
+<span class="kd">const</span> <span class="nx">zlib</span> <span class="o">=</span> <span class="nx">require</span><span class="p">(</span><span class="dl">'</span><span class="s1">zlib</span><span class="dl">'</span><span class="p">);</span>
+<span class="k">async</span> <span class="kd">function</span> <span class="nx">transferLargeFile</span><span class="p">(</span><span class="nx">inputPath</span><span class="p">,</span> <span class="nx">outputPath</span><span class="p">)</span> <span class="p">{</span>
+    <span class="nx">console</span><span class="p">.</span><span class="nx">log</span><span class="p">(</span><span class="s2">`Trasferimento di </span><span class="p">${</span>
+        <span class="nx">inputPath</span>
+    <span class="p">}</span><span class="s2">
+    -&gt; </span><span class="p">${</span>
+        <span class="nx">outputPath</span>
+    <span class="p">}</span><span class="s2">
+    `</span><span class="p">);</span>
+    <span class="kd">const</span> <span class="nx">start</span> <span class="o">=</span> <span class="nb">Date</span><span class="p">.</span><span class="nx">now</span><span class="p">();</span>
+    <span class="k">try</span> <span class="p">{</span>
+        <span class="k">await</span> <span class="nx">pipeline</span><span class="p">(</span> <span class="nx">fs</span><span class="p">.</span><span class="nx">createReadStream</span><span class="p">(</span><span class="nx">inputPath</span><span class="p">,</span> <span class="p">{</span>
+            <span class="na">highWaterMark</span><span class="p">:</span> <span class="mi">64</span> <span class="o">*</span> <span class="mi">1024</span>
+        <span class="p">}</span>
+        <span class="p">),</span>
+        <span class="c1">// 64KB chunk size zlib.createGzip(</span>
+        <span class="p">{</span>
+            <span class="na">level</span><span class="p">:</span> <span class="mi">6</span>
+        <span class="p">}</span>
+        <span class="p">),</span>
+        <span class="c1">// Comprimo in-stream: zero file intermedi</span>
+            <span class="nx">fs</span><span class="p">.</span><span class="nx">createWriteStream</span><span class="p">(</span><span class="nx">outputPath</span><span class="p">)</span> <span class="c1">// pipeline gestisce pause/resume</span>
+            <span class="nx">automaticamente</span> <span class="p">)</span>
+        <span class="p">;</span>
+        <span class="kd">const</span> <span class="nx">elapsed</span> <span class="o">=</span> <span class="p">((</span><span class="nb">Date</span><span class="p">.</span><span class="nx">now</span><span class="p">()</span> <span class="o">-</span> <span class="nx">start</span><span class="p">)</span> <span class="o">/</span> <span class="mi">1000</span><span class="p">).</span><span class="nx">toFixed</span><span class="p">(</span><span class="mi">2</span><span class="p">);</span>
+        <span class="nx">console</span><span class="p">.</span><span class="nx">log</span><span class="p">(</span><span class="s2">`Completato in </span><span class="p">${</span>
+            <span class="nx">elapsed</span>
+        <span class="p">}</span><span class="s2">
+        s`</span><span class="p">);</span>
+    <span class="p">}</span>
+    <span class="k">catch</span> <span class="p">(</span><span class="nx">err</span><span class="p">)</span> <span class="p">{</span>
+        <span class="nx">console</span><span class="p">.</span><span class="nx">error</span><span class="p">(</span><span class="dl">'</span><span class="s1">Pipeline fallita:</span><span class="dl">'</span><span class="p">,</span> <span class="nx">err</span><span class="p">.</span><span class="nx">message</span><span class="p">);</span>
+        <span class="c1">// pipeline chiude automaticamente tutti gli stream in caso di errore:</span>
+            <span class="nx">zero</span> <span class="nx">fd</span> <span class="nx">leak</span> <span class="k">throw</span> <span class="nx">err</span>
+        <span class="p">;</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+<span class="cm">/* Implemento uno stream Transform personalizzato per manipolare i dati in
+    pipeline: */</span>
+<span class="kd">const</span> <span class="p">{</span>
+    <span class="nx">Transform</span>
+<span class="p">}</span>
+<span class="o">=</span> <span class="nx">require</span><span class="p">(</span><span class="dl">'</span><span class="s1">stream</span><span class="dl">'</span><span class="p">);</span>
+<span class="kd">class</span> <span class="nx">CsvToJsonTransform</span> <span class="kd">extends</span> <span class="nx">Transform</span> <span class="p">{</span>
+    <span class="kd">constructor</span><span class="p">()</span> <span class="p">{</span>
+        <span class="k">super</span><span class="p">({</span>
+            <span class="na">readableObjectMode</span><span class="p">:</span> <span class="kc">true</span><span class="p">,</span>
+            <span class="c1">// Output: oggetti JS writableObjectMode: false // Input:</span>
+                <span class="nx">Buffer</span><span class="o">/</span><span class="nx">string</span>
+        <span class="p">}</span>
+        <span class="p">);</span>
+        <span class="k">this</span><span class="p">.</span><span class="nx">_headers</span> <span class="o">=</span> <span class="kc">null</span><span class="p">;</span>
+        <span class="k">this</span><span class="p">.</span><span class="nx">_buffer</span> <span class="o">=</span> <span class="dl">''</span><span class="p">;</span>
+    <span class="p">}</span>
+    <span class="nx">_transform</span><span class="p">(</span><span class="nx">chunk</span><span class="p">,</span> <span class="nx">encoding</span><span class="p">,</span> <span class="nx">callback</span><span class="p">)</span> <span class="p">{</span>
+        <span class="k">this</span><span class="p">.</span><span class="nx">_buffer</span> <span class="o">+=</span> <span class="nx">chunk</span><span class="p">.</span><span class="nx">toString</span><span class="p">();</span>
+        <span class="kd">const</span> <span class="nx">lines</span> <span class="o">=</span> <span class="k">this</span><span class="p">.</span><span class="nx">_buffer</span><span class="p">.</span><span class="nx">split</span><span class="p">(</span><span class="dl">'</span><span class="s1"> </span><span class="dl">'</span><span class="p">);</span>
+        <span class="k">this</span><span class="p">.</span><span class="nx">_buffer</span> <span class="o">=</span> <span class="nx">lines</span><span class="p">.</span><span class="nx">pop</span><span class="p">();</span>
+        <span class="c1">// Tengo l'ultima riga incompleta per il prossimo chunk for (const line</span>
+            <span class="k">of</span> <span class="nx">lines</span><span class="p">)</span>
+        <span class="p">{</span>
+            <span class="k">if</span> <span class="p">(</span><span class="o">!</span><span class="nx">line</span><span class="p">.</span><span class="nx">trim</span><span class="p">())</span> <span class="k">continue</span><span class="p">;</span>
+            <span class="k">if</span> <span class="p">(</span><span class="o">!</span><span class="k">this</span><span class="p">.</span><span class="nx">_headers</span><span class="p">)</span> <span class="p">{</span>
+                <span class="k">this</span><span class="p">.</span><span class="nx">_headers</span> <span class="o">=</span> <span class="nx">line</span><span class="p">.</span><span class="nx">split</span><span class="p">(</span><span class="dl">'</span><span class="s1">,</span><span class="dl">'</span><span class="p">).</span><span class="nx">map</span><span class="p">(</span><span class="nx">h</span> <span class="o">=&gt;</span> <span class="nx">h</span><span class="p">.</span><span class="nx">trim</span><span class="p">());</span>
+            <span class="p">}</span>
+            <span class="k">else</span> <span class="p">{</span>
+                <span class="kd">const</span> <span class="nx">values</span> <span class="o">=</span> <span class="nx">line</span><span class="p">.</span><span class="nx">split</span><span class="p">(</span><span class="dl">'</span><span class="s1">,</span><span class="dl">'</span><span class="p">);</span>
+                <span class="kd">const</span> <span class="nx">obj</span> <span class="o">=</span> <span class="p">{</span>
+                <span class="p">}</span>
+                <span class="p">;</span>
+                <span class="k">this</span><span class="p">.</span><span class="nx">_headers</span><span class="p">.</span><span class="nx">forEach</span><span class="p">((</span><span class="nx">header</span><span class="p">,</span> <span class="nx">i</span><span class="p">)</span> <span class="o">=&gt;</span> <span class="p">{</span>
+                    <span class="nx">obj</span><span class="p">[</span><span class="nx">header</span><span class="p">]</span> <span class="o">=</span> <span class="nx">values</span><span class="p">[</span><span class="nx">i</span><span class="p">]?.</span><span class="nx">trim</span><span class="p">();</span>
+                <span class="p">}</span>
+                <span class="p">);</span>
+                <span class="k">this</span><span class="p">.</span><span class="nx">push</span><span class="p">(</span><span class="nx">obj</span><span class="p">);</span>
+                <span class="c1">// push() rispetta la backpressure automaticamente</span>
+            <span class="p">}</span>
+        <span class="p">}</span>
+        <span class="nx">callback</span><span class="p">();</span>
+        <span class="c1">// Segnalo che ho finito di processare questo chunk</span>
+    <span class="p">}</span>
+    <span class="nx">_flush</span><span class="p">(</span><span class="nx">callback</span><span class="p">)</span> <span class="p">{</span>
+        <span class="c1">// Processo l'eventuale ultima riga senza newline finale if</span>
+            <span class="p">(</span><span class="k">this</span><span class="p">.</span><span class="nx">_buffer</span><span class="p">.</span><span class="nx">trim</span><span class="p">()</span> <span class="o">&amp;&amp;</span> <span class="k">this</span><span class="p">.</span><span class="nx">_headers</span><span class="p">)</span>
+        <span class="p">{</span>
+            <span class="kd">const</span> <span class="nx">values</span> <span class="o">=</span> <span class="k">this</span><span class="p">.</span><span class="nx">_buffer</span><span class="p">.</span><span class="nx">split</span><span class="p">(</span><span class="dl">'</span><span class="s1">,</span><span class="dl">'</span><span class="p">);</span>
+            <span class="kd">const</span> <span class="nx">obj</span> <span class="o">=</span> <span class="p">{</span>
+            <span class="p">}</span>
+            <span class="p">;</span>
+            <span class="k">this</span><span class="p">.</span><span class="nx">_headers</span><span class="p">.</span><span class="nx">forEach</span><span class="p">((</span><span class="nx">header</span><span class="p">,</span> <span class="nx">i</span><span class="p">)</span> <span class="o">=&gt;</span> <span class="p">{</span>
+                <span class="nx">obj</span><span class="p">[</span><span class="nx">header</span><span class="p">]</span> <span class="o">=</span> <span class="nx">values</span><span class="p">[</span><span class="nx">i</span><span class="p">]?.</span><span class="nx">trim</span><span class="p">();</span>
+            <span class="p">}</span>
+            <span class="p">);</span>
+            <span class="k">this</span><span class="p">.</span><span class="nx">push</span><span class="p">(</span><span class="nx">obj</span><span class="p">);</span>
+        <span class="p">}</span>
+        <span class="nx">callback</span><span class="p">();</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+<span class="cm">/* Pipeline completa: leggo CSV da 10GB, trasformo in JSON, salvo senza caricare
+    nulla in RAM. */</span>
+<span class="k">async</span> <span class="kd">function</span> <span class="nx">processMassiveCsv</span><span class="p">(</span><span class="nx">inputPath</span><span class="p">,</span> <span class="nx">outputPath</span><span class="p">)</span> <span class="p">{</span>
+    <span class="kd">const</span> <span class="nx">jsonStream</span> <span class="o">=</span> <span class="nx">fs</span><span class="p">.</span><span class="nx">createWriteStream</span><span class="p">(</span><span class="nx">outputPath</span><span class="p">);</span>
+    <span class="nx">jsonStream</span><span class="p">.</span><span class="nx">write</span><span class="p">(</span><span class="dl">'</span><span class="s1">[ </span><span class="dl">'</span><span class="p">);</span>
+    <span class="kd">let</span> <span class="nx">isFirst</span> <span class="o">=</span> <span class="kc">true</span><span class="p">;</span>
+    <span class="kd">const</span> <span class="nx">objectWriter</span> <span class="o">=</span> <span class="k">new</span> <span class="nx">Transform</span><span class="p">({</span>
+        <span class="na">objectMode</span><span class="p">:</span> <span class="kc">true</span><span class="p">,</span> <span class="nx">transform</span><span class="p">(</span><span class="nx">obj</span><span class="p">,</span> <span class="nx">_</span><span class="p">,</span> <span class="nx">cb</span><span class="p">)</span> <span class="p">{</span>
+            <span class="kd">const</span> <span class="nx">prefix</span> <span class="o">=</span> <span class="nx">isFirst</span> <span class="p">?</span> <span class="dl">''</span> <span class="p">:</span> <span class="dl">'</span><span class="s1">, </span><span class="dl">'</span><span class="p">;</span>
+            <span class="nx">isFirst</span> <span class="o">=</span> <span class="kc">false</span><span class="p">;</span>
+            <span class="nx">cb</span><span class="p">(</span><span class="kc">null</span><span class="p">,</span> <span class="nx">prefix</span> <span class="o">+</span> <span class="nx">JSON</span><span class="p">.</span><span class="nx">stringify</span><span class="p">(</span><span class="nx">obj</span><span class="p">));</span>
+        <span class="p">}</span>
+    <span class="p">}</span>
+    <span class="p">);</span>
+    <span class="k">await</span> <span class="nx">pipeline</span><span class="p">(</span> <span class="nx">fs</span><span class="p">.</span><span class="nx">createReadStream</span><span class="p">(</span><span class="nx">inputPath</span><span class="p">),</span> <span class="k">new</span> <span class="nx">CsvToJsonTransform</span><span class="p">(),</span>
+        <span class="nx">objectWriter</span><span class="p">,</span> <span class="nx">jsonStream</span> <span class="p">);</span>
+    <span class="nx">fs</span><span class="p">.</span><span class="nx">appendFileSync</span><span class="p">(</span><span class="nx">outputPath</span><span class="p">,</span> <span class="dl">'</span><span class="s1"> ]</span><span class="dl">'</span><span class="p">);</span>
+<span class="p">}</span>
+<span class="cm">/* In Express, uso pipeline per servire file grandi senza caricarli in memoria:
+    */</span>
+<span class="nx">app</span><span class="p">.</span><span class="kd">get</span><span class="p">(</span><span class="dl">'</span><span class="s1">/download/:filename</span><span class="dl">'</span><span class="p">,</span> <span class="k">async</span> <span class="p">(</span><span class="nx">req</span><span class="p">,</span> <span class="nx">res</span><span class="p">)</span> <span class="o">=&gt;</span> <span class="p">{</span>
+    <span class="kd">const</span> <span class="nx">filePath</span> <span class="o">=</span> <span class="nx">path</span><span class="p">.</span><span class="nx">join</span><span class="p">(</span><span class="nx">UPLOADS_DIR</span><span class="p">,</span> <span class="nx">req</span><span class="p">.</span><span class="nx">params</span><span class="p">.</span><span class="nx">filename</span><span class="p">);</span>
+    <span class="kd">const</span> <span class="nx">stat</span> <span class="o">=</span> <span class="nx">fs</span><span class="p">.</span><span class="nx">statSync</span><span class="p">(</span><span class="nx">filePath</span><span class="p">);</span>
+    <span class="nx">res</span><span class="p">.</span><span class="nx">setHeader</span><span class="p">(</span><span class="dl">'</span><span class="s1">Content-Length</span><span class="dl">'</span><span class="p">,</span> <span class="nx">stat</span><span class="p">.</span><span class="nx">size</span><span class="p">);</span>
+    <span class="nx">res</span><span class="p">.</span><span class="nx">setHeader</span><span class="p">(</span><span class="dl">'</span><span class="s1">Content-Type</span><span class="dl">'</span><span class="p">,</span> <span class="dl">'</span><span class="s1">application/octet-stream</span><span class="dl">'</span><span class="p">);</span>
+    <span class="k">try</span> <span class="p">{</span>
+        <span class="k">await</span> <span class="nx">pipeline</span><span class="p">(</span><span class="nx">fs</span><span class="p">.</span><span class="nx">createReadStream</span><span class="p">(</span><span class="nx">filePath</span><span class="p">),</span> <span class="nx">res</span><span class="p">);</span>
+    <span class="p">}</span>
+    <span class="k">catch</span> <span class="p">(</span><span class="nx">err</span><span class="p">)</span> <span class="p">{</span>
+        <span class="k">if</span> <span class="p">(</span><span class="nx">err</span><span class="p">.</span><span class="nx">code</span> <span class="o">!==</span> <span class="dl">'</span><span class="s1">ERR_STREAM_PREMATURE_CLOSE</span><span class="dl">'</span><span class="p">)</span> <span class="p">{</span>
+            <span class="nx">console</span><span class="p">.</span><span class="nx">error</span><span class="p">(</span><span class="dl">'</span><span class="s1">Errore download:</span><span class="dl">'</span><span class="p">,</span> <span class="nx">err</span><span class="p">);</span>
+        <span class="p">}</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+<span class="p">);</span>
+</pre></td></tr></tbody></table></code></pre></div></div>
+
+        </article>
+
+        <!--
+            Fonte originale in fondo al corpo: la posiziono qui (dopo il testo)
+            perché è un approfondimento opzionale, non un'azione primaria.
+            L'icona SVG è inline per evitare dipendenze da font icon esterni.
+        -->
+        
+
+    </main>
+
+    <!-- COLONNA DESTRA: sidebar -->
+    <aside class="post-sidebar">
+
+        <!-- Box 1: tag argomento -->
+        
+        <div class="sidebar-box tags-box">
+            <span class="box-label">Argomenti</span>
+            <div class="tag-cloud-sidebar">
+                
+                    <span class="sidebar-tag">js</span>
+                
+                    <span class="sidebar-tag">node.js internals & libuv</span>
+                
+            </div>
+        </div>
+        
+
+        <!-- Box 2: fonte originale nella sidebar (a colpo d'occhio senza scorrere) -->
+        
+
+        <!-- Box 3: libro consigliato -->
+        <div class="sidebar-box books-box">
+            <span class="box-label">Letture Consigliate</span>
+            <div class="book-card">
+                <a href="https://www.amazon.it/Appunti-Programmazione-Pensieri-soluzioni-Applicazioni-ebook/dp/B0FMFRHKTF/"
+                   target="_blank"
+                   rel="noopener noreferrer"
+                   aria-label="Acquista Appunti di Programmazione su Amazon">
+                    <img src="https://m.media-amazon.com/images/I/61Ck5eMzGYL._SY466_.jpg"
+                         alt="Copertina: Appunti di Programmazione"
+                         width="80">
+                    <p>Appunti di Programmazione: Pensieri e soluzioni per Applicazioni WEB</p>
+                </a>
+            </div>
+        </div>
+
     </aside>
 </div>
+        </div>
 
-    <footer class="main-footer">
-        Appunti di Programmazione &nbsp;·&nbsp; cosimociraci@gmail.com
+    </div>
+
+    <!-- ===== FOOTER ===== -->
+    <footer class="main-footer"
+            style="border-top: 1px solid var(--border-color); padding: 1.5rem 2rem; font-family: 'JetBrains Mono', monospace; font-size: 0.65rem; text-transform: uppercase; color: var(--text-dim); text-align: center; letter-spacing: 0.05em;">
+        [ROOT@DEVLOG ~]# Appunti di Programmazione &nbsp;·&nbsp;
+        
+            <a href="mailto:cosimociraci@gmail.com" style="color: var(--text-dim);">cosimociraci@gmail.com</a>
+        
     </footer>
 
     <script>
         /*
-         * toggleTheme: legge il tema corrente dall'attributo HTML,
-         * calcola l'opposto e lo salva. Il CSS reagisce via [data-theme].
-         * Non uso classi sul body per mantenere tutto centralizzato
-         * sull'elemento radice.
+         * toggleTheme: aggiorno il tema sia via data-theme (CSS custom con variabili)
+         * sia via classe 'dark' sull'<html> (Tailwind darkMode: "class").
+         * Persisto la scelta in localStorage per le sessioni future.
+         * classList.toggle(class, forza) aggiunge/rimuove in un'unica chiamata
+         * senza rischio di duplicati.
          */
         function toggleTheme() {
-            var html = document.documentElement;
+            var html    = document.documentElement;
             var current = html.getAttribute('data-theme');
-            var next = current === 'dark' ? 'light' : 'dark';
+            var next    = current === 'dark' ? 'light' : 'dark';
             html.setAttribute('data-theme', next);
+            html.classList.toggle('dark', next === 'dark');
             localStorage.setItem('theme', next);
         }
     </script>
