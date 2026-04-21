@@ -1,146 +1,58 @@
 <!DOCTYPE html>
-<!--
-    Ho impostato data-theme="dark" come default sull'<html> invece di class="dark".
-    Il mio CSS custom usa il selettore [data-theme="dark/light"], mentre Tailwind
-    usa la classe 'dark'. Lo script anti-FOUC qui sotto sincronizza entrambi
-    leggendo localStorage, così nessuno dei due sistemi resta cieco all'altro.
--->
-<html lang="it" data-theme="dark" class="dark">
+<html lang="it" data-theme="dark">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Java News Roundup: Febbraio 2026 — DevLog</title>
     <meta name="description" content="Riassunto delle principali notizie riguardanti JDK 26, Payara Platform, Hibernate, Quarkus, Apache Camel e Jakarta EE 12.
 ">
-
-    <!-- Font: Space Grotesk (headlines), Inter (body), JetBrains Mono (code) -->
-    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300..700&family=Inter:wght@300..700&family=JetBrains+Mono:wght@400..700&display=swap" rel="stylesheet">
-    <!-- Material Symbols per le icone nella sidebar e nella navbar -->
-    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet">
-
-    <!--
-        Ho incluso il foglio di stile custom DOPO i font e PRIMA dello script anti-FOUC.
-        Il CSS definisce le variabili --bg-primary, --text-main, ecc. usate dai layout
-        di post e libro, e tutto il syntax highlighting Rouge. Senza questo link,
-        le pagine articolo erano prive di qualsiasi stile personalizzato.
-    -->
     <link rel="stylesheet" href="/appuntidiprogrammazione/assets/css/style.css">
 
-    <!--
-        Anti-FOUC (Flash Of Unstyled Content): applico il tema PRIMA che il browser
-        disegni qualsiasi elemento. Lo script è inline e bloccante di proposito.
-        Leggo la preferenza da localStorage; se assente, uso 'dark' come default.
-        Sincronizzo sia data-theme (selettore CSS custom) sia la classe 'dark'
-        (selettore darkMode Tailwind) per mantenere entrambi i sistemi allineati.
-    -->
     <script>
+        /*
+         * Applico il tema PRIMA del rendering per evitare il flash di contenuto
+         * (FOUC). Lo script è inline e bloccante di proposito: deve girare
+         * prima che il browser disegni qualsiasi elemento.
+         */
         (function() {
             var saved = localStorage.getItem('theme') || 'dark';
             document.documentElement.setAttribute('data-theme', saved);
-            if (saved === 'dark') {
-                document.documentElement.classList.add('dark');
-            } else {
-                document.documentElement.classList.remove('dark');
-            }
         })();
     </script>
 </head>
-<body class="antialiased flex flex-col min-h-screen" style="background-color: var(--bg-primary); color: var(--text-main); font-family: 'Inter', sans-serif;">
+<body>
 
-    <!-- ===== TOP NAVBAR ===== -->
-    <nav class="main-header flex justify-between items-center px-8 h-16 w-full backdrop-blur-xl sticky top-0 z-50"
-         style="background-color: rgba(10,10,10,0.92); border-bottom: 1px solid var(--border-color);">
-
-        <!-- Logo: torna alla home via relative_url per compatibilità con baseurl -->
-        <a class="logo font-mono font-bold"
-           href="/appuntidiprogrammazione/"
-           style="color: var(--accent-primary); font-family: 'JetBrains Mono', monospace; letter-spacing: 0.05em;">
-            APPUNTI DI <span style="color: var(--text-main);">PROGRAMMAZIONE</span>
-        </a>
-
-        <div class="flex items-center space-x-4">
-            <!--
-                Ho aggiunto onclick="toggleTheme()" al pulsante: nel vecchio default
-                era presente, nel nuovo era stato rimosso e il pulsante era muto.
-                La funzione è definita in fondo al body, prima della chiusura </html>.
-            -->
-            <button onclick="toggleTheme()"
-                    class="theme-toggle"
-                    aria-label="Cambia tema"
-                    style="background: var(--bg-tertiary); border: 1px solid var(--border-color); border-radius: 4px; padding: 6px 12px; cursor: pointer; color: var(--text-main); transition: var(--transition);">
-                🌓
-            </button>
+    <header class="main-header">
+        <div class="logo" onclick="window.location.href='/appuntidiprogrammazione/'">
+            APPUNTI DI <span>PROGRAMMAZIONE</span>
         </div>
-    </nav>
 
-    <!-- ===== LAYOUT PRINCIPALE: sidebar sinistra + canvas contenuto ===== -->
-    <div class="flex flex-grow w-full max-w-screen-xl mx-auto mt-8 mb-16 px-4 sm:px-8" style="gap: 3rem; align-items: flex-start;">
+        <!-- 
+            Il pulsante aggiorna l'attributo data-theme sull'<html> e
+            persiste la scelta nel localStorage per le sessioni future.
+        -->
+        <button onclick="toggleTheme()" class="theme-toggle" aria-label="Cambia tema">🌓</button>
+    </header>
 
-        <!-- Sidebar sinistra: visibile solo su schermi >= lg (1024px) -->
-        <aside class="hidden lg:flex flex-col flex-shrink-0"
-               style="width: 220px; position: sticky; top: 5.5rem; border-right: 1px solid var(--border-color); padding-right: 1.5rem;">
-
-            <div style="margin-bottom: 1.5rem; padding-bottom: 1rem; border-bottom: 1px solid var(--border-color);">
-                <p class="font-mono" style="font-size: 0.65rem; text-transform: uppercase; color: var(--text-dim); margin-bottom: 0.25rem;">System Operator</p>
-                <h2 class="font-mono" style="font-size: 1rem; font-weight: 900; color: var(--accent-primary); letter-spacing: -0.02em;">CONSOLE_ROOT</h2>
-                <p class="font-mono" style="font-size: 0.65rem; color: var(--text-dim);">v4.2.0-stable</p>
-            </div>
-
-            <nav style="flex: 1;">
-                <ul style="list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 2px; font-family: 'JetBrains Mono', monospace; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.05em;">
-                    <li>
-                        <a href="/appuntidiprogrammazione/"
-                           style="display: flex; align-items: center; gap: 0.5rem; padding: 0.6rem 0.75rem; color: var(--accent-primary); border-radius: 4px; transition: var(--transition);"
-                           onmouseover="this.style.background='var(--bg-tertiary)'"
-                           onmouseout="this.style.background='transparent'">
-                            <span class="material-symbols-outlined" style="font-size: 1rem;">terminal</span>
-                            Latest Logs
-                        </a>
-                    </li>
-                    <li>
-                        <a href="#"
-                           style="display: flex; align-items: center; gap: 0.5rem; padding: 0.6rem 0.75rem; color: var(--text-dim); border-radius: 4px; transition: var(--transition);"
-                           onmouseover="this.style.color='var(--accent-primary)'; this.style.background='var(--bg-tertiary)'"
-                           onmouseout="this.style.color='var(--text-dim)'; this.style.background='transparent'">
-                            <span class="material-symbols-outlined" style="font-size: 1rem;">menu_book</span>
-                            Book Reviews
-                        </a>
-                    </li>
-                    <li>
-                        <a href="#"
-                           style="display: flex; align-items: center; gap: 0.5rem; padding: 0.6rem 0.75rem; color: var(--text-dim); border-radius: 4px; transition: var(--transition);"
-                           onmouseover="this.style.color='var(--accent-primary)'; this.style.background='var(--bg-tertiary)'"
-                           onmouseout="this.style.color='var(--text-dim)'; this.style.background='transparent'">
-                            <span class="material-symbols-outlined" style="font-size: 1rem;">star</span>
-                            Core Readings
-                        </a>
-                    </li>
-                </ul>
-            </nav>
-        </aside>
-
-        <!-- Canvas: qui Jekyll inietta il contenuto della pagina corrente.
-             Non c'è nessun contenuto hardcoded dopo <!--
+    <!--
     Layout post: struttura a due colonne.
-    - Sinistra (post-content): breadcrumb → tags → PDF → fonte → corpo MD
-    - Destra  (post-sidebar):  tags + fonte + libro consigliato
+    - Sinistra (post-content): breadcrumb → tags → link PDF → link fonte → articolo MD
+    - Destra (post-sidebar): tags argomento + libro consigliato
     
-    grid-template-areas: "content sidebar" definita in style.css su .post-container.
-    Sotto 992px le colonne si collassano in una sola.
+    Ordine DOM: post-content prima, post-sidebar dopo.
+    Grid-template-areas in CSS li posiziona visivamente:
+    "content sidebar" su desktop, stacked su mobile.
 -->
 <div class="post-container">
-
     <!-- COLONNA SINISTRA: contenuto principale -->
     <main class="post-content">
-
-        <!-- Breadcrumb: uso relative_url per compatibilità con baseurl -->
+        <!-- Breadcrumb: navigazione verso la home -->
         <nav class="post-breadcrumb" aria-label="Breadcrumb">
             <a href="/appuntidiprogrammazione/">Appunti di Programmazione</a>
             <span class="separator" aria-hidden="true">/</span>
             <span>Java News Roundup: Febbraio 2026</span>
         </nav>
-
-        <!-- Tag chip in testa all'articolo -->
+        <!-- Tags legati all'articolo -->
         
         <div class="post-tags-header" aria-label="Argomenti">
             
@@ -158,11 +70,9 @@
             
         </div>
         
-
-        <!-- Link al PDF allegato: visibile solo se pdf_file è nel frontmatter -->
+        <!-- Link al/ai PDF allegati all'articolo -->
         
-
-        <!-- Corpo dell'articolo: Kramdown inietta l'HTML del markdown qui -->
+        <!-- Corpo dell'articolo renderizzato da Kramdown -->
         <article class="post-article-body">
             <p># Java News Roundup: Febbraio 2026</p>
 
@@ -224,12 +134,9 @@
 <p>Sorgente originale: https://www.infoq.com/news/2026/02/java-news-roundup-feb16-2026/</p>
 
         </article>
-
-        <!--
-            Fonte originale in fondo al corpo: la posiziono qui (dopo il testo)
-            perché è un approfondimento opzionale, non un'azione primaria.
-            L'icona SVG è inline per evitare dipendenze da font icon esterni.
-        -->
+        <!-- Link alla fonte originale: lo posiziono dopo il corpo perché è un
+             approfondimento opzionale, non un'azione primaria. L'icona SVG inline
+             evita dipendenze da font icon esterni. -->
         
         <div class="post-source-link">
             <span class="source-link-label">Fonte originale</span>
@@ -239,11 +146,13 @@
                rel="noopener noreferrer"
                aria-label="Leggi la fonte originale di: Java News Roundup: Febbraio 2026">
                 <svg xmlns="http://www.w3.org/2000/svg"
-                     width="13" height="13"
+                     width="14" height="14"
                      viewBox="0 0 24 24"
-                     fill="none" stroke="currentColor"
+                     fill="none"
+                     stroke="currentColor"
                      stroke-width="2"
-                     stroke-linecap="round" stroke-linejoin="round"
+                     stroke-linecap="round"
+                     stroke-linejoin="round"
                      aria-hidden="true">
                     <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>
                     <polyline points="15 3 21 3 21 9"/>
@@ -253,13 +162,10 @@
             </a>
         </div>
         
-
     </main>
-
-    <!-- COLONNA DESTRA: sidebar -->
+    <!-- COLONNA DESTRA: sidebar post -->
     <aside class="post-sidebar">
-
-        <!-- Box 1: tag argomento -->
+        <!-- Box 1: tags argomento (stessa lista dei chip sopra, ma nella sidebar) -->
         
         <div class="sidebar-box tags-box">
             <span class="box-label">Argomenti</span>
@@ -280,8 +186,8 @@
             </div>
         </div>
         
-
-        <!-- Box 2: fonte originale nella sidebar (a colpo d'occhio senza scorrere) -->
+        <!-- Box 2: fonte originale nella sidebar, visibile a colpo d'occhio
+             senza dover scorrere fino in fondo all'articolo. -->
         
         <div class="sidebar-box source-box">
             <span class="box-label">Fonte Originale</span>
@@ -291,11 +197,13 @@
                rel="noopener noreferrer"
                aria-label="Leggi la fonte originale di: Java News Roundup: Febbraio 2026">
                 <svg xmlns="http://www.w3.org/2000/svg"
-                     width="13" height="13"
+                     width="14" height="14"
                      viewBox="0 0 24 24"
-                     fill="none" stroke="currentColor"
+                     fill="none"
+                     stroke="currentColor"
                      stroke-width="2"
-                     stroke-linecap="round" stroke-linejoin="round"
+                     stroke-linecap="round"
+                     stroke-linejoin="round"
                      aria-hidden="true">
                     <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>
                     <polyline points="15 3 21 3 21 9"/>
@@ -305,7 +213,6 @@
             </a>
         </div>
         
-
         <!-- Box 3: libro consigliato -->
         <div class="sidebar-box books-box">
             <span class="box-label">Letture Consigliate</span>
@@ -321,242 +228,25 @@
                 </a>
             </div>
         </div>
-
-    </aside>
-</div>:
-             era questo il bug principale che rendeva ogni pagina identica. -->
-        <div class="flex-1" style="min-width: 0;">
-            <!--
-    Layout post: struttura a due colonne.
-    - Sinistra (post-content): breadcrumb → tags → PDF → fonte → corpo MD
-    - Destra  (post-sidebar):  tags + fonte + libro consigliato
-    
-    grid-template-areas: "content sidebar" definita in style.css su .post-container.
-    Sotto 992px le colonne si collassano in una sola.
--->
-<div class="post-container">
-
-    <!-- COLONNA SINISTRA: contenuto principale -->
-    <main class="post-content">
-
-        <!-- Breadcrumb: uso relative_url per compatibilità con baseurl -->
-        <nav class="post-breadcrumb" aria-label="Breadcrumb">
-            <a href="/appuntidiprogrammazione/">Appunti di Programmazione</a>
-            <span class="separator" aria-hidden="true">/</span>
-            <span>Java News Roundup: Febbraio 2026</span>
-        </nav>
-
-        <!-- Tag chip in testa all'articolo -->
-        
-        <div class="post-tags-header" aria-label="Argomenti">
-            
-                <span class="post-tag-chip">jdk</span>
-            
-                <span class="post-tag-chip">payara</span>
-            
-                <span class="post-tag-chip">hibernate</span>
-            
-                <span class="post-tag-chip">quarkus</span>
-            
-                <span class="post-tag-chip">apache-camel</span>
-            
-                <span class="post-tag-chip">jakarta-ee</span>
-            
-        </div>
-        
-
-        <!-- Link al PDF allegato: visibile solo se pdf_file è nel frontmatter -->
-        
-
-        <!-- Corpo dell'articolo: Kramdown inietta l'HTML del markdown qui -->
-        <article class="post-article-body">
-            <p># Java News Roundup: Febbraio 2026</p>
-
-<p>Ho trascorso questa settimana seguendo le ultime novità riguardanti il mondo Java, e sono molto entusiasta di condividere ciò che ho appreso con voi. In questo articolo, riassumerò le principali notizie riguardo JDK 26, Payara Platform, Hibernate, Quarkus, Apache Camel e Jakarta EE 12.</p>
-
-<h2 id="jdk-26">JDK 26</h2>
-
-<p>Il secondo release candidate di JDK 26 è stato reso disponibile questa settimana, con numerose aggiornamenti da quello precedente (Build 9). Il team di sviluppo ha risolto alcuni problemi e il GA (release generale) è previsto per il 17 marzo 2026. La versione finale include dieci nuove funzionalità, tra cui:</p>
-
-<ul>
-  <li>JEP 500: Prepare to Make Final Mean Final</li>
-  <li>JEP 504: Remove the Applet API</li>
-  <li>JEP 516: Ahead-of-Time Object Caching with Any GC</li>
-  <li>JEP 517: HTTP/3 per l’API del client HTTP</li>
-  <li>JEP 522: G1 GC: Improve Throughput by Reducing Synchronization</li>
-  <li>JEP 524: PEM Encodings of Cryptographic Objects (Second Preview)</li>
-  <li>JEP 525: Structured Concurrency (Sixth Preview)</li>
-  <li>JEP 526: Lazy Constants (Second Preview)</li>
-  <li>JEP 529: Vector API (Eleventh Incubator)</li>
-  <li>JEP 530: Primitive Types in Patterns, instanceof, e switch (Fourth Preview)</li>
-</ul>
-
-<p>Developers sono incoraggiati a segnalare eventuali bug attraverso il database dei bug Java.</p>
-
-<h2 id="payara-platform">Payara Platform</h2>
-
-<p>Payara ha rilasciato l’edizione di febbraio 2026 del suo Payara Platform, che include Community Edition 7.2026.2, Enterprise Edition 6.35.0 e Enterprise Edition 5.84.0. Gli aggiornamenti includono correzioni dei bug e la migrazione di componenti, così come nuove funzionalità, come l’improved system logging con una nuova proprietà per specificare il sistema di log, e HTTP DELETE requests con un non-zero Content-Length header abilitati di default.</p>
-
-<h2 id="hibernate">Hibernate</h2>
-
-<p>La versione 8.2.2.Final di Hibernate Search è stata rilasciata questa settimana, con alcune aggiornamenti significativi, tra cui: compatibilità con Hibernate ORM 7.2.4.Final, l’uso di Locale.Root per instanziare i logger e una risoluzione del problema in cui un documento viene aggiornato al posto di eliminato durante un delete cascading quando si applica un’istanza della classe OneToOne dell’ORM Hibernate.</p>
-
-<h2 id="quarkus">Quarkus</h2>
-
-<p>La versione 3.31.4 del framework Quarkus è stata rilasciata, che include alcuni aggiornamenti significativi come il nuovo isEmpty() metodo nella classe DirectoryPathTree per restaurare la meccanica rimossa nel 3.30 release train per il trattamento dei set di origine vuoti e la risoluzione del problema che ha causato un NullPointerException durante la settimana dell’ambiente variabile HTTP_TEST_HOST con Gradle 9.3.1.</p>
-
-<h2 id="apache-camel">Apache Camel</h2>
-
-<p>La versione 4.18.0 di Apache Camel è stata rilasciata questa settimana, che include correzioni dei bug, aggiornamenti delle dipendenze e nuove funzionalità come un nuovo componente di formato dati Open Cybersecurity Schema Framework (OCFS), un modulo MCP aggiunto alla componente Camel JBang e una classe KafkaSecurityConfigurer aggiunta alla componente Camel Kafka per migliorare la configurazione dell’autenticazione Apache Kafka.</p>
-
-<h2 id="jakarta-ee-12">Jakarta EE 12</h2>
-
-<p>I sviluppatori di Jakarta hanno rilasciato un aggiornamento su Jakarta EE 12, con i dettagli della terza milestone contenuti nel minuto della chiamata del platform di Jakarta EE dell’ultima settimana. Le specifiche sono previste per aggiornare il loro pom.xml al nuovo Parent EE4J 2.0.0, che contiene la configurazione necessaria per pubblicare i pacchetti prima della loro pubblicazione su Maven Central, in modo simile a quello precedente OSSRH (ritirato l’anno scorso).</p>
-
-<p>Several specifications have reached a milestone 2 release for Jakarta EE 12. These include:</p>
-
-<ul>
-  <li>Jakarta Contexts and Dependency Injection 5.0</li>
-  <li>Jakarta Persistence 4.0</li>
-  <li>Jakarta Validation 4.0</li>
-  <li>Jakarta RESTful Web Services 5.0</li>
-  <li>Jakarta Query 1.0</li>
-  <li>Jakarta Data 1.1</li>
-  <li>Jakarta NoSQL 1.1</li>
-</ul>
-
-<hr />
-
-<p>Sorgente originale: https://www.infoq.com/news/2026/02/java-news-roundup-feb16-2026/</p>
-
-        </article>
-
-        <!--
-            Fonte originale in fondo al corpo: la posiziono qui (dopo il testo)
-            perché è un approfondimento opzionale, non un'azione primaria.
-            L'icona SVG è inline per evitare dipendenze da font icon esterni.
-        -->
-        
-        <div class="post-source-link">
-            <span class="source-link-label">Fonte originale</span>
-            <a class="source-link-anchor"
-               href=""
-               target="_blank"
-               rel="noopener noreferrer"
-               aria-label="Leggi la fonte originale di: Java News Roundup: Febbraio 2026">
-                <svg xmlns="http://www.w3.org/2000/svg"
-                     width="13" height="13"
-                     viewBox="0 0 24 24"
-                     fill="none" stroke="currentColor"
-                     stroke-width="2"
-                     stroke-linecap="round" stroke-linejoin="round"
-                     aria-hidden="true">
-                    <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>
-                    <polyline points="15 3 21 3 21 9"/>
-                    <line x1="10" y1="14" x2="21" y2="3"/>
-                </svg>
-                
-            </a>
-        </div>
-        
-
-    </main>
-
-    <!-- COLONNA DESTRA: sidebar -->
-    <aside class="post-sidebar">
-
-        <!-- Box 1: tag argomento -->
-        
-        <div class="sidebar-box tags-box">
-            <span class="box-label">Argomenti</span>
-            <div class="tag-cloud-sidebar">
-                
-                    <span class="sidebar-tag">jdk</span>
-                
-                    <span class="sidebar-tag">payara</span>
-                
-                    <span class="sidebar-tag">hibernate</span>
-                
-                    <span class="sidebar-tag">quarkus</span>
-                
-                    <span class="sidebar-tag">apache-camel</span>
-                
-                    <span class="sidebar-tag">jakarta-ee</span>
-                
-            </div>
-        </div>
-        
-
-        <!-- Box 2: fonte originale nella sidebar (a colpo d'occhio senza scorrere) -->
-        
-        <div class="sidebar-box source-box">
-            <span class="box-label">Fonte Originale</span>
-            <a class="sidebar-source-anchor"
-               href=""
-               target="_blank"
-               rel="noopener noreferrer"
-               aria-label="Leggi la fonte originale di: Java News Roundup: Febbraio 2026">
-                <svg xmlns="http://www.w3.org/2000/svg"
-                     width="13" height="13"
-                     viewBox="0 0 24 24"
-                     fill="none" stroke="currentColor"
-                     stroke-width="2"
-                     stroke-linecap="round" stroke-linejoin="round"
-                     aria-hidden="true">
-                    <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>
-                    <polyline points="15 3 21 3 21 9"/>
-                    <line x1="10" y1="14" x2="21" y2="3"/>
-                </svg>
-                Leggi l'articolo originale
-            </a>
-        </div>
-        
-
-        <!-- Box 3: libro consigliato -->
-        <div class="sidebar-box books-box">
-            <span class="box-label">Letture Consigliate</span>
-            <div class="book-card">
-                <a href="https://www.amazon.it/Appunti-Programmazione-Pensieri-soluzioni-Applicazioni-ebook/dp/B0FMFRHKTF/"
-                   target="_blank"
-                   rel="noopener noreferrer"
-                   aria-label="Acquista Appunti di Programmazione su Amazon">
-                    <img src="https://m.media-amazon.com/images/I/61Ck5eMzGYL._SY466_.jpg"
-                         alt="Copertina: Appunti di Programmazione"
-                         width="80">
-                    <p>Appunti di Programmazione: Pensieri e soluzioni per Applicazioni WEB</p>
-                </a>
-            </div>
-        </div>
-
     </aside>
 </div>
-        </div>
 
-    </div>
-
-    <!-- ===== FOOTER ===== -->
-    <footer class="main-footer"
-            style="border-top: 1px solid var(--border-color); padding: 1.5rem 2rem; font-family: 'JetBrains Mono', monospace; font-size: 0.65rem; text-transform: uppercase; color: var(--text-dim); text-align: center; letter-spacing: 0.05em;">
-        [ROOT@DEVLOG ~]# Appunti di Programmazione &nbsp;·&nbsp;
-        
-            <a href="mailto:cosimociraci@gmail.com" style="color: var(--text-dim);">cosimociraci@gmail.com</a>
-        
+    <footer class="main-footer">
+        Appunti di Programmazione &nbsp;·&nbsp; cosimociraci@gmail.com
     </footer>
 
     <script>
         /*
-         * toggleTheme: aggiorno il tema sia via data-theme (CSS custom con variabili)
-         * sia via classe 'dark' sull'<html> (Tailwind darkMode: "class").
-         * Persisto la scelta in localStorage per le sessioni future.
-         * classList.toggle(class, forza) aggiunge/rimuove in un'unica chiamata
-         * senza rischio di duplicati.
+         * toggleTheme: legge il tema corrente dall'attributo HTML,
+         * calcola l'opposto e lo salva. Il CSS reagisce via [data-theme].
+         * Non uso classi sul body per mantenere tutto centralizzato
+         * sull'elemento radice.
          */
         function toggleTheme() {
-            var html    = document.documentElement;
+            var html = document.documentElement;
             var current = html.getAttribute('data-theme');
-            var next    = current === 'dark' ? 'light' : 'dark';
+            var next = current === 'dark' ? 'light' : 'dark';
             html.setAttribute('data-theme', next);
-            html.classList.toggle('dark', next === 'dark');
             localStorage.setItem('theme', next);
         }
     </script>

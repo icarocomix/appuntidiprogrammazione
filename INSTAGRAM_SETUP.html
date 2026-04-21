@@ -1,306 +1,39 @@
 <!DOCTYPE html>
-<!--
-    Ho impostato data-theme="dark" come default sull'<html> invece di class="dark".
-    Il mio CSS custom usa il selettore [data-theme="dark/light"], mentre Tailwind
-    usa la classe 'dark'. Lo script anti-FOUC qui sotto sincronizza entrambi
-    leggendo localStorage, così nessuno dei due sistemi resta cieco all'altro.
--->
-<html lang="it" data-theme="dark" class="dark">
+<html lang="it" data-theme="dark">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Guida: Pubblicazione automatica caroselli Instagram — DevLog</title>
     <meta name="description" content="Hub tecnico per appunti di programmazione, analisi di problemi reali  e soluzioni implementative in ambito Spring Boot, Java e Web Dev.">
-
-    <!-- Font: Space Grotesk (headlines), Inter (body), JetBrains Mono (code) -->
-    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300..700&family=Inter:wght@300..700&family=JetBrains+Mono:wght@400..700&display=swap" rel="stylesheet">
-    <!-- Material Symbols per le icone nella sidebar e nella navbar -->
-    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet">
-
-    <!--
-        Ho incluso il foglio di stile custom DOPO i font e PRIMA dello script anti-FOUC.
-        Il CSS definisce le variabili --bg-primary, --text-main, ecc. usate dai layout
-        di post e libro, e tutto il syntax highlighting Rouge. Senza questo link,
-        le pagine articolo erano prive di qualsiasi stile personalizzato.
-    -->
     <link rel="stylesheet" href="/appuntidiprogrammazione/assets/css/style.css">
 
-    <!--
-        Anti-FOUC (Flash Of Unstyled Content): applico il tema PRIMA che il browser
-        disegni qualsiasi elemento. Lo script è inline e bloccante di proposito.
-        Leggo la preferenza da localStorage; se assente, uso 'dark' come default.
-        Sincronizzo sia data-theme (selettore CSS custom) sia la classe 'dark'
-        (selettore darkMode Tailwind) per mantenere entrambi i sistemi allineati.
-    -->
     <script>
+        /*
+         * Applico il tema PRIMA del rendering per evitare il flash di contenuto
+         * (FOUC). Lo script è inline e bloccante di proposito: deve girare
+         * prima che il browser disegni qualsiasi elemento.
+         */
         (function() {
             var saved = localStorage.getItem('theme') || 'dark';
             document.documentElement.setAttribute('data-theme', saved);
-            if (saved === 'dark') {
-                document.documentElement.classList.add('dark');
-            } else {
-                document.documentElement.classList.remove('dark');
-            }
         })();
     </script>
 </head>
-<body class="antialiased flex flex-col min-h-screen" style="background-color: var(--bg-primary); color: var(--text-main); font-family: 'Inter', sans-serif;">
+<body>
 
-    <!-- ===== TOP NAVBAR ===== -->
-    <nav class="main-header flex justify-between items-center px-8 h-16 w-full backdrop-blur-xl sticky top-0 z-50"
-         style="background-color: rgba(10,10,10,0.92); border-bottom: 1px solid var(--border-color);">
-
-        <!-- Logo: torna alla home via relative_url per compatibilità con baseurl -->
-        <a class="logo font-mono font-bold"
-           href="/appuntidiprogrammazione/"
-           style="color: var(--accent-primary); font-family: 'JetBrains Mono', monospace; letter-spacing: 0.05em;">
-            APPUNTI DI <span style="color: var(--text-main);">PROGRAMMAZIONE</span>
-        </a>
-
-        <div class="flex items-center space-x-4">
-            <!--
-                Ho aggiunto onclick="toggleTheme()" al pulsante: nel vecchio default
-                era presente, nel nuovo era stato rimosso e il pulsante era muto.
-                La funzione è definita in fondo al body, prima della chiusura </html>.
-            -->
-            <button onclick="toggleTheme()"
-                    class="theme-toggle"
-                    aria-label="Cambia tema"
-                    style="background: var(--bg-tertiary); border: 1px solid var(--border-color); border-radius: 4px; padding: 6px 12px; cursor: pointer; color: var(--text-main); transition: var(--transition);">
-                🌓
-            </button>
+    <header class="main-header">
+        <div class="logo" onclick="window.location.href='/appuntidiprogrammazione/'">
+            APPUNTI DI <span>PROGRAMMAZIONE</span>
         </div>
-    </nav>
 
-    <!-- ===== LAYOUT PRINCIPALE: sidebar sinistra + canvas contenuto ===== -->
-    <div class="flex flex-grow w-full max-w-screen-xl mx-auto mt-8 mb-16 px-4 sm:px-8" style="gap: 3rem; align-items: flex-start;">
+        <!-- 
+            Il pulsante aggiorna l'attributo data-theme sull'<html> e
+            persiste la scelta nel localStorage per le sessioni future.
+        -->
+        <button onclick="toggleTheme()" class="theme-toggle" aria-label="Cambia tema">🌓</button>
+    </header>
 
-        <!-- Sidebar sinistra: visibile solo su schermi >= lg (1024px) -->
-        <aside class="hidden lg:flex flex-col flex-shrink-0"
-               style="width: 220px; position: sticky; top: 5.5rem; border-right: 1px solid var(--border-color); padding-right: 1.5rem;">
-
-            <div style="margin-bottom: 1.5rem; padding-bottom: 1rem; border-bottom: 1px solid var(--border-color);">
-                <p class="font-mono" style="font-size: 0.65rem; text-transform: uppercase; color: var(--text-dim); margin-bottom: 0.25rem;">System Operator</p>
-                <h2 class="font-mono" style="font-size: 1rem; font-weight: 900; color: var(--accent-primary); letter-spacing: -0.02em;">CONSOLE_ROOT</h2>
-                <p class="font-mono" style="font-size: 0.65rem; color: var(--text-dim);">v4.2.0-stable</p>
-            </div>
-
-            <nav style="flex: 1;">
-                <ul style="list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 2px; font-family: 'JetBrains Mono', monospace; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.05em;">
-                    <li>
-                        <a href="/appuntidiprogrammazione/"
-                           style="display: flex; align-items: center; gap: 0.5rem; padding: 0.6rem 0.75rem; color: var(--accent-primary); border-radius: 4px; transition: var(--transition);"
-                           onmouseover="this.style.background='var(--bg-tertiary)'"
-                           onmouseout="this.style.background='transparent'">
-                            <span class="material-symbols-outlined" style="font-size: 1rem;">terminal</span>
-                            Latest Logs
-                        </a>
-                    </li>
-                    <li>
-                        <a href="#"
-                           style="display: flex; align-items: center; gap: 0.5rem; padding: 0.6rem 0.75rem; color: var(--text-dim); border-radius: 4px; transition: var(--transition);"
-                           onmouseover="this.style.color='var(--accent-primary)'; this.style.background='var(--bg-tertiary)'"
-                           onmouseout="this.style.color='var(--text-dim)'; this.style.background='transparent'">
-                            <span class="material-symbols-outlined" style="font-size: 1rem;">menu_book</span>
-                            Book Reviews
-                        </a>
-                    </li>
-                    <li>
-                        <a href="#"
-                           style="display: flex; align-items: center; gap: 0.5rem; padding: 0.6rem 0.75rem; color: var(--text-dim); border-radius: 4px; transition: var(--transition);"
-                           onmouseover="this.style.color='var(--accent-primary)'; this.style.background='var(--bg-tertiary)'"
-                           onmouseout="this.style.color='var(--text-dim)'; this.style.background='transparent'">
-                            <span class="material-symbols-outlined" style="font-size: 1rem;">star</span>
-                            Core Readings
-                        </a>
-                    </li>
-                </ul>
-            </nav>
-        </aside>
-
-        <!-- Canvas: qui Jekyll inietta il contenuto della pagina corrente.
-             Non c'è nessun contenuto hardcoded dopo <h1 id="guida-pubblicazione-automatica-caroselli-instagram">Guida: Pubblicazione automatica caroselli Instagram</h1>
-
-<h2 id="struttura-dei-file">Struttura dei file</h2>
-
-<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code><table class="rouge-table"><tbody><tr><td class="rouge-gutter gl"><pre class="lineno">1
-2
-3
-4
-5
-6
-7
-8
-9
-10
-11
-</pre></td><td class="rouge-code"><pre>repo/
-├── publish.py                          ← script di pubblicazione
-├── generazione_slide/
-│   └── calendario_instagram.csv        ← calendario post
-│   └── 2026-04-05-argon2/              ← esempio cartella carosello
-│       ├── 1.png
-│       ├── 2.png
-│       └── 3.png
-└── .github/
-    └── workflows/
-        └── instagram.yml               ← workflow automatico
-</pre></td></tr></tbody></table></code></pre></div></div>
-
-<hr />
-
-<h2 id="1-formato-del-csv">1. Formato del CSV</h2>
-
-<p>Il file <code class="language-plaintext highlighter-rouge">generazione_slide/calendario_instagram.csv</code> deve avere
-questa intestazione esatta (la prima riga):</p>
-
-<pre><code class="language-csv">data,folder,caption,tags
-</code></pre>
-
-<p>Esempio di righe valide:</p>
-
-<pre><code class="language-csv">data,folder,caption,tags
-2026-04-05,generazione_slide/2026-04-05-argon2,Argon2 è l'algoritmo giusto per hashare le password. Ecco perché MD5 e SHA256 non bastano contro le GPU moderne.,"#java #security #backend #springboot #programmazione"
-2026-04-07,generazione_slide/2026-04-07-jvm,Come funziona la JVM internamente? Thread, heap e garbage collector spiegati con codice reale.,"#java #jvm #backend #dev"
-</code></pre>
-
-<p><strong>Note importanti sul CSV:</strong></p>
-<ul>
-  <li>Il formato della colonna <code class="language-plaintext highlighter-rouge">data</code> deve essere <code class="language-plaintext highlighter-rouge">YYYY-MM-DD</code></li>
-  <li>La colonna <code class="language-plaintext highlighter-rouge">folder</code> contiene il path relativo alla root del repo</li>
-  <li>Se <code class="language-plaintext highlighter-rouge">caption</code> o <code class="language-plaintext highlighter-rouge">tags</code> contengono virgole, racchiudili tra <code class="language-plaintext highlighter-rouge">"virgolette doppie"</code></li>
-  <li>I tag vanno nella colonna <code class="language-plaintext highlighter-rouge">tags</code>, separati da spazi, con il <code class="language-plaintext highlighter-rouge">#</code></li>
-</ul>
-
-<hr />
-
-<h2 id="2-aggiungere-i-secrets-github">2. Aggiungere i secrets GitHub</h2>
-
-<p>I secrets sono credenziali cifrate che GitHub inietta come variabili
-d’ambiente durante i workflow, senza mai mostrarle nei log.</p>
-
-<h3 id="procedura-passo-per-passo">Procedura passo per passo</h3>
-
-<p><strong>1.</strong> Vai sul tuo repository su GitHub</p>
-
-<p><strong>2.</strong> Clicca su <strong>Settings</strong> (tab in alto a destra della repo)</p>
-
-<p><strong>3.</strong> Nel menu laterale sinistro, sotto <strong>Security</strong>, clicca su
-   <strong>Secrets and variables</strong> → <strong>Actions</strong></p>
-
-<p><strong>4.</strong> Clicca su <strong>New repository secret</strong> (pulsante verde in alto a destra)</p>
-
-<p><strong>5.</strong> Aggiungi il primo secret:</p>
-<ul>
-  <li><strong>Name:</strong> <code class="language-plaintext highlighter-rouge">IG_USERNAME</code></li>
-  <li><strong>Secret:</strong> il tuo username Instagram (senza la @)</li>
-  <li>Clicca <strong>Add secret</strong></li>
-</ul>
-
-<p><strong>6.</strong> Clicca di nuovo <strong>New repository secret</strong> e aggiungi:</p>
-<ul>
-  <li><strong>Name:</strong> <code class="language-plaintext highlighter-rouge">IG_PASSWORD</code></li>
-  <li><strong>Secret:</strong> la tua password Instagram</li>
-  <li>Clicca <strong>Add secret</strong></li>
-</ul>
-
-<p>Al termine vedrai entrambi i secrets nella lista. GitHub non mostra
-mai il valore dopo il salvataggio — se devi cambiare una password
-puoi sovrascrivere il secret con <strong>Update</strong>.</p>
-
-<hr />
-
-<h2 id="3-abilitare-il-workflow">3. Abilitare il workflow</h2>
-
-<p>Il file <code class="language-plaintext highlighter-rouge">.github/workflows/instagram.yml</code> viene rilevato
-automaticamente da GitHub Actions al primo push.</p>
-
-<p>Verifica che Actions sia abilitato per il tuo repo:
-<strong>Settings</strong> → <strong>Actions</strong> → <strong>General</strong> → seleziona
-<strong>Allow all actions and reusable workflows</strong> → <strong>Save</strong></p>
-
-<hr />
-
-<h2 id="4-test-prima-di-andare-live">4. Test prima di andare live</h2>
-
-<p>Prima di aspettare le 09:00 UTC, testa manualmente:</p>
-
-<p><strong>1.</strong> Vai su <strong>Actions</strong> nella tab del tuo repo</p>
-
-<p><strong>2.</strong> Nel menu laterale, clicca su <strong>Pubblica Carosello Instagram</strong></p>
-
-<p><strong>3.</strong> Clicca su <strong>Run workflow</strong> (pulsante grigio a destra)</p>
-
-<p><strong>4.</strong> Nelle opzioni che appaiono, imposta <strong>Dry run</strong> su <code class="language-plaintext highlighter-rouge">true</code></p>
-
-<p><strong>5.</strong> Clicca <strong>Run workflow</strong></p>
-
-<p>Il workflow girerà e nei log vedrai cosa avrebbe pubblicato,
-senza effettuare nessuna chiamata reale a Instagram.</p>
-
-<p>Quando sei soddisfatto del test, esegui di nuovo con <strong>Dry run = false</strong>
-per la pubblicazione reale.</p>
-
-<hr />
-
-<h2 id="5-risoluzione-problemi-comuni">5. Risoluzione problemi comuni</h2>
-
-<table>
-  <thead>
-    <tr>
-      <th>Problema</th>
-      <th>Causa probabile</th>
-      <th>Soluzione</th>
-    </tr>
-  </thead>
-  <tbody>
-    <tr>
-      <td><code class="language-plaintext highlighter-rouge">Login fallito</code></td>
-      <td>Password errata o 2FA attivo</td>
-      <td>Disabilita 2FA sull’account IG o usa una password per app</td>
-    </tr>
-    <tr>
-      <td><code class="language-plaintext highlighter-rouge">Cartella non trovata</code></td>
-      <td>Path errato nel CSV</td>
-      <td>Verifica che il <code class="language-plaintext highlighter-rouge">folder</code> nel CSV corrisponda esattamente al path nel repo</td>
-    </tr>
-    <tr>
-      <td><code class="language-plaintext highlighter-rouge">Solo 1 immagine trovata</code></td>
-      <td>Manca il secondo file</td>
-      <td>Instagram richiede min 2 slide per un carosello</td>
-    </tr>
-    <tr>
-      <td><code class="language-plaintext highlighter-rouge">Nessun post pianificato</code></td>
-      <td>Data nel CSV non coincide</td>
-      <td>Controlla che il formato sia <code class="language-plaintext highlighter-rouge">YYYY-MM-DD</code> senza spazi</td>
-    </tr>
-    <tr>
-      <td>Workflow non parte</td>
-      <td>Actions disabilitato</td>
-      <td>Vedi sezione 3 sopra</td>
-    </tr>
-  </tbody>
-</table>
-
-<hr />
-
-<h2 id="6-account-con-autenticazione-a-due-fattori-2fa">6. Account con autenticazione a due fattori (2FA)</h2>
-
-<p>Se il tuo account Instagram ha il 2FA attivo, il login da script
-fallirà. Le opzioni sono:</p>
-
-<ul>
-  <li><strong>Opzione A (consigliata):</strong> Crea un account Instagram secondario
-dedicato alla pubblicazione automatica, senza 2FA.</li>
-  <li><strong>Opzione B:</strong> Disabilita temporaneamente il 2FA, esegui il login
-con lo script, e riattivalo. instagrapi salva la sessione in locale
-ma in un ambiente CI stateless come GitHub Actions la sessione
-non persiste tra un run e l’altro.</li>
-</ul>
-:
-             era questo il bug principale che rendeva ogni pagina identica. -->
-        <div class="flex-1" style="min-width: 0;">
-            <h1 id="guida-pubblicazione-automatica-caroselli-instagram">Guida: Pubblicazione automatica caroselli Instagram</h1>
+    <h1 id="guida-pubblicazione-automatica-caroselli-instagram">Guida: Pubblicazione automatica caroselli Instagram</h1>
 
 <h2 id="struttura-dei-file">Struttura dei file</h2>
 
@@ -479,33 +212,23 @@ ma in un ambiente CI stateless come GitHub Actions la sessione
 non persiste tra un run e l’altro.</li>
 </ul>
 
-        </div>
 
-    </div>
-
-    <!-- ===== FOOTER ===== -->
-    <footer class="main-footer"
-            style="border-top: 1px solid var(--border-color); padding: 1.5rem 2rem; font-family: 'JetBrains Mono', monospace; font-size: 0.65rem; text-transform: uppercase; color: var(--text-dim); text-align: center; letter-spacing: 0.05em;">
-        [ROOT@DEVLOG ~]# Appunti di Programmazione &nbsp;·&nbsp;
-        
-            <a href="mailto:cosimociraci@gmail.com" style="color: var(--text-dim);">cosimociraci@gmail.com</a>
-        
+    <footer class="main-footer">
+        Appunti di Programmazione &nbsp;·&nbsp; cosimociraci@gmail.com
     </footer>
 
     <script>
         /*
-         * toggleTheme: aggiorno il tema sia via data-theme (CSS custom con variabili)
-         * sia via classe 'dark' sull'<html> (Tailwind darkMode: "class").
-         * Persisto la scelta in localStorage per le sessioni future.
-         * classList.toggle(class, forza) aggiunge/rimuove in un'unica chiamata
-         * senza rischio di duplicati.
+         * toggleTheme: legge il tema corrente dall'attributo HTML,
+         * calcola l'opposto e lo salva. Il CSS reagisce via [data-theme].
+         * Non uso classi sul body per mantenere tutto centralizzato
+         * sull'elemento radice.
          */
         function toggleTheme() {
-            var html    = document.documentElement;
+            var html = document.documentElement;
             var current = html.getAttribute('data-theme');
-            var next    = current === 'dark' ? 'light' : 'dark';
+            var next = current === 'dark' ? 'light' : 'dark';
             html.setAttribute('data-theme', next);
-            html.classList.toggle('dark', next === 'dark');
             localStorage.setItem('theme', next);
         }
     </script>
