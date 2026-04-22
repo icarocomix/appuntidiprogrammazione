@@ -1,58 +1,251 @@
 <!DOCTYPE html>
-<html lang="it" data-theme="dark">
+<!--
+    FIX 1: aggiunto data-theme="dark" mantenendo class="dark".
+    Tailwind usa class (darkMode:"class"), il mio style.css usa [data-theme].
+    Lo script anti-FOUC nel <head> li sincronizza entrambi prima del render.
+-->
+<html class="dark" data-theme="dark" lang="it">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sfida di un Senior Developer: La settimana tecnica in Java (aprile 2026) — DevLog</title>
-    <meta name="description" content="L'articolo descrive gli aggiornamenti più significativi del mondo Java della settimana, includendo la versione 4.0 di TornadoVM e Google ADK for Java 1.0.
-">
-    <link rel="stylesheet" href="/appuntidiprogrammazione/assets/css/style.css">
-
-    <script>
-        /*
-         * Applico il tema PRIMA del rendering per evitare il flash di contenuto
-         * (FOUC). Lo script è inline e bloccante di proposito: deve girare
-         * prima che il browser disegni qualsiasi elemento.
-         */
-        (function() {
-            var saved = localStorage.getItem('theme') || 'dark';
-            document.documentElement.setAttribute('data-theme', saved);
-        })();
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Sfida di un Senior Developer: La settimana tecnica in Java (aprile 2026) — DevLog</title>
+<meta content="L'articolo descrive gli aggiornamenti più significativi del mondo Java della settimana, includendo la versione 4.0 di TornadoVM e Google ADK for Java 1.0.
+" name="description"/>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300..700&family=Inter:wght@300..700&family=JetBrains+Mono:wght@400..700&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+<!--
+    FIX 2: link al foglio di stile custom — era completamente assente.
+    Senza questo post.html e libro.html non hanno nessuna classe CSS
+    (.post-container, .post-article-body, syntax highlighting Rouge, ecc.)
+-->
+<link rel="stylesheet" href="/appuntidiprogrammazione/assets/css/style.css"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "tertiary-fixed": "#ffdad7",
+                        "error-container": "#93000a",
+                        "on-tertiary-fixed-variant": "#842225",
+                        "secondary-fixed-dim": "#c8c6c5",
+                        "outline-variant": "#3c4a42",
+                        "on-error": "#690005",
+                        "inverse-on-surface": "#313030",
+                        "on-primary-container": "#00422b",
+                        "background": "#131313",
+                        "on-primary-fixed-variant": "#005236",
+                        "tertiary-fixed-dim": "#ffb3af",
+                        "surface-container-high": "#2a2a2a",
+                        "on-tertiary-container": "#711419",
+                        "on-primary-fixed": "#002113",
+                        "on-error-container": "#ffdad6",
+                        "surface-dim": "#131313",
+                        "surface-container-low": "#1c1b1b",
+                        "on-surface-variant": "#bbcabf",
+                        "on-secondary-fixed": "#1b1c1c",
+                        "surface-container-lowest": "#0e0e0e",
+                        "secondary-container": "#474746",
+                        "on-secondary-container": "#b7b5b4",
+                        "secondary-fixed": "#e4e2e1",
+                        "surface-container-highest": "#353534",
+                        "surface-variant": "#353534",
+                        "outline": "#86948a",
+                        "on-surface": "#e5e2e1",
+                        "surface": "#131313",
+                        "primary-fixed-dim": "#4edea3",
+                        "on-tertiary-fixed": "#410005",
+                        "on-primary": "#003824",
+                        "on-tertiary": "#650911",
+                        "inverse-primary": "#006c49",
+                        "primary-container": "#10b981",
+                        "surface-tint": "#4edea3",
+                        "surface-bright": "#3a3939",
+                        "on-secondary-fixed-variant": "#474746",
+                        "tertiary": "#ffb3af",
+                        "primary-fixed": "#6ffbbe",
+                        "inverse-surface": "#e5e2e1",
+                        "primary": "#4edea3",
+                        "on-secondary": "#303030",
+                        "on-background": "#e5e2e1",
+                        "error": "#ffb4ab",
+                        "tertiary-container": "#fc7c78",
+                        "surface-container": "#201f1f",
+                        "secondary": "#c8c6c5"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.125rem",
+                        "lg": "0.25rem",
+                        "xl": "0.5rem",
+                        "full": "0.75rem"
+                    },
+                    "spacing": {},
+                    "fontFamily": {
+                        "headline": ["Space Grotesk", "sans-serif"],
+                        "body": ["Inter", "sans-serif"],
+                        "label": ["JetBrains Mono", "monospace"]
+                    }
+                }
+            }
+        }
     </script>
+<style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #131313;
+            color: #e5e2e1;
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+        }
+        h1, h2, h3, h4, h5, h6, .font-headline {
+            font-family: 'Space Grotesk', sans-serif;
+        }
+        .font-mono, .label {
+            font-family: 'JetBrains Mono', monospace;
+        }
+        .glow-hover:hover {
+            box-shadow: 0 0 20px 0 rgba(78, 222, 163, 0.15);
+        }
+        .glass-panel {
+            background-color: rgba(53, 53, 52, 0.6);
+            backdrop-filter: blur(12px);
+            border-top: 1px solid rgba(60, 74, 66, 0.15);
+            border-left: 1px solid rgba(60, 74, 66, 0.15);
+        }
+        .ambient-glow {
+            position: relative;
+        }
+        .ambient-glow::after {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            box-shadow: 0 0 30px 5px rgba(78, 222, 163, 0.1);
+            border-radius: inherit;
+            z-index: -1;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+        .ambient-glow:hover::after { opacity: 1; }
+    </style>
+<!--
+    FIX 3: script anti-FOUC inline e bloccante nel <head>.
+    Deve girare prima che il browser dipinga qualsiasi elemento.
+    Legge localStorage e sincronizza sia data-theme (CSS custom)
+    sia class="dark" (Tailwind darkMode:"class").
+-->
+<script>
+    (function() {
+        var saved = localStorage.getItem('theme') || 'dark';
+        if (saved === 'light') {
+            document.documentElement.classList.remove('dark');
+            document.documentElement.setAttribute('data-theme', 'light');
+        } else {
+            document.documentElement.classList.add('dark');
+            document.documentElement.setAttribute('data-theme', 'dark');
+        }
+    })();
+</script>
 </head>
-<body>
+<body class="bg-background text-on-background antialiased flex flex-col min-h-screen">
 
-    <header class="main-header">
-        <div class="logo" onclick="window.location.href='/appuntidiprogrammazione/'">
-            APPUNTI DI <span>PROGRAMMAZIONE</span>
-        </div>
+<!-- TopNavBar — identico al nuovo, solo href del logo/primo link corretti -->
+<nav class="flex justify-between items-center px-8 h-16 w-full bg-[#131313]/90 dark:bg-[#131313]/90 backdrop-blur-xl docked full-width top-0 z-50 border-b border-white/5 sticky top-0">
+<a class="font-mono font-bold text-[#10B981] before:content-['&gt;_'] hover:text-[#4edea3] transition-colors duration-200" href="/appuntidiprogrammazione/">LUCID_CONSOLE</a>
+<div class="hidden md:flex items-center space-x-6 font-['Space_Grotesk'] uppercase tracking-widest text-sm">
+<a class="text-[#10B981] border-b-2 border-[#10B981] pb-1 hover:text-[#4edea3] transition-colors duration-200" href="/appuntidiprogrammazione/">Articles</a>
+<a class="text-zinc-400 font-mono hover:text-[#4edea3] transition-colors duration-200" href="#">Reviews</a>
+<a class="text-zinc-400 font-mono hover:text-[#4edea3] transition-colors duration-200" href="#">Library</a>
+<a class="text-zinc-400 font-mono hover:text-[#4edea3] transition-colors duration-200" href="#">Archive</a>
+</div>
+<div class="flex items-center space-x-4">
+<!--
+    FIX 4: aggiunto onclick="toggleTheme()" — il pulsante era muto nel
+    nuovo file. La funzione toggleTheme() è definita nel <script> in fondo.
+-->
+<button onclick="toggleTheme()" aria-label="Toggle Dark Mode" class="text-zinc-400 hover:text-[#4edea3] transition-colors duration-200">
+<span class="material-symbols-outlined" data-icon="dark_mode">dark_mode</span>
+</button>
+<button aria-label="Terminal" class="text-zinc-400 hover:text-[#4edea3] transition-colors duration-200">
+<span class="material-symbols-outlined" data-icon="terminal">terminal</span>
+</button>
+</div>
+</nav>
 
-        <!-- 
-            Il pulsante aggiorna l'attributo data-theme sull'<html> e
-            persiste la scelta nel localStorage per le sessioni future.
-        -->
-        <button onclick="toggleTheme()" class="theme-toggle" aria-label="Cambia tema">🌓</button>
-    </header>
+<!-- Main Content Area — identico al nuovo -->
+<main class="flex-grow flex w-full max-w-7xl mx-auto mt-8 mb-16 px-4 sm:px-8">
 
-    <!--
+<!-- SideNavBar — identico al nuovo -->
+<aside class="hidden lg:flex flex-col border-r border-white/5 w-64 flex-shrink-0 mr-12 bg-surface-container-low h-[calc(100vh-8rem)] sticky top-24 rounded-lg overflow-hidden">
+<div class="p-6 border-b border-white/5">
+<p class="font-mono text-xs uppercase tracking-tighter text-on-surface-variant mb-1">System Operator</p>
+<h2 class="font-mono text-lg font-black text-primary mb-1 truncate">CONSOLE_ROOT</h2>
+<p class="font-mono text-[10px] text-zinc-500">v4.2.0-stable</p>
+<div class="mt-6 relative">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500 text-sm">search</span>
+<input class="w-full bg-surface-container-lowest border border-outline-variant/30 rounded focus:border-primary focus:ring-1 focus:ring-primary text-xs font-mono py-2 pl-9 pr-3 text-on-surface placeholder:text-zinc-600 outline-none transition-all" placeholder="Search Documentation..." type="text"/>
+</div>
+</div>
+<nav class="flex-1 py-4 overflow-y-auto">
+<ul class="space-y-1 font-mono text-xs uppercase tracking-tighter">
+<li>
+<a class="text-[#10B981] bg-emerald-500/5 flex items-center gap-3 px-4 py-3 border-r-2 border-[#10B981] hover:bg-zinc-800/50 transition-all" href="/appuntidiprogrammazione/">
+<span class="material-symbols-outlined text-sm">terminal</span>
+<span>Latest Logs</span>
+</a>
+</li>
+<li>
+<a class="text-zinc-500 flex items-center gap-3 px-4 py-3 hover:bg-zinc-800/50 hover:translate-x-1 transition-all hover:text-[#4edea3]" href="#">
+<span class="material-symbols-outlined text-sm">menu_book</span>
+<span>Book Reviews</span>
+</a>
+</li>
+<li>
+<a class="text-zinc-500 flex items-center gap-3 px-4 py-3 hover:bg-zinc-800/50 hover:translate-x-1 transition-all hover:text-[#4edea3]" href="#">
+<span class="material-symbols-outlined text-sm">star</span>
+<span>Core Readings</span>
+</a>
+</li>
+<li>
+<a class="text-zinc-500 flex items-center gap-3 px-4 py-3 hover:bg-zinc-800/50 hover:translate-x-1 transition-all hover:text-[#4edea3]" href="#">
+<span class="material-symbols-outlined text-sm">info</span>
+<span>System Info</span>
+</a>
+</li>
+</ul>
+</nav>
+<div class="p-4 border-t border-white/5 bg-surface-container-lowest/50">
+<ul class="flex justify-between">
+<li>
+<a class="text-zinc-500 hover:text-primary transition-colors" href="#" title="Source">
+<span class="material-symbols-outlined">code</span>
+</a>
+</li>
+<li>
+<a class="text-zinc-500 hover:text-primary transition-colors" href="#" title="RSS">
+<span class="material-symbols-outlined">rss_feed</span>
+</a>
+</li>
+</ul>
+</div>
+</aside>
+
+<!-- Canvas: solo <!--
     Layout post: struttura a due colonne.
-    - Sinistra (post-content): breadcrumb → tags → link PDF → link fonte → articolo MD
-    - Destra (post-sidebar): tags argomento + libro consigliato
-    
-    Ordine DOM: post-content prima, post-sidebar dopo.
-    Grid-template-areas in CSS li posiziona visivamente:
-    "content sidebar" su desktop, stacked su mobile.
+    - Sinistra (post-content): breadcrumb → tags → PDF → corpo MD → fonte
+    - Destra  (post-sidebar):  tags + fonte + libro consigliato
 -->
 <div class="post-container">
-    <!-- COLONNA SINISTRA: contenuto principale -->
+
     <main class="post-content">
-        <!-- Breadcrumb: navigazione verso la home -->
+
         <nav class="post-breadcrumb" aria-label="Breadcrumb">
             <a href="/appuntidiprogrammazione/">Appunti di Programmazione</a>
             <span class="separator" aria-hidden="true">/</span>
             <span>Sfida di un Senior Developer: La settimana tecnica in Java (aprile 2026)</span>
         </nav>
-        <!-- Tags legati all'articolo -->
+
         
         <div class="post-tags-header" aria-label="Argomenti">
             
@@ -64,9 +257,9 @@
             
         </div>
         
-        <!-- Link al/ai PDF allegati all'articolo -->
+
         
-        <!-- Corpo dell'articolo renderizzato da Kramdown -->
+
         <article class="post-article-body">
             <p># Sfida di un Senior Developer: La settimana tecnica in Java (aprile 2026)</p>
 
@@ -94,9 +287,7 @@
 <p>Fonte originale: https://www.infoq.com/news/2026/04/java-news-roundup-mar30-2026/</p>
 
         </article>
-        <!-- Link alla fonte originale: lo posiziono dopo il corpo perché è un
-             approfondimento opzionale, non un'azione primaria. L'icona SVG inline
-             evita dipendenze da font icon esterni. -->
+
         
         <div class="post-source-link">
             <span class="source-link-label">Fonte originale</span>
@@ -105,14 +296,9 @@
                target="_blank"
                rel="noopener noreferrer"
                aria-label="Leggi la fonte originale di: Sfida di un Senior Developer: La settimana tecnica in Java (aprile 2026)">
-                <svg xmlns="http://www.w3.org/2000/svg"
-                     width="14" height="14"
-                     viewBox="0 0 24 24"
-                     fill="none"
-                     stroke="currentColor"
-                     stroke-width="2"
-                     stroke-linecap="round"
-                     stroke-linejoin="round"
+                <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13"
+                     viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                     stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
                      aria-hidden="true">
                     <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>
                     <polyline points="15 3 21 3 21 9"/>
@@ -122,10 +308,11 @@
             </a>
         </div>
         
+
     </main>
-    <!-- COLONNA DESTRA: sidebar post -->
+
     <aside class="post-sidebar">
-        <!-- Box 1: tags argomento (stessa lista dei chip sopra, ma nella sidebar) -->
+
         
         <div class="sidebar-box tags-box">
             <span class="box-label">Argomenti</span>
@@ -140,8 +327,7 @@
             </div>
         </div>
         
-        <!-- Box 2: fonte originale nella sidebar, visibile a colpo d'occhio
-             senza dover scorrere fino in fondo all'articolo. -->
+
         
         <div class="sidebar-box source-box">
             <span class="box-label">Fonte Originale</span>
@@ -150,14 +336,9 @@
                target="_blank"
                rel="noopener noreferrer"
                aria-label="Leggi la fonte originale di: Sfida di un Senior Developer: La settimana tecnica in Java (aprile 2026)">
-                <svg xmlns="http://www.w3.org/2000/svg"
-                     width="14" height="14"
-                     viewBox="0 0 24 24"
-                     fill="none"
-                     stroke="currentColor"
-                     stroke-width="2"
-                     stroke-linecap="round"
-                     stroke-linejoin="round"
+                <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13"
+                     viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                     stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
                      aria-hidden="true">
                     <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>
                     <polyline points="15 3 21 3 21 9"/>
@@ -167,7 +348,7 @@
             </a>
         </div>
         
-        <!-- Box 3: libro consigliato -->
+
         <div class="sidebar-box books-box">
             <span class="box-label">Letture Consigliate</span>
             <div class="book-card">
@@ -182,28 +363,452 @@
                 </a>
             </div>
         </div>
+
+    </aside>
+</div>, nessun contenuto hardcoded -->
+<article class="flex-1 w-full max-w-4xl min-w-0">
+<div class="prose prose-invert max-w-none font-body text-on-surface-variant prose-headings:font-headline prose-headings:text-on-surface prose-a:text-primary prose-a:no-underline hover:prose-a:underline prose-code:font-label prose-code:text-primary prose-code:bg-surface-container-lowest prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded-sm">
+<!--
+    FIX 5: rimosso il blocco <header> + <div class="glass-panel"> hardcoded
+    che nel nuovo file stava DOPO <!--
+    Layout post: struttura a due colonne.
+    - Sinistra (post-content): breadcrumb → tags → PDF → corpo MD → fonte
+    - Destra  (post-sidebar):  tags + fonte + libro consigliato
+-->
+<div class="post-container">
+
+    <main class="post-content">
+
+        <nav class="post-breadcrumb" aria-label="Breadcrumb">
+            <a href="/appuntidiprogrammazione/">Appunti di Programmazione</a>
+            <span class="separator" aria-hidden="true">/</span>
+            <span>Sfida di un Senior Developer: La settimana tecnica in Java (aprile 2026)</span>
+        </nav>
+
+        
+        <div class="post-tags-header" aria-label="Argomenti">
+            
+                <span class="post-tag-chip">tornadovm</span>
+            
+                <span class="post-tag-chip">google adk</span>
+            
+                <span class="post-tag-chip">java framework</span>
+            
+        </div>
+        
+
+        
+
+        <article class="post-article-body">
+            <p># Sfida di un Senior Developer: La settimana tecnica in Java (aprile 2026)</p>
+
+<p>Ho trascorso questa settimana seguendo le notizie più importanti del mondo Java, e sono venuto a conoscenza di alcuni aggiornamenti interessanti. Ho scoperto che la versione 4.0 del framework TornadoVM è stata rilasciata ufficialmente, insieme al Google ADK for Java 1.0.</p>
+
+<h2 id="tornadovm-40">TornadoVM 4.0</h2>
+
+<p>Il team di sviluppo di TornadoVM ha annunciato la versione 4.0 del loro framework di accelerazione GPU. Il rilascio include varie correzioni dei bug, aggiornamenti delle dipendenze e alcune modifiche significative, tra cui un nuovo hardware backend che supporta Apple Silicon e l’API Metal, la possibilità di utilizzare le intrinseche SIMD shuffle e reduction nel backend PTX, e una nuova funzione <code class="language-plaintext highlighter-rouge">withCUDAGraph()</code> aggiunta alla classe <code class="language-plaintext highlighter-rouge">TornadoExecutionPlan</code>. A mio avviso, queste modifiche aprono la strada a nuove possibilità di sviluppo per gli utenti che usano TornadoVM.</p>
+
+<h2 id="google-adk-for-java-10">Google ADK for Java 1.0</h2>
+
+<p>Google ha annunciato l’uscita della versione 1.0 del loro framework open-source Agent Development Kit (ADK) per Java. Il rilascio include varie correzioni dei bug, miglioramenti della documentazione e alcune nuove funzionalità, tra cui l’utilizzo dell’<code class="language-plaintext highlighter-rouge">InMemoryArtifactService</code> classe nella classe <code class="language-plaintext highlighter-rouge">AgentExecutorProducer</code>, per permettere la costruzione di istanze dell’<code class="language-plaintext highlighter-rouge">AgentExecutor</code>, e la capacità di utilizzare simultaneamente le feature <code class="language-plaintext highlighter-rouge">output_schema</code> e <code class="language-plaintext highlighter-rouge">tools</code> in modelli che non supportano entrambi al contempo.</p>
+
+<h2 id="altri-aggiornamenti">Altri aggiornamenti</h2>
+
+<p>Altre notizie importanti della settimana include:</p>
+<ul>
+  <li>La versione 7.1.0 di Grails è stata rilasciata come prima release candidate, con bug fixes e modifiche significative come la configurazione del <code class="language-plaintext highlighter-rouge">Groovy invokedynamic</code> spostato dalla generata <code class="language-plaintext highlighter-rouge">build.gradle</code> file al Grails Gradle Plugin per centralizzare la configurazione, e il cambiamento dell’<code class="language-plaintext highlighter-rouge">@Service</code> annotation che ora eredita un datasource automaticamente dal mapping blocco della classe di dominio.</li>
+  <li>Google ha rilasciato le versioni 11.0.21, 10.1.54 e 9.0.117 di Apache Tomcat, con modifiche significative come la risoluzione di un problema che aveva impedito il bloccaggio della scrittura delle risposte in NIO e TLS fino alla chiusura della connessione, e miglioramenti dell’errore handling per HTTP/2 e l’intercettore <code class="language-plaintext highlighter-rouge">EncryptInterceptor</code>.</li>
+  <li>Apache Log4j ha rilasciato la versione 2.25.4 di loro framework di gestione dei log, con alcune modifiche significative come la correzione dell’allineamento tra gli attributi documentati e reali nella classe <code class="language-plaintext highlighter-rouge">Rfc5424Layout</code> dopo essere stato migrato dal metodo factory al pattern builder in versione 2.21.0, la correzione dei problemi di formattazione e sanitizzazione in XML e RFC5424 layouts, e miglioramenti nell’handling degli invalidi caratteri e valori non standard nella <code class="language-plaintext highlighter-rouge">XmlLayout</code>, <code class="language-plaintext highlighter-rouge">Log4j1XmlLayout</code> e <code class="language-plaintext highlighter-rouge">MapMessage</code> classe.</li>
+  <li>Gradle ha rilasciato la prima release candidate di Gradle 9.5.0 con varie modifiche significative, tra cui miglioramenti alla diagnosi e al reporting dei problemi delle task di build, che ora includono informazioni sulla provenienza e un logging più chiaro quando il JVM client non è compatibile, e miglioramenti alla creazione della build con una nuova funzione <code class="language-plaintext highlighter-rouge">disallowChanges()</code> aggiunta all’interfaccia <code class="language-plaintext highlighter-rouge">DomainObjectCollection</code>, che permette di impedire l’aggiunta o rimozione degli elementi dalla raccolta.</li>
+</ul>
+
+<hr />
+<p>Fonte originale: https://www.infoq.com/news/2026/04/java-news-roundup-mar30-2026/</p>
+
+        </article>
+
+        
+        <div class="post-source-link">
+            <span class="source-link-label">Fonte originale</span>
+            <a class="source-link-anchor"
+               href="https://www.infoq.com/news/2026/04/java-news-roundup-mar30-2026"
+               target="_blank"
+               rel="noopener noreferrer"
+               aria-label="Leggi la fonte originale di: Sfida di un Senior Developer: La settimana tecnica in Java (aprile 2026)">
+                <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13"
+                     viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                     stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+                     aria-hidden="true">
+                    <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>
+                    <polyline points="15 3 21 3 21 9"/>
+                    <line x1="10" y1="14" x2="21" y2="3"/>
+                </svg>
+                https://www.infoq.com/news/2026/04/java-news-roundup-mar30-2026
+            </a>
+        </div>
+        
+
+    </main>
+
+    <aside class="post-sidebar">
+
+        
+        <div class="sidebar-box tags-box">
+            <span class="box-label">Argomenti</span>
+            <div class="tag-cloud-sidebar">
+                
+                    <span class="sidebar-tag">tornadovm</span>
+                
+                    <span class="sidebar-tag">google adk</span>
+                
+                    <span class="sidebar-tag">java framework</span>
+                
+            </div>
+        </div>
+        
+
+        
+        <div class="sidebar-box source-box">
+            <span class="box-label">Fonte Originale</span>
+            <a class="sidebar-source-anchor"
+               href="https://www.infoq.com/news/2026/04/java-news-roundup-mar30-2026"
+               target="_blank"
+               rel="noopener noreferrer"
+               aria-label="Leggi la fonte originale di: Sfida di un Senior Developer: La settimana tecnica in Java (aprile 2026)">
+                <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13"
+                     viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                     stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+                     aria-hidden="true">
+                    <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>
+                    <polyline points="15 3 21 3 21 9"/>
+                    <line x1="10" y1="14" x2="21" y2="3"/>
+                </svg>
+                Leggi l'articolo originale
+            </a>
+        </div>
+        
+
+        <div class="sidebar-box books-box">
+            <span class="box-label">Letture Consigliate</span>
+            <div class="book-card">
+                <a href="https://www.amazon.it/Appunti-Programmazione-Pensieri-soluzioni-Applicazioni-ebook/dp/B0FMFRHKTF/"
+                   target="_blank"
+                   rel="noopener noreferrer"
+                   aria-label="Acquista Appunti di Programmazione su Amazon">
+                    <img src="https://m.media-amazon.com/images/I/61Ck5eMzGYL._SY466_.jpg"
+                         alt="Copertina: Appunti di Programmazione"
+                         width="80">
+                    <p>Appunti di Programmazione: Pensieri e soluzioni per Applicazioni WEB</p>
+                </a>
+            </div>
+        </div>
+
+    </aside>
+</div> nello stesso div.
+    Quel blocco veniva renderizzato su ogni pagina, sovrapposto al contenuto reale.
+    Resta solo <!--
+    Layout post: struttura a due colonne.
+    - Sinistra (post-content): breadcrumb → tags → PDF → corpo MD → fonte
+    - Destra  (post-sidebar):  tags + fonte + libro consigliato
+-->
+<div class="post-container">
+
+    <main class="post-content">
+
+        <nav class="post-breadcrumb" aria-label="Breadcrumb">
+            <a href="/appuntidiprogrammazione/">Appunti di Programmazione</a>
+            <span class="separator" aria-hidden="true">/</span>
+            <span>Sfida di un Senior Developer: La settimana tecnica in Java (aprile 2026)</span>
+        </nav>
+
+        
+        <div class="post-tags-header" aria-label="Argomenti">
+            
+                <span class="post-tag-chip">tornadovm</span>
+            
+                <span class="post-tag-chip">google adk</span>
+            
+                <span class="post-tag-chip">java framework</span>
+            
+        </div>
+        
+
+        
+
+        <article class="post-article-body">
+            <p># Sfida di un Senior Developer: La settimana tecnica in Java (aprile 2026)</p>
+
+<p>Ho trascorso questa settimana seguendo le notizie più importanti del mondo Java, e sono venuto a conoscenza di alcuni aggiornamenti interessanti. Ho scoperto che la versione 4.0 del framework TornadoVM è stata rilasciata ufficialmente, insieme al Google ADK for Java 1.0.</p>
+
+<h2 id="tornadovm-40">TornadoVM 4.0</h2>
+
+<p>Il team di sviluppo di TornadoVM ha annunciato la versione 4.0 del loro framework di accelerazione GPU. Il rilascio include varie correzioni dei bug, aggiornamenti delle dipendenze e alcune modifiche significative, tra cui un nuovo hardware backend che supporta Apple Silicon e l’API Metal, la possibilità di utilizzare le intrinseche SIMD shuffle e reduction nel backend PTX, e una nuova funzione <code class="language-plaintext highlighter-rouge">withCUDAGraph()</code> aggiunta alla classe <code class="language-plaintext highlighter-rouge">TornadoExecutionPlan</code>. A mio avviso, queste modifiche aprono la strada a nuove possibilità di sviluppo per gli utenti che usano TornadoVM.</p>
+
+<h2 id="google-adk-for-java-10">Google ADK for Java 1.0</h2>
+
+<p>Google ha annunciato l’uscita della versione 1.0 del loro framework open-source Agent Development Kit (ADK) per Java. Il rilascio include varie correzioni dei bug, miglioramenti della documentazione e alcune nuove funzionalità, tra cui l’utilizzo dell’<code class="language-plaintext highlighter-rouge">InMemoryArtifactService</code> classe nella classe <code class="language-plaintext highlighter-rouge">AgentExecutorProducer</code>, per permettere la costruzione di istanze dell’<code class="language-plaintext highlighter-rouge">AgentExecutor</code>, e la capacità di utilizzare simultaneamente le feature <code class="language-plaintext highlighter-rouge">output_schema</code> e <code class="language-plaintext highlighter-rouge">tools</code> in modelli che non supportano entrambi al contempo.</p>
+
+<h2 id="altri-aggiornamenti">Altri aggiornamenti</h2>
+
+<p>Altre notizie importanti della settimana include:</p>
+<ul>
+  <li>La versione 7.1.0 di Grails è stata rilasciata come prima release candidate, con bug fixes e modifiche significative come la configurazione del <code class="language-plaintext highlighter-rouge">Groovy invokedynamic</code> spostato dalla generata <code class="language-plaintext highlighter-rouge">build.gradle</code> file al Grails Gradle Plugin per centralizzare la configurazione, e il cambiamento dell’<code class="language-plaintext highlighter-rouge">@Service</code> annotation che ora eredita un datasource automaticamente dal mapping blocco della classe di dominio.</li>
+  <li>Google ha rilasciato le versioni 11.0.21, 10.1.54 e 9.0.117 di Apache Tomcat, con modifiche significative come la risoluzione di un problema che aveva impedito il bloccaggio della scrittura delle risposte in NIO e TLS fino alla chiusura della connessione, e miglioramenti dell’errore handling per HTTP/2 e l’intercettore <code class="language-plaintext highlighter-rouge">EncryptInterceptor</code>.</li>
+  <li>Apache Log4j ha rilasciato la versione 2.25.4 di loro framework di gestione dei log, con alcune modifiche significative come la correzione dell’allineamento tra gli attributi documentati e reali nella classe <code class="language-plaintext highlighter-rouge">Rfc5424Layout</code> dopo essere stato migrato dal metodo factory al pattern builder in versione 2.21.0, la correzione dei problemi di formattazione e sanitizzazione in XML e RFC5424 layouts, e miglioramenti nell’handling degli invalidi caratteri e valori non standard nella <code class="language-plaintext highlighter-rouge">XmlLayout</code>, <code class="language-plaintext highlighter-rouge">Log4j1XmlLayout</code> e <code class="language-plaintext highlighter-rouge">MapMessage</code> classe.</li>
+  <li>Gradle ha rilasciato la prima release candidate di Gradle 9.5.0 con varie modifiche significative, tra cui miglioramenti alla diagnosi e al reporting dei problemi delle task di build, che ora includono informazioni sulla provenienza e un logging più chiaro quando il JVM client non è compatibile, e miglioramenti alla creazione della build con una nuova funzione <code class="language-plaintext highlighter-rouge">disallowChanges()</code> aggiunta all’interfaccia <code class="language-plaintext highlighter-rouge">DomainObjectCollection</code>, che permette di impedire l’aggiunta o rimozione degli elementi dalla raccolta.</li>
+</ul>
+
+<hr />
+<p>Fonte originale: https://www.infoq.com/news/2026/04/java-news-roundup-mar30-2026/</p>
+
+        </article>
+
+        
+        <div class="post-source-link">
+            <span class="source-link-label">Fonte originale</span>
+            <a class="source-link-anchor"
+               href="https://www.infoq.com/news/2026/04/java-news-roundup-mar30-2026"
+               target="_blank"
+               rel="noopener noreferrer"
+               aria-label="Leggi la fonte originale di: Sfida di un Senior Developer: La settimana tecnica in Java (aprile 2026)">
+                <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13"
+                     viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                     stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+                     aria-hidden="true">
+                    <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>
+                    <polyline points="15 3 21 3 21 9"/>
+                    <line x1="10" y1="14" x2="21" y2="3"/>
+                </svg>
+                https://www.infoq.com/news/2026/04/java-news-roundup-mar30-2026
+            </a>
+        </div>
+        
+
+    </main>
+
+    <aside class="post-sidebar">
+
+        
+        <div class="sidebar-box tags-box">
+            <span class="box-label">Argomenti</span>
+            <div class="tag-cloud-sidebar">
+                
+                    <span class="sidebar-tag">tornadovm</span>
+                
+                    <span class="sidebar-tag">google adk</span>
+                
+                    <span class="sidebar-tag">java framework</span>
+                
+            </div>
+        </div>
+        
+
+        
+        <div class="sidebar-box source-box">
+            <span class="box-label">Fonte Originale</span>
+            <a class="sidebar-source-anchor"
+               href="https://www.infoq.com/news/2026/04/java-news-roundup-mar30-2026"
+               target="_blank"
+               rel="noopener noreferrer"
+               aria-label="Leggi la fonte originale di: Sfida di un Senior Developer: La settimana tecnica in Java (aprile 2026)">
+                <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13"
+                     viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                     stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+                     aria-hidden="true">
+                    <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>
+                    <polyline points="15 3 21 3 21 9"/>
+                    <line x1="10" y1="14" x2="21" y2="3"/>
+                </svg>
+                Leggi l'articolo originale
+            </a>
+        </div>
+        
+
+        <div class="sidebar-box books-box">
+            <span class="box-label">Letture Consigliate</span>
+            <div class="book-card">
+                <a href="https://www.amazon.it/Appunti-Programmazione-Pensieri-soluzioni-Applicazioni-ebook/dp/B0FMFRHKTF/"
+                   target="_blank"
+                   rel="noopener noreferrer"
+                   aria-label="Acquista Appunti di Programmazione su Amazon">
+                    <img src="https://m.media-amazon.com/images/I/61Ck5eMzGYL._SY466_.jpg"
+                         alt="Copertina: Appunti di Programmazione"
+                         width="80">
+                    <p>Appunti di Programmazione: Pensieri e soluzioni per Applicazioni WEB</p>
+                </a>
+            </div>
+        </div>
+
+    </aside>
+</div>: Jekyll sostituisce con index, post o libro.
+-->
+<!--
+    Layout post: struttura a due colonne.
+    - Sinistra (post-content): breadcrumb → tags → PDF → corpo MD → fonte
+    - Destra  (post-sidebar):  tags + fonte + libro consigliato
+-->
+<div class="post-container">
+
+    <main class="post-content">
+
+        <nav class="post-breadcrumb" aria-label="Breadcrumb">
+            <a href="/appuntidiprogrammazione/">Appunti di Programmazione</a>
+            <span class="separator" aria-hidden="true">/</span>
+            <span>Sfida di un Senior Developer: La settimana tecnica in Java (aprile 2026)</span>
+        </nav>
+
+        
+        <div class="post-tags-header" aria-label="Argomenti">
+            
+                <span class="post-tag-chip">tornadovm</span>
+            
+                <span class="post-tag-chip">google adk</span>
+            
+                <span class="post-tag-chip">java framework</span>
+            
+        </div>
+        
+
+        
+
+        <article class="post-article-body">
+            <p># Sfida di un Senior Developer: La settimana tecnica in Java (aprile 2026)</p>
+
+<p>Ho trascorso questa settimana seguendo le notizie più importanti del mondo Java, e sono venuto a conoscenza di alcuni aggiornamenti interessanti. Ho scoperto che la versione 4.0 del framework TornadoVM è stata rilasciata ufficialmente, insieme al Google ADK for Java 1.0.</p>
+
+<h2 id="tornadovm-40">TornadoVM 4.0</h2>
+
+<p>Il team di sviluppo di TornadoVM ha annunciato la versione 4.0 del loro framework di accelerazione GPU. Il rilascio include varie correzioni dei bug, aggiornamenti delle dipendenze e alcune modifiche significative, tra cui un nuovo hardware backend che supporta Apple Silicon e l’API Metal, la possibilità di utilizzare le intrinseche SIMD shuffle e reduction nel backend PTX, e una nuova funzione <code class="language-plaintext highlighter-rouge">withCUDAGraph()</code> aggiunta alla classe <code class="language-plaintext highlighter-rouge">TornadoExecutionPlan</code>. A mio avviso, queste modifiche aprono la strada a nuove possibilità di sviluppo per gli utenti che usano TornadoVM.</p>
+
+<h2 id="google-adk-for-java-10">Google ADK for Java 1.0</h2>
+
+<p>Google ha annunciato l’uscita della versione 1.0 del loro framework open-source Agent Development Kit (ADK) per Java. Il rilascio include varie correzioni dei bug, miglioramenti della documentazione e alcune nuove funzionalità, tra cui l’utilizzo dell’<code class="language-plaintext highlighter-rouge">InMemoryArtifactService</code> classe nella classe <code class="language-plaintext highlighter-rouge">AgentExecutorProducer</code>, per permettere la costruzione di istanze dell’<code class="language-plaintext highlighter-rouge">AgentExecutor</code>, e la capacità di utilizzare simultaneamente le feature <code class="language-plaintext highlighter-rouge">output_schema</code> e <code class="language-plaintext highlighter-rouge">tools</code> in modelli che non supportano entrambi al contempo.</p>
+
+<h2 id="altri-aggiornamenti">Altri aggiornamenti</h2>
+
+<p>Altre notizie importanti della settimana include:</p>
+<ul>
+  <li>La versione 7.1.0 di Grails è stata rilasciata come prima release candidate, con bug fixes e modifiche significative come la configurazione del <code class="language-plaintext highlighter-rouge">Groovy invokedynamic</code> spostato dalla generata <code class="language-plaintext highlighter-rouge">build.gradle</code> file al Grails Gradle Plugin per centralizzare la configurazione, e il cambiamento dell’<code class="language-plaintext highlighter-rouge">@Service</code> annotation che ora eredita un datasource automaticamente dal mapping blocco della classe di dominio.</li>
+  <li>Google ha rilasciato le versioni 11.0.21, 10.1.54 e 9.0.117 di Apache Tomcat, con modifiche significative come la risoluzione di un problema che aveva impedito il bloccaggio della scrittura delle risposte in NIO e TLS fino alla chiusura della connessione, e miglioramenti dell’errore handling per HTTP/2 e l’intercettore <code class="language-plaintext highlighter-rouge">EncryptInterceptor</code>.</li>
+  <li>Apache Log4j ha rilasciato la versione 2.25.4 di loro framework di gestione dei log, con alcune modifiche significative come la correzione dell’allineamento tra gli attributi documentati e reali nella classe <code class="language-plaintext highlighter-rouge">Rfc5424Layout</code> dopo essere stato migrato dal metodo factory al pattern builder in versione 2.21.0, la correzione dei problemi di formattazione e sanitizzazione in XML e RFC5424 layouts, e miglioramenti nell’handling degli invalidi caratteri e valori non standard nella <code class="language-plaintext highlighter-rouge">XmlLayout</code>, <code class="language-plaintext highlighter-rouge">Log4j1XmlLayout</code> e <code class="language-plaintext highlighter-rouge">MapMessage</code> classe.</li>
+  <li>Gradle ha rilasciato la prima release candidate di Gradle 9.5.0 con varie modifiche significative, tra cui miglioramenti alla diagnosi e al reporting dei problemi delle task di build, che ora includono informazioni sulla provenienza e un logging più chiaro quando il JVM client non è compatibile, e miglioramenti alla creazione della build con una nuova funzione <code class="language-plaintext highlighter-rouge">disallowChanges()</code> aggiunta all’interfaccia <code class="language-plaintext highlighter-rouge">DomainObjectCollection</code>, che permette di impedire l’aggiunta o rimozione degli elementi dalla raccolta.</li>
+</ul>
+
+<hr />
+<p>Fonte originale: https://www.infoq.com/news/2026/04/java-news-roundup-mar30-2026/</p>
+
+        </article>
+
+        
+        <div class="post-source-link">
+            <span class="source-link-label">Fonte originale</span>
+            <a class="source-link-anchor"
+               href="https://www.infoq.com/news/2026/04/java-news-roundup-mar30-2026"
+               target="_blank"
+               rel="noopener noreferrer"
+               aria-label="Leggi la fonte originale di: Sfida di un Senior Developer: La settimana tecnica in Java (aprile 2026)">
+                <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13"
+                     viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                     stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+                     aria-hidden="true">
+                    <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>
+                    <polyline points="15 3 21 3 21 9"/>
+                    <line x1="10" y1="14" x2="21" y2="3"/>
+                </svg>
+                https://www.infoq.com/news/2026/04/java-news-roundup-mar30-2026
+            </a>
+        </div>
+        
+
+    </main>
+
+    <aside class="post-sidebar">
+
+        
+        <div class="sidebar-box tags-box">
+            <span class="box-label">Argomenti</span>
+            <div class="tag-cloud-sidebar">
+                
+                    <span class="sidebar-tag">tornadovm</span>
+                
+                    <span class="sidebar-tag">google adk</span>
+                
+                    <span class="sidebar-tag">java framework</span>
+                
+            </div>
+        </div>
+        
+
+        
+        <div class="sidebar-box source-box">
+            <span class="box-label">Fonte Originale</span>
+            <a class="sidebar-source-anchor"
+               href="https://www.infoq.com/news/2026/04/java-news-roundup-mar30-2026"
+               target="_blank"
+               rel="noopener noreferrer"
+               aria-label="Leggi la fonte originale di: Sfida di un Senior Developer: La settimana tecnica in Java (aprile 2026)">
+                <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13"
+                     viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                     stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+                     aria-hidden="true">
+                    <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>
+                    <polyline points="15 3 21 3 21 9"/>
+                    <line x1="10" y1="14" x2="21" y2="3"/>
+                </svg>
+                Leggi l'articolo originale
+            </a>
+        </div>
+        
+
+        <div class="sidebar-box books-box">
+            <span class="box-label">Letture Consigliate</span>
+            <div class="book-card">
+                <a href="https://www.amazon.it/Appunti-Programmazione-Pensieri-soluzioni-Applicazioni-ebook/dp/B0FMFRHKTF/"
+                   target="_blank"
+                   rel="noopener noreferrer"
+                   aria-label="Acquista Appunti di Programmazione su Amazon">
+                    <img src="https://m.media-amazon.com/images/I/61Ck5eMzGYL._SY466_.jpg"
+                         alt="Copertina: Appunti di Programmazione"
+                         width="80">
+                    <p>Appunti di Programmazione: Pensieri e soluzioni per Applicazioni WEB</p>
+                </a>
+            </div>
+        </div>
+
     </aside>
 </div>
+</div>
+</article>
 
-    <footer class="main-footer">
-        Appunti di Programmazione &nbsp;·&nbsp; cosimociraci@gmail.com
-    </footer>
+</main>
 
-    <script>
-        /*
-         * toggleTheme: legge il tema corrente dall'attributo HTML,
-         * calcola l'opposto e lo salva. Il CSS reagisce via [data-theme].
-         * Non uso classi sul body per mantenere tutto centralizzato
-         * sull'elemento radice.
-         */
-        function toggleTheme() {
-            var html = document.documentElement;
-            var current = html.getAttribute('data-theme');
-            var next = current === 'dark' ? 'light' : 'dark';
-            html.setAttribute('data-theme', next);
-            localStorage.setItem('theme', next);
-        }
-    </script>
+<!-- Footer — identico al nuovo, email da _config.yml -->
+<footer class="flex flex-col md:flex-row justify-between items-center px-12 gap-4 w-full py-8 mt-auto bg-[#131313] dark:bg-[#131313] border-t border-white/5">
+<p class="font-mono text-[10px] uppercase opacity-50 text-[#10B981]">[ROOT@LUCID-CONSOLE ~]# Appunti di Programmazione</p>
+<div class="flex space-x-6 font-mono text-[10px] uppercase opacity-50">
+<a class="text-zinc-500 hover:text-[#10B981] underline underline-offset-4 transition-colors" href="#">Github</a>
+<a class="text-zinc-500 hover:text-[#10B981] underline underline-offset-4 transition-colors" href="#">LinkedIn</a>
+        
+        <a class="text-zinc-500 hover:text-[#10B981] underline underline-offset-4 transition-colors" href="mailto:cosimociraci@gmail.com">cosimociraci@gmail.com</a>
+        
+        </div>
+</footer>
 
+<script>
+    /*
+     * toggleTheme: aggiorno sia data-theme (CSS custom variables nel mio style.css)
+     * sia class="dark" sull'<html> (Tailwind darkMode:"class").
+     * classList.toggle(cls, force) aggiunge o rimuove in un'unica chiamata.
+     * Persisto la scelta in localStorage per le sessioni future.
+     */
+    function toggleTheme() {
+        var html    = document.documentElement;
+        var current = html.getAttribute('data-theme');
+        var next    = (current === 'dark') ? 'light' : 'dark';
+        html.setAttribute('data-theme', next);
+        html.classList.toggle('dark', next === 'dark');
+        localStorage.setItem('theme', next);
+    }
+</script>
 </body>
 </html>
