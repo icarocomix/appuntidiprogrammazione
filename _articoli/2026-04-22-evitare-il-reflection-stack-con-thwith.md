@@ -22,20 +22,25 @@ Ottimizzare cicli th:each molto lunghi che effettuano calcoli o trasformazioni s
 ```java
 <!-- PATTERN DA EVITARE: ogni espressione SpEL viene rivalutata per ogni colonna
     della riga. Con 1000 righe, hasRole() viene chiamato 3000 volte invece di
-    1000. --> <tr th:each="user : ${
+    1000. --> 
+    <tr th:each="user : ${
     users
 }
 "> <td th:text="${
     user.name
 }
-">Nome</td> <!-- hasRole() rivalutato per ogni td --> <td th:class="${
+">Nome</td> 
+<!-- hasRole() rivalutato per ogni td --> 
+<td th:class="${
     user.hasRole('ADMIN')
 }
 ? 'badge-danger' : 'badge-secondary'" th:text="${
     user.hasRole('ADMIN')
 }
-? 'Admin' : 'User'">Ruolo</td> <!-- formatCurrency rivalutato due volte per riga
-    --> <td th:text="${
+? 'Admin' : 'User'">Ruolo</td> 
+<!-- formatCurrency rivalutato due volte per riga
+    --> 
+    <td th:text="${
     #finance.formatCurrency(user.totalSpent, 'EUR')
 }
 ">€ 0</td> <td th:class="${
@@ -44,9 +49,12 @@ Ottimizzare cicli th:each molto lunghi che effettuano calcoli o trasformazioni s
 ? 'text-gold' : ''" th:text="${
     user.totalSpent.compareTo(T(java.math.BigDecimal).valueOf(1000)) > 0
 }
-? 'VIP' : 'Standard'">Tier</td> </tr> <!-- PATTERN CORRETTO: th:with calcola
+? 'VIP' : 'Standard'">Tier</td> </tr> 
+
+<!-- PATTERN CORRETTO: th:with calcola
     ogni valore una sola volta per iterazione. Con 1000 righe: hasRole()
-    chiamato 1000 volte, formatCurrency 1000 volte. --> <tr th:each="user : ${
+    chiamato 1000 volte, formatCurrency 1000 volte. --> 
+<tr th:each="user : ${
     users
 }
 " th:with=" isAdmin=${
@@ -67,7 +75,9 @@ Ottimizzare cicli th:each molto lunghi che effettuano calcoli o trasformazioni s
 "> <td th:text="${
     user.name
 }
-">Nome</td> <!-- Uso la variabile locale: zero reflection aggiuntiva --> <td
+">Nome</td> 
+<!-- Uso la variabile locale: zero reflection aggiuntiva --> 
+<td
     th:class="${
     isAdmin
 }
@@ -83,8 +93,11 @@ Ottimizzare cicli th:each molto lunghi che effettuano calcoli o trasformazioni s
 ? 'text-gold' : ''" th:text="${
     isVip
 }
-? 'VIP' : 'Standard'">Tier</td> </tr> <!-- th:with annidato per logiche più
-    complesse: calcolo il subtotale e il discount una sola volta. --> <tbody
+? 'VIP' : 'Standard'">Tier</td> </tr> 
+
+<!-- th:with annidato per logiche più
+    complesse: calcolo il subtotale e il discount una sola volta. --> 
+<tbody
     th:each="order : ${
     orders
 }
@@ -118,8 +131,11 @@ Ottimizzare cicli th:each molto lunghi che effettuano calcoli o trasformazioni s
 ">Sconto</td> <td th:text="${
     #finance.formatCurrency(finalTotal, 'EUR')
 }
-">Totale</td> </tr> </tbody> <!-- th:with può essere usato anche fuori dai loop
-    per evitare chiamate ripetute a bean Spring: --> <div th:with="config=${
+">Totale</td> </tr> </tbody> 
+
+<!-- th:with può essere usato anche fuori dai loop
+    per evitare chiamate ripetute a bean Spring: --> 
+<div th:with="config=${
     @appConfigBean.getDisplayConfig()
 }
 "> <span th:text="${
