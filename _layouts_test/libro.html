@@ -1,8 +1,15 @@
 ---
 layout: default
 ---
+<!--
+    Layout libro: variante di post.html per le recensioni.
+    - Sinistra: breadcrumb → tags → corpo (h1 = titolo + autore + sintesi)
+    - Destra:   copertina Amazon + tag argomento
+-->
 <div class="post-container">
+
     <main class="post-content">
+
         <nav class="post-breadcrumb" aria-label="Breadcrumb">
             <a href="{{ '/' | relative_url }}">Appunti di Programmazione</a>
             <span class="separator" aria-hidden="true">/</span>
@@ -23,18 +30,26 @@ layout: default
             <hr>
             {{ content }}
         </article>
+
     </main>
 
     <aside class="post-sidebar">
+
         {% if page.link_img %}
         <div class="sidebar-box book-cover-box">
             <span class="box-label">Acquista su Amazon</span>
-            <a href="{{ page.link }}" target="_blank" rel="noopener noreferrer" class="book-cover-link">
-                <img src="{{ page.link_img }}" alt="Copertina di {{ page.title }}" style="width: 100%; height: auto; border-radius: 4px;">
+            <a href="{{ page.link }}"
+               target="_blank"
+               rel="noopener noreferrer"
+               class="book-cover-link"
+               aria-label="Acquista {{ page.title }} su Amazon">
+                <img src="{{ page.link_img }}"
+                     alt="Copertina di {{ page.title }}"
+                     style="width: 100%; height: auto; border-radius: 4px;">
             </a>
         </div>
         {% endif %}
-        
+
         <div class="sidebar-box tags-box">
             <span class="box-label">Argomenti</span>
             <div class="tag-cloud-sidebar">
@@ -43,5 +58,6 @@ layout: default
                 {% endfor %}
             </div>
         </div>
+
     </aside>
 </div>
