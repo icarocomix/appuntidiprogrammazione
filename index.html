@@ -160,9 +160,21 @@ title: Home
 
         articoli.forEach(function(article) {
             const raw = article.getAttribute('data-tags') || '';
+            
+            // Primo split: divido per virgola (i diversi gruppi di tag)
             raw.split(',').forEach(function(t) {
-                const trimmed = t.trim();
-                if (trimmed) allTags.add(trimmed);
+                const trimmedGroup = t.trim();
+                if (trimmedGroup) {
+                    // Secondo split: divido per trattino "-" per ottenere i singoli token.
+                    // In questo modo, "fibra-ottica" diventa ["fibra", "ottica"]
+                    trimmedGroup.split('-').forEach(function(token) {
+                        const cleanToken = token.trim();
+                        if (cleanToken) {
+                            // Aggiungo il singolo pezzetto al Set (che gestisce i duplicati)
+                            allTags.add(cleanToken);
+                        }
+                    });
+                }
             });
         });
 
@@ -188,14 +200,31 @@ title: Home
     }
 
     function applyFilters() {
-        const query    = document.getElementById('search-bar').value.toLowerCase().trim();
-        const articoli = document.querySelectorAll('.post-item:not([hidden])');
+        const query = document.getElementById('search-bar').value.toLowerCase().trim();
+        
+        // Prendo TUTTI gli articoli, altrimenti quelli nascosti non verranno mai ripristinati
+        const articoli = document.querySelectorAll('.post-item');
+        
         articoli.forEach(function(article) {
-            const title      = article.getAttribute('data-title') || '';
-            const tags       = article.getAttribute('data-tags')  || '';
-            const matchesTag = (activeTag === 'tutti' || tags.split(',').includes(activeTag));
+            const title = (article.getAttribute('data-title') || '').toLowerCase();
+            const tags  = (article.getAttribute('data-tags')  || '').toLowerCase();
+            
+            // 1. Logica TAG: 
+            // Verifico se activeTag è 'tutti' oppure se il tag selezionato è presente 
+            // tra i token (splittati per virgola e trattino).
+            const matchesTag = (activeTag === 'tutti' || 
+                               tags.split(/[,\-]/).map(t => t.trim()).includes(activeTag));
+            
+            // 2. Logica TESTO:
             const matchesTxt = !query || title.includes(query);
-            article.style.display = (matchesTag && matchesTxt) ? '' : 'none';
+            
+            // 3. APPLICAZIONE FILTRO:
+            // Uso display 'none' per nascondere e stringa vuota '' per mostrare (valore di default)
+            if (matchesTag && matchesTxt) {
+                article.style.display = '';
+            } else {
+                article.style.display = 'none';
+            }
         });
     }
 </script>
