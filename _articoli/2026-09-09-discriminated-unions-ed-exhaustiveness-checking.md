@@ -1,5 +1,5 @@
 ---
-layout: post
+layout: code
 title: "Discriminated Unions ed Exhaustiveness Checking"
 date: 2026-09-09 12:00:00
 sintesi: >

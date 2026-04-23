@@ -1,5 +1,5 @@
 ---
-layout: post
+layout: code
 title: "Error Global Loop & Validation Binding"
 date: 2026-06-15 12:00:00
 sintesi: >

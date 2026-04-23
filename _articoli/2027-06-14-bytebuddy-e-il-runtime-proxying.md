@@ -1,5 +1,5 @@
 ---
-layout: post
+layout: code
 title: "ByteBuddy e il Runtime Proxying"
 date: 2027-06-14 12:00:00
 sintesi: >

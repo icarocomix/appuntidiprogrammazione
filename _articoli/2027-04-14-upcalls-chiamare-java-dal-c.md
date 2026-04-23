@@ -1,5 +1,5 @@
 ---
-layout: post
+layout: code
 title: "Upcalls: Chiamare Java dal C"
 date: 2027-04-14 12:00:00
 sintesi: >

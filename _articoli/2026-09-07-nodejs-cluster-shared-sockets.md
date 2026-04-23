@@ -1,5 +1,5 @@
 ---
-layout: post
+layout: code
 title: "Node.js Cluster & Shared Sockets"
 date: 2026-09-07 12:00:00
 sintesi: >

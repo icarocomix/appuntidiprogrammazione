@@ -1,5 +1,5 @@
 ---
-layout: post
+layout: code
 title: "Evitare il Context Switch Overhead"
 date: 2027-04-07 12:00:00
 sintesi: >

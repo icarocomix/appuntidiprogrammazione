@@ -1,5 +1,5 @@
 ---
-layout: post
+layout: code
 title: "Conditional Types e Inferenza (infer)"
 date: 2026-09-16 12:00:00
 sintesi: >

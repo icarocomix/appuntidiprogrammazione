@@ -1,5 +1,5 @@
 ---
-layout: post
+layout: code
 title: "Migrazione a FFM API (Panama)"
 date: 2027-03-31 12:00:00
 sintesi: >

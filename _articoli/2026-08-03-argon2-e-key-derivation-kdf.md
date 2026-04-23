@@ -1,5 +1,5 @@
 ---
-layout: post
+layout: code
 title: "Argon2 e Key Derivation (KDF)"
 date: 2026-08-03 12:00:00
 sintesi: >

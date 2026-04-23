@@ -1,5 +1,5 @@
 ---
-layout: post
+layout: code
 title: "Locking in Full Text Search"
 date: 2027-03-10 12:00:00
 sintesi: >

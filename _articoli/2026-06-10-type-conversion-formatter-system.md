@@ -1,5 +1,5 @@
 ---
-layout: post
+layout: code
 title: "Type Conversion & Formatter System"
 date: 2026-06-10 12:00:00
 sintesi: >

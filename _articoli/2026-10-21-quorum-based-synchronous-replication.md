@@ -1,5 +1,5 @@
 ---
-layout: post
+layout: code
 title: "Quorum-based Synchronous Replication"
 date: 2026-10-21 12:00:00
 sintesi: >

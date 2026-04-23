@@ -1,5 +1,5 @@
 ---
-layout: post
+layout: code
 title: "GiST e il problema delle Bounding Box"
 date: 2027-01-13 12:00:00
 sintesi: >

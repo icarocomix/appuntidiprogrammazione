@@ -1,5 +1,5 @@
 ---
-layout: post
+layout: code
 title: "TLAB (Thread-Local Allocation Buffers)"
 date: 2027-06-02 12:00:00
 sintesi: >

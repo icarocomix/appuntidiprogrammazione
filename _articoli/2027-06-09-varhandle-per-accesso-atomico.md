@@ -1,5 +1,5 @@
 ---
-layout: post
+layout: code
 title: "VarHandle per Accesso Atomico"
 date: 2027-06-09 12:00:00
 sintesi: >

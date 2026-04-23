@@ -1,5 +1,5 @@
 ---
-layout: post
+layout: code
 title: "Component-Based Architecture (Fragment Parameters)"
 date: 2026-06-01 12:00:00
 sintesi: >

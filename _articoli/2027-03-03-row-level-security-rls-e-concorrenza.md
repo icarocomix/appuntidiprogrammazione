@@ -1,5 +1,5 @@
 ---
-layout: post
+layout: code
 title: "Row-Level Security (RLS) e Concorrenza"
 date: 2027-03-03 12:00:00
 sintesi: >

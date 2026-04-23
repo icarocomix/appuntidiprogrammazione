@@ -1,5 +1,5 @@
 ---
-layout: post
+layout: code
 title: "Filtro di Kalman"
 date: 2026-05-02 07:27:10
 sintesi: >

@@ -1,5 +1,5 @@
 ---
-layout: post
+layout: code
 title: "Diagnosticare il GC Thrashing"
 date: 2027-05-19 12:00:00
 sintesi: >

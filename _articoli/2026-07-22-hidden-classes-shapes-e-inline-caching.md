@@ -1,5 +1,5 @@
 ---
-layout: post
+layout: code
 title: "Hidden Classes (Shapes) e Inline Caching"
 date: 2026-07-22 12:00:00
 sintesi: >

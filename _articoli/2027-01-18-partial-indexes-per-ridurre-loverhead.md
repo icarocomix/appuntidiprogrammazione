@@ -1,5 +1,5 @@
 ---
-layout: post
+layout: code
 title: "Partial Indexes per ridurre loverhead"
 date: 2027-01-18 12:00:00
 sintesi: >

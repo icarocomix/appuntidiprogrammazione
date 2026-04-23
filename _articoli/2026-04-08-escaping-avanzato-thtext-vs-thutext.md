@@ -1,5 +1,5 @@
 ---
-layout: post
+layout: code
 title: "Escaping Avanzato: th:text vs th:utext"
 date: 2026-04-08 12:00:00
 sintesi: >

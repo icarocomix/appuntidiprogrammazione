@@ -1,5 +1,5 @@
 ---
-layout: post
+layout: code
 title: "JWT Signature Bypass e Algorithm none"
 date: 2026-08-05 12:00:00
 sintesi: >

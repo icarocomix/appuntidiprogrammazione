@@ -1,5 +1,5 @@
 ---
-layout: post
+layout: code
 title: "Fragment Caching (JCache/Redis)"
 date: 2026-04-20 12:00:00
 sintesi: >

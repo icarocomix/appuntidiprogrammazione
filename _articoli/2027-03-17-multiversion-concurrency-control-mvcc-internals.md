@@ -1,5 +1,5 @@
 ---
-layout: post
+layout: code
 title: "Multiversion Concurrency Control (MVCC) Internals"
 date: 2027-03-17 12:00:00
 sintesi: >

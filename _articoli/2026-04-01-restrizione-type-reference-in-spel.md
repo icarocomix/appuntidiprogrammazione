@@ -1,5 +1,5 @@
 ---
-layout: post
+layout: code
 title: "Restrizione Type Reference in SpEL"
 date: 2026-04-01 12:00:00
 sintesi: >

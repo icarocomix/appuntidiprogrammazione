@@ -1,5 +1,5 @@
 ---
-layout: post
+layout: code
 title: "Catene di Markov"
 date: 2026-04-25 07:25:10
 sintesi: >

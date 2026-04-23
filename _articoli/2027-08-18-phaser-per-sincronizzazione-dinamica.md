@@ -1,5 +1,5 @@
 ---
-layout: post
+layout: code
 title: "Phaser per Sincronizzazione Dinamica"
 date: 2027-08-18 12:00:00
 sintesi: >

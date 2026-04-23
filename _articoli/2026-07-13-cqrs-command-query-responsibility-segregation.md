@@ -1,5 +1,5 @@
 ---
-layout: post
+layout: code
 title: "CQRS (Command Query Responsibility Segregation)"
 date: 2026-07-13 12:00:00
 sintesi: >

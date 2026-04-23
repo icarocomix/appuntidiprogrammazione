@@ -1,5 +1,5 @@
 ---
-layout: post
+layout: code
 title: "Monadi (Maybe, Either) per Error Handling"
 date: 2026-07-06 12:00:00
 sintesi: >

@@ -1,5 +1,5 @@
 ---
-layout: post
+layout: code
 title: "BRIN: Indici per dataset massivi"
 date: 2027-01-11 12:00:00
 sintesi: >

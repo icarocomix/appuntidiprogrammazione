@@ -1,5 +1,5 @@
 ---
-layout: post
+layout: code
 title: "Class Data Sharing (CDS)"
 date: 2027-06-21 12:00:00
 sintesi: >

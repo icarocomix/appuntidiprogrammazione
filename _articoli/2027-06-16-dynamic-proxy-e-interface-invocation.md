@@ -1,5 +1,5 @@
 ---
-layout: post
+layout: code
 title: "Dynamic Proxy e Interface Invocation"
 date: 2027-06-16 12:00:00
 sintesi: >

@@ -1,5 +1,5 @@
 ---
-layout: post
+layout: code
 title: "Pattern Observer e RxJS Multicasting"
 date: 2026-07-01 12:00:00
 sintesi: >

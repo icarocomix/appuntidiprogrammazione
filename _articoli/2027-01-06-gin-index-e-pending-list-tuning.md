@@ -1,5 +1,5 @@
 ---
-layout: post
+layout: code
 title: "GIN Index e Pending List Tuning"
 date: 2027-01-06 12:00:00
 sintesi: >

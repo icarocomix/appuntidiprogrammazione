@@ -1,5 +1,5 @@
 ---
-layout: post
+layout: code
 title: "Explicit Table Locking (SHARE/EXCLUSIVE)"
 date: 2027-03-08 12:00:00
 sintesi: >

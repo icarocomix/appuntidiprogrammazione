@@ -1,5 +1,5 @@
 ---
-layout: post
+layout: code
 title: "Timeout e Safety nei Lock"
 date: 2027-09-08 12:00:00
 sintesi: >

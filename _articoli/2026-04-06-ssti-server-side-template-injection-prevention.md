@@ -1,5 +1,5 @@
 ---
-layout: post
+layout: code
 title: "SSTI (Server-Side Template Injection) Prevention"
 date: 2026-04-06 12:00:00
 sintesi: >

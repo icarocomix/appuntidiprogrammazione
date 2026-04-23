@@ -1,5 +1,5 @@
 ---
-layout: post
+layout: code
 title: "ThreadLocal e Memory Leak"
 date: 2027-08-25 12:00:00
 sintesi: >

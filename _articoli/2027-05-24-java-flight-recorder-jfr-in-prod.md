@@ -1,5 +1,5 @@
 ---
-layout: post
+layout: code
 title: "Java Flight Recorder (JFR) in Prod"
 date: 2027-05-24 12:00:00
 sintesi: >

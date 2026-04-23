@@ -1,5 +1,5 @@
 ---
-layout: post
+layout: code
 title: "Subtransactions e Lock Overflow"
 date: 2027-02-10 12:00:00
 sintesi: >

@@ -1,5 +1,5 @@
 ---
-layout: post
+layout: code
 title: "Multi-Layout ViewResolver Order"
 date: 2026-06-24 12:00:00
 sintesi: >

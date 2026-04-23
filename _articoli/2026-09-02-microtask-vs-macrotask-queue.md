@@ -1,5 +1,5 @@
 ---
-layout: post
+layout: code
 title: "Microtask vs Macrotask Queue"
 date: 2026-09-02 12:00:00
 sintesi: >

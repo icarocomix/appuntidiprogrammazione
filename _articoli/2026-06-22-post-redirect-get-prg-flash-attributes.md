@@ -1,5 +1,5 @@
 ---
-layout: post
+layout: code
 title: "Post-Redirect-Get (PRG) & Flash Attributes"
 date: 2026-06-22 12:00:00
 sintesi: >

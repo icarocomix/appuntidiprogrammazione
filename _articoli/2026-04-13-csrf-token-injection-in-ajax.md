@@ -1,5 +1,5 @@
 ---
-layout: post
+layout: code
 title: "CSRF Token Injection in AJAX"
 date: 2026-04-13 12:00:00
 sintesi: >

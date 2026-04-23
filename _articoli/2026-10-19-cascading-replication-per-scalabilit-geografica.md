@@ -1,5 +1,5 @@
 ---
-layout: post
+layout: code
 title: "Cascading Replication per Scalabilit Geografica"
 date: 2026-10-19 12:00:00
 sintesi: >

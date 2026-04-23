@@ -1,5 +1,5 @@
 ---
-layout: post
+layout: code
 title: "Ottimizzazione Inline JS (Jackson Integration)"
 date: 2026-04-29 12:00:00
 sintesi: >

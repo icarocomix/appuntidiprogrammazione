@@ -1,5 +1,5 @@
 ---
-layout: post
+layout: code
 title: "Decoupled Logic (th:ref)"
 date: 2026-05-13 12:00:00
 sintesi: >

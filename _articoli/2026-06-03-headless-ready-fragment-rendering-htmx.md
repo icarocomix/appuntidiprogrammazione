@@ -1,5 +1,5 @@
 ---
-layout: post
+layout: code
 title: "Headless-Ready: Fragment Rendering (HTMX)"
 date: 2026-06-03 12:00:00
 sintesi: >

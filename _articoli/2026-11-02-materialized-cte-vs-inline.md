@@ -1,5 +1,5 @@
 ---
-layout: post
+layout: code
 title: "Materialized CTE vs Inline"
 date: 2026-11-02 12:00:00
 sintesi: >

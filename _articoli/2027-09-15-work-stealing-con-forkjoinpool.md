@@ -1,5 +1,5 @@
 ---
-layout: post
+layout: code
 title: "Work-Stealing con ForkJoinPool"
 date: 2027-09-15 12:00:00
 sintesi: >

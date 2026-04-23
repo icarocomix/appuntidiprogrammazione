@@ -1,5 +1,5 @@
 ---
-layout: post
+layout: code
 title: "SP-GiST per Dati Non Bilanciati"
 date: 2027-01-25 12:00:00
 sintesi: >

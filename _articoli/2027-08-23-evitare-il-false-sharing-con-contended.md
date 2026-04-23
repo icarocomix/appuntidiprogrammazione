@@ -1,5 +1,5 @@
 ---
-layout: post
+layout: code
 title: "Evitare il False Sharing con @Contended"
 date: 2027-08-23 12:00:00
 sintesi: >

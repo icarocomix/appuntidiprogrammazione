@@ -1,5 +1,5 @@
 ---
-layout: post
+layout: code
 title: "Join Order Control (join_collapse_limit)"
 date: 2026-10-26 12:00:00
 sintesi: >

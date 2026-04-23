@@ -1,5 +1,5 @@
 ---
-layout: post
+layout: code
 title: "Subresource Integrity (SRI)"
 date: 2026-08-12 12:00:00
 sintesi: >

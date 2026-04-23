@@ -1,5 +1,5 @@
 ---
-layout: post
+layout: code
 title: "Expression Objects Custom"
 date: 2026-05-18 12:00:00
 sintesi: >

@@ -1,5 +1,5 @@
 ---
-layout: post
+layout: code
 title: "Backpressure in Stream Pipeline"
 date: 2026-08-31 12:00:00
 sintesi: >

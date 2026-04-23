@@ -1,5 +1,5 @@
 ---
-layout: post
+layout: code
 title: "Hot Standby Feedback"
 date: 2027-03-29 12:00:00
 sintesi: >

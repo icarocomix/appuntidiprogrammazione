@@ -1,5 +1,5 @@
 ---
-layout: post
+layout: code
 title: "Extended Statistics (CREATE STATISTICS)"
 date: 2026-11-25 12:00:00
 sintesi: >

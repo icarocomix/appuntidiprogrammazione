@@ -1,5 +1,5 @@
 ---
-layout: post
+layout: code
 title: "Deadlock Timeout e Analisi Log"
 date: 2027-03-01 12:00:00
 sintesi: >

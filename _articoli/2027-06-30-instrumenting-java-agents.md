@@ -1,5 +1,5 @@
 ---
-layout: post
+layout: code
 title: "Instrumenting Java Agents"
 date: 2027-06-30 12:00:00
 sintesi: >

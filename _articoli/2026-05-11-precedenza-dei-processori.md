@@ -1,5 +1,5 @@
 ---
-layout: post
+layout: code
 title: "Precedenza dei Processori"
 date: 2026-05-11 12:00:00
 sintesi: >

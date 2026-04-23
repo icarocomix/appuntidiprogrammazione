@@ -1,5 +1,5 @@
 ---
-layout: post
+layout: code
 title: "Backpressure con Semaphores"
 date: 2027-09-01 12:00:00
 sintesi: >

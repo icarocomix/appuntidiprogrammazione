@@ -1,5 +1,5 @@
 ---
-layout: post
+layout: code
 title: "Event Sourcing e State Reconstitution"
 date: 2026-07-08 12:00:00
 sintesi: >

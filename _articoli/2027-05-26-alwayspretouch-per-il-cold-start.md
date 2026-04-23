@@ -1,5 +1,5 @@
 ---
-layout: post
+layout: code
 title: "AlwaysPreTouch per il Cold Start"
 date: 2027-05-26 12:00:00
 sintesi: >

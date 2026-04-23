@@ -1,5 +1,5 @@
 ---
-layout: post
+layout: code
 title: "WAL Archiving & Point-In-Time Recovery (PITR)"
 date: 2026-10-14 12:00:00
 sintesi: >

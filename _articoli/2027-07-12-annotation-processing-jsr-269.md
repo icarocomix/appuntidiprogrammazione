@@ -1,5 +1,5 @@
 ---
-layout: post
+layout: code
 title: "Annotation Processing (JSR 269)"
 date: 2027-07-12 12:00:00
 sintesi: >

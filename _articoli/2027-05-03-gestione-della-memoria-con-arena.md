@@ -1,5 +1,5 @@
 ---
-layout: post
+layout: code
 title: "Gestione della Memoria con Arena"
 date: 2027-05-03 12:00:00
 sintesi: >

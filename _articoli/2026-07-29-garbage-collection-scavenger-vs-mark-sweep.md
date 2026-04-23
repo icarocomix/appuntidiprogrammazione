@@ -1,5 +1,5 @@
 ---
-layout: post
+layout: code
 title: "Garbage Collection: Scavenger vs Mark-Sweep"
 date: 2026-07-29 12:00:00
 sintesi: >

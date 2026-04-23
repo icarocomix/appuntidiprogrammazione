@@ -1,5 +1,5 @@
 ---
-layout: post
+layout: code
 title: "Exception Handling: il costo dello Stacktrace"
 date: 2027-08-09 12:00:00
 sintesi: >

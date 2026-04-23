@@ -1,5 +1,5 @@
 ---
-layout: post
+layout: code
 title: "Virtual Threads & I/O Bound Tasks"
 date: 2027-09-13 12:00:00
 sintesi: >

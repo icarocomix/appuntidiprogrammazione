@@ -1,5 +1,5 @@
 ---
-layout: post
+layout: code
 title: "Logical Decoding & Replication Slots"
 date: 2026-10-05 12:00:00
 sintesi: >

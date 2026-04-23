@@ -1,5 +1,5 @@
 ---
-layout: post
+layout: code
 title: "Visibility Map e Index Scans"
 date: 2026-12-02 12:00:00
 sintesi: >

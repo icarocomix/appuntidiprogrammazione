@@ -1,5 +1,5 @@
 ---
-layout: post
+layout: code
 title: "Diagnostica: OutOfMemory Nativo"
 date: 2027-04-12 12:00:00
 sintesi: >

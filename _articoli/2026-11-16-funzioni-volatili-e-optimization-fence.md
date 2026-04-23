@@ -1,5 +1,5 @@
 ---
-layout: post
+layout: code
 title: "Funzioni Volatili e Optimization Fence"
 date: 2026-11-16 12:00:00
 sintesi: >

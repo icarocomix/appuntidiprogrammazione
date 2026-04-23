@@ -1,5 +1,5 @@
 ---
-layout: post
+layout: code
 title: "Transaction ID (XID) Wraparound"
 date: 2027-02-17 12:00:00
 sintesi: >

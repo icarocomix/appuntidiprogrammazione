@@ -1,5 +1,5 @@
 ---
-layout: post
+layout: code
 title: "Indici su Espressioni (Functional Indexes)"
 date: 2027-01-27 12:00:00
 sintesi: >

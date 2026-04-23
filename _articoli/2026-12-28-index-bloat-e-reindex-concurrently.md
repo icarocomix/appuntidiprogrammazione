@@ -1,5 +1,5 @@
 ---
-layout: post
+layout: code
 title: "Index Bloat e REINDEX CONCURRENTLY"
 date: 2026-12-28 12:00:00
 sintesi: >

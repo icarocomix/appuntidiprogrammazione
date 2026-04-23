@@ -1,5 +1,5 @@
 ---
-layout: post
+layout: code
 title: "Index Scan vs Bitmap Scan"
 date: 2026-11-09 12:00:00
 sintesi: >

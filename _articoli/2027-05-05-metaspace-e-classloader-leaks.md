@@ -1,5 +1,5 @@
 ---
-layout: post
+layout: code
 title: "Metaspace e ClassLoader Leaks"
 date: 2027-05-05 12:00:00
 sintesi: >

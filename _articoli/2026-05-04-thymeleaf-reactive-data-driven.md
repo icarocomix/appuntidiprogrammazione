@@ -1,5 +1,5 @@
 ---
-layout: post
+layout: code
 title: "Thymeleaf Reactive (Data-Driven)"
 date: 2026-05-04 12:00:00
 sintesi: >

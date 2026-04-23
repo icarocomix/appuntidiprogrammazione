@@ -1,5 +1,5 @@
 ---
-layout: post
+layout: code
 title: "Wait Queues e Lock Priority"
 date: 2027-02-08 12:00:00
 sintesi: >

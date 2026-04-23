@@ -1,5 +1,5 @@
 ---
-layout: post
+layout: code
 title: "B-Tree Index Bloat & Fillfactor"
 date: 2027-01-20 12:00:00
 sintesi: >

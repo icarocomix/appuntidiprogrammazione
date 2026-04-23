@@ -1,5 +1,5 @@
 ---
-layout: post
+layout: code
 title: "AtomicFieldUpdater per ridurre loverhead"
 date: 2027-09-20 12:00:00
 sintesi: >

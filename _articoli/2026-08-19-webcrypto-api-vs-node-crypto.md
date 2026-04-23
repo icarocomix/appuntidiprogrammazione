@@ -1,5 +1,5 @@
 ---
-layout: post
+layout: code
 title: "WebCrypto API vs Node Crypto"
 date: 2026-08-19 12:00:00
 sintesi: >

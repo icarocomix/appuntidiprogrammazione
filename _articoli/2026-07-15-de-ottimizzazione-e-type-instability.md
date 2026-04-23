@@ -1,5 +1,5 @@
 ---
-layout: post
+layout: code
 title: "De-ottimizzazione e Type Instability"
 date: 2026-07-15 12:00:00
 sintesi: >

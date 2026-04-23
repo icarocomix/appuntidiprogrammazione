@@ -1,5 +1,5 @@
 ---
-layout: post
+layout: code
 title: "Interpretazione di EXPLAIN BUFFERS"
 date: 2026-11-04 12:00:00
 sintesi: >

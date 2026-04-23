@@ -1,5 +1,5 @@
 ---
-layout: post
+layout: code
 title: "Linker Options e Variadic Functions"
 date: 2027-04-19 12:00:00
 sintesi: >

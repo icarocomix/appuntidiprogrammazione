@@ -1,5 +1,5 @@
 ---
-layout: post
+layout: code
 title: "Locking su Partizioni"
 date: 2027-02-22 12:00:00
 sintesi: >

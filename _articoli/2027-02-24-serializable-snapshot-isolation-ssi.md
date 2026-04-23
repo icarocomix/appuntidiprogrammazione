@@ -1,5 +1,5 @@
 ---
-layout: post
+layout: code
 title: "Serializable Snapshot Isolation (SSI)"
 date: 2027-02-24 12:00:00
 sintesi: >

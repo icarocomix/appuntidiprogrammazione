@@ -1,5 +1,5 @@
 ---
-layout: post
+layout: code
 title: "Eliminare i Memory Leak da Listener"
 date: 2027-07-14 12:00:00
 sintesi: >

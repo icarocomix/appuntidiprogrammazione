@@ -1,5 +1,5 @@
 ---
-layout: post
+layout: code
 title: "Object Pooling per Risorse Native"
 date: 2027-07-28 12:00:00
 sintesi: >

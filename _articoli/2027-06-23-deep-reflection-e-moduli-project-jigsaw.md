@@ -1,5 +1,5 @@
 ---
-layout: post
+layout: code
 title: "Deep Reflection e Moduli (Project Jigsaw)"
 date: 2027-06-23 12:00:00
 sintesi: >

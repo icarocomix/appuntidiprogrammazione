@@ -1,5 +1,5 @@
 ---
-layout: post
+layout: code
 title: "Custom Dialects e IProcessor"
 date: 2026-05-20 12:00:00
 sintesi: >

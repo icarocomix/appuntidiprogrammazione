@@ -1,5 +1,5 @@
 ---
-layout: post
+layout: code
 title: "Java News Roundup: Marzo 2026 - La mia esperienza con gli ultimi aggiornamenti della comunità Java"
 sintesi: >
   L'articolo riporta sui recenti aggiornamenti di Java, inclusi JDK 26, LibericaJDK, GlassFish 9.0, Micronaut e ClawRunr.

@@ -1,5 +1,5 @@
 ---
-layout: post
+layout: code
 title: "ZGC e Low Latency sotto i 10ms"
 date: 2027-05-17 12:00:00
 sintesi: >

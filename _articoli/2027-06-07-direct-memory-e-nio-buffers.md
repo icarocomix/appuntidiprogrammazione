@@ -1,5 +1,5 @@
 ---
-layout: post
+layout: code
 title: "Direct Memory e NIO Buffers"
 date: 2027-06-07 12:00:00
 sintesi: >

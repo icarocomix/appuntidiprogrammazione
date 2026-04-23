@@ -1,5 +1,5 @@
 ---
-layout: post
+layout: code
 title: "Zero-Copy con Buffer.allocUnsafe"
 date: 2026-08-26 12:00:00
 sintesi: >

@@ -1,5 +1,5 @@
 ---
-layout: post
+layout: code
 title: "Typed Arrays e Unboxed Numerics"
 date: 2026-07-27 12:00:00
 sintesi: >

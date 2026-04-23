@@ -1,5 +1,5 @@
 ---
-layout: post
+layout: code
 title: "Monitoring Replication Lag (LSN Algebra)"
 date: 2026-09-21 12:00:00
 sintesi: >

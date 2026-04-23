@@ -1,5 +1,5 @@
 ---
-layout: post
+layout: code
 title: "String Deduplication in G1GC"
 date: 2027-05-31 12:00:00
 sintesi: >

@@ -1,5 +1,5 @@
 ---
-layout: post
+layout: code
 title: "Predicate Locking in SSI"
 date: 2027-02-15 12:00:00
 sintesi: >

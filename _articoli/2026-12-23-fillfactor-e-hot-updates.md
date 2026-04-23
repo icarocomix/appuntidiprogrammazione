@@ -1,5 +1,5 @@
 ---
-layout: post
+layout: code
 title: "Fillfactor e HOT Updates"
 date: 2026-12-23 12:00:00
 sintesi: >

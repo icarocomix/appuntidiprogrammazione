@@ -1,5 +1,5 @@
 ---
-layout: post
+layout: code
 title: "Monitoring I/O con pg_stat_bgwriter"
 date: 2026-11-30 12:00:00
 sintesi: >

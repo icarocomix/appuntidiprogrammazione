@@ -1,5 +1,5 @@
 ---
-layout: post
+layout: code
 title: "Container Awareness e MaxRAMPercentage"
 date: 2027-05-12 12:00:00
 sintesi: >

@@ -1,5 +1,5 @@
 ---
-layout: post
+layout: code
 title: "Reti di Markov"
 date: 2026-05-09 07:30:17
 sintesi: >

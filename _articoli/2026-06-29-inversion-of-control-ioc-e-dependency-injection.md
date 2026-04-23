@@ -1,5 +1,5 @@
 ---
-layout: post
+layout: code
 title: "Inversion of Control (IoC) e Dependency Injection"
 date: 2026-06-29 12:00:00
 sintesi: >

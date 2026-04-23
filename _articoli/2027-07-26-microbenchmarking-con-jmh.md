@@ -1,5 +1,5 @@
 ---
-layout: post
+layout: code
 title: "Microbenchmarking con JMH"
 date: 2027-07-26 12:00:00
 sintesi: >

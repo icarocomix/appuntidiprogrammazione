@@ -1,5 +1,5 @@
 ---
-layout: post
+layout: code
 title: "Element Tag Processors (Web Components)"
 date: 2026-05-06 12:00:00
 sintesi: >

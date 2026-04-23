@@ -1,5 +1,5 @@
 ---
-layout: post
+layout: code
 title: "FSM e VM: Gestione dello spazio libero"
 date: 2026-12-21 12:00:00
 sintesi: >

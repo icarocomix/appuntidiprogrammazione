@@ -1,5 +1,5 @@
 ---
-layout: post
+layout: code
 title: "Content Security Policy (CSP) e Nonces"
 date: 2026-08-17 12:00:00
 sintesi: >

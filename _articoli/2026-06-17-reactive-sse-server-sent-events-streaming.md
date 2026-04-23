@@ -1,5 +1,5 @@
 ---
-layout: post
+layout: code
 title: "Reactive SSE (Server-Sent Events) Streaming"
 date: 2026-06-17 12:00:00
 sintesi: >

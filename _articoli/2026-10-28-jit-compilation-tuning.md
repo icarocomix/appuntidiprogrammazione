@@ -1,5 +1,5 @@
 ---
-layout: post
+layout: code
 title: "JIT Compilation Tuning"
 date: 2026-10-28 12:00:00
 sintesi: >

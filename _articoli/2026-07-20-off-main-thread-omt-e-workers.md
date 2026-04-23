@@ -1,5 +1,5 @@
 ---
-layout: post
+layout: code
 title: "Off-Main-Thread (OMT) e Workers"
 date: 2026-07-20 12:00:00
 sintesi: >

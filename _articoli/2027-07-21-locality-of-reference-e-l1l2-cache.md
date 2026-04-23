@@ -1,5 +1,5 @@
 ---
-layout: post
+layout: code
 title: "Locality of Reference e L1/L2 Cache"
 date: 2027-07-21 12:00:00
 sintesi: >

@@ -1,5 +1,5 @@
 ---
-layout: post
+layout: code
 title: "Fencing e STONITH in High Availability"
 date: 2026-09-23 12:00:00
 sintesi: >

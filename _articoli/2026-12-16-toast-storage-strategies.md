@@ -1,5 +1,5 @@
 ---
-layout: post
+layout: code
 title: "TOAST Storage Strategies"
 date: 2026-12-16 12:00:00
 sintesi: >

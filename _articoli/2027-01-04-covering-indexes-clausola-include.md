@@ -1,5 +1,5 @@
 ---
-layout: post
+layout: code
 title: "Covering Indexes (Clausola INCLUDE)"
 date: 2027-01-04 12:00:00
 sintesi: >

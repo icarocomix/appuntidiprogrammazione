@@ -1,5 +1,5 @@
 ---
-layout: post
+layout: code
 title: "Index-Only Scans e Visibilit"
 date: 2027-03-22 12:00:00
 sintesi: >

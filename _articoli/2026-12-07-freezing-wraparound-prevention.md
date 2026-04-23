@@ -1,5 +1,5 @@
 ---
-layout: post
+layout: code
 title: "Freezing & Wraparound Prevention"
 date: 2026-12-07 12:00:00
 sintesi: >

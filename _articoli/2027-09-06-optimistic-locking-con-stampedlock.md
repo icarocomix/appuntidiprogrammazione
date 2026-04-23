@@ -1,5 +1,5 @@
 ---
-layout: post
+layout: code
 title: "Optimistic Locking con StampedLock"
 date: 2027-09-06 12:00:00
 sintesi: >

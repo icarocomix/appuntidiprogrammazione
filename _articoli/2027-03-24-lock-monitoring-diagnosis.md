@@ -1,5 +1,5 @@
 ---
-layout: post
+layout: code
 title: "Lock Monitoring & Diagnosis"
 date: 2027-03-24 12:00:00
 sintesi: >

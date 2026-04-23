@@ -1,5 +1,5 @@
 ---
-layout: post
+layout: code
 title: "L'algoritmo EM (Expectation-Maximization)"
 sintesi: >
   L'algoritmo EM (Expectation-Maximization) è un metodo iterativo fondamentale in statistica e machine learning, utilizzato per trovare stime di massima verosimiglianza dei parametri in modelli probabilistici che dipendono da variabili latenti.

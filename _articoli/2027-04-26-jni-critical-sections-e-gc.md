@@ -1,5 +1,5 @@
 ---
-layout: post
+layout: code
 title: "JNI Critical Sections e GC"
 date: 2027-04-26 12:00:00
 sintesi: >

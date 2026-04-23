@@ -1,5 +1,5 @@
 ---
-layout: post
+layout: code
 title: "Jackson Afterburner per il Parsing JSON"
 date: 2027-08-04 12:00:00
 sintesi: >

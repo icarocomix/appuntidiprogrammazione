@@ -1,5 +1,5 @@
 ---
-layout: post
+layout: code
 title: "Template Literal Types (TS 4.0+)"
 date: 2026-09-14 12:00:00
 sintesi: >

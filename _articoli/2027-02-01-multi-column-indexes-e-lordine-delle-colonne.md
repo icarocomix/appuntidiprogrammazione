@@ -1,5 +1,5 @@
 ---
-layout: post
+layout: code
 title: "Multi-column Indexes e lordine delle colonne"
 date: 2027-02-01 12:00:00
 sintesi: >

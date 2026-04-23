@@ -1,5 +1,5 @@
 ---
-layout: post
+layout: code
 title: "HashMap e il carico di collisione"
 date: 2027-08-02 12:00:00
 sintesi: >

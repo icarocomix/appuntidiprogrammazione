@@ -1,5 +1,5 @@
 ---
-layout: post
+layout: code
 title: "Tuning del Random Page Cost"
 date: 2026-11-18 12:00:00
 sintesi: >

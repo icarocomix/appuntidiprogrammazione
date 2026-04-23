@@ -1,5 +1,5 @@
 ---
-layout: post
+layout: code
 title: "SpEL Compilation Mode"
 date: 2026-04-27 12:00:00
 sintesi: >

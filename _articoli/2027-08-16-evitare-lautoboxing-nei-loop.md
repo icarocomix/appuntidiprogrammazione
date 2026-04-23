@@ -1,5 +1,5 @@
 ---
-layout: post
+layout: code
 title: "Evitare lAutoboxing nei Loop"
 date: 2027-08-16 12:00:00
 sintesi: >

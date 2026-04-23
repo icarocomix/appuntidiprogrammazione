@@ -1,5 +1,5 @@
 ---
-layout: post
+layout: code
 title: "MethodHandle vs Reflection"
 date: 2027-06-28 12:00:00
 sintesi: >

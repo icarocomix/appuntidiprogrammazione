@@ -1,5 +1,5 @@
 ---
-layout: post
+layout: code
 title: "Security Dialect: sec:authorize"
 date: 2026-04-15 12:00:00
 sintesi: >

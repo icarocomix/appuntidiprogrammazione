@@ -1,5 +1,5 @@
 ---
-layout: post
+layout: code
 title: "CharSequence vs String.substring"
 date: 2027-08-11 12:00:00
 sintesi: >

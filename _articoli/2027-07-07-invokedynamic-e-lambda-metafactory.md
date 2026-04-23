@@ -1,5 +1,5 @@
 ---
-layout: post
+layout: code
 title: "Invokedynamic e Lambda Metafactory"
 date: 2027-07-07 12:00:00
 sintesi: >

@@ -1,5 +1,5 @@
 ---
-layout: post
+layout: code
 title: "String.intern() e StringTable"
 date: 2027-07-19 12:00:00
 sintesi: >

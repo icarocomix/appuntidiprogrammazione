@@ -1,5 +1,5 @@
 ---
-layout: post
+layout: code
 title: "Bloat Analysis & pg_repack"
 date: 2026-12-09 12:00:00
 sintesi: >

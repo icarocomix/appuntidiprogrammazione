@@ -1,5 +1,5 @@
 ---
-layout: post
+layout: code
 title: "Reflection Inflation e JIT"
 date: 2027-07-05 12:00:00
 sintesi: >

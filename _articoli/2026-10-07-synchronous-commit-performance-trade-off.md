@@ -1,5 +1,5 @@
 ---
-layout: post
+layout: code
 title: "Synchronous Commit & Performance Trade-off"
 date: 2026-10-07 12:00:00
 sintesi: >

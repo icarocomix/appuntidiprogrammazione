@@ -1,5 +1,5 @@
 ---
-layout: post
+layout: code
 title: "Conflict Detection in Logical Replication"
 date: 2026-10-12 12:00:00
 sintesi: >

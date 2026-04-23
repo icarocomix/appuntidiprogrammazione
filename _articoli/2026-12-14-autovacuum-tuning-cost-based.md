@@ -1,5 +1,5 @@
 ---
-layout: post
+layout: code
 title: "Autovacuum Tuning (Cost-Based)"
 date: 2026-12-14 12:00:00
 sintesi: >

@@ -1,5 +1,5 @@
 ---
-layout: post
+layout: code
 title: "Logical Replication Slots e Upgrade Near-Zero Downtime"
 date: 2026-09-28 12:00:00
 sintesi: >

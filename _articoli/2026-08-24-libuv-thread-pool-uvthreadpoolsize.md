@@ -1,5 +1,5 @@
 ---
-layout: post
+layout: code
 title: "Libuv Thread Pool & UV_THREADPOOL_SIZE"
 date: 2026-08-24 12:00:00
 sintesi: >

@@ -1,5 +1,5 @@
 ---
-layout: post
+layout: code
 title: "G1GC e Humongous Objects"
 date: 2027-05-10 12:00:00
 sintesi: >

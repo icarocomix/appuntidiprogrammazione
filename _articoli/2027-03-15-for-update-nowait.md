@@ -1,5 +1,5 @@
 ---
-layout: post
+layout: code
 title: "FOR UPDATE NOWAIT"
 date: 2027-03-15 12:00:00
 sintesi: >

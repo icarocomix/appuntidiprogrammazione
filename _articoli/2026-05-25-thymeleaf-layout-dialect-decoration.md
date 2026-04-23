@@ -1,5 +1,5 @@
 ---
-layout: post
+layout: code
 title: "Thymeleaf Layout Dialect (Decoration)"
 date: 2026-05-25 12:00:00
 sintesi: >
