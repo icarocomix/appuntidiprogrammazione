@@ -65,7 +65,7 @@ title: Home
                 >
                     <div class="post-meta">
                         {% if item.layout == 'libro' %}
-                            📚 LETTURA CONSIGLIATA: &nbsp;·&nbsp; {{ item.date | date: "%d/%m/%Y" }}
+                            <img src="{{ site.baseurl }}/assets/img/article.png"> LETTURA CONSIGLIATA: &nbsp;·&nbsp; {{ item.date | date: "%d/%m/%Y" }}
                         {% else %}
                             {{ item.tech | upcase }} &nbsp;·&nbsp; {{ item.date | date: "%d/%m/%Y" }}
                         {% endif %}
