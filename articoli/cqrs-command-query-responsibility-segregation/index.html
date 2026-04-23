@@ -1,1714 +1,424 @@
 <!DOCTYPE html>
-<!--
-    FIX 1: aggiunto data-theme="dark" mantenendo class="dark".
-    Tailwind usa class (darkMode:"class"), il mio style.css usa [data-theme].
-    Lo script anti-FOUC nel <head> li sincronizza entrambi prima del render.
--->
-<html class="dark" data-theme="dark" lang="it">
+<html lang="it" data-theme="dark">
 <head>
-<meta charset="utf-8"/>
-<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
-<title>CQRS (Command Query Responsibility Segregation) — DevLog</title>
-<meta content="Usare lo stesso modello per leggere e scrivere dati porta a compromessi sulle performance. La separazione tra Command (scrive/modifica) e Query (legge) permette di ottimizzare i Command per la consistenza e le Query per la velocità (es. usando viste 
-" name="description"/>
-<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300..700&family=Inter:wght@300..700&family=JetBrains+Mono:wght@400..700&display=swap" rel="stylesheet"/>
-<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
-<!--
-    FIX 2: link al foglio di stile custom — era completamente assente.
-    Senza questo post.html e libro.html non hanno nessuna classe CSS
-    (.post-container, .post-article-body, syntax highlighting Rouge, ecc.)
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CQRS (Command Query Responsibility Segregation) — DevLog</title>
+    <meta name="description" content="Usare lo stesso modello per leggere e scrivere dati porta a compromessi sulle performance. La separazione tra Command (scrive/modifica) e Query (legge) permette di ottimizzare i Command per la consistenza e le Query per la velocità (es. usando viste 
+">
+    <link rel="stylesheet" href="/appuntidiprogrammazione/assets/css/style.css">
+
+    <script>
+        /*
+         * Applico il tema PRIMA del rendering per evitare il flash di contenuto
+         * (FOUC). Lo script è inline e bloccante di proposito: deve girare
+         * prima che il browser disegni qualsiasi elemento.
+         */
+        (function() {
+            var saved = localStorage.getItem('theme') || 'dark';
+            document.documentElement.setAttribute('data-theme', saved);
+        })();
+    </script>
+</head>
+<body>
+
+    <header class="main-header">
+        <div class="logo" onclick="window.location.href='/appuntidiprogrammazione/'">
+            APPUNTI DI <span>PROGRAMMAZIONE</span>
+        </div>
+
+        <!-- 
+            Il pulsante aggiorna l'attributo data-theme sull'<html> e
+            persiste la scelta nel localStorage per le sessioni future.
+        -->
+        <button onclick="toggleTheme()" class="theme-toggle" aria-label="Cambia tema">🌓</button>
+    </header>
+
+    <!--
+    Layout post: struttura a due colonne.
+    - Sinistra (post-content): breadcrumb → tags → link PDF → link fonte → articolo MD
+    - Destra (post-sidebar): tags argomento + libro consigliato
+    
+    Ordine DOM: post-content prima, post-sidebar dopo.
+    Grid-template-areas in CSS li posiziona visivamente:
+    "content sidebar" su desktop, stacked su mobile.
 -->
-<link rel="stylesheet" href="/appuntidiprogrammazione/assets/css/style.css"/>
-<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
-<script id="tailwind-config">
-        tailwind.config = {
-            darkMode: "class",
-            theme: {
-                extend: {
-                    "colors": {
-                        "tertiary-fixed": "#ffdad7",
-                        "error-container": "#93000a",
-                        "on-tertiary-fixed-variant": "#842225",
-                        "secondary-fixed-dim": "#c8c6c5",
-                        "outline-variant": "#3c4a42",
-                        "on-error": "#690005",
-                        "inverse-on-surface": "#313030",
-                        "on-primary-container": "#00422b",
-                        "background": "#131313",
-                        "on-primary-fixed-variant": "#005236",
-                        "tertiary-fixed-dim": "#ffb3af",
-                        "surface-container-high": "#2a2a2a",
-                        "on-tertiary-container": "#711419",
-                        "on-primary-fixed": "#002113",
-                        "on-error-container": "#ffdad6",
-                        "surface-dim": "#131313",
-                        "surface-container-low": "#1c1b1b",
-                        "on-surface-variant": "#bbcabf",
-                        "on-secondary-fixed": "#1b1c1c",
-                        "surface-container-lowest": "#0e0e0e",
-                        "secondary-container": "#474746",
-                        "on-secondary-container": "#b7b5b4",
-                        "secondary-fixed": "#e4e2e1",
-                        "surface-container-highest": "#353534",
-                        "surface-variant": "#353534",
-                        "outline": "#86948a",
-                        "on-surface": "#e5e2e1",
-                        "surface": "#131313",
-                        "primary-fixed-dim": "#4edea3",
-                        "on-tertiary-fixed": "#410005",
-                        "on-primary": "#003824",
-                        "on-tertiary": "#650911",
-                        "inverse-primary": "#006c49",
-                        "primary-container": "#10b981",
-                        "surface-tint": "#4edea3",
-                        "surface-bright": "#3a3939",
-                        "on-secondary-fixed-variant": "#474746",
-                        "tertiary": "#ffb3af",
-                        "primary-fixed": "#6ffbbe",
-                        "inverse-surface": "#e5e2e1",
-                        "primary": "#4edea3",
-                        "on-secondary": "#303030",
-                        "on-background": "#e5e2e1",
-                        "error": "#ffb4ab",
-                        "tertiary-container": "#fc7c78",
-                        "surface-container": "#201f1f",
-                        "secondary": "#c8c6c5"
-                    },
-                    "borderRadius": {
-                        "DEFAULT": "0.125rem",
-                        "lg": "0.25rem",
-                        "xl": "0.5rem",
-                        "full": "0.75rem"
-                    },
-                    "spacing": {},
-                    "fontFamily": {
-                        "headline": ["Space Grotesk", "sans-serif"],
-                        "body": ["Inter", "sans-serif"],
-                        "label": ["JetBrains Mono", "monospace"]
-                    }
-                }
-            }
+<div class="post-container">
+    <!-- COLONNA SINISTRA: contenuto principale -->
+    <main class="post-content">
+        <!-- Breadcrumb: navigazione verso la home -->
+        <nav class="post-breadcrumb" aria-label="Breadcrumb">
+            <a href="/appuntidiprogrammazione/">Appunti di Programmazione</a>
+            <span class="separator" aria-hidden="true">/</span>
+            <span>CQRS (Command Query Responsibility Segregation)</span>
+        </nav>
+        <!-- Tags legati all'articolo -->
+        
+        <div class="post-tags-header" aria-label="Argomenti">
+            
+                <span class="post-tag-chip">js</span>
+            
+                <span class="post-tag-chip">design patterns & architecture</span>
+            
+        </div>
+        
+        <!-- Link al/ai PDF allegati all'articolo -->
+        
+        <div class="pdf-link-wrapper">
+            <a class="pdf-link"
+               href="/appuntidiprogrammazione/assets/pdf/cqrs-command-query-responsibility-segregation.pdf"
+               target="_blank"
+               rel="noopener noreferrer"
+               aria-label="Scarica il PDF: CQRS (Command Query Responsibility Segregation)">
+                Scarica PDF
+            </a>
+        </div>
+        
+        <!-- Corpo dell'articolo renderizzato da Kramdown -->
+        <article class="post-article-body">
+            <h2 id="esigenza-reale">Esigenza Reale</h2>
+<p>Scalare un’applicazione social dove la frequenza di lettura (feed) è 1000x superiore a quella di scrittura (post).</p>
+
+<h2 id="analisi-tecnica">Analisi Tecnica</h2>
+<p><strong>Problema:</strong> Modelli di dati troppo complessi che tentano di soddisfare sia i vincoli di validazione che le esigenze di reportistica veloce.</p>
+
+<p><strong>Perché:</strong> Separo le responsabilità. Ho scelto CQRS per poter scalare i database di lettura indipendentemente dai servizi di scrittura, ottimizzando i tempi di risposta delle API.</p>
+
+<h2 id="esempio-implementativo">Esempio Implementativo</h2>
+
+<div class="language-javascript highlighter-rouge"><div class="highlight"><pre class="highlight"><code><table class="rouge-table"><tbody><tr><td class="rouge-gutter gl"><pre class="lineno">1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+106
+107
+108
+109
+110
+111
+112
+113
+114
+115
+116
+117
+118
+119
+120
+121
+122
+123
+124
+125
+126
+127
+128
+129
+130
+131
+132
+133
+134
+135
+</pre></td><td class="rouge-code"><pre><span class="cm">/* LATO COMMAND: gestisco le operazioni di scrittura con validazione e
+    invarianti di dominio. */</span>
+<span class="kd">class</span> <span class="nx">CreatePostCommand</span> <span class="p">{</span>
+    <span class="kd">constructor</span><span class="p">({</span>
+        <span class="nx">authorId</span><span class="p">,</span> <span class="nx">content</span><span class="p">,</span> <span class="nx">tags</span>
+    <span class="p">}</span>
+    <span class="p">)</span> <span class="p">{</span>
+        <span class="c1">// Validazione delle invarianti del dominio: avviene sul lato Command,</span>
+            <span class="nx">non</span> <span class="nx">sul</span> <span class="nx">lato</span> <span class="nx">Query</span> <span class="k">if</span> <span class="p">(</span><span class="o">!</span><span class="nx">authorId</span><span class="p">)</span> <span class="k">throw</span> <span class="k">new</span> <span class="nb">Error</span><span class="p">(</span><span class="dl">'</span><span class="s1">authorId è
+            obbligatorio</span><span class="dl">'</span><span class="p">)</span>
+        <span class="p">;</span>
+        <span class="k">if</span> <span class="p">(</span><span class="o">!</span><span class="nx">content</span> <span class="o">||</span> <span class="nx">content</span><span class="p">.</span><span class="nx">trim</span><span class="p">().</span><span class="nx">length</span> <span class="o">&lt;</span> <span class="mi">10</span><span class="p">)</span> <span class="k">throw</span> <span class="k">new</span> <span class="nb">Error</span><span class="p">(</span><span class="dl">'</span><span class="s1">Il
+            contenuto deve avere almeno 10 caratteri</span><span class="dl">'</span><span class="p">);</span>
+        <span class="k">if</span> <span class="p">(</span><span class="nx">content</span><span class="p">.</span><span class="nx">length</span> <span class="o">&gt;</span> <span class="mi">5000</span><span class="p">)</span> <span class="k">throw</span> <span class="k">new</span> <span class="nb">Error</span><span class="p">(</span><span class="dl">'</span><span class="s1">Il contenuto non può
+            superare 5000 caratteri</span><span class="dl">'</span><span class="p">);</span>
+        <span class="k">this</span><span class="p">.</span><span class="nx">authorId</span> <span class="o">=</span> <span class="nx">authorId</span><span class="p">;</span>
+        <span class="k">this</span><span class="p">.</span><span class="nx">content</span> <span class="o">=</span> <span class="nx">content</span><span class="p">.</span><span class="nx">trim</span><span class="p">();</span>
+        <span class="k">this</span><span class="p">.</span><span class="nx">tags</span> <span class="o">=</span> <span class="nx">tags</span> <span class="o">??</span> <span class="p">[];</span>
+        <span class="k">this</span><span class="p">.</span><span class="nx">createdAt</span> <span class="o">=</span> <span class="k">new</span> <span class="nb">Date</span><span class="p">();</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+<span class="kd">class</span> <span class="nx">PostCommandHandler</span> <span class="p">{</span>
+    <span class="kd">constructor</span><span class="p">(</span><span class="nx">writeDb</span><span class="p">,</span> <span class="nx">eventBus</span><span class="p">)</span> <span class="p">{</span>
+        <span class="k">this</span><span class="p">.</span><span class="nx">writeDb</span> <span class="o">=</span> <span class="nx">writeDb</span><span class="p">;</span>
+        <span class="c1">// Database ottimizzato per scritture (es. PostgreSQL normalizzato)</span>
+            <span class="k">this</span><span class="p">.</span><span class="nx">eventBus</span> <span class="o">=</span> <span class="nx">eventBus</span>
+        <span class="p">;</span>
+    <span class="p">}</span>
+    <span class="k">async</span> <span class="nx">handle</span><span class="p">(</span><span class="nx">command</span><span class="p">)</span> <span class="p">{</span>
+        <span class="k">if</span> <span class="p">(</span><span class="nx">command</span> <span class="k">instanceof</span> <span class="nx">CreatePostCommand</span><span class="p">)</span> <span class="p">{</span>
+            <span class="c1">// Salvo nel write model: schema normalizzato, ottimizzato per</span>
+                <span class="nx">integrità</span> <span class="kd">const</span> <span class="nx">post</span> <span class="o">=</span> <span class="k">await</span> <span class="k">this</span><span class="p">.</span><span class="nx">writeDb</span><span class="p">.</span><span class="nx">posts</span><span class="p">.</span><span class="nx">create</span><span class="p">(</span>
+            <span class="p">{</span>
+                <span class="na">authorId</span><span class="p">:</span> <span class="nx">command</span><span class="p">.</span><span class="nx">authorId</span><span class="p">,</span> <span class="na">content</span><span class="p">:</span> <span class="nx">command</span><span class="p">.</span><span class="nx">content</span><span class="p">,</span> <span class="na">tags</span><span class="p">:</span>
+                    <span class="nx">command</span><span class="p">.</span><span class="nx">tags</span><span class="p">,</span> <span class="na">createdAt</span><span class="p">:</span> <span class="nx">command</span><span class="p">.</span><span class="nx">createdAt</span>
+            <span class="p">}</span>
+            <span class="p">);</span>
+            <span class="c1">// Pubblico l'evento per aggiornare le read views in modo asincrono</span>
+                <span class="k">await</span> <span class="k">this</span><span class="p">.</span><span class="nx">eventBus</span><span class="p">.</span><span class="nx">publish</span><span class="p">(</span><span class="dl">'</span><span class="s1">POST_CREATED</span><span class="dl">'</span><span class="p">,</span>
+            <span class="p">{</span>
+                <span class="na">postId</span><span class="p">:</span> <span class="nx">post</span><span class="p">.</span><span class="nx">id</span><span class="p">,</span> <span class="na">authorId</span><span class="p">:</span> <span class="nx">post</span><span class="p">.</span><span class="nx">authorId</span><span class="p">,</span> <span class="na">content</span><span class="p">:</span> <span class="nx">post</span><span class="p">.</span><span class="nx">content</span><span class="p">,</span>
+                    <span class="na">tags</span><span class="p">:</span> <span class="nx">post</span><span class="p">.</span><span class="nx">tags</span><span class="p">,</span> <span class="na">createdAt</span><span class="p">:</span> <span class="nx">post</span><span class="p">.</span><span class="nx">createdAt</span>
+            <span class="p">}</span>
+            <span class="p">);</span>
+            <span class="k">return</span> <span class="nx">post</span><span class="p">.</span><span class="nx">id</span><span class="p">;</span>
+        <span class="p">}</span>
+        <span class="k">throw</span> <span class="k">new</span> <span class="nb">Error</span><span class="p">(</span><span class="dl">'</span><span class="s1">Command non gestito: </span><span class="dl">'</span> <span class="o">+</span> <span class="nx">command</span><span class="p">.</span><span class="kd">constructor</span><span class="p">.</span><span class="nx">name</span><span class="p">);</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+<span class="cm">/* LATO QUERY: gestisco le letture con modelli de-normalizzati ottimizzati per
+    la UI. */</span>
+<span class="kd">class</span> <span class="nx">FeedQueryHandler</span> <span class="p">{</span>
+    <span class="kd">constructor</span><span class="p">(</span><span class="nx">readDb</span><span class="p">)</span> <span class="p">{</span>
+        <span class="c1">// Database di lettura: può essere Redis, Elasticsearch, MongoDB o una</span>
+            <span class="nx">vista</span> <span class="nx">materializzata</span> <span class="k">this</span><span class="p">.</span><span class="nx">readDb</span> <span class="o">=</span> <span class="nx">readDb</span>
+        <span class="p">;</span>
+    <span class="p">}</span>
+    <span class="k">async</span> <span class="nx">getFeed</span><span class="p">(</span><span class="nx">userId</span><span class="p">,</span> <span class="p">{</span>
+        <span class="nx">page</span> <span class="o">=</span> <span class="mi">1</span><span class="p">,</span> <span class="nx">limit</span> <span class="o">=</span> <span class="mi">20</span>
+    <span class="p">}</span>
+    <span class="o">=</span> <span class="p">{</span>
+    <span class="p">}</span>
+    <span class="p">)</span> <span class="p">{</span>
+        <span class="c1">// Query ultra-veloce su una vista pre-calcolata: nessun JOIN, nessuna</span>
+            <span class="nx">logica</span> <span class="nx">di</span> <span class="nx">dominio</span>
+        <span class="k">return</span> <span class="k">this</span><span class="p">.</span><span class="nx">readDb</span><span class="p">.</span><span class="nx">feedViews</span><span class="p">.</span><span class="nx">find</span><span class="p">({</span>
+            <span class="na">targetUserId</span><span class="p">:</span> <span class="nx">userId</span><span class="p">,</span> <span class="nx">page</span><span class="p">,</span> <span class="nx">limit</span>
+        <span class="p">}</span>
+        <span class="p">);</span>
+        <span class="c1">// Ritorna direttamente il DTO pronto per la UI</span>
+    <span class="p">}</span>
+    <span class="k">async</span> <span class="nx">getPostById</span><span class="p">(</span><span class="nx">postId</span><span class="p">)</span> <span class="p">{</span>
+        <span class="k">return</span> <span class="k">this</span><span class="p">.</span><span class="nx">readDb</span><span class="p">.</span><span class="nx">postDetails</span><span class="p">.</span><span class="nx">findOne</span><span class="p">({</span>
+            <span class="na">id</span><span class="p">:</span> <span class="nx">postId</span>
+        <span class="p">}</span>
+        <span class="p">);</span>
+        <span class="c1">// Vista denormalizzata: autore, like count, commenti in una sola query</span>
+    <span class="p">}</span>
+    <span class="k">async</span> <span class="nx">searchPosts</span><span class="p">(</span><span class="nx">query</span><span class="p">,</span> <span class="nx">tags</span><span class="p">)</span> <span class="p">{</span>
+        <span class="c1">// Elasticsearch ottimizzato per full-text search: impossibile sul write</span>
+            <span class="nx">model</span> <span class="nx">normalizzato</span>
+        <span class="k">return</span> <span class="k">this</span><span class="p">.</span><span class="nx">readDb</span><span class="p">.</span><span class="nx">searchIndex</span><span class="p">.</span><span class="nx">query</span><span class="p">({</span>
+            <span class="na">text</span><span class="p">:</span> <span class="nx">query</span><span class="p">,</span> <span class="nx">tags</span>
+        <span class="p">}</span>
+        <span class="p">);</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+<span class="cm">/* Sincronizzo i read models tramite event listener: aggiornamento asincrono
+    delle viste. */</span>
+<span class="kd">class</span> <span class="nx">FeedProjection</span> <span class="p">{</span>
+    <span class="kd">constructor</span><span class="p">(</span><span class="nx">readDb</span><span class="p">)</span> <span class="p">{</span>
+        <span class="k">this</span><span class="p">.</span><span class="nx">readDb</span> <span class="o">=</span> <span class="nx">readDb</span><span class="p">;</span>
+    <span class="p">}</span>
+    <span class="c1">// Questo handler viene invocato ogni volta che POST_CREATED viene</span>
+        <span class="nx">pubblicato</span> <span class="k">async</span> <span class="nx">onPostCreated</span><span class="p">(</span><span class="nx">event</span><span class="p">)</span>
+    <span class="p">{</span>
+        <span class="c1">// Recupero i follower dell'autore e aggiorno la loro feed view const</span>
+            <span class="nx">followers</span> <span class="o">=</span> <span class="k">await</span> <span class="k">this</span><span class="p">.</span><span class="nx">readDb</span><span class="p">.</span><span class="nx">follows</span><span class="p">.</span><span class="nx">findFollowers</span><span class="p">(</span><span class="nx">event</span><span class="p">.</span><span class="nx">authorId</span><span class="p">)</span>
+        <span class="p">;</span>
+        <span class="c1">// Fan-out: aggiorno la feed view di ogni follower await</span>
+            <span class="nb">Promise</span><span class="p">.</span><span class="nx">all</span><span class="p">(</span><span class="nx">followers</span><span class="p">.</span><span class="nx">map</span><span class="p">(</span><span class="nx">followerId</span> <span class="o">=&gt;</span>
+            <span class="k">this</span><span class="p">.</span><span class="nx">readDb</span><span class="p">.</span><span class="nx">feedViews</span><span class="p">.</span><span class="nx">insert</span><span class="p">(</span>
+        <span class="p">{</span>
+            <span class="na">targetUserId</span><span class="p">:</span> <span class="nx">followerId</span><span class="p">,</span> <span class="na">postId</span><span class="p">:</span> <span class="nx">event</span><span class="p">.</span><span class="nx">postId</span><span class="p">,</span> <span class="na">authorId</span><span class="p">:</span>
+                <span class="nx">event</span><span class="p">.</span><span class="nx">authorId</span><span class="p">,</span> <span class="na">contentPreview</span><span class="p">:</span> <span class="nx">event</span><span class="p">.</span><span class="nx">content</span><span class="p">.</span><span class="nx">substring</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">200</span><span class="p">),</span>
+                <span class="na">tags</span><span class="p">:</span> <span class="nx">event</span><span class="p">.</span><span class="nx">tags</span><span class="p">,</span> <span class="na">createdAt</span><span class="p">:</span> <span class="nx">event</span><span class="p">.</span><span class="nx">createdAt</span>
+        <span class="p">}</span>
+        <span class="p">)</span> <span class="p">));</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+<span class="cm">/* Assemblo tutto in Express: Command e Query su endpoint separati. */</span>
+<span class="kd">const</span> <span class="nx">commandHandler</span> <span class="o">=</span> <span class="k">new</span> <span class="nx">PostCommandHandler</span><span class="p">(</span><span class="nx">writeDb</span><span class="p">,</span> <span class="nx">eventBus</span><span class="p">);</span>
+<span class="kd">const</span> <span class="nx">queryHandler</span> <span class="o">=</span> <span class="k">new</span> <span class="nx">FeedQueryHandler</span><span class="p">(</span><span class="nx">readDb</span><span class="p">);</span>
+<span class="c1">// READ: ottimizzato per velocità, può essere cachato a più livelli</span>
+    <span class="nx">app</span><span class="p">.</span><span class="kd">get</span><span class="p">(</span><span class="dl">'</span><span class="s1">/feed</span><span class="dl">'</span><span class="p">,</span> <span class="k">async</span> <span class="p">(</span><span class="nx">req</span><span class="p">,</span> <span class="nx">res</span><span class="p">)</span> <span class="o">=&gt;</span>
+<span class="p">{</span>
+    <span class="kd">const</span> <span class="nx">feed</span> <span class="o">=</span> <span class="k">await</span> <span class="nx">queryHandler</span><span class="p">.</span><span class="nx">getFeed</span><span class="p">(</span><span class="nx">req</span><span class="p">.</span><span class="nx">user</span><span class="p">.</span><span class="nx">id</span><span class="p">,</span> <span class="nx">req</span><span class="p">.</span><span class="nx">query</span><span class="p">);</span>
+    <span class="nx">res</span><span class="p">.</span><span class="nx">json</span><span class="p">(</span><span class="nx">feed</span><span class="p">);</span>
+    <span class="c1">// Risposta in &lt; 10ms dalla vista pre-calcolata</span>
+<span class="p">}</span>
+<span class="p">);</span>
+<span class="c1">// WRITE: ottimizzato per consistenza e validazione app.post('/posts', async</span>
+    <span class="p">(</span><span class="nx">req</span><span class="p">,</span> <span class="nx">res</span><span class="p">)</span> <span class="o">=&gt;</span>
+<span class="p">{</span>
+    <span class="kd">const</span> <span class="nx">command</span> <span class="o">=</span> <span class="k">new</span> <span class="nx">CreatePostCommand</span><span class="p">({</span>
+        <span class="na">authorId</span><span class="p">:</span> <span class="nx">req</span><span class="p">.</span><span class="nx">user</span><span class="p">.</span><span class="nx">id</span><span class="p">,</span> <span class="p">...</span><span class="nx">req</span><span class="p">.</span><span class="nx">body</span>
+    <span class="p">}</span>
+    <span class="p">);</span>
+    <span class="kd">const</span> <span class="nx">postId</span> <span class="o">=</span> <span class="k">await</span> <span class="nx">commandHandler</span><span class="p">.</span><span class="nx">handle</span><span class="p">(</span><span class="nx">command</span><span class="p">);</span>
+    <span class="nx">res</span><span class="p">.</span><span class="nx">status</span><span class="p">(</span><span class="mi">202</span><span class="p">).</span><span class="nx">json</span><span class="p">({</span>
+        <span class="nx">postId</span><span class="p">,</span> <span class="na">message</span><span class="p">:</span> <span class="dl">'</span><span class="s1">Post creato. Il feed verrà aggiornato a breve.</span><span class="dl">'</span>
+    <span class="p">}</span>
+    <span class="p">);</span>
+<span class="p">}</span>
+<span class="p">);</span>
+</pre></td></tr></tbody></table></code></pre></div></div>
+
+        </article>
+        <!-- Link alla fonte originale: lo posiziono dopo il corpo perché è un
+             approfondimento opzionale, non un'azione primaria. L'icona SVG inline
+             evita dipendenze da font icon esterni. -->
+        
+    </main>
+    <!-- COLONNA DESTRA: sidebar post -->
+    <aside class="post-sidebar">
+        <!-- Box 1: tags argomento (stessa lista dei chip sopra, ma nella sidebar) -->
+        
+        <div class="sidebar-box tags-box">
+            <span class="box-label">Argomenti</span>
+            <div class="tag-cloud-sidebar">
+                
+                    <span class="sidebar-tag">js</span>
+                
+                    <span class="sidebar-tag">design patterns & architecture</span>
+                
+            </div>
+        </div>
+        
+        <!-- Box 2: fonte originale nella sidebar, visibile a colpo d'occhio
+             senza dover scorrere fino in fondo all'articolo. -->
+        
+        <!-- Box 3: libro consigliato -->
+        <div class="sidebar-box books-box">
+            <span class="box-label">Letture Consigliate</span>
+            <div class="book-card">
+                <a href="https://www.amazon.it/Appunti-Programmazione-Pensieri-soluzioni-Applicazioni-ebook/dp/B0FMFRHKTF/"
+                   target="_blank"
+                   rel="noopener noreferrer"
+                   aria-label="Acquista Appunti di Programmazione su Amazon">
+                    <img src="https://m.media-amazon.com/images/I/61Ck5eMzGYL._SY466_.jpg"
+                         alt="Copertina: Appunti di Programmazione"
+                         width="80">
+                    <p>Appunti di Programmazione: Pensieri e soluzioni per Applicazioni WEB</p>
+                </a>
+            </div>
+        </div>
+    </aside>
+</div>
+
+    <footer class="main-footer">
+        Appunti di Programmazione &nbsp;·&nbsp; cosimociraci@gmail.com
+    </footer>
+
+    <script>
+        /*
+         * toggleTheme: legge il tema corrente dall'attributo HTML,
+         * calcola l'opposto e lo salva. Il CSS reagisce via [data-theme].
+         * Non uso classi sul body per mantenere tutto centralizzato
+         * sull'elemento radice.
+         */
+        function toggleTheme() {
+            var html = document.documentElement;
+            var current = html.getAttribute('data-theme');
+            var next = current === 'dark' ? 'light' : 'dark';
+            html.setAttribute('data-theme', next);
+            localStorage.setItem('theme', next);
         }
     </script>
-<style>
-        body {
-            font-family: 'Inter', sans-serif;
-            background-color: #131313;
-            color: #e5e2e1;
-            display: flex;
-            flex-direction: column;
-            min-height: 100vh;
-        }
-        h1, h2, h3, h4, h5, h6, .font-headline {
-            font-family: 'Space Grotesk', sans-serif;
-        }
-        .font-mono, .label {
-            font-family: 'JetBrains Mono', monospace;
-        }
-        .glow-hover:hover {
-            box-shadow: 0 0 20px 0 rgba(78, 222, 163, 0.15);
-        }
-        .glass-panel {
-            background-color: rgba(53, 53, 52, 0.6);
-            backdrop-filter: blur(12px);
-            border-top: 1px solid rgba(60, 74, 66, 0.15);
-            border-left: 1px solid rgba(60, 74, 66, 0.15);
-        }
-        .ambient-glow {
-            position: relative;
-        }
-        .ambient-glow::after {
-            content: '';
-            position: absolute;
-            top: 0; left: 0; right: 0; bottom: 0;
-            box-shadow: 0 0 30px 5px rgba(78, 222, 163, 0.1);
-            border-radius: inherit;
-            z-index: -1;
-            opacity: 0;
-            transition: opacity 0.3s ease;
-        }
-        .ambient-glow:hover::after { opacity: 1; }
-    </style>
-<!--
-    FIX 3: script anti-FOUC inline e bloccante nel <head>.
-    Deve girare prima che il browser dipinga qualsiasi elemento.
-    Legge localStorage e sincronizza sia data-theme (CSS custom)
-    sia class="dark" (Tailwind darkMode:"class").
--->
-<script>
-    (function() {
-        var saved = localStorage.getItem('theme') || 'dark';
-        if (saved === 'light') {
-            document.documentElement.classList.remove('dark');
-            document.documentElement.setAttribute('data-theme', 'light');
-        } else {
-            document.documentElement.classList.add('dark');
-            document.documentElement.setAttribute('data-theme', 'dark');
-        }
-    })();
-</script>
-</head>
-<body class="bg-background text-on-background antialiased flex flex-col min-h-screen">
 
-<!-- TopNavBar — identico al nuovo, solo href del logo/primo link corretti -->
-<nav class="flex justify-between items-center px-8 h-16 w-full bg-[#131313]/90 dark:bg-[#131313]/90 backdrop-blur-xl docked full-width top-0 z-50 border-b border-white/5 sticky top-0">
-<a class="font-mono font-bold text-[#10B981] before:content-['&gt;_'] hover:text-[#4edea3] transition-colors duration-200" href="/appuntidiprogrammazione/">LUCID_CONSOLE</a>
-<div class="hidden md:flex items-center space-x-6 font-['Space_Grotesk'] uppercase tracking-widest text-sm">
-<a class="text-[#10B981] border-b-2 border-[#10B981] pb-1 hover:text-[#4edea3] transition-colors duration-200" href="/appuntidiprogrammazione/">Articles</a>
-<a class="text-zinc-400 font-mono hover:text-[#4edea3] transition-colors duration-200" href="#">Reviews</a>
-<a class="text-zinc-400 font-mono hover:text-[#4edea3] transition-colors duration-200" href="#">Library</a>
-<a class="text-zinc-400 font-mono hover:text-[#4edea3] transition-colors duration-200" href="#">Archive</a>
-</div>
-<div class="flex items-center space-x-4">
-<!--
-    FIX 4: aggiunto onclick="toggleTheme()" — il pulsante era muto nel
-    nuovo file. La funzione toggleTheme() è definita nel <script> in fondo.
--->
-<button onclick="toggleTheme()" aria-label="Toggle Dark Mode" class="text-zinc-400 hover:text-[#4edea3] transition-colors duration-200">
-<span class="material-symbols-outlined" data-icon="dark_mode">dark_mode</span>
-</button>
-<button aria-label="Terminal" class="text-zinc-400 hover:text-[#4edea3] transition-colors duration-200">
-<span class="material-symbols-outlined" data-icon="terminal">terminal</span>
-</button>
-</div>
-</nav>
-
-<!-- Main Content Area — identico al nuovo -->
-<main class="flex-grow flex w-full max-w-7xl mx-auto mt-8 mb-16 px-4 sm:px-8">
-
-<!-- SideNavBar — identico al nuovo -->
-<aside class="hidden lg:flex flex-col border-r border-white/5 w-64 flex-shrink-0 mr-12 bg-surface-container-low h-[calc(100vh-8rem)] sticky top-24 rounded-lg overflow-hidden">
-<div class="p-6 border-b border-white/5">
-<p class="font-mono text-xs uppercase tracking-tighter text-on-surface-variant mb-1">System Operator</p>
-<h2 class="font-mono text-lg font-black text-primary mb-1 truncate">CONSOLE_ROOT</h2>
-<p class="font-mono text-[10px] text-zinc-500">v4.2.0-stable</p>
-<div class="mt-6 relative">
-<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500 text-sm">search</span>
-<input class="w-full bg-surface-container-lowest border border-outline-variant/30 rounded focus:border-primary focus:ring-1 focus:ring-primary text-xs font-mono py-2 pl-9 pr-3 text-on-surface placeholder:text-zinc-600 outline-none transition-all" placeholder="Search Documentation..." type="text"/>
-</div>
-</div>
-<nav class="flex-1 py-4 overflow-y-auto">
-<ul class="space-y-1 font-mono text-xs uppercase tracking-tighter">
-<li>
-<a class="text-[#10B981] bg-emerald-500/5 flex items-center gap-3 px-4 py-3 border-r-2 border-[#10B981] hover:bg-zinc-800/50 transition-all" href="/appuntidiprogrammazione/">
-<span class="material-symbols-outlined text-sm">terminal</span>
-<span>Latest Logs</span>
-</a>
-</li>
-<li>
-<a class="text-zinc-500 flex items-center gap-3 px-4 py-3 hover:bg-zinc-800/50 hover:translate-x-1 transition-all hover:text-[#4edea3]" href="#">
-<span class="material-symbols-outlined text-sm">menu_book</span>
-<span>Book Reviews</span>
-</a>
-</li>
-<li>
-<a class="text-zinc-500 flex items-center gap-3 px-4 py-3 hover:bg-zinc-800/50 hover:translate-x-1 transition-all hover:text-[#4edea3]" href="#">
-<span class="material-symbols-outlined text-sm">star</span>
-<span>Core Readings</span>
-</a>
-</li>
-<li>
-<a class="text-zinc-500 flex items-center gap-3 px-4 py-3 hover:bg-zinc-800/50 hover:translate-x-1 transition-all hover:text-[#4edea3]" href="#">
-<span class="material-symbols-outlined text-sm">info</span>
-<span>System Info</span>
-</a>
-</li>
-</ul>
-</nav>
-<div class="p-4 border-t border-white/5 bg-surface-container-lowest/50">
-<ul class="flex justify-between">
-<li>
-<a class="text-zinc-500 hover:text-primary transition-colors" href="#" title="Source">
-<span class="material-symbols-outlined">code</span>
-</a>
-</li>
-<li>
-<a class="text-zinc-500 hover:text-primary transition-colors" href="#" title="RSS">
-<span class="material-symbols-outlined">rss_feed</span>
-</a>
-</li>
-</ul>
-</div>
-</aside>
-
-<!-- Canvas: solo <!--
-    Layout post: struttura a due colonne.
-    - Sinistra (post-content): breadcrumb → tags → PDF → corpo MD → fonte
-    - Destra  (post-sidebar):  tags + fonte + libro consigliato
--->
-<div class="post-container">
-
-    <main class="post-content">
-
-        <nav class="post-breadcrumb" aria-label="Breadcrumb">
-            <a href="/appuntidiprogrammazione/">Appunti di Programmazione</a>
-            <span class="separator" aria-hidden="true">/</span>
-            <span>CQRS (Command Query Responsibility Segregation)</span>
-        </nav>
-
-        
-        <div class="post-tags-header" aria-label="Argomenti">
-            
-                <span class="post-tag-chip">js</span>
-            
-                <span class="post-tag-chip">design patterns & architecture</span>
-            
-        </div>
-        
-
-        
-        <div class="pdf-link-wrapper">
-            <a class="pdf-link"
-               href="/appuntidiprogrammazione/assets/pdf/cqrs-command-query-responsibility-segregation.pdf"
-               target="_blank"
-               rel="noopener noreferrer"
-               aria-label="Scarica il PDF: CQRS (Command Query Responsibility Segregation)">
-                ↓ Scarica PDF
-            </a>
-        </div>
-        
-
-        <article class="post-article-body">
-            <h2 id="esigenza-reale">Esigenza Reale</h2>
-<p>Scalare un’applicazione social dove la frequenza di lettura (feed) è 1000x superiore a quella di scrittura (post).</p>
-
-<h2 id="analisi-tecnica">Analisi Tecnica</h2>
-<p><strong>Problema:</strong> Modelli di dati troppo complessi che tentano di soddisfare sia i vincoli di validazione che le esigenze di reportistica veloce.</p>
-
-<p><strong>Perché:</strong> Separo le responsabilità. Ho scelto CQRS per poter scalare i database di lettura indipendentemente dai servizi di scrittura, ottimizzando i tempi di risposta delle API.</p>
-
-<h2 id="esempio-implementativo">Esempio Implementativo</h2>
-
-<div class="language-javascript highlighter-rouge"><div class="highlight"><pre class="highlight"><code><table class="rouge-table"><tbody><tr><td class="rouge-gutter gl"><pre class="lineno">1
-2
-3
-4
-5
-6
-7
-8
-9
-10
-11
-12
-13
-14
-15
-16
-17
-18
-19
-20
-21
-22
-23
-24
-25
-26
-27
-28
-29
-30
-31
-32
-33
-34
-35
-36
-37
-38
-39
-40
-41
-42
-43
-44
-45
-46
-47
-48
-49
-50
-51
-52
-53
-54
-55
-56
-57
-58
-59
-60
-61
-62
-63
-64
-65
-66
-67
-68
-69
-70
-71
-72
-73
-74
-75
-76
-77
-78
-79
-80
-81
-82
-83
-84
-85
-86
-87
-88
-89
-90
-91
-92
-93
-94
-95
-96
-97
-98
-99
-100
-101
-102
-103
-104
-105
-106
-107
-108
-109
-110
-111
-112
-113
-114
-115
-116
-117
-118
-119
-120
-121
-122
-123
-124
-125
-126
-127
-128
-129
-130
-131
-132
-133
-134
-135
-</pre></td><td class="rouge-code"><pre><span class="cm">/* LATO COMMAND: gestisco le operazioni di scrittura con validazione e
-    invarianti di dominio. */</span>
-<span class="kd">class</span> <span class="nx">CreatePostCommand</span> <span class="p">{</span>
-    <span class="kd">constructor</span><span class="p">({</span>
-        <span class="nx">authorId</span><span class="p">,</span> <span class="nx">content</span><span class="p">,</span> <span class="nx">tags</span>
-    <span class="p">}</span>
-    <span class="p">)</span> <span class="p">{</span>
-        <span class="c1">// Validazione delle invarianti del dominio: avviene sul lato Command,</span>
-            <span class="nx">non</span> <span class="nx">sul</span> <span class="nx">lato</span> <span class="nx">Query</span> <span class="k">if</span> <span class="p">(</span><span class="o">!</span><span class="nx">authorId</span><span class="p">)</span> <span class="k">throw</span> <span class="k">new</span> <span class="nb">Error</span><span class="p">(</span><span class="dl">'</span><span class="s1">authorId è
-            obbligatorio</span><span class="dl">'</span><span class="p">)</span>
-        <span class="p">;</span>
-        <span class="k">if</span> <span class="p">(</span><span class="o">!</span><span class="nx">content</span> <span class="o">||</span> <span class="nx">content</span><span class="p">.</span><span class="nx">trim</span><span class="p">().</span><span class="nx">length</span> <span class="o">&lt;</span> <span class="mi">10</span><span class="p">)</span> <span class="k">throw</span> <span class="k">new</span> <span class="nb">Error</span><span class="p">(</span><span class="dl">'</span><span class="s1">Il
-            contenuto deve avere almeno 10 caratteri</span><span class="dl">'</span><span class="p">);</span>
-        <span class="k">if</span> <span class="p">(</span><span class="nx">content</span><span class="p">.</span><span class="nx">length</span> <span class="o">&gt;</span> <span class="mi">5000</span><span class="p">)</span> <span class="k">throw</span> <span class="k">new</span> <span class="nb">Error</span><span class="p">(</span><span class="dl">'</span><span class="s1">Il contenuto non può
-            superare 5000 caratteri</span><span class="dl">'</span><span class="p">);</span>
-        <span class="k">this</span><span class="p">.</span><span class="nx">authorId</span> <span class="o">=</span> <span class="nx">authorId</span><span class="p">;</span>
-        <span class="k">this</span><span class="p">.</span><span class="nx">content</span> <span class="o">=</span> <span class="nx">content</span><span class="p">.</span><span class="nx">trim</span><span class="p">();</span>
-        <span class="k">this</span><span class="p">.</span><span class="nx">tags</span> <span class="o">=</span> <span class="nx">tags</span> <span class="o">??</span> <span class="p">[];</span>
-        <span class="k">this</span><span class="p">.</span><span class="nx">createdAt</span> <span class="o">=</span> <span class="k">new</span> <span class="nb">Date</span><span class="p">();</span>
-    <span class="p">}</span>
-<span class="p">}</span>
-<span class="kd">class</span> <span class="nx">PostCommandHandler</span> <span class="p">{</span>
-    <span class="kd">constructor</span><span class="p">(</span><span class="nx">writeDb</span><span class="p">,</span> <span class="nx">eventBus</span><span class="p">)</span> <span class="p">{</span>
-        <span class="k">this</span><span class="p">.</span><span class="nx">writeDb</span> <span class="o">=</span> <span class="nx">writeDb</span><span class="p">;</span>
-        <span class="c1">// Database ottimizzato per scritture (es. PostgreSQL normalizzato)</span>
-            <span class="k">this</span><span class="p">.</span><span class="nx">eventBus</span> <span class="o">=</span> <span class="nx">eventBus</span>
-        <span class="p">;</span>
-    <span class="p">}</span>
-    <span class="k">async</span> <span class="nx">handle</span><span class="p">(</span><span class="nx">command</span><span class="p">)</span> <span class="p">{</span>
-        <span class="k">if</span> <span class="p">(</span><span class="nx">command</span> <span class="k">instanceof</span> <span class="nx">CreatePostCommand</span><span class="p">)</span> <span class="p">{</span>
-            <span class="c1">// Salvo nel write model: schema normalizzato, ottimizzato per</span>
-                <span class="nx">integrità</span> <span class="kd">const</span> <span class="nx">post</span> <span class="o">=</span> <span class="k">await</span> <span class="k">this</span><span class="p">.</span><span class="nx">writeDb</span><span class="p">.</span><span class="nx">posts</span><span class="p">.</span><span class="nx">create</span><span class="p">(</span>
-            <span class="p">{</span>
-                <span class="na">authorId</span><span class="p">:</span> <span class="nx">command</span><span class="p">.</span><span class="nx">authorId</span><span class="p">,</span> <span class="na">content</span><span class="p">:</span> <span class="nx">command</span><span class="p">.</span><span class="nx">content</span><span class="p">,</span> <span class="na">tags</span><span class="p">:</span>
-                    <span class="nx">command</span><span class="p">.</span><span class="nx">tags</span><span class="p">,</span> <span class="na">createdAt</span><span class="p">:</span> <span class="nx">command</span><span class="p">.</span><span class="nx">createdAt</span>
-            <span class="p">}</span>
-            <span class="p">);</span>
-            <span class="c1">// Pubblico l'evento per aggiornare le read views in modo asincrono</span>
-                <span class="k">await</span> <span class="k">this</span><span class="p">.</span><span class="nx">eventBus</span><span class="p">.</span><span class="nx">publish</span><span class="p">(</span><span class="dl">'</span><span class="s1">POST_CREATED</span><span class="dl">'</span><span class="p">,</span>
-            <span class="p">{</span>
-                <span class="na">postId</span><span class="p">:</span> <span class="nx">post</span><span class="p">.</span><span class="nx">id</span><span class="p">,</span> <span class="na">authorId</span><span class="p">:</span> <span class="nx">post</span><span class="p">.</span><span class="nx">authorId</span><span class="p">,</span> <span class="na">content</span><span class="p">:</span> <span class="nx">post</span><span class="p">.</span><span class="nx">content</span><span class="p">,</span>
-                    <span class="na">tags</span><span class="p">:</span> <span class="nx">post</span><span class="p">.</span><span class="nx">tags</span><span class="p">,</span> <span class="na">createdAt</span><span class="p">:</span> <span class="nx">post</span><span class="p">.</span><span class="nx">createdAt</span>
-            <span class="p">}</span>
-            <span class="p">);</span>
-            <span class="k">return</span> <span class="nx">post</span><span class="p">.</span><span class="nx">id</span><span class="p">;</span>
-        <span class="p">}</span>
-        <span class="k">throw</span> <span class="k">new</span> <span class="nb">Error</span><span class="p">(</span><span class="dl">'</span><span class="s1">Command non gestito: </span><span class="dl">'</span> <span class="o">+</span> <span class="nx">command</span><span class="p">.</span><span class="kd">constructor</span><span class="p">.</span><span class="nx">name</span><span class="p">);</span>
-    <span class="p">}</span>
-<span class="p">}</span>
-<span class="cm">/* LATO QUERY: gestisco le letture con modelli de-normalizzati ottimizzati per
-    la UI. */</span>
-<span class="kd">class</span> <span class="nx">FeedQueryHandler</span> <span class="p">{</span>
-    <span class="kd">constructor</span><span class="p">(</span><span class="nx">readDb</span><span class="p">)</span> <span class="p">{</span>
-        <span class="c1">// Database di lettura: può essere Redis, Elasticsearch, MongoDB o una</span>
-            <span class="nx">vista</span> <span class="nx">materializzata</span> <span class="k">this</span><span class="p">.</span><span class="nx">readDb</span> <span class="o">=</span> <span class="nx">readDb</span>
-        <span class="p">;</span>
-    <span class="p">}</span>
-    <span class="k">async</span> <span class="nx">getFeed</span><span class="p">(</span><span class="nx">userId</span><span class="p">,</span> <span class="p">{</span>
-        <span class="nx">page</span> <span class="o">=</span> <span class="mi">1</span><span class="p">,</span> <span class="nx">limit</span> <span class="o">=</span> <span class="mi">20</span>
-    <span class="p">}</span>
-    <span class="o">=</span> <span class="p">{</span>
-    <span class="p">}</span>
-    <span class="p">)</span> <span class="p">{</span>
-        <span class="c1">// Query ultra-veloce su una vista pre-calcolata: nessun JOIN, nessuna</span>
-            <span class="nx">logica</span> <span class="nx">di</span> <span class="nx">dominio</span>
-        <span class="k">return</span> <span class="k">this</span><span class="p">.</span><span class="nx">readDb</span><span class="p">.</span><span class="nx">feedViews</span><span class="p">.</span><span class="nx">find</span><span class="p">({</span>
-            <span class="na">targetUserId</span><span class="p">:</span> <span class="nx">userId</span><span class="p">,</span> <span class="nx">page</span><span class="p">,</span> <span class="nx">limit</span>
-        <span class="p">}</span>
-        <span class="p">);</span>
-        <span class="c1">// Ritorna direttamente il DTO pronto per la UI</span>
-    <span class="p">}</span>
-    <span class="k">async</span> <span class="nx">getPostById</span><span class="p">(</span><span class="nx">postId</span><span class="p">)</span> <span class="p">{</span>
-        <span class="k">return</span> <span class="k">this</span><span class="p">.</span><span class="nx">readDb</span><span class="p">.</span><span class="nx">postDetails</span><span class="p">.</span><span class="nx">findOne</span><span class="p">({</span>
-            <span class="na">id</span><span class="p">:</span> <span class="nx">postId</span>
-        <span class="p">}</span>
-        <span class="p">);</span>
-        <span class="c1">// Vista denormalizzata: autore, like count, commenti in una sola query</span>
-    <span class="p">}</span>
-    <span class="k">async</span> <span class="nx">searchPosts</span><span class="p">(</span><span class="nx">query</span><span class="p">,</span> <span class="nx">tags</span><span class="p">)</span> <span class="p">{</span>
-        <span class="c1">// Elasticsearch ottimizzato per full-text search: impossibile sul write</span>
-            <span class="nx">model</span> <span class="nx">normalizzato</span>
-        <span class="k">return</span> <span class="k">this</span><span class="p">.</span><span class="nx">readDb</span><span class="p">.</span><span class="nx">searchIndex</span><span class="p">.</span><span class="nx">query</span><span class="p">({</span>
-            <span class="na">text</span><span class="p">:</span> <span class="nx">query</span><span class="p">,</span> <span class="nx">tags</span>
-        <span class="p">}</span>
-        <span class="p">);</span>
-    <span class="p">}</span>
-<span class="p">}</span>
-<span class="cm">/* Sincronizzo i read models tramite event listener: aggiornamento asincrono
-    delle viste. */</span>
-<span class="kd">class</span> <span class="nx">FeedProjection</span> <span class="p">{</span>
-    <span class="kd">constructor</span><span class="p">(</span><span class="nx">readDb</span><span class="p">)</span> <span class="p">{</span>
-        <span class="k">this</span><span class="p">.</span><span class="nx">readDb</span> <span class="o">=</span> <span class="nx">readDb</span><span class="p">;</span>
-    <span class="p">}</span>
-    <span class="c1">// Questo handler viene invocato ogni volta che POST_CREATED viene</span>
-        <span class="nx">pubblicato</span> <span class="k">async</span> <span class="nx">onPostCreated</span><span class="p">(</span><span class="nx">event</span><span class="p">)</span>
-    <span class="p">{</span>
-        <span class="c1">// Recupero i follower dell'autore e aggiorno la loro feed view const</span>
-            <span class="nx">followers</span> <span class="o">=</span> <span class="k">await</span> <span class="k">this</span><span class="p">.</span><span class="nx">readDb</span><span class="p">.</span><span class="nx">follows</span><span class="p">.</span><span class="nx">findFollowers</span><span class="p">(</span><span class="nx">event</span><span class="p">.</span><span class="nx">authorId</span><span class="p">)</span>
-        <span class="p">;</span>
-        <span class="c1">// Fan-out: aggiorno la feed view di ogni follower await</span>
-            <span class="nb">Promise</span><span class="p">.</span><span class="nx">all</span><span class="p">(</span><span class="nx">followers</span><span class="p">.</span><span class="nx">map</span><span class="p">(</span><span class="nx">followerId</span> <span class="o">=&gt;</span>
-            <span class="k">this</span><span class="p">.</span><span class="nx">readDb</span><span class="p">.</span><span class="nx">feedViews</span><span class="p">.</span><span class="nx">insert</span><span class="p">(</span>
-        <span class="p">{</span>
-            <span class="na">targetUserId</span><span class="p">:</span> <span class="nx">followerId</span><span class="p">,</span> <span class="na">postId</span><span class="p">:</span> <span class="nx">event</span><span class="p">.</span><span class="nx">postId</span><span class="p">,</span> <span class="na">authorId</span><span class="p">:</span>
-                <span class="nx">event</span><span class="p">.</span><span class="nx">authorId</span><span class="p">,</span> <span class="na">contentPreview</span><span class="p">:</span> <span class="nx">event</span><span class="p">.</span><span class="nx">content</span><span class="p">.</span><span class="nx">substring</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">200</span><span class="p">),</span>
-                <span class="na">tags</span><span class="p">:</span> <span class="nx">event</span><span class="p">.</span><span class="nx">tags</span><span class="p">,</span> <span class="na">createdAt</span><span class="p">:</span> <span class="nx">event</span><span class="p">.</span><span class="nx">createdAt</span>
-        <span class="p">}</span>
-        <span class="p">)</span> <span class="p">));</span>
-    <span class="p">}</span>
-<span class="p">}</span>
-<span class="cm">/* Assemblo tutto in Express: Command e Query su endpoint separati. */</span>
-<span class="kd">const</span> <span class="nx">commandHandler</span> <span class="o">=</span> <span class="k">new</span> <span class="nx">PostCommandHandler</span><span class="p">(</span><span class="nx">writeDb</span><span class="p">,</span> <span class="nx">eventBus</span><span class="p">);</span>
-<span class="kd">const</span> <span class="nx">queryHandler</span> <span class="o">=</span> <span class="k">new</span> <span class="nx">FeedQueryHandler</span><span class="p">(</span><span class="nx">readDb</span><span class="p">);</span>
-<span class="c1">// READ: ottimizzato per velocità, può essere cachato a più livelli</span>
-    <span class="nx">app</span><span class="p">.</span><span class="kd">get</span><span class="p">(</span><span class="dl">'</span><span class="s1">/feed</span><span class="dl">'</span><span class="p">,</span> <span class="k">async</span> <span class="p">(</span><span class="nx">req</span><span class="p">,</span> <span class="nx">res</span><span class="p">)</span> <span class="o">=&gt;</span>
-<span class="p">{</span>
-    <span class="kd">const</span> <span class="nx">feed</span> <span class="o">=</span> <span class="k">await</span> <span class="nx">queryHandler</span><span class="p">.</span><span class="nx">getFeed</span><span class="p">(</span><span class="nx">req</span><span class="p">.</span><span class="nx">user</span><span class="p">.</span><span class="nx">id</span><span class="p">,</span> <span class="nx">req</span><span class="p">.</span><span class="nx">query</span><span class="p">);</span>
-    <span class="nx">res</span><span class="p">.</span><span class="nx">json</span><span class="p">(</span><span class="nx">feed</span><span class="p">);</span>
-    <span class="c1">// Risposta in &lt; 10ms dalla vista pre-calcolata</span>
-<span class="p">}</span>
-<span class="p">);</span>
-<span class="c1">// WRITE: ottimizzato per consistenza e validazione app.post('/posts', async</span>
-    <span class="p">(</span><span class="nx">req</span><span class="p">,</span> <span class="nx">res</span><span class="p">)</span> <span class="o">=&gt;</span>
-<span class="p">{</span>
-    <span class="kd">const</span> <span class="nx">command</span> <span class="o">=</span> <span class="k">new</span> <span class="nx">CreatePostCommand</span><span class="p">({</span>
-        <span class="na">authorId</span><span class="p">:</span> <span class="nx">req</span><span class="p">.</span><span class="nx">user</span><span class="p">.</span><span class="nx">id</span><span class="p">,</span> <span class="p">...</span><span class="nx">req</span><span class="p">.</span><span class="nx">body</span>
-    <span class="p">}</span>
-    <span class="p">);</span>
-    <span class="kd">const</span> <span class="nx">postId</span> <span class="o">=</span> <span class="k">await</span> <span class="nx">commandHandler</span><span class="p">.</span><span class="nx">handle</span><span class="p">(</span><span class="nx">command</span><span class="p">);</span>
-    <span class="nx">res</span><span class="p">.</span><span class="nx">status</span><span class="p">(</span><span class="mi">202</span><span class="p">).</span><span class="nx">json</span><span class="p">({</span>
-        <span class="nx">postId</span><span class="p">,</span> <span class="na">message</span><span class="p">:</span> <span class="dl">'</span><span class="s1">Post creato. Il feed verrà aggiornato a breve.</span><span class="dl">'</span>
-    <span class="p">}</span>
-    <span class="p">);</span>
-<span class="p">}</span>
-<span class="p">);</span>
-</pre></td></tr></tbody></table></code></pre></div></div>
-
-        </article>
-
-        
-
-    </main>
-
-    <aside class="post-sidebar">
-
-        
-        <div class="sidebar-box tags-box">
-            <span class="box-label">Argomenti</span>
-            <div class="tag-cloud-sidebar">
-                
-                    <span class="sidebar-tag">js</span>
-                
-                    <span class="sidebar-tag">design patterns & architecture</span>
-                
-            </div>
-        </div>
-        
-
-        
-
-        <div class="sidebar-box books-box">
-            <span class="box-label">Letture Consigliate</span>
-            <div class="book-card">
-                <a href="https://www.amazon.it/Appunti-Programmazione-Pensieri-soluzioni-Applicazioni-ebook/dp/B0FMFRHKTF/"
-                   target="_blank"
-                   rel="noopener noreferrer"
-                   aria-label="Acquista Appunti di Programmazione su Amazon">
-                    <img src="https://m.media-amazon.com/images/I/61Ck5eMzGYL._SY466_.jpg"
-                         alt="Copertina: Appunti di Programmazione"
-                         width="80">
-                    <p>Appunti di Programmazione: Pensieri e soluzioni per Applicazioni WEB</p>
-                </a>
-            </div>
-        </div>
-
-    </aside>
-</div>, nessun contenuto hardcoded -->
-<article class="flex-1 w-full max-w-4xl min-w-0">
-<div class="prose prose-invert max-w-none font-body text-on-surface-variant prose-headings:font-headline prose-headings:text-on-surface prose-a:text-primary prose-a:no-underline hover:prose-a:underline prose-code:font-label prose-code:text-primary prose-code:bg-surface-container-lowest prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded-sm">
-<!--
-    FIX 5: rimosso il blocco <header> + <div class="glass-panel"> hardcoded
-    che nel nuovo file stava DOPO <!--
-    Layout post: struttura a due colonne.
-    - Sinistra (post-content): breadcrumb → tags → PDF → corpo MD → fonte
-    - Destra  (post-sidebar):  tags + fonte + libro consigliato
--->
-<div class="post-container">
-
-    <main class="post-content">
-
-        <nav class="post-breadcrumb" aria-label="Breadcrumb">
-            <a href="/appuntidiprogrammazione/">Appunti di Programmazione</a>
-            <span class="separator" aria-hidden="true">/</span>
-            <span>CQRS (Command Query Responsibility Segregation)</span>
-        </nav>
-
-        
-        <div class="post-tags-header" aria-label="Argomenti">
-            
-                <span class="post-tag-chip">js</span>
-            
-                <span class="post-tag-chip">design patterns & architecture</span>
-            
-        </div>
-        
-
-        
-        <div class="pdf-link-wrapper">
-            <a class="pdf-link"
-               href="/appuntidiprogrammazione/assets/pdf/cqrs-command-query-responsibility-segregation.pdf"
-               target="_blank"
-               rel="noopener noreferrer"
-               aria-label="Scarica il PDF: CQRS (Command Query Responsibility Segregation)">
-                ↓ Scarica PDF
-            </a>
-        </div>
-        
-
-        <article class="post-article-body">
-            <h2 id="esigenza-reale">Esigenza Reale</h2>
-<p>Scalare un’applicazione social dove la frequenza di lettura (feed) è 1000x superiore a quella di scrittura (post).</p>
-
-<h2 id="analisi-tecnica">Analisi Tecnica</h2>
-<p><strong>Problema:</strong> Modelli di dati troppo complessi che tentano di soddisfare sia i vincoli di validazione che le esigenze di reportistica veloce.</p>
-
-<p><strong>Perché:</strong> Separo le responsabilità. Ho scelto CQRS per poter scalare i database di lettura indipendentemente dai servizi di scrittura, ottimizzando i tempi di risposta delle API.</p>
-
-<h2 id="esempio-implementativo">Esempio Implementativo</h2>
-
-<div class="language-javascript highlighter-rouge"><div class="highlight"><pre class="highlight"><code><table class="rouge-table"><tbody><tr><td class="rouge-gutter gl"><pre class="lineno">1
-2
-3
-4
-5
-6
-7
-8
-9
-10
-11
-12
-13
-14
-15
-16
-17
-18
-19
-20
-21
-22
-23
-24
-25
-26
-27
-28
-29
-30
-31
-32
-33
-34
-35
-36
-37
-38
-39
-40
-41
-42
-43
-44
-45
-46
-47
-48
-49
-50
-51
-52
-53
-54
-55
-56
-57
-58
-59
-60
-61
-62
-63
-64
-65
-66
-67
-68
-69
-70
-71
-72
-73
-74
-75
-76
-77
-78
-79
-80
-81
-82
-83
-84
-85
-86
-87
-88
-89
-90
-91
-92
-93
-94
-95
-96
-97
-98
-99
-100
-101
-102
-103
-104
-105
-106
-107
-108
-109
-110
-111
-112
-113
-114
-115
-116
-117
-118
-119
-120
-121
-122
-123
-124
-125
-126
-127
-128
-129
-130
-131
-132
-133
-134
-135
-</pre></td><td class="rouge-code"><pre><span class="cm">/* LATO COMMAND: gestisco le operazioni di scrittura con validazione e
-    invarianti di dominio. */</span>
-<span class="kd">class</span> <span class="nx">CreatePostCommand</span> <span class="p">{</span>
-    <span class="kd">constructor</span><span class="p">({</span>
-        <span class="nx">authorId</span><span class="p">,</span> <span class="nx">content</span><span class="p">,</span> <span class="nx">tags</span>
-    <span class="p">}</span>
-    <span class="p">)</span> <span class="p">{</span>
-        <span class="c1">// Validazione delle invarianti del dominio: avviene sul lato Command,</span>
-            <span class="nx">non</span> <span class="nx">sul</span> <span class="nx">lato</span> <span class="nx">Query</span> <span class="k">if</span> <span class="p">(</span><span class="o">!</span><span class="nx">authorId</span><span class="p">)</span> <span class="k">throw</span> <span class="k">new</span> <span class="nb">Error</span><span class="p">(</span><span class="dl">'</span><span class="s1">authorId è
-            obbligatorio</span><span class="dl">'</span><span class="p">)</span>
-        <span class="p">;</span>
-        <span class="k">if</span> <span class="p">(</span><span class="o">!</span><span class="nx">content</span> <span class="o">||</span> <span class="nx">content</span><span class="p">.</span><span class="nx">trim</span><span class="p">().</span><span class="nx">length</span> <span class="o">&lt;</span> <span class="mi">10</span><span class="p">)</span> <span class="k">throw</span> <span class="k">new</span> <span class="nb">Error</span><span class="p">(</span><span class="dl">'</span><span class="s1">Il
-            contenuto deve avere almeno 10 caratteri</span><span class="dl">'</span><span class="p">);</span>
-        <span class="k">if</span> <span class="p">(</span><span class="nx">content</span><span class="p">.</span><span class="nx">length</span> <span class="o">&gt;</span> <span class="mi">5000</span><span class="p">)</span> <span class="k">throw</span> <span class="k">new</span> <span class="nb">Error</span><span class="p">(</span><span class="dl">'</span><span class="s1">Il contenuto non può
-            superare 5000 caratteri</span><span class="dl">'</span><span class="p">);</span>
-        <span class="k">this</span><span class="p">.</span><span class="nx">authorId</span> <span class="o">=</span> <span class="nx">authorId</span><span class="p">;</span>
-        <span class="k">this</span><span class="p">.</span><span class="nx">content</span> <span class="o">=</span> <span class="nx">content</span><span class="p">.</span><span class="nx">trim</span><span class="p">();</span>
-        <span class="k">this</span><span class="p">.</span><span class="nx">tags</span> <span class="o">=</span> <span class="nx">tags</span> <span class="o">??</span> <span class="p">[];</span>
-        <span class="k">this</span><span class="p">.</span><span class="nx">createdAt</span> <span class="o">=</span> <span class="k">new</span> <span class="nb">Date</span><span class="p">();</span>
-    <span class="p">}</span>
-<span class="p">}</span>
-<span class="kd">class</span> <span class="nx">PostCommandHandler</span> <span class="p">{</span>
-    <span class="kd">constructor</span><span class="p">(</span><span class="nx">writeDb</span><span class="p">,</span> <span class="nx">eventBus</span><span class="p">)</span> <span class="p">{</span>
-        <span class="k">this</span><span class="p">.</span><span class="nx">writeDb</span> <span class="o">=</span> <span class="nx">writeDb</span><span class="p">;</span>
-        <span class="c1">// Database ottimizzato per scritture (es. PostgreSQL normalizzato)</span>
-            <span class="k">this</span><span class="p">.</span><span class="nx">eventBus</span> <span class="o">=</span> <span class="nx">eventBus</span>
-        <span class="p">;</span>
-    <span class="p">}</span>
-    <span class="k">async</span> <span class="nx">handle</span><span class="p">(</span><span class="nx">command</span><span class="p">)</span> <span class="p">{</span>
-        <span class="k">if</span> <span class="p">(</span><span class="nx">command</span> <span class="k">instanceof</span> <span class="nx">CreatePostCommand</span><span class="p">)</span> <span class="p">{</span>
-            <span class="c1">// Salvo nel write model: schema normalizzato, ottimizzato per</span>
-                <span class="nx">integrità</span> <span class="kd">const</span> <span class="nx">post</span> <span class="o">=</span> <span class="k">await</span> <span class="k">this</span><span class="p">.</span><span class="nx">writeDb</span><span class="p">.</span><span class="nx">posts</span><span class="p">.</span><span class="nx">create</span><span class="p">(</span>
-            <span class="p">{</span>
-                <span class="na">authorId</span><span class="p">:</span> <span class="nx">command</span><span class="p">.</span><span class="nx">authorId</span><span class="p">,</span> <span class="na">content</span><span class="p">:</span> <span class="nx">command</span><span class="p">.</span><span class="nx">content</span><span class="p">,</span> <span class="na">tags</span><span class="p">:</span>
-                    <span class="nx">command</span><span class="p">.</span><span class="nx">tags</span><span class="p">,</span> <span class="na">createdAt</span><span class="p">:</span> <span class="nx">command</span><span class="p">.</span><span class="nx">createdAt</span>
-            <span class="p">}</span>
-            <span class="p">);</span>
-            <span class="c1">// Pubblico l'evento per aggiornare le read views in modo asincrono</span>
-                <span class="k">await</span> <span class="k">this</span><span class="p">.</span><span class="nx">eventBus</span><span class="p">.</span><span class="nx">publish</span><span class="p">(</span><span class="dl">'</span><span class="s1">POST_CREATED</span><span class="dl">'</span><span class="p">,</span>
-            <span class="p">{</span>
-                <span class="na">postId</span><span class="p">:</span> <span class="nx">post</span><span class="p">.</span><span class="nx">id</span><span class="p">,</span> <span class="na">authorId</span><span class="p">:</span> <span class="nx">post</span><span class="p">.</span><span class="nx">authorId</span><span class="p">,</span> <span class="na">content</span><span class="p">:</span> <span class="nx">post</span><span class="p">.</span><span class="nx">content</span><span class="p">,</span>
-                    <span class="na">tags</span><span class="p">:</span> <span class="nx">post</span><span class="p">.</span><span class="nx">tags</span><span class="p">,</span> <span class="na">createdAt</span><span class="p">:</span> <span class="nx">post</span><span class="p">.</span><span class="nx">createdAt</span>
-            <span class="p">}</span>
-            <span class="p">);</span>
-            <span class="k">return</span> <span class="nx">post</span><span class="p">.</span><span class="nx">id</span><span class="p">;</span>
-        <span class="p">}</span>
-        <span class="k">throw</span> <span class="k">new</span> <span class="nb">Error</span><span class="p">(</span><span class="dl">'</span><span class="s1">Command non gestito: </span><span class="dl">'</span> <span class="o">+</span> <span class="nx">command</span><span class="p">.</span><span class="kd">constructor</span><span class="p">.</span><span class="nx">name</span><span class="p">);</span>
-    <span class="p">}</span>
-<span class="p">}</span>
-<span class="cm">/* LATO QUERY: gestisco le letture con modelli de-normalizzati ottimizzati per
-    la UI. */</span>
-<span class="kd">class</span> <span class="nx">FeedQueryHandler</span> <span class="p">{</span>
-    <span class="kd">constructor</span><span class="p">(</span><span class="nx">readDb</span><span class="p">)</span> <span class="p">{</span>
-        <span class="c1">// Database di lettura: può essere Redis, Elasticsearch, MongoDB o una</span>
-            <span class="nx">vista</span> <span class="nx">materializzata</span> <span class="k">this</span><span class="p">.</span><span class="nx">readDb</span> <span class="o">=</span> <span class="nx">readDb</span>
-        <span class="p">;</span>
-    <span class="p">}</span>
-    <span class="k">async</span> <span class="nx">getFeed</span><span class="p">(</span><span class="nx">userId</span><span class="p">,</span> <span class="p">{</span>
-        <span class="nx">page</span> <span class="o">=</span> <span class="mi">1</span><span class="p">,</span> <span class="nx">limit</span> <span class="o">=</span> <span class="mi">20</span>
-    <span class="p">}</span>
-    <span class="o">=</span> <span class="p">{</span>
-    <span class="p">}</span>
-    <span class="p">)</span> <span class="p">{</span>
-        <span class="c1">// Query ultra-veloce su una vista pre-calcolata: nessun JOIN, nessuna</span>
-            <span class="nx">logica</span> <span class="nx">di</span> <span class="nx">dominio</span>
-        <span class="k">return</span> <span class="k">this</span><span class="p">.</span><span class="nx">readDb</span><span class="p">.</span><span class="nx">feedViews</span><span class="p">.</span><span class="nx">find</span><span class="p">({</span>
-            <span class="na">targetUserId</span><span class="p">:</span> <span class="nx">userId</span><span class="p">,</span> <span class="nx">page</span><span class="p">,</span> <span class="nx">limit</span>
-        <span class="p">}</span>
-        <span class="p">);</span>
-        <span class="c1">// Ritorna direttamente il DTO pronto per la UI</span>
-    <span class="p">}</span>
-    <span class="k">async</span> <span class="nx">getPostById</span><span class="p">(</span><span class="nx">postId</span><span class="p">)</span> <span class="p">{</span>
-        <span class="k">return</span> <span class="k">this</span><span class="p">.</span><span class="nx">readDb</span><span class="p">.</span><span class="nx">postDetails</span><span class="p">.</span><span class="nx">findOne</span><span class="p">({</span>
-            <span class="na">id</span><span class="p">:</span> <span class="nx">postId</span>
-        <span class="p">}</span>
-        <span class="p">);</span>
-        <span class="c1">// Vista denormalizzata: autore, like count, commenti in una sola query</span>
-    <span class="p">}</span>
-    <span class="k">async</span> <span class="nx">searchPosts</span><span class="p">(</span><span class="nx">query</span><span class="p">,</span> <span class="nx">tags</span><span class="p">)</span> <span class="p">{</span>
-        <span class="c1">// Elasticsearch ottimizzato per full-text search: impossibile sul write</span>
-            <span class="nx">model</span> <span class="nx">normalizzato</span>
-        <span class="k">return</span> <span class="k">this</span><span class="p">.</span><span class="nx">readDb</span><span class="p">.</span><span class="nx">searchIndex</span><span class="p">.</span><span class="nx">query</span><span class="p">({</span>
-            <span class="na">text</span><span class="p">:</span> <span class="nx">query</span><span class="p">,</span> <span class="nx">tags</span>
-        <span class="p">}</span>
-        <span class="p">);</span>
-    <span class="p">}</span>
-<span class="p">}</span>
-<span class="cm">/* Sincronizzo i read models tramite event listener: aggiornamento asincrono
-    delle viste. */</span>
-<span class="kd">class</span> <span class="nx">FeedProjection</span> <span class="p">{</span>
-    <span class="kd">constructor</span><span class="p">(</span><span class="nx">readDb</span><span class="p">)</span> <span class="p">{</span>
-        <span class="k">this</span><span class="p">.</span><span class="nx">readDb</span> <span class="o">=</span> <span class="nx">readDb</span><span class="p">;</span>
-    <span class="p">}</span>
-    <span class="c1">// Questo handler viene invocato ogni volta che POST_CREATED viene</span>
-        <span class="nx">pubblicato</span> <span class="k">async</span> <span class="nx">onPostCreated</span><span class="p">(</span><span class="nx">event</span><span class="p">)</span>
-    <span class="p">{</span>
-        <span class="c1">// Recupero i follower dell'autore e aggiorno la loro feed view const</span>
-            <span class="nx">followers</span> <span class="o">=</span> <span class="k">await</span> <span class="k">this</span><span class="p">.</span><span class="nx">readDb</span><span class="p">.</span><span class="nx">follows</span><span class="p">.</span><span class="nx">findFollowers</span><span class="p">(</span><span class="nx">event</span><span class="p">.</span><span class="nx">authorId</span><span class="p">)</span>
-        <span class="p">;</span>
-        <span class="c1">// Fan-out: aggiorno la feed view di ogni follower await</span>
-            <span class="nb">Promise</span><span class="p">.</span><span class="nx">all</span><span class="p">(</span><span class="nx">followers</span><span class="p">.</span><span class="nx">map</span><span class="p">(</span><span class="nx">followerId</span> <span class="o">=&gt;</span>
-            <span class="k">this</span><span class="p">.</span><span class="nx">readDb</span><span class="p">.</span><span class="nx">feedViews</span><span class="p">.</span><span class="nx">insert</span><span class="p">(</span>
-        <span class="p">{</span>
-            <span class="na">targetUserId</span><span class="p">:</span> <span class="nx">followerId</span><span class="p">,</span> <span class="na">postId</span><span class="p">:</span> <span class="nx">event</span><span class="p">.</span><span class="nx">postId</span><span class="p">,</span> <span class="na">authorId</span><span class="p">:</span>
-                <span class="nx">event</span><span class="p">.</span><span class="nx">authorId</span><span class="p">,</span> <span class="na">contentPreview</span><span class="p">:</span> <span class="nx">event</span><span class="p">.</span><span class="nx">content</span><span class="p">.</span><span class="nx">substring</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">200</span><span class="p">),</span>
-                <span class="na">tags</span><span class="p">:</span> <span class="nx">event</span><span class="p">.</span><span class="nx">tags</span><span class="p">,</span> <span class="na">createdAt</span><span class="p">:</span> <span class="nx">event</span><span class="p">.</span><span class="nx">createdAt</span>
-        <span class="p">}</span>
-        <span class="p">)</span> <span class="p">));</span>
-    <span class="p">}</span>
-<span class="p">}</span>
-<span class="cm">/* Assemblo tutto in Express: Command e Query su endpoint separati. */</span>
-<span class="kd">const</span> <span class="nx">commandHandler</span> <span class="o">=</span> <span class="k">new</span> <span class="nx">PostCommandHandler</span><span class="p">(</span><span class="nx">writeDb</span><span class="p">,</span> <span class="nx">eventBus</span><span class="p">);</span>
-<span class="kd">const</span> <span class="nx">queryHandler</span> <span class="o">=</span> <span class="k">new</span> <span class="nx">FeedQueryHandler</span><span class="p">(</span><span class="nx">readDb</span><span class="p">);</span>
-<span class="c1">// READ: ottimizzato per velocità, può essere cachato a più livelli</span>
-    <span class="nx">app</span><span class="p">.</span><span class="kd">get</span><span class="p">(</span><span class="dl">'</span><span class="s1">/feed</span><span class="dl">'</span><span class="p">,</span> <span class="k">async</span> <span class="p">(</span><span class="nx">req</span><span class="p">,</span> <span class="nx">res</span><span class="p">)</span> <span class="o">=&gt;</span>
-<span class="p">{</span>
-    <span class="kd">const</span> <span class="nx">feed</span> <span class="o">=</span> <span class="k">await</span> <span class="nx">queryHandler</span><span class="p">.</span><span class="nx">getFeed</span><span class="p">(</span><span class="nx">req</span><span class="p">.</span><span class="nx">user</span><span class="p">.</span><span class="nx">id</span><span class="p">,</span> <span class="nx">req</span><span class="p">.</span><span class="nx">query</span><span class="p">);</span>
-    <span class="nx">res</span><span class="p">.</span><span class="nx">json</span><span class="p">(</span><span class="nx">feed</span><span class="p">);</span>
-    <span class="c1">// Risposta in &lt; 10ms dalla vista pre-calcolata</span>
-<span class="p">}</span>
-<span class="p">);</span>
-<span class="c1">// WRITE: ottimizzato per consistenza e validazione app.post('/posts', async</span>
-    <span class="p">(</span><span class="nx">req</span><span class="p">,</span> <span class="nx">res</span><span class="p">)</span> <span class="o">=&gt;</span>
-<span class="p">{</span>
-    <span class="kd">const</span> <span class="nx">command</span> <span class="o">=</span> <span class="k">new</span> <span class="nx">CreatePostCommand</span><span class="p">({</span>
-        <span class="na">authorId</span><span class="p">:</span> <span class="nx">req</span><span class="p">.</span><span class="nx">user</span><span class="p">.</span><span class="nx">id</span><span class="p">,</span> <span class="p">...</span><span class="nx">req</span><span class="p">.</span><span class="nx">body</span>
-    <span class="p">}</span>
-    <span class="p">);</span>
-    <span class="kd">const</span> <span class="nx">postId</span> <span class="o">=</span> <span class="k">await</span> <span class="nx">commandHandler</span><span class="p">.</span><span class="nx">handle</span><span class="p">(</span><span class="nx">command</span><span class="p">);</span>
-    <span class="nx">res</span><span class="p">.</span><span class="nx">status</span><span class="p">(</span><span class="mi">202</span><span class="p">).</span><span class="nx">json</span><span class="p">({</span>
-        <span class="nx">postId</span><span class="p">,</span> <span class="na">message</span><span class="p">:</span> <span class="dl">'</span><span class="s1">Post creato. Il feed verrà aggiornato a breve.</span><span class="dl">'</span>
-    <span class="p">}</span>
-    <span class="p">);</span>
-<span class="p">}</span>
-<span class="p">);</span>
-</pre></td></tr></tbody></table></code></pre></div></div>
-
-        </article>
-
-        
-
-    </main>
-
-    <aside class="post-sidebar">
-
-        
-        <div class="sidebar-box tags-box">
-            <span class="box-label">Argomenti</span>
-            <div class="tag-cloud-sidebar">
-                
-                    <span class="sidebar-tag">js</span>
-                
-                    <span class="sidebar-tag">design patterns & architecture</span>
-                
-            </div>
-        </div>
-        
-
-        
-
-        <div class="sidebar-box books-box">
-            <span class="box-label">Letture Consigliate</span>
-            <div class="book-card">
-                <a href="https://www.amazon.it/Appunti-Programmazione-Pensieri-soluzioni-Applicazioni-ebook/dp/B0FMFRHKTF/"
-                   target="_blank"
-                   rel="noopener noreferrer"
-                   aria-label="Acquista Appunti di Programmazione su Amazon">
-                    <img src="https://m.media-amazon.com/images/I/61Ck5eMzGYL._SY466_.jpg"
-                         alt="Copertina: Appunti di Programmazione"
-                         width="80">
-                    <p>Appunti di Programmazione: Pensieri e soluzioni per Applicazioni WEB</p>
-                </a>
-            </div>
-        </div>
-
-    </aside>
-</div> nello stesso div.
-    Quel blocco veniva renderizzato su ogni pagina, sovrapposto al contenuto reale.
-    Resta solo <!--
-    Layout post: struttura a due colonne.
-    - Sinistra (post-content): breadcrumb → tags → PDF → corpo MD → fonte
-    - Destra  (post-sidebar):  tags + fonte + libro consigliato
--->
-<div class="post-container">
-
-    <main class="post-content">
-
-        <nav class="post-breadcrumb" aria-label="Breadcrumb">
-            <a href="/appuntidiprogrammazione/">Appunti di Programmazione</a>
-            <span class="separator" aria-hidden="true">/</span>
-            <span>CQRS (Command Query Responsibility Segregation)</span>
-        </nav>
-
-        
-        <div class="post-tags-header" aria-label="Argomenti">
-            
-                <span class="post-tag-chip">js</span>
-            
-                <span class="post-tag-chip">design patterns & architecture</span>
-            
-        </div>
-        
-
-        
-        <div class="pdf-link-wrapper">
-            <a class="pdf-link"
-               href="/appuntidiprogrammazione/assets/pdf/cqrs-command-query-responsibility-segregation.pdf"
-               target="_blank"
-               rel="noopener noreferrer"
-               aria-label="Scarica il PDF: CQRS (Command Query Responsibility Segregation)">
-                ↓ Scarica PDF
-            </a>
-        </div>
-        
-
-        <article class="post-article-body">
-            <h2 id="esigenza-reale">Esigenza Reale</h2>
-<p>Scalare un’applicazione social dove la frequenza di lettura (feed) è 1000x superiore a quella di scrittura (post).</p>
-
-<h2 id="analisi-tecnica">Analisi Tecnica</h2>
-<p><strong>Problema:</strong> Modelli di dati troppo complessi che tentano di soddisfare sia i vincoli di validazione che le esigenze di reportistica veloce.</p>
-
-<p><strong>Perché:</strong> Separo le responsabilità. Ho scelto CQRS per poter scalare i database di lettura indipendentemente dai servizi di scrittura, ottimizzando i tempi di risposta delle API.</p>
-
-<h2 id="esempio-implementativo">Esempio Implementativo</h2>
-
-<div class="language-javascript highlighter-rouge"><div class="highlight"><pre class="highlight"><code><table class="rouge-table"><tbody><tr><td class="rouge-gutter gl"><pre class="lineno">1
-2
-3
-4
-5
-6
-7
-8
-9
-10
-11
-12
-13
-14
-15
-16
-17
-18
-19
-20
-21
-22
-23
-24
-25
-26
-27
-28
-29
-30
-31
-32
-33
-34
-35
-36
-37
-38
-39
-40
-41
-42
-43
-44
-45
-46
-47
-48
-49
-50
-51
-52
-53
-54
-55
-56
-57
-58
-59
-60
-61
-62
-63
-64
-65
-66
-67
-68
-69
-70
-71
-72
-73
-74
-75
-76
-77
-78
-79
-80
-81
-82
-83
-84
-85
-86
-87
-88
-89
-90
-91
-92
-93
-94
-95
-96
-97
-98
-99
-100
-101
-102
-103
-104
-105
-106
-107
-108
-109
-110
-111
-112
-113
-114
-115
-116
-117
-118
-119
-120
-121
-122
-123
-124
-125
-126
-127
-128
-129
-130
-131
-132
-133
-134
-135
-</pre></td><td class="rouge-code"><pre><span class="cm">/* LATO COMMAND: gestisco le operazioni di scrittura con validazione e
-    invarianti di dominio. */</span>
-<span class="kd">class</span> <span class="nx">CreatePostCommand</span> <span class="p">{</span>
-    <span class="kd">constructor</span><span class="p">({</span>
-        <span class="nx">authorId</span><span class="p">,</span> <span class="nx">content</span><span class="p">,</span> <span class="nx">tags</span>
-    <span class="p">}</span>
-    <span class="p">)</span> <span class="p">{</span>
-        <span class="c1">// Validazione delle invarianti del dominio: avviene sul lato Command,</span>
-            <span class="nx">non</span> <span class="nx">sul</span> <span class="nx">lato</span> <span class="nx">Query</span> <span class="k">if</span> <span class="p">(</span><span class="o">!</span><span class="nx">authorId</span><span class="p">)</span> <span class="k">throw</span> <span class="k">new</span> <span class="nb">Error</span><span class="p">(</span><span class="dl">'</span><span class="s1">authorId è
-            obbligatorio</span><span class="dl">'</span><span class="p">)</span>
-        <span class="p">;</span>
-        <span class="k">if</span> <span class="p">(</span><span class="o">!</span><span class="nx">content</span> <span class="o">||</span> <span class="nx">content</span><span class="p">.</span><span class="nx">trim</span><span class="p">().</span><span class="nx">length</span> <span class="o">&lt;</span> <span class="mi">10</span><span class="p">)</span> <span class="k">throw</span> <span class="k">new</span> <span class="nb">Error</span><span class="p">(</span><span class="dl">'</span><span class="s1">Il
-            contenuto deve avere almeno 10 caratteri</span><span class="dl">'</span><span class="p">);</span>
-        <span class="k">if</span> <span class="p">(</span><span class="nx">content</span><span class="p">.</span><span class="nx">length</span> <span class="o">&gt;</span> <span class="mi">5000</span><span class="p">)</span> <span class="k">throw</span> <span class="k">new</span> <span class="nb">Error</span><span class="p">(</span><span class="dl">'</span><span class="s1">Il contenuto non può
-            superare 5000 caratteri</span><span class="dl">'</span><span class="p">);</span>
-        <span class="k">this</span><span class="p">.</span><span class="nx">authorId</span> <span class="o">=</span> <span class="nx">authorId</span><span class="p">;</span>
-        <span class="k">this</span><span class="p">.</span><span class="nx">content</span> <span class="o">=</span> <span class="nx">content</span><span class="p">.</span><span class="nx">trim</span><span class="p">();</span>
-        <span class="k">this</span><span class="p">.</span><span class="nx">tags</span> <span class="o">=</span> <span class="nx">tags</span> <span class="o">??</span> <span class="p">[];</span>
-        <span class="k">this</span><span class="p">.</span><span class="nx">createdAt</span> <span class="o">=</span> <span class="k">new</span> <span class="nb">Date</span><span class="p">();</span>
-    <span class="p">}</span>
-<span class="p">}</span>
-<span class="kd">class</span> <span class="nx">PostCommandHandler</span> <span class="p">{</span>
-    <span class="kd">constructor</span><span class="p">(</span><span class="nx">writeDb</span><span class="p">,</span> <span class="nx">eventBus</span><span class="p">)</span> <span class="p">{</span>
-        <span class="k">this</span><span class="p">.</span><span class="nx">writeDb</span> <span class="o">=</span> <span class="nx">writeDb</span><span class="p">;</span>
-        <span class="c1">// Database ottimizzato per scritture (es. PostgreSQL normalizzato)</span>
-            <span class="k">this</span><span class="p">.</span><span class="nx">eventBus</span> <span class="o">=</span> <span class="nx">eventBus</span>
-        <span class="p">;</span>
-    <span class="p">}</span>
-    <span class="k">async</span> <span class="nx">handle</span><span class="p">(</span><span class="nx">command</span><span class="p">)</span> <span class="p">{</span>
-        <span class="k">if</span> <span class="p">(</span><span class="nx">command</span> <span class="k">instanceof</span> <span class="nx">CreatePostCommand</span><span class="p">)</span> <span class="p">{</span>
-            <span class="c1">// Salvo nel write model: schema normalizzato, ottimizzato per</span>
-                <span class="nx">integrità</span> <span class="kd">const</span> <span class="nx">post</span> <span class="o">=</span> <span class="k">await</span> <span class="k">this</span><span class="p">.</span><span class="nx">writeDb</span><span class="p">.</span><span class="nx">posts</span><span class="p">.</span><span class="nx">create</span><span class="p">(</span>
-            <span class="p">{</span>
-                <span class="na">authorId</span><span class="p">:</span> <span class="nx">command</span><span class="p">.</span><span class="nx">authorId</span><span class="p">,</span> <span class="na">content</span><span class="p">:</span> <span class="nx">command</span><span class="p">.</span><span class="nx">content</span><span class="p">,</span> <span class="na">tags</span><span class="p">:</span>
-                    <span class="nx">command</span><span class="p">.</span><span class="nx">tags</span><span class="p">,</span> <span class="na">createdAt</span><span class="p">:</span> <span class="nx">command</span><span class="p">.</span><span class="nx">createdAt</span>
-            <span class="p">}</span>
-            <span class="p">);</span>
-            <span class="c1">// Pubblico l'evento per aggiornare le read views in modo asincrono</span>
-                <span class="k">await</span> <span class="k">this</span><span class="p">.</span><span class="nx">eventBus</span><span class="p">.</span><span class="nx">publish</span><span class="p">(</span><span class="dl">'</span><span class="s1">POST_CREATED</span><span class="dl">'</span><span class="p">,</span>
-            <span class="p">{</span>
-                <span class="na">postId</span><span class="p">:</span> <span class="nx">post</span><span class="p">.</span><span class="nx">id</span><span class="p">,</span> <span class="na">authorId</span><span class="p">:</span> <span class="nx">post</span><span class="p">.</span><span class="nx">authorId</span><span class="p">,</span> <span class="na">content</span><span class="p">:</span> <span class="nx">post</span><span class="p">.</span><span class="nx">content</span><span class="p">,</span>
-                    <span class="na">tags</span><span class="p">:</span> <span class="nx">post</span><span class="p">.</span><span class="nx">tags</span><span class="p">,</span> <span class="na">createdAt</span><span class="p">:</span> <span class="nx">post</span><span class="p">.</span><span class="nx">createdAt</span>
-            <span class="p">}</span>
-            <span class="p">);</span>
-            <span class="k">return</span> <span class="nx">post</span><span class="p">.</span><span class="nx">id</span><span class="p">;</span>
-        <span class="p">}</span>
-        <span class="k">throw</span> <span class="k">new</span> <span class="nb">Error</span><span class="p">(</span><span class="dl">'</span><span class="s1">Command non gestito: </span><span class="dl">'</span> <span class="o">+</span> <span class="nx">command</span><span class="p">.</span><span class="kd">constructor</span><span class="p">.</span><span class="nx">name</span><span class="p">);</span>
-    <span class="p">}</span>
-<span class="p">}</span>
-<span class="cm">/* LATO QUERY: gestisco le letture con modelli de-normalizzati ottimizzati per
-    la UI. */</span>
-<span class="kd">class</span> <span class="nx">FeedQueryHandler</span> <span class="p">{</span>
-    <span class="kd">constructor</span><span class="p">(</span><span class="nx">readDb</span><span class="p">)</span> <span class="p">{</span>
-        <span class="c1">// Database di lettura: può essere Redis, Elasticsearch, MongoDB o una</span>
-            <span class="nx">vista</span> <span class="nx">materializzata</span> <span class="k">this</span><span class="p">.</span><span class="nx">readDb</span> <span class="o">=</span> <span class="nx">readDb</span>
-        <span class="p">;</span>
-    <span class="p">}</span>
-    <span class="k">async</span> <span class="nx">getFeed</span><span class="p">(</span><span class="nx">userId</span><span class="p">,</span> <span class="p">{</span>
-        <span class="nx">page</span> <span class="o">=</span> <span class="mi">1</span><span class="p">,</span> <span class="nx">limit</span> <span class="o">=</span> <span class="mi">20</span>
-    <span class="p">}</span>
-    <span class="o">=</span> <span class="p">{</span>
-    <span class="p">}</span>
-    <span class="p">)</span> <span class="p">{</span>
-        <span class="c1">// Query ultra-veloce su una vista pre-calcolata: nessun JOIN, nessuna</span>
-            <span class="nx">logica</span> <span class="nx">di</span> <span class="nx">dominio</span>
-        <span class="k">return</span> <span class="k">this</span><span class="p">.</span><span class="nx">readDb</span><span class="p">.</span><span class="nx">feedViews</span><span class="p">.</span><span class="nx">find</span><span class="p">({</span>
-            <span class="na">targetUserId</span><span class="p">:</span> <span class="nx">userId</span><span class="p">,</span> <span class="nx">page</span><span class="p">,</span> <span class="nx">limit</span>
-        <span class="p">}</span>
-        <span class="p">);</span>
-        <span class="c1">// Ritorna direttamente il DTO pronto per la UI</span>
-    <span class="p">}</span>
-    <span class="k">async</span> <span class="nx">getPostById</span><span class="p">(</span><span class="nx">postId</span><span class="p">)</span> <span class="p">{</span>
-        <span class="k">return</span> <span class="k">this</span><span class="p">.</span><span class="nx">readDb</span><span class="p">.</span><span class="nx">postDetails</span><span class="p">.</span><span class="nx">findOne</span><span class="p">({</span>
-            <span class="na">id</span><span class="p">:</span> <span class="nx">postId</span>
-        <span class="p">}</span>
-        <span class="p">);</span>
-        <span class="c1">// Vista denormalizzata: autore, like count, commenti in una sola query</span>
-    <span class="p">}</span>
-    <span class="k">async</span> <span class="nx">searchPosts</span><span class="p">(</span><span class="nx">query</span><span class="p">,</span> <span class="nx">tags</span><span class="p">)</span> <span class="p">{</span>
-        <span class="c1">// Elasticsearch ottimizzato per full-text search: impossibile sul write</span>
-            <span class="nx">model</span> <span class="nx">normalizzato</span>
-        <span class="k">return</span> <span class="k">this</span><span class="p">.</span><span class="nx">readDb</span><span class="p">.</span><span class="nx">searchIndex</span><span class="p">.</span><span class="nx">query</span><span class="p">({</span>
-            <span class="na">text</span><span class="p">:</span> <span class="nx">query</span><span class="p">,</span> <span class="nx">tags</span>
-        <span class="p">}</span>
-        <span class="p">);</span>
-    <span class="p">}</span>
-<span class="p">}</span>
-<span class="cm">/* Sincronizzo i read models tramite event listener: aggiornamento asincrono
-    delle viste. */</span>
-<span class="kd">class</span> <span class="nx">FeedProjection</span> <span class="p">{</span>
-    <span class="kd">constructor</span><span class="p">(</span><span class="nx">readDb</span><span class="p">)</span> <span class="p">{</span>
-        <span class="k">this</span><span class="p">.</span><span class="nx">readDb</span> <span class="o">=</span> <span class="nx">readDb</span><span class="p">;</span>
-    <span class="p">}</span>
-    <span class="c1">// Questo handler viene invocato ogni volta che POST_CREATED viene</span>
-        <span class="nx">pubblicato</span> <span class="k">async</span> <span class="nx">onPostCreated</span><span class="p">(</span><span class="nx">event</span><span class="p">)</span>
-    <span class="p">{</span>
-        <span class="c1">// Recupero i follower dell'autore e aggiorno la loro feed view const</span>
-            <span class="nx">followers</span> <span class="o">=</span> <span class="k">await</span> <span class="k">this</span><span class="p">.</span><span class="nx">readDb</span><span class="p">.</span><span class="nx">follows</span><span class="p">.</span><span class="nx">findFollowers</span><span class="p">(</span><span class="nx">event</span><span class="p">.</span><span class="nx">authorId</span><span class="p">)</span>
-        <span class="p">;</span>
-        <span class="c1">// Fan-out: aggiorno la feed view di ogni follower await</span>
-            <span class="nb">Promise</span><span class="p">.</span><span class="nx">all</span><span class="p">(</span><span class="nx">followers</span><span class="p">.</span><span class="nx">map</span><span class="p">(</span><span class="nx">followerId</span> <span class="o">=&gt;</span>
-            <span class="k">this</span><span class="p">.</span><span class="nx">readDb</span><span class="p">.</span><span class="nx">feedViews</span><span class="p">.</span><span class="nx">insert</span><span class="p">(</span>
-        <span class="p">{</span>
-            <span class="na">targetUserId</span><span class="p">:</span> <span class="nx">followerId</span><span class="p">,</span> <span class="na">postId</span><span class="p">:</span> <span class="nx">event</span><span class="p">.</span><span class="nx">postId</span><span class="p">,</span> <span class="na">authorId</span><span class="p">:</span>
-                <span class="nx">event</span><span class="p">.</span><span class="nx">authorId</span><span class="p">,</span> <span class="na">contentPreview</span><span class="p">:</span> <span class="nx">event</span><span class="p">.</span><span class="nx">content</span><span class="p">.</span><span class="nx">substring</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">200</span><span class="p">),</span>
-                <span class="na">tags</span><span class="p">:</span> <span class="nx">event</span><span class="p">.</span><span class="nx">tags</span><span class="p">,</span> <span class="na">createdAt</span><span class="p">:</span> <span class="nx">event</span><span class="p">.</span><span class="nx">createdAt</span>
-        <span class="p">}</span>
-        <span class="p">)</span> <span class="p">));</span>
-    <span class="p">}</span>
-<span class="p">}</span>
-<span class="cm">/* Assemblo tutto in Express: Command e Query su endpoint separati. */</span>
-<span class="kd">const</span> <span class="nx">commandHandler</span> <span class="o">=</span> <span class="k">new</span> <span class="nx">PostCommandHandler</span><span class="p">(</span><span class="nx">writeDb</span><span class="p">,</span> <span class="nx">eventBus</span><span class="p">);</span>
-<span class="kd">const</span> <span class="nx">queryHandler</span> <span class="o">=</span> <span class="k">new</span> <span class="nx">FeedQueryHandler</span><span class="p">(</span><span class="nx">readDb</span><span class="p">);</span>
-<span class="c1">// READ: ottimizzato per velocità, può essere cachato a più livelli</span>
-    <span class="nx">app</span><span class="p">.</span><span class="kd">get</span><span class="p">(</span><span class="dl">'</span><span class="s1">/feed</span><span class="dl">'</span><span class="p">,</span> <span class="k">async</span> <span class="p">(</span><span class="nx">req</span><span class="p">,</span> <span class="nx">res</span><span class="p">)</span> <span class="o">=&gt;</span>
-<span class="p">{</span>
-    <span class="kd">const</span> <span class="nx">feed</span> <span class="o">=</span> <span class="k">await</span> <span class="nx">queryHandler</span><span class="p">.</span><span class="nx">getFeed</span><span class="p">(</span><span class="nx">req</span><span class="p">.</span><span class="nx">user</span><span class="p">.</span><span class="nx">id</span><span class="p">,</span> <span class="nx">req</span><span class="p">.</span><span class="nx">query</span><span class="p">);</span>
-    <span class="nx">res</span><span class="p">.</span><span class="nx">json</span><span class="p">(</span><span class="nx">feed</span><span class="p">);</span>
-    <span class="c1">// Risposta in &lt; 10ms dalla vista pre-calcolata</span>
-<span class="p">}</span>
-<span class="p">);</span>
-<span class="c1">// WRITE: ottimizzato per consistenza e validazione app.post('/posts', async</span>
-    <span class="p">(</span><span class="nx">req</span><span class="p">,</span> <span class="nx">res</span><span class="p">)</span> <span class="o">=&gt;</span>
-<span class="p">{</span>
-    <span class="kd">const</span> <span class="nx">command</span> <span class="o">=</span> <span class="k">new</span> <span class="nx">CreatePostCommand</span><span class="p">({</span>
-        <span class="na">authorId</span><span class="p">:</span> <span class="nx">req</span><span class="p">.</span><span class="nx">user</span><span class="p">.</span><span class="nx">id</span><span class="p">,</span> <span class="p">...</span><span class="nx">req</span><span class="p">.</span><span class="nx">body</span>
-    <span class="p">}</span>
-    <span class="p">);</span>
-    <span class="kd">const</span> <span class="nx">postId</span> <span class="o">=</span> <span class="k">await</span> <span class="nx">commandHandler</span><span class="p">.</span><span class="nx">handle</span><span class="p">(</span><span class="nx">command</span><span class="p">);</span>
-    <span class="nx">res</span><span class="p">.</span><span class="nx">status</span><span class="p">(</span><span class="mi">202</span><span class="p">).</span><span class="nx">json</span><span class="p">({</span>
-        <span class="nx">postId</span><span class="p">,</span> <span class="na">message</span><span class="p">:</span> <span class="dl">'</span><span class="s1">Post creato. Il feed verrà aggiornato a breve.</span><span class="dl">'</span>
-    <span class="p">}</span>
-    <span class="p">);</span>
-<span class="p">}</span>
-<span class="p">);</span>
-</pre></td></tr></tbody></table></code></pre></div></div>
-
-        </article>
-
-        
-
-    </main>
-
-    <aside class="post-sidebar">
-
-        
-        <div class="sidebar-box tags-box">
-            <span class="box-label">Argomenti</span>
-            <div class="tag-cloud-sidebar">
-                
-                    <span class="sidebar-tag">js</span>
-                
-                    <span class="sidebar-tag">design patterns & architecture</span>
-                
-            </div>
-        </div>
-        
-
-        
-
-        <div class="sidebar-box books-box">
-            <span class="box-label">Letture Consigliate</span>
-            <div class="book-card">
-                <a href="https://www.amazon.it/Appunti-Programmazione-Pensieri-soluzioni-Applicazioni-ebook/dp/B0FMFRHKTF/"
-                   target="_blank"
-                   rel="noopener noreferrer"
-                   aria-label="Acquista Appunti di Programmazione su Amazon">
-                    <img src="https://m.media-amazon.com/images/I/61Ck5eMzGYL._SY466_.jpg"
-                         alt="Copertina: Appunti di Programmazione"
-                         width="80">
-                    <p>Appunti di Programmazione: Pensieri e soluzioni per Applicazioni WEB</p>
-                </a>
-            </div>
-        </div>
-
-    </aside>
-</div>: Jekyll sostituisce con index, post o libro.
--->
-<!--
-    Layout post: struttura a due colonne.
-    - Sinistra (post-content): breadcrumb → tags → PDF → corpo MD → fonte
-    - Destra  (post-sidebar):  tags + fonte + libro consigliato
--->
-<div class="post-container">
-
-    <main class="post-content">
-
-        <nav class="post-breadcrumb" aria-label="Breadcrumb">
-            <a href="/appuntidiprogrammazione/">Appunti di Programmazione</a>
-            <span class="separator" aria-hidden="true">/</span>
-            <span>CQRS (Command Query Responsibility Segregation)</span>
-        </nav>
-
-        
-        <div class="post-tags-header" aria-label="Argomenti">
-            
-                <span class="post-tag-chip">js</span>
-            
-                <span class="post-tag-chip">design patterns & architecture</span>
-            
-        </div>
-        
-
-        
-        <div class="pdf-link-wrapper">
-            <a class="pdf-link"
-               href="/appuntidiprogrammazione/assets/pdf/cqrs-command-query-responsibility-segregation.pdf"
-               target="_blank"
-               rel="noopener noreferrer"
-               aria-label="Scarica il PDF: CQRS (Command Query Responsibility Segregation)">
-                ↓ Scarica PDF
-            </a>
-        </div>
-        
-
-        <article class="post-article-body">
-            <h2 id="esigenza-reale">Esigenza Reale</h2>
-<p>Scalare un’applicazione social dove la frequenza di lettura (feed) è 1000x superiore a quella di scrittura (post).</p>
-
-<h2 id="analisi-tecnica">Analisi Tecnica</h2>
-<p><strong>Problema:</strong> Modelli di dati troppo complessi che tentano di soddisfare sia i vincoli di validazione che le esigenze di reportistica veloce.</p>
-
-<p><strong>Perché:</strong> Separo le responsabilità. Ho scelto CQRS per poter scalare i database di lettura indipendentemente dai servizi di scrittura, ottimizzando i tempi di risposta delle API.</p>
-
-<h2 id="esempio-implementativo">Esempio Implementativo</h2>
-
-<div class="language-javascript highlighter-rouge"><div class="highlight"><pre class="highlight"><code><table class="rouge-table"><tbody><tr><td class="rouge-gutter gl"><pre class="lineno">1
-2
-3
-4
-5
-6
-7
-8
-9
-10
-11
-12
-13
-14
-15
-16
-17
-18
-19
-20
-21
-22
-23
-24
-25
-26
-27
-28
-29
-30
-31
-32
-33
-34
-35
-36
-37
-38
-39
-40
-41
-42
-43
-44
-45
-46
-47
-48
-49
-50
-51
-52
-53
-54
-55
-56
-57
-58
-59
-60
-61
-62
-63
-64
-65
-66
-67
-68
-69
-70
-71
-72
-73
-74
-75
-76
-77
-78
-79
-80
-81
-82
-83
-84
-85
-86
-87
-88
-89
-90
-91
-92
-93
-94
-95
-96
-97
-98
-99
-100
-101
-102
-103
-104
-105
-106
-107
-108
-109
-110
-111
-112
-113
-114
-115
-116
-117
-118
-119
-120
-121
-122
-123
-124
-125
-126
-127
-128
-129
-130
-131
-132
-133
-134
-135
-</pre></td><td class="rouge-code"><pre><span class="cm">/* LATO COMMAND: gestisco le operazioni di scrittura con validazione e
-    invarianti di dominio. */</span>
-<span class="kd">class</span> <span class="nx">CreatePostCommand</span> <span class="p">{</span>
-    <span class="kd">constructor</span><span class="p">({</span>
-        <span class="nx">authorId</span><span class="p">,</span> <span class="nx">content</span><span class="p">,</span> <span class="nx">tags</span>
-    <span class="p">}</span>
-    <span class="p">)</span> <span class="p">{</span>
-        <span class="c1">// Validazione delle invarianti del dominio: avviene sul lato Command,</span>
-            <span class="nx">non</span> <span class="nx">sul</span> <span class="nx">lato</span> <span class="nx">Query</span> <span class="k">if</span> <span class="p">(</span><span class="o">!</span><span class="nx">authorId</span><span class="p">)</span> <span class="k">throw</span> <span class="k">new</span> <span class="nb">Error</span><span class="p">(</span><span class="dl">'</span><span class="s1">authorId è
-            obbligatorio</span><span class="dl">'</span><span class="p">)</span>
-        <span class="p">;</span>
-        <span class="k">if</span> <span class="p">(</span><span class="o">!</span><span class="nx">content</span> <span class="o">||</span> <span class="nx">content</span><span class="p">.</span><span class="nx">trim</span><span class="p">().</span><span class="nx">length</span> <span class="o">&lt;</span> <span class="mi">10</span><span class="p">)</span> <span class="k">throw</span> <span class="k">new</span> <span class="nb">Error</span><span class="p">(</span><span class="dl">'</span><span class="s1">Il
-            contenuto deve avere almeno 10 caratteri</span><span class="dl">'</span><span class="p">);</span>
-        <span class="k">if</span> <span class="p">(</span><span class="nx">content</span><span class="p">.</span><span class="nx">length</span> <span class="o">&gt;</span> <span class="mi">5000</span><span class="p">)</span> <span class="k">throw</span> <span class="k">new</span> <span class="nb">Error</span><span class="p">(</span><span class="dl">'</span><span class="s1">Il contenuto non può
-            superare 5000 caratteri</span><span class="dl">'</span><span class="p">);</span>
-        <span class="k">this</span><span class="p">.</span><span class="nx">authorId</span> <span class="o">=</span> <span class="nx">authorId</span><span class="p">;</span>
-        <span class="k">this</span><span class="p">.</span><span class="nx">content</span> <span class="o">=</span> <span class="nx">content</span><span class="p">.</span><span class="nx">trim</span><span class="p">();</span>
-        <span class="k">this</span><span class="p">.</span><span class="nx">tags</span> <span class="o">=</span> <span class="nx">tags</span> <span class="o">??</span> <span class="p">[];</span>
-        <span class="k">this</span><span class="p">.</span><span class="nx">createdAt</span> <span class="o">=</span> <span class="k">new</span> <span class="nb">Date</span><span class="p">();</span>
-    <span class="p">}</span>
-<span class="p">}</span>
-<span class="kd">class</span> <span class="nx">PostCommandHandler</span> <span class="p">{</span>
-    <span class="kd">constructor</span><span class="p">(</span><span class="nx">writeDb</span><span class="p">,</span> <span class="nx">eventBus</span><span class="p">)</span> <span class="p">{</span>
-        <span class="k">this</span><span class="p">.</span><span class="nx">writeDb</span> <span class="o">=</span> <span class="nx">writeDb</span><span class="p">;</span>
-        <span class="c1">// Database ottimizzato per scritture (es. PostgreSQL normalizzato)</span>
-            <span class="k">this</span><span class="p">.</span><span class="nx">eventBus</span> <span class="o">=</span> <span class="nx">eventBus</span>
-        <span class="p">;</span>
-    <span class="p">}</span>
-    <span class="k">async</span> <span class="nx">handle</span><span class="p">(</span><span class="nx">command</span><span class="p">)</span> <span class="p">{</span>
-        <span class="k">if</span> <span class="p">(</span><span class="nx">command</span> <span class="k">instanceof</span> <span class="nx">CreatePostCommand</span><span class="p">)</span> <span class="p">{</span>
-            <span class="c1">// Salvo nel write model: schema normalizzato, ottimizzato per</span>
-                <span class="nx">integrità</span> <span class="kd">const</span> <span class="nx">post</span> <span class="o">=</span> <span class="k">await</span> <span class="k">this</span><span class="p">.</span><span class="nx">writeDb</span><span class="p">.</span><span class="nx">posts</span><span class="p">.</span><span class="nx">create</span><span class="p">(</span>
-            <span class="p">{</span>
-                <span class="na">authorId</span><span class="p">:</span> <span class="nx">command</span><span class="p">.</span><span class="nx">authorId</span><span class="p">,</span> <span class="na">content</span><span class="p">:</span> <span class="nx">command</span><span class="p">.</span><span class="nx">content</span><span class="p">,</span> <span class="na">tags</span><span class="p">:</span>
-                    <span class="nx">command</span><span class="p">.</span><span class="nx">tags</span><span class="p">,</span> <span class="na">createdAt</span><span class="p">:</span> <span class="nx">command</span><span class="p">.</span><span class="nx">createdAt</span>
-            <span class="p">}</span>
-            <span class="p">);</span>
-            <span class="c1">// Pubblico l'evento per aggiornare le read views in modo asincrono</span>
-                <span class="k">await</span> <span class="k">this</span><span class="p">.</span><span class="nx">eventBus</span><span class="p">.</span><span class="nx">publish</span><span class="p">(</span><span class="dl">'</span><span class="s1">POST_CREATED</span><span class="dl">'</span><span class="p">,</span>
-            <span class="p">{</span>
-                <span class="na">postId</span><span class="p">:</span> <span class="nx">post</span><span class="p">.</span><span class="nx">id</span><span class="p">,</span> <span class="na">authorId</span><span class="p">:</span> <span class="nx">post</span><span class="p">.</span><span class="nx">authorId</span><span class="p">,</span> <span class="na">content</span><span class="p">:</span> <span class="nx">post</span><span class="p">.</span><span class="nx">content</span><span class="p">,</span>
-                    <span class="na">tags</span><span class="p">:</span> <span class="nx">post</span><span class="p">.</span><span class="nx">tags</span><span class="p">,</span> <span class="na">createdAt</span><span class="p">:</span> <span class="nx">post</span><span class="p">.</span><span class="nx">createdAt</span>
-            <span class="p">}</span>
-            <span class="p">);</span>
-            <span class="k">return</span> <span class="nx">post</span><span class="p">.</span><span class="nx">id</span><span class="p">;</span>
-        <span class="p">}</span>
-        <span class="k">throw</span> <span class="k">new</span> <span class="nb">Error</span><span class="p">(</span><span class="dl">'</span><span class="s1">Command non gestito: </span><span class="dl">'</span> <span class="o">+</span> <span class="nx">command</span><span class="p">.</span><span class="kd">constructor</span><span class="p">.</span><span class="nx">name</span><span class="p">);</span>
-    <span class="p">}</span>
-<span class="p">}</span>
-<span class="cm">/* LATO QUERY: gestisco le letture con modelli de-normalizzati ottimizzati per
-    la UI. */</span>
-<span class="kd">class</span> <span class="nx">FeedQueryHandler</span> <span class="p">{</span>
-    <span class="kd">constructor</span><span class="p">(</span><span class="nx">readDb</span><span class="p">)</span> <span class="p">{</span>
-        <span class="c1">// Database di lettura: può essere Redis, Elasticsearch, MongoDB o una</span>
-            <span class="nx">vista</span> <span class="nx">materializzata</span> <span class="k">this</span><span class="p">.</span><span class="nx">readDb</span> <span class="o">=</span> <span class="nx">readDb</span>
-        <span class="p">;</span>
-    <span class="p">}</span>
-    <span class="k">async</span> <span class="nx">getFeed</span><span class="p">(</span><span class="nx">userId</span><span class="p">,</span> <span class="p">{</span>
-        <span class="nx">page</span> <span class="o">=</span> <span class="mi">1</span><span class="p">,</span> <span class="nx">limit</span> <span class="o">=</span> <span class="mi">20</span>
-    <span class="p">}</span>
-    <span class="o">=</span> <span class="p">{</span>
-    <span class="p">}</span>
-    <span class="p">)</span> <span class="p">{</span>
-        <span class="c1">// Query ultra-veloce su una vista pre-calcolata: nessun JOIN, nessuna</span>
-            <span class="nx">logica</span> <span class="nx">di</span> <span class="nx">dominio</span>
-        <span class="k">return</span> <span class="k">this</span><span class="p">.</span><span class="nx">readDb</span><span class="p">.</span><span class="nx">feedViews</span><span class="p">.</span><span class="nx">find</span><span class="p">({</span>
-            <span class="na">targetUserId</span><span class="p">:</span> <span class="nx">userId</span><span class="p">,</span> <span class="nx">page</span><span class="p">,</span> <span class="nx">limit</span>
-        <span class="p">}</span>
-        <span class="p">);</span>
-        <span class="c1">// Ritorna direttamente il DTO pronto per la UI</span>
-    <span class="p">}</span>
-    <span class="k">async</span> <span class="nx">getPostById</span><span class="p">(</span><span class="nx">postId</span><span class="p">)</span> <span class="p">{</span>
-        <span class="k">return</span> <span class="k">this</span><span class="p">.</span><span class="nx">readDb</span><span class="p">.</span><span class="nx">postDetails</span><span class="p">.</span><span class="nx">findOne</span><span class="p">({</span>
-            <span class="na">id</span><span class="p">:</span> <span class="nx">postId</span>
-        <span class="p">}</span>
-        <span class="p">);</span>
-        <span class="c1">// Vista denormalizzata: autore, like count, commenti in una sola query</span>
-    <span class="p">}</span>
-    <span class="k">async</span> <span class="nx">searchPosts</span><span class="p">(</span><span class="nx">query</span><span class="p">,</span> <span class="nx">tags</span><span class="p">)</span> <span class="p">{</span>
-        <span class="c1">// Elasticsearch ottimizzato per full-text search: impossibile sul write</span>
-            <span class="nx">model</span> <span class="nx">normalizzato</span>
-        <span class="k">return</span> <span class="k">this</span><span class="p">.</span><span class="nx">readDb</span><span class="p">.</span><span class="nx">searchIndex</span><span class="p">.</span><span class="nx">query</span><span class="p">({</span>
-            <span class="na">text</span><span class="p">:</span> <span class="nx">query</span><span class="p">,</span> <span class="nx">tags</span>
-        <span class="p">}</span>
-        <span class="p">);</span>
-    <span class="p">}</span>
-<span class="p">}</span>
-<span class="cm">/* Sincronizzo i read models tramite event listener: aggiornamento asincrono
-    delle viste. */</span>
-<span class="kd">class</span> <span class="nx">FeedProjection</span> <span class="p">{</span>
-    <span class="kd">constructor</span><span class="p">(</span><span class="nx">readDb</span><span class="p">)</span> <span class="p">{</span>
-        <span class="k">this</span><span class="p">.</span><span class="nx">readDb</span> <span class="o">=</span> <span class="nx">readDb</span><span class="p">;</span>
-    <span class="p">}</span>
-    <span class="c1">// Questo handler viene invocato ogni volta che POST_CREATED viene</span>
-        <span class="nx">pubblicato</span> <span class="k">async</span> <span class="nx">onPostCreated</span><span class="p">(</span><span class="nx">event</span><span class="p">)</span>
-    <span class="p">{</span>
-        <span class="c1">// Recupero i follower dell'autore e aggiorno la loro feed view const</span>
-            <span class="nx">followers</span> <span class="o">=</span> <span class="k">await</span> <span class="k">this</span><span class="p">.</span><span class="nx">readDb</span><span class="p">.</span><span class="nx">follows</span><span class="p">.</span><span class="nx">findFollowers</span><span class="p">(</span><span class="nx">event</span><span class="p">.</span><span class="nx">authorId</span><span class="p">)</span>
-        <span class="p">;</span>
-        <span class="c1">// Fan-out: aggiorno la feed view di ogni follower await</span>
-            <span class="nb">Promise</span><span class="p">.</span><span class="nx">all</span><span class="p">(</span><span class="nx">followers</span><span class="p">.</span><span class="nx">map</span><span class="p">(</span><span class="nx">followerId</span> <span class="o">=&gt;</span>
-            <span class="k">this</span><span class="p">.</span><span class="nx">readDb</span><span class="p">.</span><span class="nx">feedViews</span><span class="p">.</span><span class="nx">insert</span><span class="p">(</span>
-        <span class="p">{</span>
-            <span class="na">targetUserId</span><span class="p">:</span> <span class="nx">followerId</span><span class="p">,</span> <span class="na">postId</span><span class="p">:</span> <span class="nx">event</span><span class="p">.</span><span class="nx">postId</span><span class="p">,</span> <span class="na">authorId</span><span class="p">:</span>
-                <span class="nx">event</span><span class="p">.</span><span class="nx">authorId</span><span class="p">,</span> <span class="na">contentPreview</span><span class="p">:</span> <span class="nx">event</span><span class="p">.</span><span class="nx">content</span><span class="p">.</span><span class="nx">substring</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">200</span><span class="p">),</span>
-                <span class="na">tags</span><span class="p">:</span> <span class="nx">event</span><span class="p">.</span><span class="nx">tags</span><span class="p">,</span> <span class="na">createdAt</span><span class="p">:</span> <span class="nx">event</span><span class="p">.</span><span class="nx">createdAt</span>
-        <span class="p">}</span>
-        <span class="p">)</span> <span class="p">));</span>
-    <span class="p">}</span>
-<span class="p">}</span>
-<span class="cm">/* Assemblo tutto in Express: Command e Query su endpoint separati. */</span>
-<span class="kd">const</span> <span class="nx">commandHandler</span> <span class="o">=</span> <span class="k">new</span> <span class="nx">PostCommandHandler</span><span class="p">(</span><span class="nx">writeDb</span><span class="p">,</span> <span class="nx">eventBus</span><span class="p">);</span>
-<span class="kd">const</span> <span class="nx">queryHandler</span> <span class="o">=</span> <span class="k">new</span> <span class="nx">FeedQueryHandler</span><span class="p">(</span><span class="nx">readDb</span><span class="p">);</span>
-<span class="c1">// READ: ottimizzato per velocità, può essere cachato a più livelli</span>
-    <span class="nx">app</span><span class="p">.</span><span class="kd">get</span><span class="p">(</span><span class="dl">'</span><span class="s1">/feed</span><span class="dl">'</span><span class="p">,</span> <span class="k">async</span> <span class="p">(</span><span class="nx">req</span><span class="p">,</span> <span class="nx">res</span><span class="p">)</span> <span class="o">=&gt;</span>
-<span class="p">{</span>
-    <span class="kd">const</span> <span class="nx">feed</span> <span class="o">=</span> <span class="k">await</span> <span class="nx">queryHandler</span><span class="p">.</span><span class="nx">getFeed</span><span class="p">(</span><span class="nx">req</span><span class="p">.</span><span class="nx">user</span><span class="p">.</span><span class="nx">id</span><span class="p">,</span> <span class="nx">req</span><span class="p">.</span><span class="nx">query</span><span class="p">);</span>
-    <span class="nx">res</span><span class="p">.</span><span class="nx">json</span><span class="p">(</span><span class="nx">feed</span><span class="p">);</span>
-    <span class="c1">// Risposta in &lt; 10ms dalla vista pre-calcolata</span>
-<span class="p">}</span>
-<span class="p">);</span>
-<span class="c1">// WRITE: ottimizzato per consistenza e validazione app.post('/posts', async</span>
-    <span class="p">(</span><span class="nx">req</span><span class="p">,</span> <span class="nx">res</span><span class="p">)</span> <span class="o">=&gt;</span>
-<span class="p">{</span>
-    <span class="kd">const</span> <span class="nx">command</span> <span class="o">=</span> <span class="k">new</span> <span class="nx">CreatePostCommand</span><span class="p">({</span>
-        <span class="na">authorId</span><span class="p">:</span> <span class="nx">req</span><span class="p">.</span><span class="nx">user</span><span class="p">.</span><span class="nx">id</span><span class="p">,</span> <span class="p">...</span><span class="nx">req</span><span class="p">.</span><span class="nx">body</span>
-    <span class="p">}</span>
-    <span class="p">);</span>
-    <span class="kd">const</span> <span class="nx">postId</span> <span class="o">=</span> <span class="k">await</span> <span class="nx">commandHandler</span><span class="p">.</span><span class="nx">handle</span><span class="p">(</span><span class="nx">command</span><span class="p">);</span>
-    <span class="nx">res</span><span class="p">.</span><span class="nx">status</span><span class="p">(</span><span class="mi">202</span><span class="p">).</span><span class="nx">json</span><span class="p">({</span>
-        <span class="nx">postId</span><span class="p">,</span> <span class="na">message</span><span class="p">:</span> <span class="dl">'</span><span class="s1">Post creato. Il feed verrà aggiornato a breve.</span><span class="dl">'</span>
-    <span class="p">}</span>
-    <span class="p">);</span>
-<span class="p">}</span>
-<span class="p">);</span>
-</pre></td></tr></tbody></table></code></pre></div></div>
-
-        </article>
-
-        
-
-    </main>
-
-    <aside class="post-sidebar">
-
-        
-        <div class="sidebar-box tags-box">
-            <span class="box-label">Argomenti</span>
-            <div class="tag-cloud-sidebar">
-                
-                    <span class="sidebar-tag">js</span>
-                
-                    <span class="sidebar-tag">design patterns & architecture</span>
-                
-            </div>
-        </div>
-        
-
-        
-
-        <div class="sidebar-box books-box">
-            <span class="box-label">Letture Consigliate</span>
-            <div class="book-card">
-                <a href="https://www.amazon.it/Appunti-Programmazione-Pensieri-soluzioni-Applicazioni-ebook/dp/B0FMFRHKTF/"
-                   target="_blank"
-                   rel="noopener noreferrer"
-                   aria-label="Acquista Appunti di Programmazione su Amazon">
-                    <img src="https://m.media-amazon.com/images/I/61Ck5eMzGYL._SY466_.jpg"
-                         alt="Copertina: Appunti di Programmazione"
-                         width="80">
-                    <p>Appunti di Programmazione: Pensieri e soluzioni per Applicazioni WEB</p>
-                </a>
-            </div>
-        </div>
-
-    </aside>
-</div>
-</div>
-</article>
-
-</main>
-
-<!-- Footer — identico al nuovo, email da _config.yml -->
-<footer class="flex flex-col md:flex-row justify-between items-center px-12 gap-4 w-full py-8 mt-auto bg-[#131313] dark:bg-[#131313] border-t border-white/5">
-<p class="font-mono text-[10px] uppercase opacity-50 text-[#10B981]">[ROOT@LUCID-CONSOLE ~]# Appunti di Programmazione</p>
-<div class="flex space-x-6 font-mono text-[10px] uppercase opacity-50">
-<a class="text-zinc-500 hover:text-[#10B981] underline underline-offset-4 transition-colors" href="#">Github</a>
-<a class="text-zinc-500 hover:text-[#10B981] underline underline-offset-4 transition-colors" href="#">LinkedIn</a>
-        
-        <a class="text-zinc-500 hover:text-[#10B981] underline underline-offset-4 transition-colors" href="mailto:cosimociraci@gmail.com">cosimociraci@gmail.com</a>
-        
-        </div>
-</footer>
-
-<script>
-    /*
-     * toggleTheme: aggiorno sia data-theme (CSS custom variables nel mio style.css)
-     * sia class="dark" sull'<html> (Tailwind darkMode:"class").
-     * classList.toggle(cls, force) aggiunge o rimuove in un'unica chiamata.
-     * Persisto la scelta in localStorage per le sessioni future.
-     */
-    function toggleTheme() {
-        var html    = document.documentElement;
-        var current = html.getAttribute('data-theme');
-        var next    = (current === 'dark') ? 'light' : 'dark';
-        html.setAttribute('data-theme', next);
-        html.classList.toggle('dark', next === 'dark');
-        localStorage.setItem('theme', next);
-    }
-</script>
 </body>
 </html>
